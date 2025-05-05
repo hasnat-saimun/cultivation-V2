@@ -72,12 +72,6 @@ Route::post('/admin/register',[
 
 Route::middleware(['adminGuard','superAdmin','moderator','dealerAdmin','basicAdmin'])->group (function(){
     
-    //Result Part
-    Route::get('/admin/result',[
-        BackofficeController::class,
-        'resultPart'
-    ])->name('resultPart');
-
     //Cultivation Part
     
     Route::get('/admin/dashboard',[
@@ -898,6 +892,12 @@ Route::middleware(['adminGuard','superAdmin','moderator','dealerAdmin','basicAdm
         'allSession'
     ])->name('allSession');
 
+    //Result Part
+    Route::get('/admin/result',[
+        BackofficeController::class,
+        'resultPart'
+    ])->name('resultPart');
+    
     //Subject route declaration
 
     Route::get('/admin/subject/create',[
