@@ -7,7 +7,7 @@
     <!-- Preloader Start Here -->
     <div id="preloader"></div>
     <!-- Preloader End Here -->
-    <div id="wrapper" class="wrapper bg-ash">
+    <div id="wrapper" class="wrapper bg-ash min-vh-100">
        <!-- Header Menu Area Start Here -->
         <div class="navbar navbar-expand-md header-menu-one bg-light">
             @include('cultivation.topBar')
@@ -26,13 +26,13 @@
                             <a href="{{ route('cultivationIndex') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{route('academicPart') }}" class="nav-link"><i class="fa-solid fa-building-columns"></i><span>Academic</span></a>
+                            <a href="{{route('academicPart') }}" class="nav-link"><i class="fa-solid fa-building-columns"></i><span>Academic Panel</span></a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('resultPart') }}" class="nav-link"><i class="fa-sharp fa-thin fa-square-poll-horizontal"></i><span>Results</span></a>
+                            <a href="{{ route('resultPart') }}" class="nav-link"><i class="fa-sharp fa-thin fa-square-poll-horizontal"></i><span>Results Management</span></a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('accountPart') }}" class="nav-link"><i class="fa-solid fa-receipt"></i><span>Accounts</span></a>
+                            <a href="{{ route('accountPart') }}" class="nav-link"><i class="fa-solid fa-receipt"></i><span>Accounts Management</span></a>
                         </li>
                         <li class="nav-item sidebar-nav-item">
                             <a href="#" class="nav-link"><i class="flaticon-classmates"></i><span>Admission</span></a>
@@ -99,7 +99,7 @@
                     <h3>Admin Dashboard</h3>
                     <ul>
                         <li>
-                            <a href="index-2.html">Home</a>
+                            <a href="{{ route('cultivationIndex') }}">Home</a>
                         </li>
                         <li>Admin</li>
                     </ul>

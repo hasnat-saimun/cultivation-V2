@@ -69,6 +69,6 @@
                         <div class="copyright">© <a href="#">Cultivation</a>-The Education Management System Software {{ date('Y') }} | All rights reserved.</div>
                     </div>
                     <div class="col-12 col-md-4 text-right">
-                        <div class="copyright">Developed by <a href="#">Virtual IT Professional</a></div>
+                        <div class="copyright"><span class="fw-bold">Developed by:</span> <a href="#">Virtual IT Professional</a></div>
                     </div>
                 </div>
