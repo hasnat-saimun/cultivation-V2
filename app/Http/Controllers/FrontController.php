@@ -26,9 +26,10 @@ class FrontController extends Controller
             if(!Hash::check($requ->cultivationPass,$cultivation->loginPassword)):
                 return back()->with('error','Sorry! Wrong password provided');
             else:
-                session(['cultivationAdmin' => $cultivation->id]);
-                $requ->session()->regenerate();
-                $requ->session()->put('adminSession',$cultivation->id);
+                // session(['superAdmin' => $cultivation->id]);
+                Session::regenerate();
+                Session::put('superAdmin',$cultivation->id);
+                // Session::get('superAdmin');
                 return redirect(route('cultivationIndex'));
             endif;
         else:

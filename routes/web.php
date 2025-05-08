@@ -70,7 +70,7 @@ Route::post('/admin/register',[
     'adminRegister'
 ])->name('adminRegister');
 
-Route::middleware(['adminGuard','superAdmin','moderator','dealerAdmin','basicAdmin'])->group (function(){
+Route::middleware(['superAdmin'])->group (function(){
     
     //Cultivation Part
     
