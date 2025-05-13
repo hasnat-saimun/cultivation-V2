@@ -189,6 +189,29 @@ Route::middleware(['superAdmin'])->group (function(){
 
     //video end
 
+    //Front str
+
+    Route::get('/admin/Home/Page/',[
+        InstituteController::class,
+        'frontPage'
+    ])->name('frontPage');
+
+    Route::post('/admin/front/details/',[
+        InstituteController::class ,
+        'frontDetails'
+    ])->name('frontDetails');
+
+    Route::get('/admin/education/ministar/img/del/{id}',[
+        InstituteController::class ,
+        'delEducationMinistarImg'
+    ])->name('delEducationMinistarImg');
+
+    Route::get('/admin/board/chairman/img/del/{id}',[
+        InstituteController::class ,
+        'delBoardChairmanImg'
+    ])->name('delBoardChairmanImg');
+    //front end here
+
     Route::get('/admin/institute/info/',[
         InstituteController::class,
         'insInfo'

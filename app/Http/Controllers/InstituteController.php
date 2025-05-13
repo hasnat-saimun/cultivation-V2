@@ -14,7 +14,75 @@ use File;
 
 class InstituteController extends Controller
 {
-    
+    //front str
+    public function frontPage(){
+        return view('academic.frontPage');
+     }
+
+     public function frontDetails(Request $requ){
+        if(!empty($requ->pageId)):
+            $frontManage = frontManage::find($requ->pageId);
+        else:
+            $frontManage = new frontManage();
+        endif;
+
+        $frontManage->homeHeadline            = $requ->homeHeadline;
+        $frontManage->homeDetails             = $requ->homeDetails;
+        $frontManage->educationMinistarName   = $requ->educationMinistarName;
+        $frontManage->boardChairmanLocation   = $requ->boardChairmanLocation;
+        $frontManage->ourMission              = $requ->ourMission;
+        $frontManage->boardChairmanName       = $requ->boardChairmanName;
+        
+        if(!empty($requ->educationMinistarImg)):
+            $educationMinistarImg        = $requ->educationMinistarImg;
+            $neweducationMinistarImg     = rand().date('Ymd').'.'.$educationMinistarImg->getClientOriginalExtension();
+            $educationMinistarImg->move(public_path('upload/image/frontImg'),$neweducationMinistarImg);
+            $frontManage->educationMinistarImg      = $neweducationMinistarImg;
+        endif;
+        
+        if(!empty($requ->boardChairmanImg)):
+            $boardChairmanImg        = $requ->boardChairmanImg;
+            $newboardChairmanImg     = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
+            $boardChairmanImg->move(public_path('upload/image/frontImg'),$newboardChairmanImg);
+            $frontManage->boardChairmanImg      = $newboardChairmanImg;
+        endif;
+
+        if($frontManage->save()):
+            return back()->with('success','Congrats! Data saved successfully');
+        else:
+            return back()->with('error','Sorry! Data failed to save. Please try later');
+        endif;
+    }
+
+    public function delEducationMinistarImg($id){
+        $item = frontManage::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/frontImg/').$item->educationMinistarImg)):
+                File::delete(public_path('upload/image/frontImg/').$item->educationMinistarImg);
+            endif;
+            $item->educationMinistarImg = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delBoardChairmanImg($id){
+        $item = frontManage::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/frontImg/').$item->boardChairmanImg)):
+                File::delete(public_path('upload/image/frontImg/').$item->boardChairmanImg);
+            endif;
+            $item->boardChairmanImg = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
 
     public function insInfo(){
         return view('academic.instituteInfo');
