@@ -157,10 +157,10 @@
                     <div class="col-md-6 col-12">
                         <p><span class="fw-bold">Planning and Implementation:</span> Principal(SBC)</p>
                     </div>
-                    <div class="col-md-6 col-12">
+                    <div class="col-md-6 col-12 text-end">
                         <p><span class="fw-bold">Powered By:</span> VITP IMS(Version 2.0.1) by Virtual IT Professional</p>
                     </div>
-                    <div class="col-12">
+                    <div class="col-12 text-center">
                         <p class="fw-bold">Copyright &copy; 2000-@php echo date('Y'); @endphp | All Rights Reserved SBC Cumilla</p>
                     </div>
                 </div>
