@@ -12,7 +12,7 @@ Enter to learn & Leave to serve
 @section('frontcontent')
 
 <div class="col-3 mx-auto">
-                    @yield('sideinfo')
+    @yield('sideinfo')
 </div>
 <div class="col-8 mx-auto">
     <div class="rowalign-items-center">

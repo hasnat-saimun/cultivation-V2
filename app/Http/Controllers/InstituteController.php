@@ -14,7 +14,9 @@ use File;
 
 class InstituteController extends Controller
 {
-    
+     public function homeInfo(){
+        return view('academic.homePage');
+    }
 
     public function insInfo(){
         return view('academic.instituteInfo');

@@ -19,7 +19,6 @@
     <!-- Flaticon CSS -->
     <link rel="stylesheet" href="{{ asset('/public/back-office/') }}/fonts/flaticon.css">
     <script src="https://kit.fontawesome.com/163dbb3d41.js" crossorigin="anonymous"></script>
-    <script src="https://kit.fontawesome.com/32dcd4a478.js" crossorigin="anonymous"></script>
     <!-- Full Calender CSS -->
     <link rel="stylesheet" href="{{ asset('/public/back-office/') }}/css/fullcalendar.min.css">
     <!-- Animate CSS -->

@@ -57,18 +57,22 @@ Route::post('/admin/login/confirm',[
     FrontController::class ,
     'cultivationLogin'
 ])->name('cultivationLogin');
+
 Route::get('/admin/login',[
     FrontController::class,
     'adminLogin'
 ])->name('adminLogin');
+
 Route::get('/admin/logout',[
     FrontController::class,
     'adminLogout'
 ])->name('adminLogout');
+
 Route::post('/admin/register',[
     FrontController::class ,
     'adminRegister'
 ])->name('adminRegister');
+
 
 Route::middleware(['adminGuard'])->group (function(){
     
@@ -188,6 +192,11 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('delVideo');
 
     //video end
+    Route::get('/admin/home/info/',[
+        InstituteController::class,
+        'homeInfo'
+    ])->name('homeInfo'); 
+
 
     Route::get('/admin/institute/info/',[
         InstituteController::class,
@@ -238,6 +247,7 @@ Route::middleware(['adminGuard'])->group (function(){
         InstituteController::class ,
         'delexPlcCon'
     ])->name('delexPlcCon');
+
     Route::get('/admin/institute/principal/exList/del/{id}',[
         InstituteController::class ,
         'delExPrincipal'
@@ -299,7 +309,6 @@ Route::middleware(['adminGuard'])->group (function(){
         AcademicController::class ,
         'delSyllabus'
     ])->name('delSyllabus');
-
 
     Route::get('/admin/academic/classRoutine/',[
         AcademicController::class ,

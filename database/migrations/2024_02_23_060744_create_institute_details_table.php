@@ -15,11 +15,11 @@ return new class extends Migration
             $table->id();
             $table->string('insHeadline')->nullable();
             $table->longText('insDetails')->nullable();
-            $table->string('landSize')->nullable();
-            $table->string('establishDate')->nullable();
+            $table->longText('landSize')->nullable();
+            $table->longText('establishDate')->nullable();
             $table->string('heroImg')->nullable();
-            $table->string('mission')->nullable();
-            $table->string('vision')->nullable();
+            $table->longText('mission')->nullable();
+            $table->longText('vision')->nullable();
             $table->timestamps();
         });
     }

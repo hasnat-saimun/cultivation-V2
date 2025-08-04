@@ -15,7 +15,7 @@ class adminGuard
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(Session::has('adminSession')):
+        if(Session::has('cultivationAdmin')):
             $x="";
         else:
             return redirect(route('adminLogin'))->with('error','Please login to continue');

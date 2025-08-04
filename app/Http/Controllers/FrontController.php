@@ -28,7 +28,7 @@ class FrontController extends Controller
             else:
                 session(['cultivationAdmin' => $cultivation->id]);
                 $requ->session()->regenerate();
-                $requ->session()->put('adminSession',$cultivation->id);
+                $requ->session()->put('cultivationAdmin',$cultivation->id);
                 return redirect(route('cultivationIndex'));
             endif;
         else:
