@@ -4,30 +4,72 @@ Institute Dashboard
 @endsection
 @section('backIndex')
 @php 
-    $institute = \App\Models\InstituteDetails::orderBy('id','DESC')->first();
-    if(!empty($institute)):
-        $headline       = $institute->insHeadline;
-        $details        = $institute->insDetails;
-        $foundedDate    = $institute->establishDate;
-        $landSize       = $institute->landSize;
-        $heroImg        = $institute->heroImg;
-        $mission        = $institute->mission;
-        $vision         = $institute->vision;
-        $pageId         = $institute->id;
+    $homePage = \App\Models\homeInfo::orderBy('id','DESC')->first();
+    if(!empty($homePage)):
+        $slidImg1               = $homePage->slidImg1;
+        $slideHadeMessege1      = $homePage->slideHadeMessege1;
+        $slideDescription1      = $homePage->slideDescription1;
+        $slidImg2               = $homePage->slidImg2;
+        $slideHadeMessege2      = $homePage->slideHadeMessege2;
+        $slideDescription2      = $homePage->slideDescription2;
+        $slidImg3               = $homePage->slidImg3;
+        $slideHadeMessege3      = $homePage->slideHadeMessege3;
+        $slideDescription3      = $homePage->slideDescription3;
+        $eduMinName             = $homePage->eduMinName;
+        $eduMinImg              = $homePage->eduMinImg;
+        $eduMinDetail           = $homePage->eduMinDetail;
+        $boardChairmanName      = $homePage->boardChairmanName;
+        $boardChairmanImg       = $homePage->boardChairmanImg;
+        $boardChairmanDetail    = $homePage->boardChairmanDetail;
+        $principalName          = $homePage->principalName;
+        $principalImg           = $homePage->principalImg;
+        $principalDetail        = $homePage->principalDetail;
+        $founded                = $homePage->founded;
+        $area                   = $homePage->area;
+        $teacherTotal           = $homePage->teacherTotal;
+        $studentTotal           = $homePage->studentTotal;
+        $notice                 = $homePage->notice;
+        $wcMsgHadeline          = $homePage->wcMsgHadeline;
+        $wclMsgDescription      = $homePage->wclMsgDescription;
+        $missionDescription     = $homePage->missionDescription;
+        $writerName             = $homePage->writerName;
+        $mainGoal               = $homePage->mainGoal;
+        $pageId                 = $homePage->id;
     else:
-        $pageId         = null;
-        $headline       = "";
-        $details        = "";
-        $foundedDate    = "";
-        $landSize       = "";
-        $heroImg        = "";
-        $mission        = "";
-        $vision         = "";
+        $pageId                 = null;
+        $slidImg1               = "";
+        $slideHadeMessege1      = "";
+        $slideDescription1      = "";
+        $slidImg2               = "";
+        $slideHadeMessege2      = "";
+        $slideDescription2      = "";
+        $slidImg3               = "";
+        $slideHadeMessege3      = "";
+        $slideDescription3      = "";
+        $eduMinName             = "";
+        $eduMinImg              = "";
+        $eduMinDetail           = "";
+        $boardChairmanName      = "";
+        $boardChairmanImg       = "";
+        $boardChairmanDetail    = "";
+        $principalName          = "";
+        $principalImg           = "";
+        $principalDetail        = "";
+        $founded                = "";
+        $area                   = "";
+        $teacherTotal           = "";
+        $studentTotal           = "";
+        $notice                 = "";
+        $wcMsgHadeline          = "";
+        $wclMsgDescription      = "";
+        $missionDescription     = "";
+        $writerName             = "";
+        $mainGoal               = "";
     endif;
 @endphp
 <!-- Dashboard summery Start Here -->
 <div class="row gutters-20 mb-4">
-    <div class="col-10 mx-auto">
+    <div class="col-12 ">
         <div class="card">
             <div class="row">
                 <div class="col-12">
@@ -43,46 +85,194 @@ Institute Dashboard
                     @endif
                 </div>
             </div>
-            <div class="card-header">Institute Info</div>
             <div class="card-body cultivation">
                 <form action="{{ route('insDetails') }}" class="form" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="pageId" value="{{ $pageId }}">
-                    <div class="mb-3">
-                        <label for="insHeadline">Headline</label>
-                        <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="establishDate">Founded</label>
-                        <input type="text" name="establishDate" class="form-control" placeholder="Enter establish date" value="{{ $foundedDate }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="landSize">Land Size</label>
-                        <input type="text" name="landSize" class="form-control" placeholder="Enter total land size" value="{{ $landSize }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="insDetails">Details</label>
-                        <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label for="ourMission">Mission</label>
-                        <input type="text" name="ourMission" class="form-control" placeholder="Enter institute mission" value="{{ $mission }}">
-                    </div>
-                    <div class="mb-3">
-                        <label for="ourVision">Vission</label>
-                        <input type="text" name="ourVision" class="form-control" placeholder="Enter institute vision" value="{{ $vision }}">
-                    </div>
-                    <div class="mb-3">
-                    <label for="heroImg">Avatar (150px X 150px)</label>
-                        @if(empty($heroImg))
-                        <input type="file" name="heroImg" id="heroImg"class="form-control-file">
-                        @else
-                        <div class="my-2">
-                            <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                            <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                    <div class="row">
+                        <div class="col-12 card-header mb-5"> Slider Info</div>
+                        <div class="col-4 mb-3">
+                            <label for="slidImg1">Slide Image 01 (150px X 150px)</label>
+                            @if(empty($slidImg1))
+                            <input type="file" name="slidImg1" id="slidImg1"class="form-control-file">
+                            @else
+                            <div class="my-2">
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$slidImg1 }}" class="form-control">
+                                <div><a href="{{ route('delslidImg1',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                            </div>
+                            @endif
                         </div>
-                        @endif
+                        <div class="col-4 mb-3">
+                            <label for="slideHadeMessege1">Headline</label>
+                            <input type="text" name="slideHadeMessege1" class="form-control" placeholder="Enter the headline" value="{{ $slideHadeMessege1 }}">
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="slideDescription1">Description</label>
+                             <textarea name="slideDescription1" class="form-control" placeholder="Enter description about institute">{{ $slideDescription1 }}</textarea>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="heroImg">Slide Image 02 (150px X 150px)</label>
+                            @if(empty($heroImg))
+                            <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                            @else
+                            <div class="my-2">
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
+                                <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="insHeadline">Headline</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="insHeadline">Description</label>
+                             <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="heroImg">Slide Image 03 (150px X 150px)</label>
+                            @if(empty($heroImg))
+                            <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                            @else
+                            <div class="my-2">
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
+                                <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="insHeadline">Headline</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-4 mb-3">
+                            <label for="insHeadline">Description</label>
+                             <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                        </div>
                     </div>
+                    <div class="row mt-5">
+                        <div class="col-12 mb-5 card-header">Other Info</div>
+                        <div class="col-3 mb-3">
+                            <label for="insHeadline">Founded Year</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-3 mb-3">
+                            <label for="insHeadline">Campus Area</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-3 mb-3">
+                            <label for="insHeadline">Teacher & Staff</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-3 mb-3">
+                            <label for="insHeadline">Student</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="insHeadline">Important Notice</label>
+                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                        </div>
+                    </div>
+                    <div class="row mt-5">
+                        <div class="col-12 mb-5 card-header">Welcome Info</div>
+                         <div class="col-12  mb-3">
+                            <label for="insHeadline">Headline</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="insHeadline">Description</label>
+                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                        </div>
+                    </div>
+                    <div class="row mt-5">
+                        <div class="col-12 mb-5 card-header">Mission & Vission</div>
+                         <div class="col-12  mb-3">
+                            <label for="insHeadline">Writer Name</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="insHeadline">Description</label>
+                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                        </div>
+                        <div class="col-12  mb-3">
+                            <label for="insHeadline">Mian Goal</label>
+                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                        </div>
+                    </div>
+                    <div class="row mt-5 ">
+                        <div class="col-6 mb-3">
+                            <div class="row ">
+                                <div class=" mb-5 card-header "> Education Ministar Info</div>
+                                <div class="col-9 mb-3">
+                                    <label for="insHeadline">Name</label>
+                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="insHeadline">Details</label>
+                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                </div> 
+                                <div class="col-12  mb-3">
+                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
+                                    @if(empty($heroImg))
+                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    @else
+                                    <div class="my-2">
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
+                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="row">
+                                <div class="mb-5 card-header">Board Chairman</div>
+                                <div class="col-12 mb-3">
+                                    <label for="insHeadline">Name</label>
+                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="insHeadline">Details</label>
+                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                </div> 
+                                <div class="col-12  mb-3">
+                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
+                                    @if(empty($heroImg))
+                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    @else
+                                    <div class="my-2">
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
+                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                         <div class="col-6 mt-5 mb-3">
+                            <div class="row ">
+                                <div class=" mb-4 card-header "> Principal</div>
+                                <div class="col-12 mb-3">
+                                    <label for="insHeadline">Name</label>
+                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                </div>
+                                <div class="col-12 mb-3">
+                                    <label for="insHeadline">Details</label>
+                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                </div> 
+                                <div class="col-12  mb-3">
+                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
+                                    @if(empty($heroImg))
+                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    @else
+                                    <div class="my-2">
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
+                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                    </div>
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div class="mt-3 ">
                         <button class="btn btn-success btn-lg" type="submit">Save</button>
                     </div>
