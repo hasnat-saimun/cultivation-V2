@@ -1,6 +1,6 @@
 @extends('academic.include')
 @section('backTitle')
-Institute Info
+Institute Dashboard
 @endsection
 @section('backIndex')
 @php 

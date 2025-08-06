@@ -18,6 +18,35 @@ class InstituteController extends Controller
         return view('academic.homePage');
     }
 
+     public function homeDetails(Request $requ){
+        if(!empty($requ->pageId)):
+            $institute = InstituteDetails::find($requ->pageId);
+        else:
+            $institute = new InstituteDetails();
+        endif;
+
+        $institute->insHeadline     = $requ->insHeadline;
+        $institute->insDetails      = $requ->insDetails;
+        $institute->establishDate   = $requ->establishDate;
+        $institute->landSize        = $requ->landSize;
+        $institute->mission         = $requ->ourMission;
+        $institute->vision          = $requ->ourVision;
+        
+        if(!empty($requ->heroImg)):
+            $heroImg        = $requ->heroImg;
+            $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
+            $heroImg->move(public_path('upload/image/cultivation'),$newheroImg);
+            $institute->heroImg      = $newheroImg;
+        endif;
+
+        if($institute->save()):
+            return back()->with('success','Congrats! Data saved successfully');
+        else:
+            return back()->with('error','Sorry! Data failed to save. Please try later');
+        endif;
+    }
+
+
     public function insInfo(){
         return view('academic.instituteInfo');
     }
