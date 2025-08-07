@@ -10,6 +10,7 @@ use App\Models\ManagingComittee;
 use App\Models\TeacherManagement;
 use App\Models\StaffManagement;
 use App\Models\ServerConfig;
+use App\Models\HomeInfo;
 use File;
 
 class InstituteController extends Controller
@@ -18,26 +19,79 @@ class InstituteController extends Controller
         return view('academic.homePage');
     }
 
-     public function homeDetails(Request $requ){
+      public function homeDetails(Request $requ){
         if(!empty($requ->pageId)):
-            $institute = InstituteDetails::find($requ->pageId);
+            $institute = HomeInfo::find($requ->pageId);
         else:
-            $institute = new InstituteDetails();
+            $institute = new HomeInfo();
         endif;
 
-        $institute->insHeadline     = $requ->insHeadline;
-        $institute->insDetails      = $requ->insDetails;
-        $institute->establishDate   = $requ->establishDate;
-        $institute->landSize        = $requ->landSize;
-        $institute->mission         = $requ->ourMission;
-        $institute->vision          = $requ->ourVision;
+        $institute->slideHadeMessege1       = $requ->slideHadeMessege1;
+        $institute->slideDescription1       = $requ->slideDescription1;
+        $institute->slideHadeMessege2       = $requ->slideHadeMessege2;
+        $institute->slideDescription2       = $requ->slideDescription2;
+        $institute->slideHadeMessege3       = $requ->slideHadeMessege3;
+        $institute->slideDescription3       = $requ->slideDescription3;
+        $institute->eduMinName              = $requ->eduMinName;
+        $institute->eduMinDetail            = $requ->eduMinDetail;
+        $institute->boardChairmanName       = $requ->boardChairmanName;
+        $institute->boardChairmanDetail     = $requ->boardChairmanDetail;
+        $institute->principalName           = $requ->principalName;
+        $institute->principalDetail         = $requ->principalDetail;
+        $institute->founded                 = $requ->founded;
+        $institute->area                    = $requ->area;
+        $institute->teacherTotal            = $requ->teacherTotal;
+        $institute->studentTotal            = $requ->studentTotal;
+        $institute->notice                  = $requ->notice;
+        $institute->wcMsgHadeline           = $requ->wcMsgHadeline;
+        $institute->wclMsgDescription       = $requ->wclMsgDescription;
+        $institute->missionDescription      = $requ->missionDescription;
+        $institute->writerName              = $requ->writerName;
+        $institute->mainGoal                = $requ->mainGoal;
         
-        if(!empty($requ->heroImg)):
-            $heroImg        = $requ->heroImg;
-            $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
-            $heroImg->move(public_path('upload/image/cultivation'),$newheroImg);
-            $institute->heroImg      = $newheroImg;
+        if(!empty($requ->slidImg1)):
+            $slidImg1        = $requ->slidImg1;
+            $newslidImg1     = rand().date('Ymd').'.'.$slidImg1->getClientOriginalExtension();
+            $slidImg1->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg1);
+            $institute->slidImg1      = $newslidImg1;
         endif;
+        
+        if(!empty($requ->slidImg2)):
+            $slidImg2        = $requ->slidImg2;
+            $newslidImg2     = rand().date('Ymd').'.'.$slidImg2->getClientOriginalExtension();
+            $slidImg2->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg2);
+            $institute->slidImg2      = $newslidImg2;
+        endif;
+        
+        if(!empty($requ->slidImg3)):
+            $slidImg3        = $requ->slidImg3;
+            $newslidImg3     = rand().date('Ymd').'.'.$slidImg3->getClientOriginalExtension();
+            $slidImg3->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg3);
+            $institute->slidImg3      = $newslidImg3;
+        endif;
+        
+        if(!empty($requ->eduMinImg)):
+            $eduMinImg        = $requ->eduMinImg;
+            $neweduMinImg     = rand().date('Ymd').'.'.$eduMinImg->getClientOriginalExtension();
+            $eduMinImg->move(public_path('upload/image/cultivation/webHomepage'),$neweduMinImg);
+            $institute->eduMinImg      = $neweduMinImg;
+        endif;
+        
+        if(!empty($requ->boardChairmanImg)):
+            $boardChairmanImg        = $requ->boardChairmanImg;
+            $newboardChairmanImg     = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
+            $boardChairmanImg->move(public_path('upload/image/cultivation/webHomepage'),$newboardChairmanImg);
+            $institute->boardChairmanImg      = $newboardChairmanImg;
+        endif;
+        
+        if(!empty($requ->principalImg)):
+            $principalImg        = $requ->principalImg;
+            $newprincipalImg     = rand().date('Ymd').'.'.$principalImg->getClientOriginalExtension();
+            $principalImg->move(public_path('upload/image/cultivation/webHomepage'),$newprincipalImg);
+            $institute->principalImg      = $newprincipalImg;
+        endif;
+
+
 
         if($institute->save()):
             return back()->with('success','Congrats! Data saved successfully');
@@ -46,7 +100,99 @@ class InstituteController extends Controller
         endif;
     }
 
+    
 
+    public function delSlidImg1($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg1)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg1);
+            endif;
+            $item->slidImg1 = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delSlidImg2($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg2)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg2);
+            endif;
+            $item->slidImg2 = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delSlidImg3($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg3)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg3);
+            endif;
+            $item->slidImg3 = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delEduMinImg($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->eduMinImg)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->eduMinImg);
+            endif;
+            $item->eduMinImg = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delBoardChairmanImg($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->boardChairmanImg)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->boardChairmanImg);
+            endif;
+            $item->boardChairmanImg = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+    public function delPrincipalImg($id){
+        $item = HomeInfo::find($id);
+        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
+        if(!empty($item)):
+            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->principalImg)):
+                File::delete(public_path('upload/image/cultivation/webHomepage').$item->principalImg);
+            endif;
+            $item->principalImg = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        else:
+            return back()->with('success','Item failed to delete');
+        endif;
+    }
+
+// fdfdefsdfg
     public function insInfo(){
         return view('academic.instituteInfo');
     }

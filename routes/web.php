@@ -197,6 +197,43 @@ Route::middleware(['adminGuard'])->group (function(){
         'homeInfo'
     ])->name('homeInfo'); 
 
+    Route::post('/admin/home/details/',[
+        InstituteController::class ,
+        'homeDetails'
+    ])->name('homeDetails');
+
+    Route::get('/admin/home/info/slidImg1/del/{id}',[
+        InstituteController::class ,
+        'delSlidImg1'
+    ])->name('delSlidImg1');
+
+    Route::get('/admin/home/info/slidImg2/del/{id}',[
+        InstituteController::class ,
+        'delSlidImg2'
+    ])->name('delSlidImg2');
+
+
+    Route::get('/admin/home/info/slidImg3/del/{id}',[
+        InstituteController::class ,
+        'delSlidImg3'
+    ])->name('delSlidImg3');
+
+
+    Route::get('/admin/home/info/eduMinImg/del/{id}',[
+        InstituteController::class ,
+        'delEduMinImg'
+    ])->name('delEduMinImg');
+
+    Route::get('/admin/home/info/boardChairmanImg/del/{id}',[
+        InstituteController::class ,
+        'delBoardChairmanImg'
+    ])->name('delBoardChairmanImg');
+
+    Route::get('/admin/home/info/principalImg/del/{id}',[
+        InstituteController::class ,
+        'delPrincipalImg'
+    ])->name('delPrincipalImg');
+
 
     Route::get('/admin/institute/info/',[
         InstituteController::class,

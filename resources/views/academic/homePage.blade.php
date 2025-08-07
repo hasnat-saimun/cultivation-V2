@@ -86,7 +86,7 @@ Institute Dashboard
                 </div>
             </div>
             <div class="card-body cultivation">
-                <form action="{{ route('insDetails') }}" class="form" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('homeDetails') }}" class="form" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="pageId" value="{{ $pageId }}">
                     <div class="row">
@@ -97,8 +97,8 @@ Institute Dashboard
                             <input type="file" name="slidImg1" id="slidImg1"class="form-control-file">
                             @else
                             <div class="my-2">
-                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$slidImg1 }}" class="form-control">
-                                <div><a href="{{ route('delslidImg1',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$slidImg1 }}" class="form-control">
+                                <div><a href="{{ route('delSlidImg1',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                             </div>
                             @endif
                         </div>
@@ -111,91 +111,91 @@ Institute Dashboard
                              <textarea name="slideDescription1" class="form-control" placeholder="Enter description about institute">{{ $slideDescription1 }}</textarea>
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="heroImg">Slide Image 02 (150px X 150px)</label>
-                            @if(empty($heroImg))
-                            <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                            <label for="slidImg2">Slide Image 02 (150px X 150px)</label>
+                            @if(empty($slidImg2))
+                            <input type="file" name="slidImg2" id="slidImg2"class="form-control-file">
                             @else
                             <div class="my-2">
-                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                                <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$slidImg2 }}" class="form-control">
+                                <div><a href="{{ route('delSlidImg2',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                             </div>
                             @endif
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="insHeadline">Headline</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="slideHadeMessege2">Headline</label>
+                            <input type="text" name="slideHadeMessege2" class="form-control" placeholder="Enter the headline" value="{{ $slideHadeMessege2 }}">
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="insHeadline">Description</label>
-                             <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                            <label for="slideDescription2">Description</label>
+                             <textarea name="slideDescription2" class="form-control" placeholder="Enter description about institute">{{ $slideDescription2 }}</textarea>
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="heroImg">Slide Image 03 (150px X 150px)</label>
-                            @if(empty($heroImg))
-                            <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                            <label for="slidImg3">Slide Image 03 (150px X 150px)</label>
+                            @if(empty($slidImg3))
+                            <input type="file" name="slidImg3" id="slidImg3"class="form-control-file">
                             @else
                             <div class="my-2">
-                                <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                                <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$slidImg3 }}" class="form-control">
+                                <div><a href="{{ route('delSlidImg3',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                             </div>
                             @endif
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="insHeadline">Headline</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="slideHadeMessege3">Headline</label>
+                            <input type="text" name="slideHadeMessege3" class="form-control" placeholder="Enter the headline" value="{{ $slideHadeMessege3 }}">
                         </div>
                         <div class="col-4 mb-3">
-                            <label for="insHeadline">Description</label>
-                             <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                            <label for="slideDescription3">Description</label>
+                             <textarea name="slideDescription3" class="form-control" placeholder="Enter description about institute">{{ $slideDescription3 }}</textarea>
                         </div>
                     </div>
                     <div class="row mt-5">
                         <div class="col-12 mb-5 card-header">Other Info</div>
                         <div class="col-3 mb-3">
-                            <label for="insHeadline">Founded Year</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="founded">Founded Year</label>
+                            <input type="text" name="founded" class="form-control" placeholder="Enter the headline" value="{{ $founded }}">
                         </div>
                         <div class="col-3 mb-3">
-                            <label for="insHeadline">Campus Area</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="area">Campus Area</label>
+                            <input type="text" name="area" class="form-control" placeholder="Enter the headline" value="{{ $area }}">
                         </div>
                         <div class="col-3 mb-3">
-                            <label for="insHeadline">Teacher & Staff</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="insHeadlteacherTotaline">Teacher & Staff</label>
+                            <input type="text" name="teacherTotal" class="form-control" placeholder="Enter the headline" value="{{ $teacherTotal }}">
                         </div>
                         <div class="col-3 mb-3">
-                            <label for="insHeadline">Student</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="insHeadlistudentTotalne">Student</label>
+                            <input type="text" name="studentTotal" class="form-control" placeholder="Enter the headline" value="{{ $studentTotal }}">
                         </div>
                         <div class="col-12 mb-3">
-                            <label for="insHeadline">Important Notice</label>
-                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                            <label for="notice">Important Notice</label>
+                            <textarea name="notice" class="form-control" placeholder="Enter description about institute">{{ $notice }}</textarea>
                         </div>
                     </div>
                     <div class="row mt-5">
                         <div class="col-12 mb-5 card-header">Welcome Info</div>
                          <div class="col-12  mb-3">
-                            <label for="insHeadline">Headline</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="wcMsgHadeline">Headline</label>
+                            <input type="text" name="wcMsgHadeline" class="form-control" placeholder="Enter the headline" value="{{ $wcMsgHadeline }}">
                         </div>
                         <div class="col-12 mb-3">
-                            <label for="insHeadline">Description</label>
-                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                            <label for="wclMsgDescription">Description</label>
+                            <textarea name="wclMsgDescription" class="form-control" placeholder="Enter description about institute">{{ $wclMsgDescription }}</textarea>
                         </div>
                     </div>
                     <div class="row mt-5">
                         <div class="col-12 mb-5 card-header">Mission & Vission</div>
                          <div class="col-12  mb-3">
-                            <label for="insHeadline">Writer Name</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="writerName">Writer Name</label>
+                            <input type="text" name="writerName" class="form-control" placeholder="Enter the headline" value="{{ $writerName }}">
                         </div>
                         <div class="col-12 mb-3">
-                            <label for="insHeadline">Description</label>
-                            <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                            <label for="missionDescription">Description</label>
+                            <textarea name="missionDescription" class="form-control" placeholder="Enter description about institute">{{ $missionDescription }}</textarea>
                         </div>
                         <div class="col-12  mb-3">
-                            <label for="insHeadline">Mian Goal</label>
-                            <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                            <label for="mainGoal">Mian Goal</label>
+                            <input type="text" name="mainGoal" class="form-control" placeholder="Enter the headline" value="{{ $mainGoal }}">
                         </div>
                     </div>
                     <div class="row mt-5 ">
@@ -203,21 +203,21 @@ Institute Dashboard
                             <div class="row ">
                                 <div class=" mb-5 card-header "> Education Ministar Info</div>
                                 <div class="col-9 mb-3">
-                                    <label for="insHeadline">Name</label>
-                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                    <label for="eduMinName">Name</label>
+                                    <input type="text" name="eduMinName" class="form-control" placeholder="Enter the headline" value="{{ $eduMinName }}">
                                 </div>
                                 <div class="col-12 mb-3">
-                                    <label for="insHeadline">Details</label>
-                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                    <label for="eduMinDetail">Details</label>
+                                    <textarea name="eduMinDetail" class="form-control" placeholder="Enter description about institute">{{ $eduMinDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
-                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
-                                    @if(empty($heroImg))
-                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    <label for="eduMinImg"> Image (150px X 150px)</label>
+                                    @if(empty($eduMinImg))
+                                    <input type="file" name="eduMinImg" id="eduMinImg"class="form-control-file">
                                     @else
                                     <div class="my-2">
-                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$eduMinImg }}" class="form-control">
+                                        <div><a href="{{ route('delEduMinImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                                     </div>
                                     @endif
                                 </div>
@@ -227,21 +227,21 @@ Institute Dashboard
                             <div class="row">
                                 <div class="mb-5 card-header">Board Chairman</div>
                                 <div class="col-12 mb-3">
-                                    <label for="insHeadline">Name</label>
-                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                    <label for="boardChairmanName">Name</label>
+                                    <input type="text" name="boardChairmanName" class="form-control" placeholder="Enter the headline" value="{{ $boardChairmanName }}">
                                 </div>
                                 <div class="col-12 mb-3">
-                                    <label for="insHeadline">Details</label>
-                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                    <label for="boardChairmanDetail">Details</label>
+                                    <textarea name="boardChairmanDetail" class="form-control" placeholder="Enter description about institute">{{ $boardChairmanDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
-                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
-                                    @if(empty($heroImg))
-                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    <label for="boardChairmanImg"> Image  (150px X 150px)</label>
+                                    @if(empty($boardChairmanImg))
+                                    <input type="file" name="boardChairmanImg" id="boardChairmanImg"class="form-control-file">
                                     @else
                                     <div class="my-2">
-                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$boardChairmanImg }}" class="form-control">
+                                        <div><a href="{{ route('delBoardChairmanImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                                     </div>
                                     @endif
                                 </div>
@@ -251,21 +251,21 @@ Institute Dashboard
                             <div class="row ">
                                 <div class=" mb-4 card-header "> Principal</div>
                                 <div class="col-12 mb-3">
-                                    <label for="insHeadline">Name</label>
-                                    <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
+                                    <label for="principalName">Name</label>
+                                    <input type="text" name="principalName" class="form-control" placeholder="Enter the headline" value="{{ $principalName }}">
                                 </div>
                                 <div class="col-12 mb-3">
-                                    <label for="insHeadline">Details</label>
-                                    <textarea name="insDetails" class="form-control" placeholder="Enter description about institute">{{ $details }}</textarea>
+                                    <label for="principalDetail">Details</label>
+                                    <textarea name="principalDetail" class="form-control" placeholder="Enter description about institute">{{ $principalDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
-                                    <label for="heroImg">Slide Image 01 (150px X 150px)</label>
-                                    @if(empty($heroImg))
-                                    <input type="file" name="heroImg" id="heroImg"class="form-control-file">
+                                    <label for="principalImg"> Image  (150px X 150px)</label>
+                                    @if(empty($principalImg))
+                                    <input type="file" name="principalImg" id="principalImg"class="form-control-file">
                                     @else
                                     <div class="my-2">
-                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                                        <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'.$principalImg }}" class="form-control">
+                                        <div><a href="{{ route('delPrincipalImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
                                     </div>
                                     @endif
                                 </div>
@@ -274,7 +274,7 @@ Institute Dashboard
                     </div>
                     
                     <div class="mt-3 ">
-                        <button class="btn btn-success btn-lg" type="submit">Save</button>
+                        <button class="btn btn-success btn-lg w-100" type="submit">Save</button>
                     </div>
                 </form>
             </div>
