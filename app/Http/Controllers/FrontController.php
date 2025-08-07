@@ -67,8 +67,8 @@ class FrontController extends Controller
 
 
     public function homePage(){
-         $home  =   HomeInfo::all();
-        return view('frontend.index',['Datakey'=>$home]);
+         $home  =   HomeInfo::first();
+        return view('frontend.index',['data'=>$home]);
     }
     
 }

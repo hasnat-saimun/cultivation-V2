@@ -3,8 +3,7 @@
 Enter to learn & Leave to serve
 @endsection
 
-@if(!empty($Datakey))
-@foreach($Datakey as $data)
+@if(!empty($data))
 
 @section('sliderninfo')
     @include('frontend.sliderinfo')
@@ -205,6 +204,5 @@ Enter to learn & Leave to serve
         </div>
     </div>
 </div>
-        @endforeach
-        @endif
 @endsection
+@endif

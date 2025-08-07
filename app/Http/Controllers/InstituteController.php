@@ -52,42 +52,42 @@ class InstituteController extends Controller
         if(!empty($requ->slidImg1)):
             $slidImg1        = $requ->slidImg1;
             $newslidImg1     = rand().date('Ymd').'.'.$slidImg1->getClientOriginalExtension();
-            $slidImg1->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg1);
+            $slidImg1->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg1);
             $institute->slidImg1      = $newslidImg1;
         endif;
         
         if(!empty($requ->slidImg2)):
             $slidImg2        = $requ->slidImg2;
             $newslidImg2     = rand().date('Ymd').'.'.$slidImg2->getClientOriginalExtension();
-            $slidImg2->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg2);
+            $slidImg2->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg2);
             $institute->slidImg2      = $newslidImg2;
         endif;
         
         if(!empty($requ->slidImg3)):
             $slidImg3        = $requ->slidImg3;
             $newslidImg3     = rand().date('Ymd').'.'.$slidImg3->getClientOriginalExtension();
-            $slidImg3->move(public_path('upload/image/cultivation/webHomepage'),$newslidImg3);
+            $slidImg3->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg3);
             $institute->slidImg3      = $newslidImg3;
         endif;
         
         if(!empty($requ->eduMinImg)):
             $eduMinImg        = $requ->eduMinImg;
             $neweduMinImg     = rand().date('Ymd').'.'.$eduMinImg->getClientOriginalExtension();
-            $eduMinImg->move(public_path('upload/image/cultivation/webHomepage'),$neweduMinImg);
+            $eduMinImg->move(public_path('public/upload/image/cultivation/webHomepage'),$neweduMinImg);
             $institute->eduMinImg      = $neweduMinImg;
         endif;
         
         if(!empty($requ->boardChairmanImg)):
             $boardChairmanImg        = $requ->boardChairmanImg;
             $newboardChairmanImg     = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
-            $boardChairmanImg->move(public_path('upload/image/cultivation/webHomepage'),$newboardChairmanImg);
+            $boardChairmanImg->move(public_path('public/upload/image/cultivation/webHomepage'),$newboardChairmanImg);
             $institute->boardChairmanImg      = $newboardChairmanImg;
         endif;
         
         if(!empty($requ->principalImg)):
             $principalImg        = $requ->principalImg;
             $newprincipalImg     = rand().date('Ymd').'.'.$principalImg->getClientOriginalExtension();
-            $principalImg->move(public_path('upload/image/cultivation/webHomepage'),$newprincipalImg);
+            $principalImg->move(public_path('public/upload/image/cultivation/webHomepage'),$newprincipalImg);
             $institute->principalImg      = $newprincipalImg;
         endif;
 
@@ -106,8 +106,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg1)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg1);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg1)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg1);
             endif;
             $item->slidImg1 = NULL;
             $item->save();
@@ -121,8 +121,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg2)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg2);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg2)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg2);
             endif;
             $item->slidImg2 = NULL;
             $item->save();
@@ -136,8 +136,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->slidImg3)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->slidImg3);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg3)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg3);
             endif;
             $item->slidImg3 = NULL;
             $item->save();
@@ -151,8 +151,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->eduMinImg)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->eduMinImg);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->eduMinImg)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->eduMinImg);
             endif;
             $item->eduMinImg = NULL;
             $item->save();
@@ -166,8 +166,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->boardChairmanImg)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->boardChairmanImg);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->boardChairmanImg)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->boardChairmanImg);
             endif;
             $item->boardChairmanImg = NULL;
             $item->save();
@@ -181,8 +181,8 @@ class InstituteController extends Controller
         $item = HomeInfo::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/webHomepage').$item->principalImg)):
-                File::delete(public_path('upload/image/cultivation/webHomepage').$item->principalImg);
+            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->principalImg)):
+                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->principalImg);
             endif;
             $item->principalImg = NULL;
             $item->save();
@@ -214,7 +214,7 @@ class InstituteController extends Controller
         if(!empty($requ->heroImg)):
             $heroImg        = $requ->heroImg;
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
-            $heroImg->move(public_path('upload/image/cultivation'),$newheroImg);
+            $heroImg->move(public_path('public/upload/image/cultivation'),$newheroImg);
             $institute->heroImg      = $newheroImg;
         endif;
 
@@ -229,8 +229,8 @@ class InstituteController extends Controller
         $item = InstituteDetails::find($id);
         // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/').$item->heroImg)):
-                File::delete(public_path('upload/image/cultivation/').$item->heroImg);
+            if(File::exists(public_path('public/upload/image/cultivation/').$item->heroImg)):
+                File::delete(public_path('public/upload/image/cultivation/').$item->heroImg);
             endif;
             $item->heroImg = NULL;
             $item->save();
@@ -288,7 +288,7 @@ class InstituteController extends Controller
         if(!empty($requ->avatar)):
             $stdAvatar = $requ->file('avatar');
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
-            $stdAvatar->move(public_path('upload/image/exPrincipal/'),$newAvatar);
+            $stdAvatar->move(public_path('public/upload/image/exPrincipal/'),$newAvatar);
 
             $exPrincipal->avatar = $newAvatar;
         endif;
@@ -308,8 +308,8 @@ class InstituteController extends Controller
     public function delexPlcCon($id){
         $item = ExPrincipal::find($id);
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/exPrincipal/').$item->avatar)):
-                File::delete(public_path('upload/image/exPrincipal/').$item->avatar);
+            if(File::exists(public_path('public/upload/image/exPrincipal/').$item->avatar)):
+                File::delete(public_path('public/upload/image/exPrincipal/').$item->avatar);
             endif;
             $item->avatar = NULL;
             $item->save();
@@ -321,8 +321,8 @@ class InstituteController extends Controller
     public function delExPrincipal($id){
         $item = ExPrincipal::find($id);
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/exPrincipal/').$item->avatar)):
-                File::delete(public_path('upload/image/exPrincipal/').$item->avatar);
+            if(File::exists(public_path('public/upload/image/exPrincipal/').$item->avatar)):
+                File::delete(public_path('public/upload/image/exPrincipal/').$item->avatar);
             endif;
             $item->delete();
             return back()->with('success','Item deleted successfully');
@@ -365,7 +365,7 @@ class InstituteController extends Controller
         if(!empty($requ->avatar)):
             $avatar        = $requ->avatar;
             $newAvatar     = rand().date('Ymd').'.'.$avatar->getClientOriginalExtension();
-            $avatar->move(public_path('upload/image/cultivation'),$newAvatar);
+            $avatar->move(public_path('public/upload/image/cultivation'),$newAvatar);
             $committee->avatar      = $newAvatar;
         endif;
 
@@ -381,8 +381,8 @@ class InstituteController extends Controller
     public function delImgContent($id){
         $item = ManagingComittee::find($id);
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/').$item->avatar)):
-                File::delete(public_path('upload/image/cultivation/').$item->avatar);
+            if(File::exists(public_path('public/upload/image/cultivation/').$item->avatar)):
+                File::delete(public_path('public/upload/image/cultivation/').$item->avatar);
             endif;
             $item->avatar = NULL;
             $item->save();
@@ -394,8 +394,8 @@ class InstituteController extends Controller
     public function delManagingCommittee($id){
         $item = ManagingComittee::find($id);
         if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/').$item->avatar)):
-                File::delete(public_path('upload/image/cultivation/').$item->avatar);
+            if(File::exists(public_path('public/upload/image/cultivation/').$item->avatar)):
+                File::delete(public_path('public/upload/image/cultivation/').$item->avatar);
             endif;
             $item->delete();
             return back()->with('success','Item deleted successfully');
