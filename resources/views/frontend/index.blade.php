@@ -2,6 +2,10 @@
 @section('fronttitle')
 Enter to learn & Leave to serve
 @endsection
+
+@if(!empty($Datakey))
+@foreach($Datakey as $data)
+
 @section('sliderninfo')
     @include('frontend.sliderinfo')
 @endsection
@@ -22,10 +26,7 @@ Enter to learn & Leave to serve
                 <marquee>
                     <ul>
                         <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
-                        </li>
-                        <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
+                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> {{$data->notice}}</a>
                         </li>
                     </ul>
                 </marquee>
@@ -204,4 +205,6 @@ Enter to learn & Leave to serve
         </div>
     </div>
 </div>
+        @endforeach
+        @endif
 @endsection

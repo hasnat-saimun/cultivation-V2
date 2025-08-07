@@ -7,6 +7,7 @@ use App\Models\StudentManagement;
 use App\Models\StaffManagement;
 use App\Models\TeacherManagement;
 use App\Models\CultivationAdmin;
+use App\Models\HomeInfo;
 use Hash;
 use sessionData;
 use Session;
@@ -66,7 +67,8 @@ class FrontController extends Controller
 
 
     public function homePage(){
-        return view('frontend.index');
+         $home  =   HomeInfo::all();
+        return view('frontend.index',['Datakey'=>$home]);
     }
     
 }
