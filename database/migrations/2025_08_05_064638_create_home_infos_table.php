@@ -13,15 +13,6 @@ return new class extends Migration
     {
         Schema::create('home_infos', function (Blueprint $table) {
             $table->id();
-            $table->string('slidImg1')->nullable();
-            $table->string('slideHadeMessege1')->nullable();
-            $table->longText('slideDescription1')->nullable();
-            $table->string('slidImg2')->nullable();
-            $table->string('slideHadeMessege2')->nullable();
-            $table->longText('slideDescription2')->nullable();
-            $table->string('slidImg3')->nullable();
-            $table->string('slideHadeMessege3')->nullable();
-            $table->longText('slideDescription3')->nullable();
             $table->string('eduMinName')->nullable();
             $table->string('eduMinImg')->nullable();
             $table->string('eduMinDetail')->nullable();

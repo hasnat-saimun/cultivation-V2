@@ -192,6 +192,17 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('delVideo');
 
     //video end
+
+     Route::get('/admin/home/slider/',[
+        InstituteController::class,
+        'sliderInfo'
+    ])->name('sliderInfo'); 
+
+     Route::post('/admin/home/slider/details',[
+        InstituteController::class,
+        'sliderDetail'
+    ])->name('sliderDetail'); 
+
     Route::get('/admin/home/info/',[
         InstituteController::class,
         'homeInfo'
@@ -202,21 +213,6 @@ Route::middleware(['adminGuard'])->group (function(){
         'homeDetails'
     ])->name('homeDetails');
 
-    Route::get('/admin/home/info/slidImg1/del/{id}',[
-        InstituteController::class ,
-        'delSlidImg1'
-    ])->name('delSlidImg1');
-
-    Route::get('/admin/home/info/slidImg2/del/{id}',[
-        InstituteController::class ,
-        'delSlidImg2'
-    ])->name('delSlidImg2');
-
-
-    Route::get('/admin/home/info/slidImg3/del/{id}',[
-        InstituteController::class ,
-        'delSlidImg3'
-    ])->name('delSlidImg3');
 
 
     Route::get('/admin/home/info/eduMinImg/del/{id}',[

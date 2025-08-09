@@ -11,10 +11,40 @@ use App\Models\TeacherManagement;
 use App\Models\StaffManagement;
 use App\Models\ServerConfig;
 use App\Models\HomeInfo;
+use App\Models\HomeSlider;
 use File;
 
 class InstituteController extends Controller
-{
+
+{   
+     public function sliderInfo(){
+        $sliderData = HomeSlider::all();
+        return view('academic.homeSlider',['data'=>$sliderData]);
+    }
+
+     public function sliderDetail(Request $requ){
+        if(!empty($requ->pageId)):
+            $institute = HomeSlider::find($requ->pageId);
+        else:
+            $institute = new HomeSlider();
+        endif;
+
+        $institute->headLine     = $requ->headLine;
+        $institute->detail      = $requ->detail;
+        
+        if(!empty($requ->avatar)):
+            $heroImg        = $requ->avatar;
+            $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
+            $heroImg->move(public_path('public/upload/image/cultivation/webHomepage'),$newheroImg);
+            $institute->avatar      = $newheroImg;
+        endif;
+
+        if($institute->save()):
+            return back()->with('success','Congrats! Data saved successfully');
+        else:
+            return back()->with('error','Sorry! Data failed to save. Please try later');
+        endif;
+    }
      public function homeInfo(){
         return view('academic.homePage');
     }
@@ -25,13 +55,6 @@ class InstituteController extends Controller
         else:
             $institute = new HomeInfo();
         endif;
-
-        $institute->slideHadeMessege1       = $requ->slideHadeMessege1;
-        $institute->slideDescription1       = $requ->slideDescription1;
-        $institute->slideHadeMessege2       = $requ->slideHadeMessege2;
-        $institute->slideDescription2       = $requ->slideDescription2;
-        $institute->slideHadeMessege3       = $requ->slideHadeMessege3;
-        $institute->slideDescription3       = $requ->slideDescription3;
         $institute->eduMinName              = $requ->eduMinName;
         $institute->eduMinDetail            = $requ->eduMinDetail;
         $institute->boardChairmanName       = $requ->boardChairmanName;
@@ -49,26 +72,6 @@ class InstituteController extends Controller
         $institute->writerName              = $requ->writerName;
         $institute->mainGoal                = $requ->mainGoal;
         
-        if(!empty($requ->slidImg1)):
-            $slidImg1        = $requ->slidImg1;
-            $newslidImg1     = rand().date('Ymd').'.'.$slidImg1->getClientOriginalExtension();
-            $slidImg1->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg1);
-            $institute->slidImg1      = $newslidImg1;
-        endif;
-        
-        if(!empty($requ->slidImg2)):
-            $slidImg2        = $requ->slidImg2;
-            $newslidImg2     = rand().date('Ymd').'.'.$slidImg2->getClientOriginalExtension();
-            $slidImg2->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg2);
-            $institute->slidImg2      = $newslidImg2;
-        endif;
-        
-        if(!empty($requ->slidImg3)):
-            $slidImg3        = $requ->slidImg3;
-            $newslidImg3     = rand().date('Ymd').'.'.$slidImg3->getClientOriginalExtension();
-            $slidImg3->move(public_path('public/upload/image/cultivation/webHomepage'),$newslidImg3);
-            $institute->slidImg3      = $newslidImg3;
-        endif;
         
         if(!empty($requ->eduMinImg)):
             $eduMinImg        = $requ->eduMinImg;
@@ -100,52 +103,6 @@ class InstituteController extends Controller
         endif;
     }
 
-    
-
-    public function delSlidImg1($id){
-        $item = HomeInfo::find($id);
-        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
-        if(!empty($item)):
-            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg1)):
-                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg1);
-            endif;
-            $item->slidImg1 = NULL;
-            $item->save();
-            return back()->with('success','Item deleted successfully');
-        else:
-            return back()->with('success','Item failed to delete');
-        endif;
-    }
-
-    public function delSlidImg2($id){
-        $item = HomeInfo::find($id);
-        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
-        if(!empty($item)):
-            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg2)):
-                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg2);
-            endif;
-            $item->slidImg2 = NULL;
-            $item->save();
-            return back()->with('success','Item deleted successfully');
-        else:
-            return back()->with('success','Item failed to delete');
-        endif;
-    }
-
-    public function delSlidImg3($id){
-        $item = HomeInfo::find($id);
-        // return public_path('upload/image/cultivation/syllabus/').$item->attachment;
-        if(!empty($item)):
-            if(File::exists(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg3)):
-                File::delete(public_path('public/upload/image/cultivation/webHomepage').$item->slidImg3);
-            endif;
-            $item->slidImg3 = NULL;
-            $item->save();
-            return back()->with('success','Item deleted successfully');
-        else:
-            return back()->with('success','Item failed to delete');
-        endif;
-    }
 
     public function delEduMinImg($id){
         $item = HomeInfo::find($id);
