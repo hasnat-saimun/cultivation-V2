@@ -161,7 +161,7 @@
                         <p><span class="fw-bold">Powered By:</span> VITP IMS(Version 2.0.1) by Virtual IT Professional</p>
                     </div>
                     <div class="col-12">
-                        <p class="fw-bold">Copyright &copy; 2000-2023 | All Rights Reserved SBC Cumilla</p>
+                        <p class="fw-bold">Copyright &copy; 2000-{{ date('Y') }} | All Rights Reserved SBC Cumilla</p>
                     </div>
                 </div>
             </div>

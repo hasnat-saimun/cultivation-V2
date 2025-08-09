@@ -2,6 +2,9 @@
 @section('fronttitle')
 Enter to learn & Leave to serve
 @endsection
+
+@if(!empty($data))
+
 @section('sliderninfo')
     @include('frontend.sliderinfo')
 @endsection
@@ -10,6 +13,7 @@ Enter to learn & Leave to serve
 @endsection
 
 @section('frontcontent')
+
 <div class="col-3 mx-auto">
     @yield('sideinfo')
 </div>
@@ -21,10 +25,7 @@ Enter to learn & Leave to serve
                 <marquee>
                     <ul>
                         <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
-                        </li>
-                        <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
+                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> {{$data->notice}}</a>
                         </li>
                     </ul>
                 </marquee>
@@ -61,35 +62,35 @@ Enter to learn & Leave to serve
             <div class="bg-success p-2 notice-box my-2">
                 <div class="row align-items-center">
                     <div class="col-2 mx-auto date-box"><span><i class="fa-thin fa-calendar"></i></span> 20th September</div>
-                    <div class="col-8 mx-auto">Loremp ipsom doller site is a common text for web development industry. Use it free for demo content</div>
+                    <div class="col-8 mx-auto">বঙ্গবন্ধু শেখ মুজিব স্কলার” নির্বাচন ও অ্যাওয়ার্ড প্রদান-২০২৩ এর জন্য আবেদন করার বিজ্ঞপ্তি</div>
                     <div class="col-1 mx-auto download"><i class="fa-light fa-down-to-bracket"></i></div>
                 </div>
             </div>
             <div class="bg-success p-2 notice-box my-2">
                 <div class="row align-items-center">
                     <div class="col-2 mx-auto date-box"><span><i class="fa-thin fa-calendar"></i></span> 20th September</div>
-                    <div class="col-8 mx-auto">Loremp ipsom doller site is a common text for web development industry. Use it free for demo content</div>
+                    <div class="col-8 mx-auto">বঙ্গবন্ধু শেখ মুজিব স্কলার” নির্বাচন ও অ্যাওয়ার্ড প্রদান-২০২৩ এর জন্য আবেদন করার বিজ্ঞপ্তি</div>
                     <div class="col-1 mx-auto download"><i class="fa-light fa-down-to-bracket"></i></div>
                 </div>
             </div>
             <div class="bg-success p-2 notice-box my-2">
                 <div class="row align-items-center">
                     <div class="col-2 mx-auto date-box"><span><i class="fa-thin fa-calendar"></i></span> 20th September</div>
-                    <div class="col-8 mx-auto">Loremp ipsom doller site is a common text for web development industry. Use it free for demo content</div>
+                    <div class="col-8 mx-auto">বঙ্গবন্ধু শেখ মুজিব স্কলার” নির্বাচন ও অ্যাওয়ার্ড প্রদান-২০২৩ এর জন্য আবেদন করার বিজ্ঞপ্তি</div>
                     <div class="col-1 mx-auto download"><i class="fa-light fa-down-to-bracket"></i></div>
                 </div>
             </div>
             <div class="bg-success p-2 notice-box my-2">
                 <div class="row align-items-center">
                     <div class="col-2 mx-auto date-box"><span><i class="fa-thin fa-calendar"></i></span> 20th September</div>
-                    <div class="col-8 mx-auto">Loremp ipsom doller site is a common text for web development industry. Use it free for demo content</div>
+                    <div class="col-8 mx-auto">বঙ্গবন্ধু শেখ মুজিব স্কলার” নির্বাচন ও অ্যাওয়ার্ড প্রদান-২০২৩ এর জন্য আবেদন করার বিজ্ঞপ্তি</div>
                     <div class="col-1 mx-auto download"><i class="fa-light fa-down-to-bracket"></i></div>
                 </div>
             </div>
             <div class="bg-success p-2 notice-box my-2">
                 <div class="row align-items-center">
                     <div class="col-2 mx-auto date-box"><span><i class="fa-thin fa-calendar"></i></span> 20th September</div>
-                    <div class="col-8 mx-auto">Loremp ipsom doller site is a common text for web development industry. Use it free for demo content</div>
+                    <div class="col-8 mx-auto">বঙ্গবন্ধু শেখ মুজিব স্কলার” নির্বাচন ও অ্যাওয়ার্ড প্রদান-২০২৩ এর জন্য আবেদন করার বিজ্ঞপ্তি</div>
                     <div class="col-1 mx-auto download"><i class="fa-light fa-down-to-bracket"></i></div>
                 </div>
             </div>
@@ -204,3 +205,4 @@ Enter to learn & Leave to serve
     </div>
 </div>
 @endsection
+@endif
