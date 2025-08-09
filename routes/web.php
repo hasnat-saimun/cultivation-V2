@@ -1126,6 +1126,8 @@ Route::middleware(['adminGuard'])->group (function(){
         'registerDel'
     ])->name('registerDel');
     //admin school Requst end
+});
+
 
     // web font str 
 
@@ -1227,8 +1229,6 @@ Route::middleware(['adminGuard'])->group (function(){
     //InstituteController str
 
     //web font end
-
-});
 
 
 
