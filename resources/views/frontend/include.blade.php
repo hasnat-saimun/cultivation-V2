@@ -158,7 +158,7 @@
                         <p><span class="fw-bold">Planning and Implementation:</span> Principal(SBC)</p>
                     </div>
                     <div class="col-md-6 col-12">
-                        <p><span class="fw-bold">Powered By:</span> VITP IMS(Version 2.0.1) by Virtual IT Professional</p>
+                        <p><span class="fw-bold">Powered By:</span> Cultivation(Version 1.0.1) by Virtual IT Professional</p>
                     </div>
                     <div class="col-12">
                         <p class="fw-bold">Copyright &copy; 2000-{{ date('Y') }} | All Rights Reserved SBC Cumilla</p>
