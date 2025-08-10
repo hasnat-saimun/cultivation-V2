@@ -3,20 +3,6 @@
 Institute Info
 @endsection
 @section('backIndex')
-@php 
-    $homeSlider = \App\Models\homeSlider::orderBy('id','DESC')->first();
-    if(!empty($homePage)):
-        $pageId                 = $homeSlider->id;
-        $headLine               = $homeSlider->headLine;
-        $detail                 = $homeSlider->detail;
-        $avatar                 = $homeSlider->avatar;
-    else:
-        $pageId                 = null;
-        $headLine               = "";
-        $detail                 = "";
-        $avatar                 = "";
-    endif;
-@endphp
 <!-- Dashboard summery Start Here -->
 <div class="row gutters-20 mb-4">
     <div class="col-10 mx-auto">
