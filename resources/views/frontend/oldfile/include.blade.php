@@ -157,11 +157,11 @@
                     <div class="col-md-6 col-12">
                         <p><span class="fw-bold">Planning and Implementation:</span> Principal(SBC)</p>
                     </div>
-                    <div class="col-md-6 col-12 text-end">
-                        <p><span class="fw-bold">Powered By:</span> Cultivation(Version 0.0.5) by Virtual IT Professional</p>
+                    <div class="col-md-6 col-12">
+                        <p><span class="fw-bold">Powered By:</span> Cultivation(Version 1.0.1) by Virtual IT Professional</p>
                     </div>
-                    <div class="col-12 text-center">
-                        <p class="fw-bold">Copyright &copy; 2000-@php echo date('Y'); @endphp | All Rights Reserved SBC Cumilla</p>
+                    <div class="col-12">
+                        <p class="fw-bold">Copyright &copy; 2000-{{ date('Y') }} | All Rights Reserved SBC Cumilla</p>
                     </div>
                 </div>
             </div>
