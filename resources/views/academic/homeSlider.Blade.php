@@ -72,7 +72,7 @@ Institute Info
                 <tbody>
                     @if(!empty($data)) @foreach($data as $item)
                     <tr>
-                        <td><img class="w-25" src="{{ asset('public/upload/image/cultivation/webHomepage').'/'. $avatar  }}" class="form-control"></td>
+                        <td style="width:10%"><img class="w-100" src="{{ asset('/public/upload/cultivation/webHomepage/').'/'.$item->avatar}}" alt="{!! $item->headLine !!}" style="max-height: 120px !important;" /></td>
                         <td>{{ $item->headLine }}</td>
                         <td>{{ $item->detail }}</td>
                         <td>
