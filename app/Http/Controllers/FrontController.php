@@ -8,6 +8,7 @@ use App\Models\StaffManagement;
 use App\Models\TeacherManagement;
 use App\Models\CultivationAdmin;
 use App\Models\HomeInfo;
+use App\Models\HomeSlider;
 use Hash;
 use sessionData;
 use Session;
@@ -68,7 +69,8 @@ class FrontController extends Controller
 
     public function homePage(){
          $home  =   HomeInfo::first();
-        return view('frontend.index',['Datakey'=>$home]);
+         $slider = HomeSlider::orderBy('ID','DESC')->limit(5)->get();
+        return view('frontend.index',['Datakey'=>$home,'sliderData'=>$slider]);
     }
     
 }
