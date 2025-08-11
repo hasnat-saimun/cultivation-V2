@@ -7,7 +7,7 @@
                 <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="2" aria-label="Slide 3"></button>
             </div>
             <div class="carousel-inner">
-                @if($sliderData)
+                @if($sliderData->count()>0)
                 @php
                     $sl = 1;
                 @endphp
