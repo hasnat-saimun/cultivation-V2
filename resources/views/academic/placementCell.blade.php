@@ -1,7 +1,33 @@
-@extends('academic.include') @section('backTitle') Placement Cell @endsection @section('backIndex') @php if(!empty($itemId)): $plcList = \App\Models\PlacementCell::find($itemId); if(!empty($plcList)): $fullName = $plcList->fullName;
-$mobileNumber = $plcList->mobile; $emailAddress = $plcList->email; $joinDate = $plcList->joinDate; $sessionYear = $plcList->sessionYear; $rollNumber = $plcList->rollNumber; $designation = $plcList->designation; $companyName =
-$plcList->companyName; $jobDetails = $plcList->jobDetails; $avatar = $plcList->avatar; endif; else: $itemId = null; $fullName = ""; $mobileNumber = ""; $emailAddress = ""; $joinDate = ""; $sessionYear = ""; $rollNumber = ""; $designation =
-""; $companyName = ""; $jobDetails = ""; $avatar = ""; endif; @endphp
+@extends('academic.include') @section('backTitle') Placement Cell @endsection @section('backIndex')
+ @php 
+ if(!empty($itemId)): 
+    $plcList = \App\Models\PlacementCell::find($itemId); 
+    if(!empty($plcList)): 
+        $fullName = $plcList->fullName;
+        $mobileNumber = $plcList->mobile; 
+        $emailAddress = $plcList->email; 
+        $joinDate = $plcList->joinDate; 
+        $sessionYear = $plcList->sessionYear;
+         $rollNumber = $plcList->rollNumber; 
+        $designation = $plcList->designation; 
+        $companyName =$plcList->companyName; 
+        $jobDetails = $plcList->jobDetails;
+        $avatar = $plcList->avatar; 
+    endif; 
+else:
+    $itemId = null;
+    $fullName = ""; 
+    $mobileNumber = "";
+    $emailAddress = "";
+    $joinDate = "";
+    $sessionYear = "";
+    $rollNumber = "";
+    $designation ="";
+    $companyName = ""; 
+    $jobDetails = ""; 
+    $avatar = "";
+ endif;
+ @endphp
 <!-- Dashboard summery Start Here -->
 <div class="row gutters-20 mb-4">
     <div class="col-10 mx-auto">

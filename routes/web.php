@@ -203,6 +203,22 @@ Route::middleware(['adminGuard'])->group (function(){
         'sliderDetail'
     ])->name('sliderDetail'); 
 
+     Route::get('/admin/home/slider/edit/{id}',[
+        InstituteController::class ,
+        'editSlider'
+    ])->name('editSlider');
+
+
+    Route::get('/admin/home/slider/image/delete/{id}',[
+        InstituteController::class ,
+        'delSliderImg'
+    ])->name('delSliderImg');
+
+    Route::get('/admin/home/slider/delete/{id}',[
+        InstituteController::class ,
+        'delSlider'
+    ])->name('delSlider');
+
     Route::get('/admin/home/info/',[
         InstituteController::class,
         'homeInfo'

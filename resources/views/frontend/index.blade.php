@@ -2,9 +2,13 @@
 @section('fronttitle')
 Enter to learn & Leave to serve
 @endsection
+
+@if(!empty($Datakey)) 
+
 @section('sliderninfo')
     @include('frontend.sliderinfo')
 @endsection
+
 @section('sideinfo')
     @include('frontend.sideInfo')
 @endsection
@@ -13,6 +17,7 @@ Enter to learn & Leave to serve
 <div class="col-3 mx-auto">
     @yield('sideinfo')
 </div>
+
 <div class="col-8 mx-auto">
     <div class="rowalign-items-center">
         <div class="col-12 mx-auto row">
@@ -21,10 +26,7 @@ Enter to learn & Leave to serve
                 <marquee>
                     <ul>
                         <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
-                        </li>
-                        <li>
-                            <a href="#"><i class="fa-thin fa-hand-point-right"></i> Lorem ipsom dollar site is a common text in web design and development industry.</a>
+                            <a href="#"><i class="fa-thin fa-hand-point-right"></i>{{$Datakey->notice}} </a>
                         </li>
                     </ul>
                 </marquee>
@@ -32,8 +34,8 @@ Enter to learn & Leave to serve
         </div>
 
         <div class="col-12 mx-auto my-2">
-            <h2>Welcome to SBC Cumilla</h2>
-            <p class="text-justify">On the first day of July 2000 the Sonar Bangla College opened its doors to students with Sir P.J. Hartog as the first Vice-Chancellor of the University. The University was set up in a picturesque part of the city known as Ramna on 600 acres of land.The University started its activities with 3 Faculties,12 Departments, 60 teachers, 877 students and 3 dormitories (Halls of Residence) for the students. At present the University consists of 13 Faculties, 83 Departments, 12 Institutes, 20 residential halls, 3 hostels and more than 56 Research Centres. The number of students and teachers has risen to about 37018 and 1992 respectively.The main purpose of the University was to create new areas of knowledge and disseminate this knowledge to the society through its students. Since its inception the University has a distinct character of having distinguished scholars as faculties who have enriched the global pool of knowledge by making notable contributions in the fields of teaching and <a href="#">Readmore</a></p>
+            <h2>Welcome to {{$Datakey->wcMsgHadeline}}</h2>
+            <p class="text-justify">{{$Datakey->wclMsgDescription}} <a href="#">Readmore</a></p>
         </div>
         <!-- mission & vission -->
         <div class="col-12 mx-auto my-4">
@@ -44,13 +46,12 @@ Enter to learn & Leave to serve
                 <div class="card-body">
                     <figure class="text-center">
                         <blockquote class="blockquote">
-                            <p class="h4">The number of students and teachers has risen to about 37018 and 1992 respectively.The main purpose of the University was to create new areas of knowledge and disseminate this knowledge to the society through its students.</p>
+                            <p class="h4">{{$Datakey->missionDescription}}</p>
                         </blockquote>
-                        <figcaption class="blockquote-footer">
-                            Abu Saleque Md. Selim Reza Shourav <cite title="Source Title">, Principal</cite>
+                        <figcaption class="blockquote-footer">{{$Datakey->writerName}}
                         </figcaption>
                     </figure>
-                    <div class="alert alert-success">Since its inception the University has a distinct character of having distinguished scholars as faculties</div>
+                    <div class="alert alert-success">{{$Datakey->mainGoal}}</div>
                 </div>
             </div>
         </div>
@@ -204,3 +205,5 @@ Enter to learn & Leave to serve
     </div>
 </div>
 @endsection
+
+                @endif

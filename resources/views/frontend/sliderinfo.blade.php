@@ -51,7 +51,7 @@
                             </div>
                             <div class="details-box-content">
                                 <h3>Founded</h3>
-                                <p>6 July, 2000</p>
+                                <p>{{$Datakey->founded}}</p>
                             </div>
                         </div>
                     </div>
@@ -62,7 +62,7 @@
                             </div>
                             <div class="details-box-content">
                                 <h3>Green Campus</h3>
-                                <p>26 Acres</p>
+                                <p>{{$Datakey->area}}</p>
                             </div>
                         </div>
                     </div>
@@ -73,7 +73,7 @@
                             </div>
                             <div class="details-box-content">
                                 <h3>Teacher & Staff</h3>
-                                <p>30+</p>
+                                <p>{{$Datakey->teacherTotal}}</p>
                             </div>
                         </div>
                     </div>
@@ -84,7 +84,7 @@
                             </div>
                             <div class="details-box-content">
                                 <h3>Students</h3>
-                                <p>1500+</p>
+                                <p>{{$Datakey->studentTotal}}</p>
                             </div>
                         </div>
                     </div>

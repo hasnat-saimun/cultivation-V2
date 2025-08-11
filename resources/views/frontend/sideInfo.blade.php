@@ -1,26 +1,43 @@
+
     <div class="list-group rounded-0 mb-4 border border-success">
         <div class="p-2 bg-success h5"><i class="fa-duotone fa-user"></i> Education Ministar</div>
         <div class="p-2 text-center">
-            <img class="w-75" alt="Education Minister" src="{{ asset('/public/') }}/img/educationMinister.jpg" />
-            <p class="fw-bold my-0">Professor Dr. Chowdhury Rafiqul Abrar</p>
-            <p class="fw-bold my-0 small">Honorable Education Advisor</p>
+            @if(!empty($Datakey->eduMinImg)) 
+            <img class="w-75" alt="Education Minister" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->eduMinImg }}" />
+            @else
+            <img class="w-75" alt="Education Minister" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
+            @endif
+
+            <p class="fw-bold my-0">{{$Datakey->eduMinName}}</p>
+            <p class="fw-bold my-0 small">{{$Datakey->eduMinDetail}}</p>
+            <a href="#"> Details </a>
         </div>
     </div>
     <div class="list-group rounded-0 my-4 border border-success">
         <div class="p-2 bg-success h5"><i class="fa-duotone fa-user-tie-hair"></i> Board Chairman</div>
-        <div class="p-2 text-center">
+         <div class="p-2 text-center">
+            @if(!empty($Datakey->boardChairmanImg)) 
+            <img class="w-75" alt="Board Chairman" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->boardChairmanImg }}" />
+            @else
             <img class="w-75" alt="Board Chairman" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
-            <p class="fw-bold my-0">Professor Md. Shamsul Islam</p>
-            <p class="fw-bold my-0 small">Chairman, Cumilla Board</p>
+            @endif
+
+            <p class="fw-bold my-0">{{$Datakey->boardChairmanName}}</p>
+            <p class="fw-bold my-0 small">{{$Datakey->boardChairmanDetail}}</p>
             <a href="#"> Details </a>
         </div>
     </div>
     <div class="list-group rounded-0 border border-success">
         <div class="p-2 bg-success h5"><i class="fa-regular fa-user-tie"></i> Principal</div>
         <div class="p-2 text-center">
-            <img class="w-75" alt="" src="{{ asset('/public/') }}/img/principal.jpg" />
-            <p class="fw-bold my-2 h6">Abu Saleque Md. Selim Reza Shourav</p>
-            <p class="fw-bold my-0 small">Principal(Sonar Bangla College)</p>
+            @if(!empty($Datakey->principalImg)) 
+            <img class="w-75" alt="Principal" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->principalImg }}" />
+            @else
+            <img class="w-75" alt="Principal" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
+            @endif
+
+            <p class="fw-bold my-0">{{$Datakey->principalName}}</p>
+            <p class="fw-bold my-0 small">{{$Datakey->principalDetail}}</p>
             <a href="#"> Details </a>
         </div>
     </div>
@@ -53,5 +70,5 @@
         <div class="bg-success p-2 h5 mb-0"><i class="fa-light fa-users"></i> Visitor Corner</div>
         <a href="#" class="list-group-item list-group-item-action"> <span class="fw-bold">Today Visitor:</span> <span class="badge text-bg-success">35</span> </a>
         <a href="#" class="list-group-item list-group-item-action"> <span class="fw-bold">Total Visitor:</span> <span class="badge text-bg-success">364567</span> </a>
-        <a href="#" class="list-group-item list-group-item-action"> <span class="fw-bold">Your IP Address:</span> <span class="badge text-bg-info">{{ request()->ip() }}</span> </a>
+        <a href="#" class="list-group-item list-group-item-action"> <span class="fw-bold">Your IP Address:</span> <span class="badge text-bg-info"></span> </a>
     </div>

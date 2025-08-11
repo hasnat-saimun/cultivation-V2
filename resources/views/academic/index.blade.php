@@ -4,6 +4,15 @@ Academic
 @endsection
 @section('backIndex')
                 <!-- Dashboard Content Start Here -->
+                 <h3>Home Info</h3>
+                <div class="row mb-5 intro-box text-center">
+                    <div class="col-2">
+                        <a href="{{ route('homeInfo') }}" class="btn btn-secondary btn-lg p-3 h3"><i class="fa-solid fa-building-columns"></i> Home Info</a>
+                    </div>
+                    <div class="col-2">
+                        <a href="{{ route('sliderInfo') }}" class="btn btn-secondary btn-lg p-3 h3"><i class="fa-solid fa-building-columns"></i> Home Slider</a>
+                    </div>
+                </div>
                 <h3>Institute Info</h3>
                 <div class="row mb-5 intro-box text-center">
                     <div class="col-2">

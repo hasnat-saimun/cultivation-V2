@@ -26,10 +26,10 @@
                             <a href="{{ route('cultivationIndex') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
                         </li> 
                         <li class="nav-item">
-                            <a href="{{ route('homeInfo') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Home Info</span></a>
+                            <a href="{{ route('homeInfo') }}" class="nav-link"><i class="fa-solid fa-building-columns"></i><span>Home Info</span></a>
                         </li>
                         <li class="nav-item">
-                            <a href="{{ route('sliderInfo') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Home Slider</span></a>
+                            <a href="{{ route('sliderInfo') }}" class="nav-link"><i class="fa-solid fa-building-columns"></i><span>Home Slider</span></a>
                         </li>
                         <li class="nav-item sidebar-nav-item">
                             <a href="#" class="nav-link"><i class="fa-regular fa-building-flag"></i><span>Institute Info</span></a>
