@@ -7,6 +7,23 @@
                 <button type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide-to="2" aria-label="Slide 3"></button>
             </div>
             <div class="carousel-inner">
+                @if($sliderData->count()>0)
+                @php
+                    $sl = 1;
+                @endphp
+                @foreach($sliderData as $slider)
+                <div class="carousel-item @if($sl == 1) active @endif">
+                    <img src="{{ asset('public/upload/image/webHomepage').'/'.$slider->avatar }}" class="d-block w-100" style="height:450px" alt="..." />
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>{{ $slider->headLine }}</h5>
+                        <p>{{ $slider->detail }}</p>
+                    </div>
+                </div>
+                @php
+                    $sl++;
+                @endphp
+                @endforeach
+                @else
                 <div class="carousel-item active">
                     <img src="{{ asset('public/img/slider/') }}/slider1.jpg" class="d-block w-100" style="height:450px" alt="..." />
                     <div class="carousel-caption d-none d-md-block">
@@ -28,6 +45,7 @@
                         <p>Some representative placeholder content for the third slide.</p>
                     </div>
                 </div>
+                @endif
             </div>
             <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleCaptions" data-bs-slide="prev">
                 <span class="carousel-control-prev-icon" aria-hidden="true"></span>

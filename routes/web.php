@@ -622,7 +622,7 @@ Route::middleware(['adminGuard'])->group (function(){
     //cashCalculas end
 
         //Tuition str
-        Route::get('/admin/getStudentForTutionFee/{stdId}',[
+    Route::get('/getStudentForTutionFee/{stdId}',[
         tuitionController::class,
         'getStudentForTutionFee'
     ])->name('getStudentForTutionFee');

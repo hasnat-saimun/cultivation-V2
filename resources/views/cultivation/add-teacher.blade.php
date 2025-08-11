@@ -66,7 +66,7 @@ New Profile
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Teacher ID</label>
-                                        <input type="text" name="teacherId" value="{{ $teacherIdPrefix }}-@if(empty($chk)) 1 @else {{ $chk->id+1 }} @endif" placeholder="Example: {{ $teacherIdPrefix }}-127420" class="form-control" reauired readonly>
+                                        <input type="text" name="teacherId" value="@if(empty($chk)) 1 @else {{ $chk->id+1 }} @endif" placeholder="Example: {{ $teacherIdPrefix }}-127420" class="form-control" reauired readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
