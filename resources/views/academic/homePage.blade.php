@@ -76,49 +76,49 @@ Institute Dashboard
                         <div class="col-12 mb-5 card-header">Primary Info</div>
                         <div class="col-3 mb-3">
                             <label for="founded">Founded Year</label>
-                            <input type="text" name="founded" class="form-control" placeholder="Enter the headline" value="{{ $founded }}">
+                            <input type="text" name="founded" class="form-control" placeholder="Enter the founded year" value="{{ $founded }}">
                         </div>
                         <div class="col-3 mb-3">
                             <label for="area">Campus Area</label>
-                            <input type="text" name="area" class="form-control" placeholder="Enter the headline" value="{{ $area }}">
+                            <input type="text" name="area" class="form-control" placeholder="Enter the campus area" value="{{ $area }}">
                         </div>
                         <div class="col-3 mb-3">
                             <label for="insHeadlteacherTotaline">Teacher & Staff</label>
-                            <input type="text" name="teacherTotal" class="form-control" placeholder="Enter the headline" value="{{ $teacherTotal }}">
+                            <input type="text" name="teacherTotal" class="form-control" placeholder="Enter the number of teacher&staff" value="{{ $teacherTotal }}">
                         </div>
                         <div class="col-3 mb-3">
                             <label for="insHeadlistudentTotalne">Student</label>
-                            <input type="text" name="studentTotal" class="form-control" placeholder="Enter the headline" value="{{ $studentTotal }}">
+                            <input type="text" name="studentTotal" class="form-control" placeholder="Enter the number of student" value="{{ $studentTotal }}">
                         </div>
                         <div class="col-12 mb-3">
                             <label for="notice">Important Notice</label>
-                            <textarea name="notice" class="form-control" placeholder="Enter description about institute">{{ $notice }}</textarea>
+                            <textarea name="notice" class="form-control" placeholder="Enter the notice">{{ $notice }}</textarea>
                         </div>
                     </div>
                     <div class="row mt-5">
                         <div class="col-12 mb-5 card-header">Welcome Info</div>
                          <div class="col-12  mb-3">
                             <label for="wcMsgHadeline">Headline</label>
-                            <input type="text" name="wcMsgHadeline" class="form-control" placeholder="Enter the headline" value="{{ $wcMsgHadeline }}">
+                            <input type="text" name="wcMsgHadeline" class="form-control" placeholder="Enter the welcoming headline" value="{{ $wcMsgHadeline }}">
                         </div>
                         <div class="col-12 mb-3">
                             <label for="wclMsgDescription">Description</label>
-                            <textarea name="wclMsgDescription" class="form-control" placeholder="Enter description about institute">{{ $wclMsgDescription }}</textarea>
+                            <textarea name="wclMsgDescription" class="form-control" placeholder="Enter welcome description about institute">{{ $wclMsgDescription }}</textarea>
                         </div>
                     </div>
                     <div class="row mt-5">
-                        <div class="col-12 mb-5 card-header">Mission & Vission</div>
+                        <div class="col-12 mb-5 card-header">Mission & Vision</div>
                          <div class="col-12  mb-3">
                             <label for="writerName">Writer Name</label>
-                            <input type="text" name="writerName" class="form-control" placeholder="Enter the headline" value="{{ $writerName }}">
+                            <input type="text" name="writerName" class="form-control" placeholder="Enter the writer name" value="{{ $writerName }}">
                         </div>
                         <div class="col-12 mb-3">
                             <label for="missionDescription">Description</label>
-                            <textarea name="missionDescription" class="form-control" placeholder="Enter description about institute">{{ $missionDescription }}</textarea>
+                            <textarea name="missionDescription" class="form-control" placeholder="Enter description about mission&vision">{{ $missionDescription }}</textarea>
                         </div>
                         <div class="col-12  mb-3">
                             <label for="mainGoal">Mian Goal</label>
-                            <input type="text" name="mainGoal" class="form-control" placeholder="Enter the headline" value="{{ $mainGoal }}">
+                            <input type="text" name="mainGoal" class="form-control" placeholder="Enter the main goal" value="{{ $mainGoal }}">
                         </div>
                     </div>
                     <div class="row mt-5 ">
@@ -127,11 +127,11 @@ Institute Dashboard
                                 <div class=" mb-5 card-header "> Education Ministar Info</div>
                                 <div class="col-9 mb-3">
                                     <label for="eduMinName">Name</label>
-                                    <input type="text" name="eduMinName" class="form-control" placeholder="Enter the headline" value="{{ $eduMinName }}">
+                                    <input type="text" name="eduMinName" class="form-control" placeholder="Enter the education ministar name" value="{{ $eduMinName }}">
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label for="eduMinDetail">Details</label>
-                                    <textarea name="eduMinDetail" class="form-control" placeholder="Enter description about institute">{{ $eduMinDetail }}</textarea>
+                                    <textarea name="eduMinDetail" class="form-control" placeholder="Enter description about education ministar">{{ $eduMinDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
                                     <label for="eduMinImg"> Image (150px X 150px)</label>
@@ -151,11 +151,11 @@ Institute Dashboard
                                 <div class="mb-5 card-header">Board Chairman</div>
                                 <div class="col-12 mb-3">
                                     <label for="boardChairmanName">Name</label>
-                                    <input type="text" name="boardChairmanName" class="form-control" placeholder="Enter the headline" value="{{ $boardChairmanName }}">
+                                    <input type="text" name="boardChairmanName" class="form-control" placeholder="Enter the board chairman name" value="{{ $boardChairmanName }}">
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label for="boardChairmanDetail">Details</label>
-                                    <textarea name="boardChairmanDetail" class="form-control" placeholder="Enter description about institute">{{ $boardChairmanDetail }}</textarea>
+                                    <textarea name="boardChairmanDetail" class="form-control" placeholder="Enter description about board chairman">{{ $boardChairmanDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
                                     <label for="boardChairmanImg"> Image  (150px X 150px)</label>
@@ -175,11 +175,11 @@ Institute Dashboard
                                 <div class=" mb-4 card-header "> Principal</div>
                                 <div class="col-12 mb-3">
                                     <label for="principalName">Name</label>
-                                    <input type="text" name="principalName" class="form-control" placeholder="Enter the headline" value="{{ $principalName }}">
+                                    <input type="text" name="principalName" class="form-control" placeholder="Enter the principal name" value="{{ $principalName }}">
                                 </div>
                                 <div class="col-12 mb-3">
                                     <label for="principalDetail">Details</label>
-                                    <textarea name="principalDetail" class="form-control" placeholder="Enter description about institute">{{ $principalDetail }}</textarea>
+                                    <textarea name="principalDetail" class="form-control" placeholder="Enter description about principal">{{ $principalDetail }}</textarea>
                                 </div> 
                                 <div class="col-12  mb-3">
                                     <label for="principalImg"> Image  (150px X 150px)</label>

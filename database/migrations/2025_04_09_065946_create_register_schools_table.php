@@ -18,6 +18,9 @@ return new class extends Migration
             $table->string('officeMobile')->nullable();
             $table->string('webName')->nullable();
             $table->string('officeMail')->nullable();
+            $table->string('division')->nullable();
+            $table->string('zilla')->nullable();
+            $table->string('upazila')->nullable();
             $table->string('insLogo')->nullable();
             $table->timestamps();
         });

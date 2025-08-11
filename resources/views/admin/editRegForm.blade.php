@@ -52,6 +52,10 @@
                                 <label for="officeMobile" class="form-label">Official Mobile</label>
                                 <input type="text" name="officeMobile" class="form-control" id="officeMobile" value="{{ $regData->officeMobile }}" placeholder="Enter office mobile number" required />
                             </div>
+                            <div class="mb-3">
+                                <label for="zilla" class="form-label">Zilla</label>
+                                <input type="text" name="zilla" class="form-control" id="zilla" placeholder="Enterthe zilla" value="{{ $regData->zilla }}" required>
+                            </div>
                         </div>
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
@@ -61,6 +65,14 @@
                             <div class="mb-3">
                                 <label for="officeMail" class="form-label">Official Email</label>
                                 <input type="text" name="officeMail" class="form-control" id="officeMail" value="{{ $regData->officeMail }}" placeholder="Enter office email address" required />
+                            <div class="mb-3">
+                                <label for="division" class="form-label">Division</label>
+                                <input type="text" name="division" class="form-control" id="division" placeholder="Enter the division" value="{{ $regData->division }}" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="upazila" class="form-label">Upazila</label>
+                                <input type="text" name="upazila" class="form-control" id="upazila" placeholder="Enter the upazila" value="{{ $regData->upazila }}" required>
+                            </div>
                             </div>
                         </div>
                     </div>

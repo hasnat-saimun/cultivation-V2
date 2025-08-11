@@ -25,6 +25,9 @@ class registerController extends Controller
         $server->officeMobile        = $requ->officeMobile;
         $server->webName             = $requ->webName;
         $server->officeMail          = $requ->officeMail;
+        $server->division            = $requ->division;
+        $server->zilla               = $requ->zilla;
+        $server->upazila             = $requ->upazila;
         // $server->insLogo             = $requ->insLogo;
 
         if(!empty($requ->insLogo)):
@@ -94,6 +97,9 @@ class registerController extends Controller
         $server->officeMobile        = $requ->officeMobile;
         $server->webName             = $requ->webName;
         $server->officeMail          = $requ->officeMail;
+        $server->division            = $requ->division;
+        $server->zilla               = $requ->zilla;
+        $server->upazila             = $requ->upazila;
 
         if($server->save()):
             return back()->with('success','Data saved successfully');

@@ -40,6 +40,9 @@ Register Form
                             <div class="mb-3">
                                 <label for="officeMobile" class="form-label">Official Mobile</label>
                                 <input type="text" name="officeMobile" class="form-control" id="officeMobile" placeholder="Enter office mobile number" required>
+                            </div><div class="mb-3">
+                                <label for="zilla" class="form-label">Zilla</label>
+                                <input type="text" name="zilla" class="form-control" id="zilla" placeholder="Enterthe zilla" required>
                             </div>
                         </div>
                         <div class="col-md-6 col-12">
@@ -51,7 +54,15 @@ Register Form
                                 <label for="officeMail" class="form-label">Official Email</label>
                                 <input type="text" name="officeMail" class="form-control" id="officeMail" placeholder="Enter office email address" required>
                             </div>
-                        </div>
+                            <div class="mb-3">
+                                <label for="division" class="form-label">Division</label>
+                                <input type="text" name="division" class="form-control" id="division" placeholder="Enter the division" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="upazila" class="form-label">Upazila</label>
+                                <input type="text" name="upazila" class="form-control" id="upazila" placeholder="Enter the upazila" required>
+                            </div>
+                            </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 col-12">
