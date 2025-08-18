@@ -9,6 +9,8 @@ use App\Models\TeacherManagement;
 use App\Models\CultivationAdmin;
 use App\Models\HomeInfo;
 use App\Models\HomeSlider;
+use App\Models\PhotoGallery;
+use App\Models\ServerConfig;
 use Hash;
 use sessionData;
 use Session;
@@ -68,9 +70,11 @@ class FrontController extends Controller
 
 
     public function homePage(){
+         $photo  =   PhotoGallery::all();
+         $server  =   ServerConfig::first();
          $home  =   HomeInfo::first();
          $slider = HomeSlider::orderBy('ID','DESC')->limit(5)->get();
-        return view('frontend.index',['Datakey'=>$home,'sliderData'=>$slider]);
+        return view('frontend.index',['Datakey'=>$home,'sliderData'=>$slider,'gallery'=>$photo,'config'=>$server]);
     }
     
 }

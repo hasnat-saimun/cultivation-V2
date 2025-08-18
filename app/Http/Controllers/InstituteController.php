@@ -12,6 +12,7 @@ use App\Models\StaffManagement;
 use App\Models\ServerConfig;
 use App\Models\HomeInfo;
 use App\Models\HomeSlider;
+use App\Models\newAdmission;
 use File;
 
 class InstituteController extends Controller
@@ -418,6 +419,14 @@ class InstituteController extends Controller
         // $cultivation->count();
         return view('frontend.institute.principalSpeech',['pSpeech'=>$pSpeech,'cultivation'=>$cultivation,'principal'=>$principalData]);
     }
+
+    
+    //X-principal
+    public function student(){
+        $syllabus  =   newAdmission::all();
+        return view('frontend.institute.student',['Datakey'=>$syllabus]);
+    }
+
     //X-principal
     public function exprincipalPage(){
         $syllabus  =   ExPrincipal::all();

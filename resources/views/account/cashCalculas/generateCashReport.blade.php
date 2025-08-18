@@ -9,9 +9,9 @@ Report
             @if(!empty($feesList))
                 @php
                     $sumAmount = $feesList->sum('amount');
-                @endphp
+                @endphp 
                 @if(!empty($feesList))
-                <div class="receipt-main col-8 mx-auto">
+                <div class="receipt-main col-12 mx-auto">
                     <div class="receipt-header row">
                         <div class="col-xs-12 col-sm-12 col-md-12 text-center mb-3">
                             <div class="receipt-right">
@@ -39,6 +39,10 @@ Report
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
+                                    <th>sl.</th>
+                                    <th>Date</th>
+                                    <th>Purpose</th>
+                                    <th>Type</th>
                                     <th>Description</th>
                                     <th>Amount</th>
                                 </tr>
@@ -49,15 +53,39 @@ Report
                                         @php
                                             $feesName   = $fl->source;
                                             $amount     = $fl->amount;
+                                            $type     = $fl->transaction;
                                         @endphp
                                     <tr>
-                                        <td class="col-md-9">{{ $feesName }}</td>
-                                        <td class="col-md-3"> {{ $amount }}/-</td>
+                                        <td></td>
+                                        <td>{{$fl->created_at->format('Y-m-d')}}</td>
+                                        <td >{{ $feesName }}</td>
+                                        <td>{{$type}}</td>
+                                        <td></td>
+                                        <td > {{ $amount }}/-</td>
                                     </tr>
                                 @endforeach
                                 <tr>
-                                    <td class="text-right">
-                                        <h2><strong>Total: </strong></h2>
+                                    <td class="text-right" colspan="5">
+                                        <h3><strong>Total Debit: </strong></h3>
+                                    </td>
+                                    <td class="text-left text-primary">
+                                        <h2>
+                                            <strong>{{ $sumAmount }}</strong>
+                                        </h2>
+                                    </td>
+                                </tr><tr>
+                                    <td class="text-right" colspan="5">
+                                        <h3><strong> Total Credit: </strong></h3>
+                                    </td>
+                                    <td class="text-left text-primary">
+                                        <h2>
+                                            <strong>{{ $sumAmount }}</strong>
+                                        </h2>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="text-right" colspan="5">
+                                        <h2><strong>Balance/Due: </strong></h2>
                                     </td>
                                     <td class="text-left text-danger">
                                         <h2>
@@ -78,7 +106,7 @@ Report
                             <div class="col-xs-6 col-sm-6 col-md-6 text-start mt-5">
                                     <p><u>Gurdian Sign</u></p>
                             </div>
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-end mt-5">
+                            <div class="col-xs-6 col-sm-6 col-md-6 text-right mt-5">
                                     <p><u>Cash Incharge</u></p>
                             </div>
                     </div>

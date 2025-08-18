@@ -16,7 +16,7 @@ Institute Info
                     $sumAmount = $feesList->sum('amount');
                 @endphp
                 @if(!empty($student))
-                <div class="receipt-main col-8 mx-auto">
+                <div class="receipt-main col-12 mx-auto">
                     <div class="receipt-header row">
                         <div class="col-xs-12 col-sm-12 col-md-12 text-center mb-3">
                             <div class="receipt-right">
@@ -67,6 +67,8 @@ Institute Info
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
+                                    <th>sl.</th>
+                                    <th>Date</th>
                                     <th>Description</th>
                                     <th>Amount</th>
                                 </tr>
@@ -85,12 +87,14 @@ Institute Info
                                         endif;
                                     @endphp
                                     <tr>
-                                        <td class="col-md-9">{{ $feesName }}</td>
-                                        <td class="col-md-3"> {{ $amount }}/-</td>
+                                        <td></td>
+                                        <td>{{ $fl->created_at->format('Y-m-d') }}</td>
+                                        <td >{{ $feesName }}</td>
+                                        <td > {{ $amount }}/-</td>
                                     </tr>
                                 @endforeach
                                 <tr>
-                                    <td class="text-right">
+                                    <td class="text-right" colspan="3">
                                         <h2><strong>Total: </strong></h2>
                                     </td>
                                     <td class="text-left text-danger">

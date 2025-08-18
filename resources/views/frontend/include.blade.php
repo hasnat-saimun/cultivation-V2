@@ -63,6 +63,7 @@
                                             <ul class="dropdown-menu">
                                                 <li><a class="dropdown-item" href="{{route('institutePage')}}">About Us</a></li>
                                                 <li><a class="dropdown-item" href="{{route('principalSpeechPage')}}">Principal Speech</a></li>
+                                                <li><a class="dropdown-item" href="{{route('student')}}">Our Student</a></li>
                                                 <li><a class="dropdown-item" href="{{route('exprincipalPage')}}">EX-Principals</a></li>
                                                 <li><a class="dropdown-item" href="{{route('teacherPage')}}">Our Teacher</a></li>
                                                 <li><a class="dropdown-item" href="{{route('staffPage')}}">Staff Corner</a></li>
@@ -126,6 +127,45 @@
             </div>
         </div>
         <footer class="mt-5 container-fluid">
+             @if(!empty($config))
+            <div class="row g-0">
+                <div class="col-12 col-md-5 mx-auto">
+                    <h3>Contact Details</h3>
+                    <p><i class="fa-solid fa-phone-office"></i> {{$config->officeMobile}}</p>
+                    <p><i class="fa-solid fa-envelopes"></i> {{$config->officeEmail}}</p>
+                    <p><i class="fa-brands fa-square-facebook"></i><a href=""></a> {{$config->facebookPage}}</p>
+                    <p><i class="fa-solid fa-buildings"></i> {{$config->address}}</p>
+                </div>
+                <div class="col-12 col-md-5 mx-auto">
+                    <h3>Google Map</h3>
+                    <iframe
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3658.720943010397!2d91.14681007428437!3d23.50655879809593!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3754796e7c90d6e3%3A0x210c98d19ee0bc9c!2z4Ka44KeH4Ka-4Kao4Ka-4KawIOCmrOCmvuCmguCmsuCmviDgppXgprLgp4fgppw!5e0!3m2!1sen!2suk!4v1695524774546!5m2!1sen!2suk"
+                        width="100%"
+                        height="300"
+                        class="rounded"
+                        allowfullscreen=""
+                        loading="lazy"
+                        referrerpolicy="no-referrer-when-downgrade"
+                    ></iframe>
+                </div>
+                <div class="col-12 mt-2">
+                    <img class="w-100" src="{{ asset('/public/') }}/img/footer_top_bg.png" alt="" />
+                </div>
+            </div>
+            <div class="p-2">
+                <div class="row">
+                    <div class="col-md-6 col-12">
+                        <p><span class="fw-bold">Planning and Implementation:</span> Principal   ({{$config->institueName}})</p>
+                    </div>
+                    <div class="col-md-6 col-12 text-end">
+                        <p><span class="fw-bold">Powered By:</span> Cultivation(Version 0.0.5) by Virtual IT Professional</p>
+                    </div>
+                    <div class="col-12 text-center">
+                        <p class="fw-bold">Copyright &copy; 2000-@php echo date('Y'); @endphp | All Rights Reserved {{$config->institueName}} </p>
+                    </div>
+                </div>
+            </div>
+            @else
             <div class="row g-0">
                 <div class="col-12 col-md-5 mx-auto">
                     <h3>Contact Details</h3>
@@ -165,6 +205,7 @@
                     </div>
                 </div>
             </div>
+            @endif
         </footer>
     
     <!-- jquery-->

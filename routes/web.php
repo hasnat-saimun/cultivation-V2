@@ -1216,6 +1216,11 @@ Route::middleware(['adminGuard'])->group (function(){
         'principalSpeechPage'
         ])->name('principalSpeechPage');
 
+         Route::get('/student',[
+        InstituteController::class,
+        'student'
+        ])->name('student');
+
     Route::get('/exPrincipal',[
         InstituteController::class,
         'exprincipalPage'

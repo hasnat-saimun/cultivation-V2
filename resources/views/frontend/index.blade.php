@@ -131,11 +131,11 @@ Enter to learn & Leave to serve
                                 </div>
                                 <div class="col-12 col-md-9">
                                     <ul class="list-group list-group-flush">
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> About Us</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Teacher Database</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Staff Database</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Principal Speech</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Managing Comittee</li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('institutePage')}}"> About Us</a></li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('teacherPage')}}"> Teacher Database</a></li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('staffPage')}}"> Staff Database</a> </li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('principalSpeechPage')}}"> Principal Speech</a></li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('comitteePage')}}"> Managing Comittee</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -154,11 +154,11 @@ Enter to learn & Leave to serve
                                 </div>
                                 <div class="col-12 col-md-9">
                                     <ul class="list-group list-group-flush">
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Semister Plan</li>
-                                        <li><a class="list-group-item" href="{{route('newSyllabus')}}">Syllabus</a>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> <a href=""> Semister Plan</a></li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a  href="{{route('newSyllabus')}}"> Syllabus</a>
                                         </li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Class Routine</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Exam Routine</li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('newClassSchedule')}}"> Class Routine</a> </li>
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> <a href="{{route('newExamSchedule')}}"> Exam Routine</a> </li>
                                     </ul>
                                 </div>
                             </div>
@@ -177,10 +177,23 @@ Enter to learn & Leave to serve
                                 </div>
                                 <div class="col-12 col-md-9">
                                     <ul class="list-group list-group-flush">
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Student Database</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> X-Student Archive</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Placement Cell</li>
-                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> Job Seekers</li>
+                                        
+                                            <li class="list-group-item">
+                                                <i class="fa-regular fa-arrow-turn-down-right"></i> 
+                                                <a href="{{route('student')}}">
+                                                    Student Database
+                                                </a>
+                                            </li>
+                                                <li class="list-group-item">
+                                                    <i class="fa-regular fa-arrow-turn-down-right"></i> 
+                                                <a href="">
+                                                    X-Student Archive
+                                                </a>
+                                                </li>
+                                        
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i><a href="{{route('placementCellView')}}"> Placement Cell</a></li>
+                                        
+                                        <li class="list-group-item"><i class="fa-regular fa-arrow-turn-down-right"></i> <a href="{{route('jobNeedyStudentView')}}">Job Seekers</a></li>
                                     </ul>
                                 </div>
                             </div>
@@ -194,12 +207,13 @@ Enter to learn & Leave to serve
         <div id="demo" class="col-12 mx-auto mt-4">
             <h2>Photo Gallery</h2>
             <div id="owl-demo" class="owl-carousel">
-                <div class="item"><img src="{{ asset('/public/') }}/img/campus.jpeg" alt="campus"></div>
-                <div class="item"><img src="{{ asset('/public/') }}/img/mainbuilding.jpg" alt="main building"></div>
-                <div class="item"><img src="{{ asset('/public/') }}/img/office.jpg" alt="office room"></div>
-                <div class="item"><img src="{{ asset('/public/') }}/img/principalroom.jpg" alt="principal room"></div>
-                <div class="item"><img src="{{ asset('/public/') }}/img/hostel.jpg" alt="hostel"></div>
-                <div class="item"><img src="{{ asset('/public/') }}/img/auditoriam.jpg" alt="auditoriam"></div>
+        @if(!empty($gallery)) 
+        @foreach($gallery as $data)
+                <div class="item">
+                    <img src="{{ asset('/public/upload/image/photogallery/').'/'.$data->avatar}}" alt="campus">
+                </div>
+            @endforeach
+             @endif
             </div>
         </div>
     </div>
