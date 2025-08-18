@@ -4,7 +4,7 @@ Marksheet Generate
 @endsection
 @section('backIndex')
     @php
-        if(isset($studentDetails)):
+        if($studentDetails->count()>0):
             $adminId        = $studentDetails->admitId;
             $stdName        = $studentDetails->firstName." ".$studentDetails->lastName;
             $rollNumber     = $studentDetails->roll;
@@ -12,9 +12,16 @@ Marksheet Generate
             $mName          = $studentDetails->mothersName;
             $sessionDetails = $studentDetails->session;
             $classDetails   = $studentDetails->class;
-
-            $sessionName    = \App\Models\Session::find($sessionDetails)->sessionName;
-            $className      = \App\Models\Classes::find($classDetails)->className;
+            if($sessionDetails):
+                $sessionName    = \App\Models\Session::find($sessionDetails->sessionName);
+            else:
+                $sessionName    = "-";
+            endif;
+            if($classDetails):
+                $className      = \App\Models\Classes::find($classDetails->className);
+            else:
+                $className    = "-";
+            endif;
         else:;
             $adminId        = "";
             $stdName        = "";
@@ -39,7 +46,7 @@ Marksheet Generate
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto col-12 mx-auto">
                         <div class="card-body row">
-                            @if(!empty($studentDetails))
+                            @if($studentDetails->count()>0)
                             <div class="card-header bg-light border-bottom-0 col-12">
                                 <div class="item-title text-center">
                                     <h1 class="mb-2 fw-bold">Sonar Bangla University College</h1>

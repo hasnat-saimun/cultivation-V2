@@ -71,7 +71,7 @@ class MarksheetController extends Controller
 
     public function generateMarksheet(Request $requ){
         // return $requ->stdId;
-        $studentList = newAdmission::where(['admitId'=>$requ->stdId])->first();
+        $studentList = newAdmission::where(['stdId'=>$requ->stdId])->first();
         return view('result.marksheetGenerate',['studentDetails'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
     }
 

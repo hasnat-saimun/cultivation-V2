@@ -32,7 +32,7 @@ Cash Calculas
                     <select class="form-select select2" id="transaction" name="transaction" aria-label="Default select example" required>
                         <option selected>-select-</option>
                         <option value="Debit">Debit</option>
-                        <option value="Crtedit">Crtedit</option>
+                        <option value="Credit">Credit</option>
                     </select>
                 </div>
                 <div class=" col-6  d-grid gap-2 mt-5">

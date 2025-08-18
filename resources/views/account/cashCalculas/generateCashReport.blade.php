@@ -8,7 +8,9 @@ Report
         <div class="row" id="report">
             @if(!empty($feesList))
                 @php
-                    $sumAmount = $feesList->sum('amount');
+                    $sumDebit = $feesList->where('transaction','Debit')->sum('amount');
+                    $sumCredit = $feesList->where('transaction','Credit')->sum('amount');
+                    $balanceDue = $sumCredit-$sumDebit;
                 @endphp 
                 @if(!empty($feesList))
                 <div class="receipt-main col-12 mx-auto">
@@ -43,12 +45,14 @@ Report
                                     <th>Date</th>
                                     <th>Purpose</th>
                                     <th>Type</th>
-                                    <th>Description</th>
                                     <th>Amount</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @if(!empty($feesList))
+                                @php
+                                    $sl = 1;
+                                @endphp
                                 @foreach($feesList as $fl)
                                         @php
                                             $feesName   = $fl->source;
@@ -56,41 +60,43 @@ Report
                                             $type     = $fl->transaction;
                                         @endphp
                                     <tr>
-                                        <td></td>
+                                        <td>{{ $sl }}</td>
                                         <td>{{$fl->created_at->format('Y-m-d')}}</td>
                                         <td >{{ $feesName }}</td>
                                         <td>{{$type}}</td>
-                                        <td></td>
                                         <td > {{ $amount }}/-</td>
                                     </tr>
+                                @php
+                                    $sl++;
+                                @endphp
                                 @endforeach
                                 <tr>
-                                    <td class="text-right" colspan="5">
+                                    <td class="text-right" colspan="4">
                                         <h3><strong>Total Debit: </strong></h3>
                                     </td>
                                     <td class="text-left text-primary">
                                         <h2>
-                                            <strong>{{ $sumAmount }}</strong>
+                                            <strong>{{ $sumDebit }}</strong>
                                         </h2>
                                     </td>
                                 </tr><tr>
-                                    <td class="text-right" colspan="5">
+                                    <td class="text-right" colspan="4">
                                         <h3><strong> Total Credit: </strong></h3>
                                     </td>
                                     <td class="text-left text-primary">
                                         <h2>
-                                            <strong>{{ $sumAmount }}</strong>
+                                            <strong>{{ $sumCredit }}</strong>
                                         </h2>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <td class="text-right" colspan="5">
+                                    <td class="text-right" colspan="4">
                                         <h2><strong>Balance/Due: </strong></h2>
                                     </td>
-                                    <td class="text-left text-danger">
-                                        <h2>
-                                            <strong>{{ $sumAmount }}</strong>
-                                        </h2>
+                                    <td class="text-left {{ $balanceDue < 0 ? 'text-danger' : 'text-success' }}">
+                                        <span class="h2">
+                                            <strong>{{ $balanceDue }}</strong>
+                                        </span>                                    
                                     </td>
                                 </tr>
                                 @else
