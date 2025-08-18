@@ -132,9 +132,11 @@
                 <div class="col-12 col-md-5 mx-auto">
                     <h3>Contact Details</h3>
                     <p><i class="fa-solid fa-phone-office"></i> {{$config->officeMobile}}</p>
-                    <p><i class="fa-solid fa-envelopes"></i> {{$config->officeEmail}}</p>
-                    <p><i class="fa-brands fa-square-facebook"></i><a href=""></a> {{$config->facebookPage}}</p>
                     <p><i class="fa-solid fa-buildings"></i> {{$config->address}}</p>
+                    <p><i class="fa-solid fa-envelopes"></i> <a class="text-muted" style="text-decoration:none" href="mailto:{{ $config->officeEmail }}">{{$config->officeEmail}}</a></p>
+                    <p>
+                        <i class="fa-brands fa-square-facebook"></i> <a class="text-muted" style="text-decoration:none" target="_blank" href="{{ $config->facebookPage }}">{{$config->facebookPage}}</a>
+                    </p>
                 </div>
                 <div class="col-12 col-md-5 mx-auto">
                     <h3>Google Map</h3>
