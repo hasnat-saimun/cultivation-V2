@@ -1,19 +1,3 @@
-    <div class="list-group rounded-0 mb-4 border border-success">
-        <div class="p-2 bg-success h5"><i class="fa-duotone fa-user"></i> Education Ministar</div>
-        <div class="p-2 text-center">
-            <img class="w-75" alt="Education Minister" src="{{ asset('/public/') }}/img/educationMinister.jpg" />
-            <p class="fw-bold my-0">Mahibul Hasan Chowdhury(M.P)</p>
-        </div>
-    </div>
-    <div class="list-group rounded-0 my-4 border border-success">
-        <div class="p-2 bg-success h5"><i class="fa-duotone fa-user-tie-hair"></i> Board Chairman</div>
-        <div class="p-2 text-center">
-            <img class="w-75" alt="Board Chairman" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
-            <p class="fw-bold my-0">Professor Dr. Md. Nizamul Karim</p>
-            <p class="fw-bold my-0 small">Chairman, Cumilla Board</p>
-            <a href="#"> Details </a>
-        </div>
-    </div>
     <div class="list-group rounded-0 border border-success">
         <div class="p-2 bg-success h5"><i class="fa-regular fa-user-tie"></i> Principal</div>
         <div class="p-2 text-center">

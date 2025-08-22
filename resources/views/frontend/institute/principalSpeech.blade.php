@@ -43,23 +43,23 @@ body {
  <section>
     <div class="container">
         <div class="row">
-            <div class="col-md-12 text-center con-title">
-                <h1 class="wow fadeInLeft animated mt-2 mb-3" data-wow-delay=".60s">Principal <span>Speech</span></h1>
+            <div class="col-md-12 text-center con-title mt-4">
+                <h1 class="wow fadeInLeft animated my-4" data-wow-delay=".60s">Valuable Speech of Honorable <span>Principal</span></h1>
            </div>
         </div>
-        <div class="row align-items-center">
-            @if(!empty($pSpeech))
+        <div class="row align-items-center my-4">
+            @if($pSpeech)
             @php
-                if(!empty($cultivation)):
+                if($cultivation):
                     $insName = $cultivation->institueName;
                 else:
                     $insName = "Jahanara-Ayub Academy";
                 endif;
             @endphp
             <div class="col-8 col-md-3 text-center mx-auto">
-                @if(!empty($principal))
+                @if($principal)
                 <div class="card">
-                    <img  class="w-100 wow bounce animated" data-wow-delay="1s" src="{{ asset('public/upload/image/teacher').'/'.$principal->avatar }}"/>
+                    <img  class="w-100 wow bounce animated" data-wow-delay="1s" src="{{ env('APP_URL') }}/public/upload/image/teacher/{{ $principal->avatar }}"/>
                     <div class="card-footer">
                         <p>{{ $principal->firstName ." ". $principal->lastName  }}</p>
                         <p>@if($principal->designation==1) Principal @elseif($principal->designation==2) Principal(Incharge) @endif<br> {{ $insName }} </p>
@@ -67,7 +67,7 @@ body {
                 </div>
                 @else
                 <div class="card">
-                    <img  class="w-100 wow bounce animated" data-wow-delay="1s" src="{{ asset('/public/avatar.png') }}" />
+                    <img  class="w-100 wow bounce animated" data-wow-delay="1s" src="{{ env('APP_URL') }}/public/avatar.png" />
                     <div class="card-footer">
                         <p>Engr. Abu Yousuf</p>
                         <p>Principal<br> Jahanar-Ayub Academy</p>
@@ -76,7 +76,7 @@ body {
                 @endif
            </div>
              <div class="col-12 col-md-9">
-                @if(!empty($pSpeech))
+                @if($pSpeech)
                 <h5 class="mt-0">{{$pSpeech->importantSpeech}}</h5>
                 <p class="mt-3 wow fadeIn animated" data-wow-delay=".60s">
                     {{$pSpeech->generalSpeech}}
@@ -87,7 +87,9 @@ body {
                 Life is not always smooth sailing; it’s more like a roller coaster with its ups and downs. But remember, it’s the bumps and twists that make the ride exciting and memorable. When you face challenges or setbacks, it’s easy to feel discouraged. However, it’s during these tough times that your true strength shines through. It’s the moments when you refuse to give up that define your character and set the stage for your success.
                 </p>
                 @endif
-            </div>     
+            </div> 
+        @else
+            <div class="alert alert-info">Sorry! No data found!</div>
         @endif            
         </div>
 

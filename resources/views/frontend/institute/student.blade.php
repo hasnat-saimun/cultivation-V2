@@ -16,13 +16,13 @@ body {
  <section class="mt-4">
     <div class="container">
         <div class="row">
-            <div class="col-md-12 text-center con-title">
-                <h2 class="wow fadeInLeft animated" data-wow-delay=".60s"> Our <span>Student</span></h2>
+            <div class="col-md-12 text-center con-title mt-4">
+                <h2 class="wow fadeInLeft animated my-4" data-wow-delay=".60s"> Student Details of <span>SBC</span></h2>
            </div>
         </div>
             <!-- On tables -->
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-md-10 mx-auto my-4">
                 <div class="card">
                     <div class="card-header">
                         Student List

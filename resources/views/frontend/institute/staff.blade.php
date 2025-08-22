@@ -15,15 +15,15 @@ Syllabus
 
  <section class="container mt-4">
     <div class="row">
-        <div class="col-md-12 text-center con-title">
-            <h2 class="hedingAbout wow fadeInLeft animated" data-wow-delay=".60s">Office <span> Staff</span> </h2>
+        <div class="col-md-12 text-center con-title mt-4">
+            <h2 class="hedingAbout wow fadeInLeft animated my-4" data-wow-delay=".60s">Let's have looks of our <span> Staff Panel</span> </h2>
         </div>
     </div>
     <div class="row align-items-center">
-         <div class="col-12">
-                @if(!empty($Datakey)) 
+         <div class="col-10 mx-auto">
+                @if($Datakey->count()>0) 
                 @foreach($Datakey as $data)
-                <table class="table table-bordered">
+                <table class="table table-bordered my-4">
                     <td style="width:10%"><img  class="w-100 img-thumbnail" src="{{ asset('public/upload/image/staff').'/'.$data->avatar }}"></td>
                     <td style="width:90%">
                         <table class="table table-bordered">
@@ -47,11 +47,11 @@ Syllabus
 
                 @endforeach
                 @else
-                <table class="table table-bordered">
-                <tr>
-                    <td colspan="6">Sorry! No data found</td>
-                </tr>
-                </table>
+                    <table class="table table-bordered my-4">
+                        <tr class="alert alert-info p-4">
+                            <td colspan="6">Sorry! No data found</td>
+                        </tr>
+                    </table>
                 @endif  
          </div>
     </div>

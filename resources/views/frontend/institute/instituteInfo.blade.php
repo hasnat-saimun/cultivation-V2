@@ -34,9 +34,13 @@ Syllabus
 
  <section class="my-4">
     <div class="container">
-        @if(!empty($Datakey)) 
-        @foreach($Datakey as $data)
-        <div class="row mb-1">
+        <div class="row">
+            <div class="col-md-12 text-center con-title mt-4">
+                <h1 class="wow fadeInLeft animated my-4" data-wow-delay=".60s">Let's have a look abount <span>SBC</span></h1>
+           </div>
+        </div>
+        @if($data)
+        <div class="row my-4">
             <div class="col-md-12 text-center con-title">
                 <h2  class=" wow fadeInLeft animated" data-wow-delay=".60s">{{$data->insHeadline}}</h2>
            </div>
@@ -66,7 +70,8 @@ Syllabus
                  </p>
             </div>    
         </div>
-        @endforeach
+        @else
+            <div class="alert alert-info">Sorry! No data found!</div>
         @endif
     </div>
 </section>

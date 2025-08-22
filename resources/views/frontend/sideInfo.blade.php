@@ -1,39 +1,11 @@
 
-    <div class="list-group rounded-0 mb-4 border border-success">
-        <div class="p-2 bg-success h5"><i class="fa-duotone fa-user"></i> Education Ministar</div>
-        <div class="p-2 text-center">
-            @if(!empty($Datakey->eduMinImg)) 
-            <img class="w-75" alt="Education Minister" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->eduMinImg }}" />
-            @else
-            <img class="w-75" alt="Education Minister" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
-            @endif
-
-            <p class="fw-bold my-0">{{$Datakey->eduMinName}}</p>
-            <p class="fw-bold my-0 small">{{$Datakey->eduMinDetail}}</p>
-            <a href="#"> Details </a>
-        </div>
-    </div>
-    <div class="list-group rounded-0 my-4 border border-success">
-        <div class="p-2 bg-success h5"><i class="fa-duotone fa-user-tie-hair"></i> Board Chairman</div>
-         <div class="p-2 text-center">
-            @if(!empty($Datakey->boardChairmanImg)) 
-            <img class="w-75" alt="Board Chairman" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->boardChairmanImg }}" />
-            @else
-            <img class="w-75" alt="Board Chairman" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
-            @endif
-
-            <p class="fw-bold my-0">{{$Datakey->boardChairmanName}}</p>
-            <p class="fw-bold my-0 small">{{$Datakey->boardChairmanDetail}}</p>
-            <a href="#"> Details </a>
-        </div>
-    </div>
     <div class="list-group rounded-0 border border-success">
         <div class="p-2 bg-success h5"><i class="fa-regular fa-user-tie"></i> Principal</div>
         <div class="p-2 text-center">
             @if(!empty($Datakey->principalImg)) 
-            <img class="w-75" alt="Principal" src="{{ asset('public/upload/image/webHomepage').'/'.$Datakey->principalImg }}" />
+            <img class="w-75" alt="Principal" src="{{ env('APP_URL') }}public/upload/image/webHomepage/{{ $Datakey->principalImg }}" />
             @else
-            <img class="w-75" alt="Principal" src="{{ asset('/public/') }}/img/chairmanOfBoard.jpg" />
+            <img class="w-75" alt="Principal" src="{{ env('APP_URL') }}/public/img/principal.jpg" />
             @endif
 
             <p class="fw-bold my-0">{{$Datakey->principalName}}</p>
@@ -56,7 +28,7 @@
         <div class="bg-success p-2 h5 mb-0"><i class="fa-solid fa-message-music"></i> National Song</div>
         <a href="#" class="list-group-item list-group-item-action">
             <audio controls="" style="width: 100%;" class="mt-3">
-                <source src="music/bd_national_anthem.mp3" type="audio/mpeg" />
+                <source src="{{ env('APP_URL') }}/public/music/bd_national_anthem.mp3" type="audio/mpeg" />
             </audio>
         </a>
     </div>

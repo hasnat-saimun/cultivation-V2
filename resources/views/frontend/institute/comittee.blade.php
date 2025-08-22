@@ -15,46 +15,46 @@ Syllabus
 
  <section class="container mt-4">
     <div class="row">
-        <div class="col-md-12 text-center con-title">
-            <h2 class="hedingAbout wow fadeInLeft animated" data-wow-delay=".60s">Our <span> Comittee</span> </h2>
+        <div class="col-md-12 text-center con-title my-4">
+            <h2 class="hedingAbout wow fadeInLeft animated" data-wow-delay=".60s">SBC <span> Governing Body</span> </h2>
         </div>
     </div>
     <div class="row align-items-center">
-         <div class="col-12">
-                        @if(!empty($Datakey)) 
-                        @foreach($Datakey as $data)
+         <div class="col-10 mx-auto my-4">
+            @if($Datakey->count()>0) 
+                @foreach($Datakey as $data)
+                <table class="table table-bordered">
+                    <td style="width:10%">
+                        <img  class="w-100 img-thumbnail" src="{{ asset('public/upload/image/cultivation').'/'.$data->avatar }}" height="50px">
+                    </td>
+                    <td style="width:90%">
                         <table class="table table-bordered">
-                            <td style="width:10%">
-                                <img  class="w-100 img-thumbnail" src="{{ asset('public/upload/image/cultivation').'/'.$data->avatar }}" height="50px">
-                            </td>
-                            <td style="width:90%">
-                                <table class="table table-bordered">
-                                    <tr>
-                                        <th style="width:15%">Name</th>
-                                        <td colspan="3">: {{$data->fullName}}</td>
-                                    </tr>
-                                    <tr>
-                                        <th style="width:15%">Designation</th>
-                                        <td colspan="3">: {{$data->designation}}</td>
-                                    </tr>
-                                    <tr>
-                                        <th style="width:15%">Mobile</th>
-                                        <td style="width:35%">: {{$data->mobile}}</td>
-                                        <th style="width:15%">Email</th>
-                                        <td style="width:35%">: {{$data->email}}</td>
-                                    </tr> 
-                                </table>
-                            </td>
+                            <tr>
+                                <th style="width:15%">Name</th>
+                                <td colspan="3">: {{$data->fullName}}</td>
+                            </tr>
+                            <tr>
+                                <th style="width:15%">Designation</th>
+                                <td colspan="3">: {{$data->designation}}</td>
+                            </tr>
+                            <tr>
+                                <th style="width:15%">Mobile</th>
+                                <td style="width:35%">: {{$data->mobile}}</td>
+                                <th style="width:15%">Email</th>
+                                <td style="width:35%">: {{$data->email}}</td>
+                            </tr> 
                         </table>
+                    </td>
+                </table>
 
-                        @endforeach
-                    @else
-                    <table class="table table-bordered">
-                        <tr>
-                            <td colspan="6">Sorry! No data found</td>
-                        </tr>
-                    </table>
-                    @endif  
+                @endforeach
+            @else
+            <table class="table table-bordered">
+                <tr class="alert alert-info p-4">
+                    <td colspan="6">Sorry! No data found</td>
+                </tr>
+            </table>
+            @endif  
          </div>
     </div>
 </section>

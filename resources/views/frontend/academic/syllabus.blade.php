@@ -6,12 +6,12 @@ Syllabus
 @section('frontcontent')
 <section class="container">
     <div class="row">
-        <div class="col-md-12 text-center con-title">
-            <h2 class="wow fadeInLeft animated" data-wow-delay=".60s"> Syllabus</h2>
+        <div class="col-md-12 text-center con-title mt-4">
+            <h2 class="hedingAbout wow fadeInLeft animated my-4" data-wow-delay=".60s">Syllabus <span> List</span> </h2>
         </div>
     </div>
     <div calss="row">
-        <div class="col-md-12">
+        <div class="col-10 mx-auto my-4">
             <div class="card">
                 <div class="card-header">
                     Syllabus 
@@ -30,21 +30,23 @@ Syllabus
                             </tr> 
                         </thead>
                         <tbody>
-                        @foreach($Datakey as $data)
-                            <tr>
-                                <td>{{$data->title}}</td>
-                                @php 
-                                    $itemClass      = \App\Models\classManage::find($data->assignClass);
-                                    $itemDepartment = \App\Models\Department::find($data->assignDepartment);
-                                    $itemSession    = \App\Models\sessionManage::find($data->assignSession);
-                                @endphp
-                                <td>{{ $itemClass->className }}</td>
-                                <td>{{ $itemDepartment->departmentName }}</td>
-                                <td>{{ $itemSession->session }}</td>
-                                <td>{{$data->created_at}}</td>
-                                <td><a data-fancybox data-type="iframe" href="{{asset('/')}}/public/upload/image/cultivation/syllabus/{{ $data->attachment }}" target="_blank"> <i class="fa fa-eye" style="color: green;"></i> </a></td>
-                            </tr> 
-                        @endforeach               
+                        @if($Datakey->count()>0)
+                            @foreach($Datakey as $data)
+                                <tr>
+                                    <td>{{$data->title}}</td>
+                                    @php 
+                                        $itemClass      = \App\Models\classManage::find($data->assignClass);
+                                        $itemDepartment = \App\Models\Department::find($data->assignDepartment);
+                                        $itemSession    = \App\Models\sessionManage::find($data->assignSession);
+                                    @endphp
+                                    <td>{{ $itemClass->className }}</td>
+                                    <td>{{ $itemDepartment->departmentName }}</td>
+                                    <td>{{ $itemSession->session }}</td>
+                                    <td>{{$data->created_at}}</td>
+                                    <td><a data-fancybox data-type="iframe" href="{{asset('/')}}/public/upload/image/cultivation/syllabus/{{ $data->attachment }}" target="_blank"> <i class="fa fa-eye" style="color: green;"></i> </a></td>
+                                </tr> 
+                            @endforeach
+                        @endif
                         </tbody>
                     </table>                         
                 </div>

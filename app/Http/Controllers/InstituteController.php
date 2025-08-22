@@ -407,8 +407,8 @@ class InstituteController extends Controller
 
     //institute info
     public function institutePage(){
-        $syllabus  =   InstituteDetails::all();
-        return view('frontend.institute.instituteInfo',['Datakey'=>$syllabus]);
+        $syllabus  =   InstituteDetails::first();
+        return view('frontend.institute.instituteInfo',['data'=>$syllabus]);
     }
     //principalSpeech
     public function principalSpeechPage(){

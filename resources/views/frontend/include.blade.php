@@ -36,6 +36,26 @@
                 width: 100%;
                 height: auto;
             }
+            /* Default (desktop/laptop) */
+            .carousel-item img {
+                height: 450px !important;
+                object-fit: cover; /* Keeps image from stretching */
+                width: 100%;
+            }
+
+            /* Tablet */
+            @media (max-width: 992px) {
+                .carousel-item img {
+                    height: 350px !important;
+                }
+            }
+
+            /* Mobile devices */
+            @media (max-width: 576px) {
+                .carousel-item img {
+                    height: 220px !important;
+                }
+            }
         </style>
     </head>
     <body>

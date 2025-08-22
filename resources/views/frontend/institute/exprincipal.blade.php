@@ -16,13 +16,13 @@ body {
  <section class="mt-4">
     <div class="container">
         <div class="row">
-            <div class="col-md-12 text-center con-title">
+            <div class="col-md-12 text-center con-title my-4">
                 <h2 class="wow fadeInLeft animated" data-wow-delay=".60s"> Former <span>Principal</span></h2>
            </div>
         </div>
             <!-- On tables -->
         <div class="row">
-            <div class="col-md-12">
+            <div class="col-10 mx-auto">
                 <div class="card">
                     <div class="card-header">
                         Ex-Principals List
@@ -41,7 +41,6 @@ body {
                     <tbody>
                         @if(!empty($Datakey)) 
                         @foreach($Datakey as $data)
-                        
                         <tr class="text-center">
                             <td>{{$data->fullName}}</td>
                             <td>{{$data->startFrom}}</td>
@@ -54,8 +53,6 @@ body {
                                 <td colspan="6">Sorry! No data found</td>
                             </tr>
                         @endif   
-                        
-                        
                     </tbody>
                 </table>                         
                     </div>
