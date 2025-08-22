@@ -50,8 +50,8 @@ use App\Http\Middleware\adminGuard;
 
 Route::get('/',[
     FrontController::class,
-    'homePage'
-])->name('homePage');
+    'adminLogin'
+])->name('adminLogin');
 
 Route::post('/admin/login/confirm',[
     FrontController::class ,
