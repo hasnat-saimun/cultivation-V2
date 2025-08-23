@@ -54,6 +54,7 @@ class AcademicController extends Controller
     public function delSyllabus($id){
         $item = Syllabus::find($id);
         if(!empty($item)):
+            
             if(File::exists(public_path('upload/image/cultivation/syllabus/').$item->attachment)):
                 File::delete(public_path('upload/image/cultivation/syllabus/').$item->attachment);
             endif;
