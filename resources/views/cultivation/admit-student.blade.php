@@ -53,6 +53,9 @@ New Admission
                                             {{ session()->get('error') }}
                                         </div>
                                     @endif
+                                    @error('avatar')
+                                        <div class="alert alert-danger">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="heading-layout1">

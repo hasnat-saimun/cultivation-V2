@@ -32,6 +32,13 @@ class AcademicController extends Controller
         $item->assignDepartment = $requ->assignDepartment;
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
+            $validated = $requ->validate([
+                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
+                     // max 2 MB
+                ],[
+                    'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                    'attachment.max'    => 'Each file must be less than 2MB.'
+                ]);
             $attachment = $requ->attachment;
             $newAttachment      = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
             $attachment->move(public_path('upload/image/cultivation/syllabus'),$newAttachment);
@@ -98,7 +105,15 @@ class AcademicController extends Controller
         $item->assignDepartment = $requ->assignDepartment;
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
+            $validated = $requ->validate([
+                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
+                     // max 2 MB
+                ],[
+                    'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                    'attachment.max'    => 'Each file must be less than 2MB.'
+                ]);
             $attachment = $requ->attachment;
+            
             $newAttachment      = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
             $attachment->move(public_path('upload/image/cultivation/semisterPlan'),$newAttachment);
             $item->attachment   = $newAttachment;
@@ -164,6 +179,13 @@ class AcademicController extends Controller
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
             $attachment = $requ->attachment;
+             $validated = $requ->validate([
+                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
+                     // max 2 MB
+                ],[
+                    'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                    'attachment.max'    => 'Each file must be less than 2MB.'
+                ]);
             $newAttachment      = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
             $attachment->move(public_path('upload/image/cultivation/classRoutine'),$newAttachment);
             $item->attachment   = $newAttachment;
@@ -228,6 +250,13 @@ class AcademicController extends Controller
         $item->assignDepartment = $requ->assignDepartment;
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
+             $validated = $requ->validate([
+                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
+                     // max 2 MB
+                ],[
+                    'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                    'attachment.max'    => 'Each file must be less than 2MB.'
+                ]);
             $attachment = $requ->attachment;
             $newAttachment      = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
             $attachment->move(public_path('upload/image/cultivation/examRoutine'),$newAttachment);
