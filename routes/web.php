@@ -36,6 +36,7 @@ use App\Http\Middleware\SuperAdmin;
 use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
+use App\Http\Middleware\schoolUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -1142,6 +1143,23 @@ Route::middleware(['adminGuard'])->group (function(){
         'registerDel'
     ])->name('registerDel');
     //admin school Requst end
+
+    //school uesr panal
+     Route::get('/admin/user/request',[
+        schoolUserController::class,
+        'userForm'
+    ])->name('userForm');
+
+    Route::get('/admin/user/list',[
+        schoolUserController::class,
+        'userList'
+    ])->name('userList');
+
+    Route::post('/admin/user/save',[
+       schoolUserController::class,
+        'saveUserForm'
+    ])->name('saveUserForm');
+
 });
 
 

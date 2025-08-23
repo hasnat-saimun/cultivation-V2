@@ -407,8 +407,14 @@ class InstituteController extends Controller
 
     //institute info
     public function institutePage(){
+<<<<<<< Updated upstream
         $syllabus  =   InstituteDetails::first();
         return view('frontend.institute.instituteInfo',['data'=>$syllabus]);
+=======
+         $server  =   ServerConfig::first();
+        $syllabus  =   InstituteDetails::all();
+        return view('frontend.institute.instituteInfo',['Datakey'=>$syllabus,'config'=>$server]);
+>>>>>>> Stashed changes
     }
     //principalSpeech
     public function principalSpeechPage(){
