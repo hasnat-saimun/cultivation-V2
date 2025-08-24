@@ -67,6 +67,18 @@ Configuration
                         {{ session()->get('error') }}
                     </div>
                 @endif
+                    @error('principalSign')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('logo')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('favicon')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('avatar')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 <form action="{{ route('saveConfig') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="serverId" value="{{ $serverId }}">
@@ -227,7 +239,7 @@ Configuration
                             <form class="form" action="{{ route('saveSign') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
-                                <input type="file" name="principalSign" class="form-control" id="principalSign" required>
+                                <input type="file" name="principalSign" class="form-control-file" id="principalSign" required>
                                 <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
                             </form>
                             @else

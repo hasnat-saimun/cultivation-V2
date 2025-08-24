@@ -35,7 +35,11 @@ endif;
                             {{ session()->get('error') }}
                         </div>
                     @endif
-                </div>
+                        
+                    @error('avatar')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+            </div>
             </div>
             <div class="card-header">Slider Info</div>
             <div class="card-body cultivation">

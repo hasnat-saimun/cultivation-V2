@@ -23,6 +23,14 @@ class TeacherController extends Controller
 
             if(!empty($requ->file('avatar'))):
                 $teacherProfileAvatar = $requ->file('avatar');
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newTeacherAvatar   = rand().date('Ymd').'.'.$teacherProfileAvatar->getClientOriginalExtension();
                 $teacherProfileAvatar->move(public_path('upload/image/teacher'),$newTeacherAvatar);
                 $teacherProfile->avatar        = $newTeacherAvatar; 
@@ -119,6 +127,14 @@ class TeacherController extends Controller
         if($teacherProfileData):
             if(!empty($requ->avatar)):
                 $teacherAvatar = $requ->file('avatar');
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newTeacherAvatar = rand().date('Ymd').'.'.$teacherAvatar->getClientOriginalExtension();
                 $teacherAvatar->move(public_path('upload/image/teacher/'),$newTeacherAvatar);
 

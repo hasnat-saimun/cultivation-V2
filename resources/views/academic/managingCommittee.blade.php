@@ -53,6 +53,10 @@ Managing Committee
                                 {{ session()->get('error') }}
                             </div>
                         @endif
+                        
+                    @error('avatar')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                     </div>
                 </div>
                 <form action="{{ route('saveManagingCommittee') }}" class="form" method="POST" enctype="multipart/form-data">

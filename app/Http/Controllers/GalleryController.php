@@ -28,7 +28,7 @@ class GalleryController extends Controller
                     'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
                 ],[
-                    'avatar.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
                     'avatar.max'    => 'Each file must be less than 5MB.'
                 ]);
             $stdAvatar = $requ->file('avatar');

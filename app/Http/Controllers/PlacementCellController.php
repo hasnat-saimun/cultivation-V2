@@ -33,6 +33,14 @@ class PlacementCellController extends Controller
         $item->designation         = $requ->designation;
         $item->jobDetails          = $requ->jobDetails;
         if(!empty($requ->avatar)):
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $stdAvatar = $requ->file('avatar');
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
             $stdAvatar->move(public_path('upload/image/placementCell/'),$newAvatar);
@@ -100,6 +108,15 @@ class PlacementCellController extends Controller
         $item->rollNumber          = $requ->rollNumber;
         if(!empty($requ->avatar)):
             $stdAvatar = $requ->file('avatar');
+            
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
             $stdAvatar->move(public_path('upload/image/neddyStudent/'),$newAvatar);
 
@@ -108,6 +125,13 @@ class PlacementCellController extends Controller
 
         if(!empty($requ->attachment)):
             $stdAttachment = $requ->file('attachment');
+            $validated = $requ->validate([
+                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],[
+                    'attachment.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'attachment.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAttachment = rand().date('Ymd').'.'.$stdAttachment->getClientOriginalExtension();
             $stdAttachment->move(public_path('upload/image/neddyStudent/'),$newAttachment);
 

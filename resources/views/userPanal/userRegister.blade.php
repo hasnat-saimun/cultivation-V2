@@ -9,10 +9,10 @@ Register Form
     <div class="col-md-10 col-12 mx-auto">
         <div class="card">
             <div class="card-header bg-light">
-                <a href="{{ route('registerList') }}" class="btn btn-success">Registered List</a>
+                <a href="{{ route('registerList') }}" class="btn btn-success"> Registered List</a>
             </div>
             <div class="card-header">
-                <i class="fa-duotone fa-toolbox"></i> Register Form
+                <i class="fa-duotone fa-toolbox"></i> User Register Form
             </div>
             <div class="card-body cultivation">
                 @if(session()->has('success'))
@@ -34,7 +34,7 @@ Register Form
                     <div class="row">
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
-                                <label for="insName" class="form-label">Institute Name</label>
+                                <label for="userName" class="form-label">User Name</label>
                                 <input type="text" name="insName" class="form-control" id="insName"  placeholder="Enter the name of the institute" required>
                             </div>
                             <div class="mb-3">

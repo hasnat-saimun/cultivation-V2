@@ -35,6 +35,13 @@ class InstituteController extends Controller
         
         if(!empty($requ->avatar)):
             $heroImg        = $requ->avatar;
+             $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],[
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
             $heroImg->move(public_path('/upload/image/webHomepage'),$newheroImg);
             $institute->avatar      = $newheroImg;
@@ -114,6 +121,14 @@ class InstituteController extends Controller
         
         if(!empty($requ->eduMinImg)):
             $eduMinImg        = $requ->eduMinImg;
+            $validated = $requ->validate([
+                    'eduMinImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'eduMinImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'eduMinImg.max'    => 'Each file must be less than 5MB.'
+                ]);
             $neweduMinImg     = rand().date('Ymd').'.'.$eduMinImg->getClientOriginalExtension();
             $eduMinImg->move(public_path('upload/image/webHomepage'),$neweduMinImg);
             $institute->eduMinImg      = $neweduMinImg;
@@ -121,6 +136,14 @@ class InstituteController extends Controller
         
         if(!empty($requ->boardChairmanImg)):
             $boardChairmanImg        = $requ->boardChairmanImg;
+            $validated = $requ->validate([
+                    'boardChairmanImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'boardChairmanImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'boardChairmanImg.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newboardChairmanImg     = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
             $boardChairmanImg->move(public_path('upload/image/webHomepage'),$newboardChairmanImg);
             $institute->boardChairmanImg      = $newboardChairmanImg;
@@ -128,6 +151,14 @@ class InstituteController extends Controller
         
         if(!empty($requ->principalImg)):
             $principalImg        = $requ->principalImg;
+             $validated = $requ->validate([
+                    'principalImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'principalImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'principalImg.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newprincipalImg     = rand().date('Ymd').'.'.$principalImg->getClientOriginalExtension();
             $principalImg->move(public_path('upload/image/webHomepage'),$newprincipalImg);
             $institute->principalImg      = $newprincipalImg;
@@ -209,6 +240,15 @@ class InstituteController extends Controller
         
         if(!empty($requ->heroImg)):
             $heroImg        = $requ->heroImg;
+            
+            $validated = $requ->validate([
+                    'heroImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'heroImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'heroImg.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
             $heroImg->move(public_path('upload/image/cultivation'),$newheroImg);
             $institute->heroImg      = $newheroImg;
@@ -283,6 +323,14 @@ class InstituteController extends Controller
         $exPrincipal->designation   = $requ->designation;
         if(!empty($requ->avatar)):
             $stdAvatar = $requ->file('avatar');
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
             $stdAvatar->move(public_path('upload/image/exPrincipal/'),$newAvatar);
 
@@ -360,6 +408,14 @@ class InstituteController extends Controller
         
         if(!empty($requ->avatar)):
             $avatar        = $requ->avatar;
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAvatar     = rand().date('Ymd').'.'.$avatar->getClientOriginalExtension();
             $avatar->move(public_path('upload/image/cultivation'),$newAvatar);
             $committee->avatar      = $newAvatar;
@@ -407,14 +463,11 @@ class InstituteController extends Controller
 
     //institute info
     public function institutePage(){
-<<<<<<< Updated upstream
         $syllabus  =   InstituteDetails::first();
         return view('frontend.institute.instituteInfo',['data'=>$syllabus]);
-=======
          $server  =   ServerConfig::first();
         $syllabus  =   InstituteDetails::all();
         return view('frontend.institute.instituteInfo',['Datakey'=>$syllabus,'config'=>$server]);
->>>>>>> Stashed changes
     }
     //principalSpeech
     public function principalSpeechPage(){

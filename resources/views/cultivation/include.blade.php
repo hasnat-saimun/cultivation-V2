@@ -79,6 +79,17 @@
                             <a href="{{ route('serverConfig') }}" class="nav-link"><i class="fa-solid fa-screwdriver-wrench"></i><span>Configuration</span></a>
                         </li>
                         <li class="nav-item sidebar-nav-item">
+                            <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>Teacher's User</span></a>
+                            <ul class="nav sub-group-menu">
+                                <li class="nav-item">
+                                    <a href="{{route('techerRegForm')}}" class="nav-link"><i class="fas fa-angle-right"></i>User Register Form</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{route('techerRegList')}}" class="nav-link"><i class="fas fa-angle-right"></i>User Register List</a>
+                                </li>
+                            </ul>
+                        </li>
+                        <li class="nav-item sidebar-nav-item">
                             <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>Admin</span></a>
                             <ul class="nav sub-group-menu">
                                 <li class="nav-item">
