@@ -54,7 +54,7 @@
                         @csrf
                         <div class="mb-3">
                             <label for="fullName">Full Name</label>
-                            <input type="text" name="fullName" class="form-control" placeholder="Enter important speech of principal" value="{{ $exName }}">
+                            <input type="text" name="fullName" class="form-control" placeholder="Enter principal full name" value="{{ $exName }}">
                         </div>
                         <div class="mb-3">
                             <label for="mobileNumber">Mobile</label>

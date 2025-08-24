@@ -48,7 +48,7 @@
                                 </li>
                                 <li class="nav-item">
                                     <a href="{{ route('managingCommittee') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Managing Comittee</a>
+                                            class="fas fa-angle-right"></i>Governing Body</a>
                                 </li>
                             </ul>
                         </li>

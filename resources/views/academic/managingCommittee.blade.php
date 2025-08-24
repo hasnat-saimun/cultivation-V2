@@ -1,6 +1,6 @@
 @extends('academic.include')
 @section('backTitle')
-Managing Committee
+Governing Body
 @endsection
 @section('backIndex')
 @php 
@@ -39,7 +39,7 @@ Managing Committee
 <div class="row gutters-20 mb-4">
     <div class="col-10 mx-auto">
         <div class="card">
-            <div class="card-header">Managing Committee</div>
+            <div class="card-header">Governing Body</div>
             <div class="card-body cultivation">
                 <div class="row">
                     <div class="col-12">
@@ -126,7 +126,7 @@ Managing Committee
                     </div>
                 </form>
             </div>
-            <div class="card-header mt-5">Committee List</div>
+            <div class="card-header mt-5">Governing Body Member List</div>
             <div class="card card-body cultivation">
                 <table id="myTable" class="table table-striped table-responsive">
                     <thead>
