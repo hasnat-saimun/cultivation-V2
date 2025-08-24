@@ -36,6 +36,7 @@ use App\Http\Middleware\SuperAdmin;
 use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
+use App\Http\Middleware\schoolUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,22 +54,22 @@ Route::get('/',[
     'adminLogin'
 ])->name('adminLogin');
 
-Route::post('/admin/login/confirm',[
+Route::post('/login/confirm',[
     FrontController::class ,
     'cultivationLogin'
 ])->name('cultivationLogin');
 
-Route::get('/admin/login',[
+Route::get('/login',[
     FrontController::class,
     'adminLogin'
 ])->name('adminLogin');
 
-Route::get('/admin/logout',[
+Route::get('/logout',[
     FrontController::class,
     'adminLogout'
 ])->name('adminLogout');
 
-Route::post('/admin/register',[
+Route::post('/register',[
     FrontController::class ,
     'adminRegister'
 ])->name('adminRegister');
@@ -78,57 +79,57 @@ Route::middleware(['adminGuard'])->group (function(){
     
     //Cultivation Part
     
-    Route::get('/admin/dashboard',[
+    Route::get('/dashboard',[
         CultivationController::class,
         'cultivationIndex'
     ])->name('cultivationIndex');
 
-    Route::get('/admin/profile',[
+    Route::get('/profile',[
         CultivationController::class,
         'adminProfile'
     ])->name('adminProfile');
 
-    Route::post('/admin/profile/save',[
+    Route::post('/profile/save',[
         CultivationController::class ,
         'saveAdminProfile'
     ])->name('saveAdminProfile');
 
-    Route::post('/admin/profile/password/save',[
+    Route::post('/profile/password/save',[
         CultivationController::class ,
         'changeAdminPassword'
     ])->name('changeAdminPassword');
 
-    Route::get('/admin/notice/list',[
+    Route::get('/notice/list',[
         NoticeController::class ,
         'noticeList'
     ])->name('noticeList');
 
-    Route::get('/admin/notice/new',[
+    Route::get('/notice/new',[
         NoticeController::class ,
         'newNotice'
     ])->name('newNotice');
 
-    Route::post('/admin/notice/save',[
+    Route::post('/notice/save',[
         NoticeController::class ,
         'saveNotice'
     ])->name('saveNotice');
 
-    Route::get('/admin/notice/edit/{id}',[
+    Route::get('/notice/edit/{id}',[
         NoticeController::class ,
         'editNotice'
     ])->name('editNotice');
 
-    Route::post('/admin/notice/update',[
+    Route::post('/notice/update',[
         NoticeController::class ,
         'updateNotice'
     ])->name('updateNotice');
 
-    Route::get('/admin/notice/delete/{id}',[
+    Route::get('/notice/delete/{id}',[
         NoticeController::class ,
         'delNotice'
     ])->name('delNotice');
 
-    Route::get('/admin/notice/preview/{id}',[
+    Route::get('/notice/preview/{id}',[
         NoticeController::class ,
         'prevNotice'
     ])->name('prevNotice');
@@ -137,27 +138,27 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Image str
 
-    Route::get('/admin/institute/photo/',[
+    Route::get('/institute/photo/',[
         GalleryController::class,
         'newPhoto'
     ])->name('newPhoto');
 
-    Route::post('/admin/photo/save',[
+    Route::post('/photo/save',[
         GalleryController::class ,
         'savePhoto'
     ])->name('savePhoto');
 
-    Route::get('/admin/photo/edit/{id}',[
+    Route::get('/photo/edit/{id}',[
         GalleryController::class ,
         'editPhoto'
     ])->name('editPhoto');
 
-    Route::get('/admin/photo/content/delete/{id}',[
+    Route::get('/photo/content/delete/{id}',[
         GalleryController::class ,
         'delPhotoContent'
     ])->name('delPhotoContent');
 
-    Route::get('/admin/photo/delete/{id}',[
+    Route::get('/photo/delete/{id}',[
         GalleryController::class ,
         'delPhoto'
     ])->name('delPhoto');
@@ -166,402 +167,402 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //video str
 
-    Route::get('/admin/institute/video/',[
+    Route::get('/institute/video/',[
         GalleryController::class,
         'newVideo'
     ])->name('newVideo');
 
-    Route::post('/admin/video/save',[
+    Route::post('/video/save',[
         GalleryController::class ,
         'saveVideo'
     ])->name('saveVideo');
 
-    Route::get('/admin/video/edit/{id}',[
+    Route::get('/video/edit/{id}',[
         GalleryController::class ,
         'editVideo'
     ])->name('editVideo');
 
-    Route::get('/admin/video/content/delete/{id}',[
+    Route::get('/video/content/delete/{id}',[
         GalleryController::class ,
         'delVideoContent'
     ])->name('delVideoContent');
 
-    Route::get('/admin/video/delete/{id}',[
+    Route::get('/video/delete/{id}',[
         GalleryController::class ,
         'delVideo'
     ])->name('delVideo');
 
     //video end
 
-     Route::get('/admin/home/slider/',[
+     Route::get('/home/slider/',[
         InstituteController::class,
         'sliderInfo'
     ])->name('sliderInfo'); 
 
-     Route::post('/admin/home/slider/details',[
+     Route::post('/home/slider/details',[
         InstituteController::class,
         'sliderDetail'
     ])->name('sliderDetail'); 
 
-     Route::get('/admin/home/slider/edit/{id}',[
+     Route::get('/home/slider/edit/{id}',[
         InstituteController::class ,
         'editSlider'
     ])->name('editSlider');
 
 
-    Route::get('/admin/home/slider/image/delete/{id}',[
+    Route::get('/home/slider/image/delete/{id}',[
         InstituteController::class ,
         'delSliderImg'
     ])->name('delSliderImg');
 
-    Route::get('/admin/home/slider/delete/{id}',[
+    Route::get('/home/slider/delete/{id}',[
         InstituteController::class ,
         'delSlider'
     ])->name('delSlider');
 
-    Route::get('/admin/home/info/',[
+    Route::get('/home/info/',[
         InstituteController::class,
         'homeInfo'
     ])->name('homeInfo'); 
 
-    Route::post('/admin/home/details/',[
+    Route::post('/home/details/',[
         InstituteController::class ,
         'homeDetails'
     ])->name('homeDetails');
 
 
 
-    Route::get('/admin/home/info/eduMinImg/del/{id}',[
+    Route::get('/home/info/eduMinImg/del/{id}',[
         InstituteController::class ,
         'delEduMinImg'
     ])->name('delEduMinImg');
 
-    Route::get('/admin/home/info/boardChairmanImg/del/{id}',[
+    Route::get('/home/info/boardChairmanImg/del/{id}',[
         InstituteController::class ,
         'delBoardChairmanImg'
     ])->name('delBoardChairmanImg');
 
-    Route::get('/admin/home/info/principalImg/del/{id}',[
+    Route::get('/home/info/principalImg/del/{id}',[
         InstituteController::class ,
         'delPrincipalImg'
     ])->name('delPrincipalImg');
 
 
-    Route::get('/admin/institute/info/',[
+    Route::get('/institute/info/',[
         InstituteController::class,
         'insInfo'
     ])->name('insInfo');
 
-    Route::get('/admin/institute/info/img/del/{id}',[
+    Route::get('/institute/info/img/del/{id}',[
         InstituteController::class ,
         'delHeroImg'
     ])->name('delHeroImg');
 
-    Route::post('/admin/institute/details/',[
+    Route::post('/institute/details/',[
         InstituteController::class ,
         'insDetails'
     ])->name('insDetails');
 
-    Route::get('/admin/institute/principal/speech',[
+    Route::get('/institute/principal/speech',[
         InstituteController::class ,
         'principalSpeech'
     ])->name('principalSpeech');
 
-    Route::post('/admin/institute/principal/speech/save',[
+    Route::post('/institute/principal/speech/save',[
         InstituteController::class ,
         'savePrincipalSpeech'
     ])->name('savePrincipalSpeech');
 
-    Route::get('/admin/institute/principal/exList',[
+    Route::get('/institute/principal/exList',[
         InstituteController::class,
         'exPrincipal'
     ])->name('exPrincipal');
 
-    Route::get('/admin/institute/view/exPrincipal/{id}',[
+    Route::get('/institute/view/exPrincipal/{id}',[
         InstituteController::class,
         'viewExPrincipal'
     ])->name('viewExPrincipal');
 
-    Route::post('/admin/institute/principal/exList/save',[
+    Route::post('/institute/principal/exList/save',[
         InstituteController::class ,
         'saveExPrincipal'
     ])->name('saveExPrincipal');
 
-    Route::get('/admin/institute/principal/exList/edit/{id}',[
+    Route::get('/institute/principal/exList/edit/{id}',[
         InstituteController::class ,
         'editExPrincipal'
     ])->name('editExPrincipal');
 
-    Route::get('/admin/academic/exPlc/content/delete/{id}',[
+    Route::get('/academic/exPlc/content/delete/{id}',[
         InstituteController::class ,
         'delexPlcCon'
     ])->name('delexPlcCon');
 
-    Route::get('/admin/institute/principal/exList/del/{id}',[
+    Route::get('/institute/principal/exList/del/{id}',[
         InstituteController::class ,
         'delExPrincipal'
     ])->name('delExPrincipal');
 
-    Route::get('/admin/institute/committee/',[
+    Route::get('/institute/committee/',[
         InstituteController::class ,
         'managingCommittee'
     ])->name('managingCommittee');
 
-    Route::post('/admin/institute/committee/save',[
+    Route::post('/institute/committee/save',[
         InstituteController::class ,
         'saveManagingCommittee'
     ])->name('saveManagingCommittee');
 
-    Route::get('/admin/institute/committee/view/{id}',[
+    Route::get('/institute/committee/view/{id}',[
         InstituteController::class ,
         'viewManagingCommittee'
     ])->name('viewManagingCommittee');
 
-    Route::get('/admin/institute/committee/edit/{id}',[
+    Route::get('/institute/committee/edit/{id}',[
         InstituteController::class ,
         'editManagingCommittee'
     ])->name('editManagingCommittee');
 
-    Route::get('/admin/institute/committee/dlt/image/{id}',[
+    Route::get('/institute/committee/dlt/image/{id}',[
         InstituteController::class ,
         'delImgContent'
     ])->name('delImgContent');
 
-    Route::get('/admin/institute/committee/del/{id}',[
+    Route::get('/institute/committee/del/{id}',[
         InstituteController::class ,
         'delManagingCommittee'
     ])->name('delManagingCommittee');
 
     // institute info ends here
 
-    Route::get('/admin/academic/syllabus/',[
+    Route::get('/academic/syllabus/',[
         AcademicController::class ,
         'syllabusManage'
     ])->name('syllabusManage');
 
-    Route::post('/admin/academic/syllabus/save',[
+    Route::post('/academic/syllabus/save',[
         AcademicController::class ,
         'saveSyllabus'
     ])->name('saveSyllabus');
 
-    Route::get('/admin/academic/syllabus/edit/{id}',[
+    Route::get('/academic/syllabus/edit/{id}',[
         AcademicController::class ,
         'editSyllabus'
     ])->name('editSyllabus');
 
-    Route::get('/admin/academic/syllabus/content/delete/{id}',[
+    Route::get('/academic/syllabus/content/delete/{id}',[
         AcademicController::class ,
         'delSyllabusContent'
     ])->name('delSyllabusContent');
 
-    Route::get('/admin/academic/syllabus/del/{id}',[
+    Route::get('/academic/syllabus/del/{id}',[
         AcademicController::class ,
         'delSyllabus'
     ])->name('delSyllabus');
 
-    Route::get('/admin/academic/classRoutine/',[
+    Route::get('/academic/classRoutine/',[
         AcademicController::class ,
         'classRoutineManage'
     ])->name('classRoutineManage');
 
-    Route::post('/admin/academic/classRoutine/save',[
+    Route::post('/academic/classRoutine/save',[
         AcademicController::class ,
         'saveClassRoutine'
     ])->name('saveClassRoutine');
 
-    Route::get('/admin/academic/classRoutine/edit/{id}',[
+    Route::get('/academic/classRoutine/edit/{id}',[
         AcademicController::class ,
         'editClassRoutine'
     ])->name('editClassRoutine');
 
-    Route::get('/admin/academic/classRoutine/del/{id}',[
+    Route::get('/academic/classRoutine/del/{id}',[
         AcademicController::class ,
         'delClassRoutine'
     ])->name('delClassRoutine');
 
-    Route::get('/admin/academic/classRoutine/content/delete/{id}',[
+    Route::get('/academic/classRoutine/content/delete/{id}',[
         AcademicController::class ,
         'delClassRoutineContent'
     ])->name('delClassRoutineContent');
 
-    Route::get('/admin/academic/examRoutine/',[
+    Route::get('/academic/examRoutine/',[
         AcademicController::class ,
         'examRoutineManage'
     ])->name('examRoutineManage');
 
-    Route::post('/admin/academic/examRoutine/save',[
+    Route::post('/academic/examRoutine/save',[
         AcademicController::class ,
         'saveExamRoutine'
     ])->name('saveExamRoutine');
 
-    Route::get('/admin/academic/examRoutine/edit/{id}',[
+    Route::get('/academic/examRoutine/edit/{id}',[
         AcademicController::class ,
         'editExamRoutine'
     ])->name('editExamRoutine');
 
-    Route::get('/admin/academic/examRoutine/del/{id}',[
+    Route::get('/academic/examRoutine/del/{id}',[
         AcademicController::class ,
         'delExamRoutine'
     ])->name('delExamRoutine');
 
-    Route::get('/admin/academic/examRoutine/content/delete/{id}',[
+    Route::get('/academic/examRoutine/content/delete/{id}',[
         AcademicController::class ,
         'delExamRoutineContent'
     ])->name('delExamRoutineContent');
 
-    Route::get('/admin/academic/semisterPlan/',[
+    Route::get('/academic/semisterPlan/',[
         AcademicController::class,
         'semisterPlanManage'
     ])->name('semisterPlanManage');
 
-    Route::post('/admin/academic/semisterPlan/save',[
+    Route::post('/academic/semisterPlan/save',[
         AcademicController::class ,
         'saveSemisterPlan'
     ])->name('saveSemisterPlan');
 
-    Route::get('/admin/academic/semisterPlan/edit/{id}',[
+    Route::get('/academic/semisterPlan/edit/{id}',[
         AcademicController::class ,
         'editSemisterPlan'
     ])->name('editSemisterPlan');
 
-    Route::get('/admin/academic/semisterPlan/del/{id}',[
+    Route::get('/academic/semisterPlan/del/{id}',[
         AcademicController::class ,
         'delSemisterPlan'
     ])->name('delSemisterPlan');
 
-    Route::get('/admin/academic/semisterPlan/content/delete/{id}',[
+    Route::get('/academic/semisterPlan/content/delete/{id}',[
         AcademicController::class ,
         'delSemisterPlanContent'
     ])->name('delSemisterPlanContent');
 
-    Route::get('/admin/placement/jobPlacement/',[
+    Route::get('/placement/jobPlacement/',[
         PlacementCellController::class ,
         'placementCell'
     ])->name('placementCell');
 
-    Route::post('/admin/placement/placementCell/save',[
+    Route::post('/placement/placementCell/save',[
         PlacementCellController::class ,
         'savePlacementCell'
     ])->name('savePlacementCell');
 
-    Route::get('/admin/placement/placementCell/edit/{id}',[
+    Route::get('/placement/placementCell/edit/{id}',[
         PlacementCellController::class ,
         'editPlc'
     ])->name('editPlc');
 
 
-    Route::get('/admin/academic/placementCell/content/delete/{id}',[
+    Route::get('/academic/placementCell/content/delete/{id}',[
         PlacementCellController::class ,
         'delPlcCon'
     ])->name('delPlcCon');
 
-    Route::get('/admin/placement/placementCell/delete/{id}',[
+    Route::get('/placement/placementCell/delete/{id}',[
         PlacementCellController::class ,
         'delPlc'
     ])->name('delPlc');
 
-    Route::get('/admin/placement/needyStudentPanel/',[
+    Route::get('/placement/needyStudentPanel/',[
         PlacementCellController::class ,
         'needyStudentPanel'
     ])->name('needyStudentPanel');
 
-    Route::post('/admin/placement/needyStudentPanel/save',[
+    Route::post('/placement/needyStudentPanel/save',[
         PlacementCellController::class ,
         'saveNeedyStdPanel'
     ])->name('saveNeedyStdPanel');
 
-    Route::get('/admin/placement/needyStudentPanel/edit/{id}',[
+    Route::get('/placement/needyStudentPanel/edit/{id}',[
         PlacementCellController::class ,
         'editNeedyStdPanel'
     ])->name('editNeedyStdPanel');
 
 
-    Route::get('/admin/academic/needyStudentPanel/photo/delete/{id}',[
+    Route::get('/academic/needyStudentPanel/photo/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPanelCon'
     ])->name('delNeedyStdPanelCon');
-    Route::get('/admin/academic/needyStudentPanel/documents/delete/{id}',[
+    Route::get('/academic/needyStudentPanel/documents/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPaneldoc'
     ])->name('delNeedyStdPaneldoc');
 
-    Route::get('/admin/placement/needyStudentPanel/delete/{id}',[
+    Route::get('/placement/needyStudentPanel/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPanel'
     ])->name('delNeedyStdPanel');
     //academic info ends here
 
     //
-    Route::get('/admin/configuration',[
+    Route::get('/configuration',[
         CultivationController::class ,
         'serverConfig'
     ])->name('serverConfig');
-    Route::post('/ademin/configuration/save',[
+    Route::post('/configuration/save',[
         CultivationController::class ,
         'saveConfig'
     ])->name('saveConfig');
-    Route::get('/ademin/sign/del/{id}',[
+    Route::get('/sign/del/{id}',[
         CultivationController::class ,
         'delSign'
     ])->name('delSign');
-    Route::post('/ademin/sign/save',[
+    Route::post('/sign/save',[
         CultivationController::class,
         'saveSign'
     ])->name('saveSign');
-    Route::get('/ademin/logo/del/{id}',[
+    Route::get('/logo/del/{id}',[
         CultivationController::class ,
         'delLogo'
     ])->name('delLogo');
-    Route::post('/ademin/logo/save',[
+    Route::post('/logo/save',[
         CultivationController::class ,
         'saveLogo'
     ])->name('saveLogo');
-    Route::get('/ademin/favicon/del/{id}',[
+    Route::get('/favicon/del/{id}',[
         CultivationController::class ,
         'delFavicon'
     ])->name('delFavicon');
-    Route::post('/ademin/favicon/save',[
+    Route::post('/favicon/save',[
         CultivationController::class ,
         'saveFavicon'
     ])->name('saveFavicon');
-    Route::get('/ademin/avatar/del/{id}',[
+    Route::get('/avatar/del/{id}',[
         CultivationController::class ,
         'delAvatar'
     ])->name('delAvatar');
-    Route::post('/ademin/avatar/save',[
+    Route::post('/avatar/save',[
         CultivationController::class ,
         'saveAvatar'
     ])->name('saveAvatar');
 
     //Account Part
-    Route::get('/ademin/account',[
+    Route::get('/account',[
         BackofficeController::class ,
         'accountPart'
     ])->name('accountPart');
 
     //Fees str
-    Route::get('/ademin/add-fees',[
+    Route::get('/add-fees',[
         individualController::class, //add Fees
         'feesForm'
     ])->name('feesForm');
 
-    Route::get('/ademin/edit-fees-data/{id}',[
+    Route::get('/edit-fees-data/{id}',[
         individualController::class, //edit Fees
         'editFees'
     ])->name('editFees');
 
-    Route::post('/ademin/update-fees',[
+    Route::post('/update-fees',[
         individualController::class, //update Fees
         'updateFees'
     ])->name('updateFees');
 
 
-    Route::post('/ademin/save-fees',[
+    Route::post('/save-fees',[
         individualController::class, //add Fees
         'saveFees'
     ])->name('saveFees');
 
-    Route::get('/ademin/delete-fees-data/{id}',[
+    Route::get('/delete-fees-data/{id}',[
         individualController::class,      // delete Fees
         'deleteFees'
     ])->name('deleteFees');
@@ -569,53 +570,53 @@ Route::middleware(['adminGuard'])->group (function(){
     //Fees end
 
     //cashCalculas str
-    Route::get('/admin/cash-calculas-from',[
+    Route::get('/cash-calculas-from',[
         cashCalculasController::class,    //cashCalculas main page
         'cashCalculasView'
     ])->name('cashCalculasView');
 
-    Route::get('/ademin/get-report',[
+    Route::get('/get-report',[
         cashCalculasController::class,    //reportList page
         'reportListView'
     ])->name('reportListView');
 
-    Route::get('/admin/single-report/{id}',[
+    Route::get('/single-report/{id}',[
         cashCalculasController::class,    // report single page
         'singleView'
     ])->name('singleView');
 
 
-    Route::post('/admin/save-cash-calculas',[
+    Route::post('/save-cash-calculas',[
         cashCalculasController::class,    //saveCashCalculas brackhand
         'saveCashCalculas'
     ])->name('saveCashCalculas');
 
-    Route::get('/admin/edit-cash-calculas/{id}',[
+    Route::get('/edit-cash-calculas/{id}',[
         cashCalculasController::class,     // edit calculas 
         'editCashCalculas'
     ])->name('editCashCalculas');
 
-    Route::post('/admin/update-cash-calculas',[
+    Route::post('/update-cash-calculas',[
         cashCalculasController::class,   //update calculas
         'updateCashCalculas'
     ])->name('updateCashCalculas');
 
-    Route::get('/admin/delete-calculas-data/{id}',[
+    Route::get('/delete-calculas-data/{id}',[
         cashCalculasController::class,      // delete calculas
         'dltCalculasData'
     ])->name('dltCalculasData');
 
-    Route::get('/admin/calculas-repot-generate/{id}',[
+    Route::get('/calculas-repot-generate/{id}',[
         cashCalculasController::class,   // calculas Report
         'cashReport'
     ])->name('cashReport');
 
-    Route::get('/admin/calculas-date-repot-generate',[
+    Route::get('/calculas-date-repot-generate',[
         cashCalculasController::class,   // calculas Report
         'cashDateReport'
     ])->name('cashDateReport');
 
-    Route::post('/admin/calculas-date-repot-recipit',[
+    Route::post('/calculas-date-repot-recipit',[
         cashCalculasController::class, //  free
         'getCashReport'
     ])->name('getCashReport');
@@ -627,52 +628,52 @@ Route::middleware(['adminGuard'])->group (function(){
         'getStudentForTutionFee'
     ])->name('getStudentForTutionFee');
 
-    Route::get('/admin/add-tuition-fee',[
+    Route::get('/add-tuition-fee',[
         tuitionController::class,   //add tuition free
         'tuitionFee'
     ])->name('tuitionFee');
 
-    Route::post('/admin/save-tuition-fee',[
+    Route::post('/save-tuition-fee',[
         tuitionController::class,
         'saveTuitionfee'
     ])->name('saveTuitionfee');
 
-    Route::get('/admin/tuition-fee-list',[
+    Route::get('/tuition-fee-list',[
         tuitionController::class,   // tuition free list
         'tuitionFeeList'
     ])->name('tuitionFeeList');
 
-    Route::get('/admin/tuition-fee-view/{id}',[
+    Route::get('/tuition-fee-view/{id}',[
         tuitionController::class,   // tuition free view
         'tuitionFeeView'
     ])->name('tuitionFeeView');
 
-    Route::get('/admin/edit-tuition-fee/{id}',[
+    Route::get('/edit-tuition-fee/{id}',[
         tuitionController::class, //edit tuition free
         'editTuitionFee'
     ])->name('editTuitionFee');
 
-    Route::post('/admin/update-tuition-fee',[
+    Route::post('/update-tuition-fee',[
         tuitionController::class, //update tuition free
         'updateTuitionFee'
     ])->name('updateTuitionFee');
 
-    Route::get('/admin/delete-tuition-fee/{id}',[
+    Route::get('/delete-tuition-fee/{id}',[
         tuitionController::class,      // delete tuition free
         'dltTuitionFee'
     ])->name('dltTuitionFee');
 
-    Route::get('/admin/tuition-repot-generate/{id}',[
+    Route::get('/tuition-repot-generate/{id}',[
         tuitionController::class,   // tuition free tuitionReport
         'tuitionReport'
     ])->name('tuitionReport');
 
-    Route::get('/admin/student/fees/generate',[
+    Route::get('/student/fees/generate',[
         tuitionController::class, //edit Fees
         'feesReport'
     ])->name('feesReport');
 
-    Route::post('/admin/student/fees/generate/report',[
+    Route::post('/student/fees/generate/report',[
         tuitionController::class, //update tuition free
         'getFeesReport'
     ])->name('getFeesReport');
@@ -681,73 +682,73 @@ Route::middleware(['adminGuard'])->group (function(){
     //Account part end
 
     //Academic Part
-    Route::get('/admin/academic',[
+    Route::get('/academic',[
         BackofficeController::class ,
         'index'
     ])->name('academicPart');
     //Student route declaration
-    Route::get('/admin/student/admit',[
+    Route::get('/student/admit',[
         admissionController::class ,
         'admitStudent'
     ])->name('admitStudent');
-    Route::post('/admin/student/admit/confirm',[
+    Route::post('/student/admit/confirm',[
         admissionController::class ,
         'confirmAdmit'
     ])->name('confirmAdmit');
-    Route::get('/admin/view/student/{stdId}',[
+    Route::get('/view/student/{stdId}',[
         admissionController::class,
         'viewAdmission'
     ])->name('viewAdmission');
-    Route::get('/admin/student/edit/{stdId}',[
+    Route::get('/student/edit/{stdId}',[
         admissionController::class ,
         'editStudent'
     ])->name('editStudent');
 
-    Route::post('/admin/student/edit/confirm',[
+    Route::post('/student/edit/confirm',[
         admissionController::class ,
         'updateAdmit'
     ])->name('updateAdmit');
 
 
-    Route::post('/admin/student/photo/update',[
+    Route::post('/student/photo/update',[
         admissionController::class ,
         'stdPhotoUpdate'
     ])->name('stdPhotoUpdate');
 
 
-    Route::get('/admin/student/del/avatar/{stdId}',[
+    Route::get('/student/del/avatar/{stdId}',[
         admissionController::class ,
         'delStudentPhoto'
     ])->name('delStudentPhoto');
 
-    Route::get('/admin/student/del/{stdId}',[
+    Route::get('/student/del/{stdId}',[
         admissionController::class ,
         'delStudent'
     ])->name('delStudent');
 
 
-    Route::get('/admin/student/list',[
+    Route::get('/student/list',[
         admissionController::class,
         'studentList'
     ])->name('studentList');
 
-    Route::get('/admin/student/idCard/{stdId}',[
+    Route::get('/student/idCard/{stdId}',[
         admissionController::class ,
         'stdIdCard'
     ])->name('stdIdCard');
 
-    Route::get('/admin/student/promotion',[
+    Route::get('/student/promotion',[
         admissionController::class ,
         'studentPromotion'
     ])->name('studentPromotion');
 
 
-    Route::post('/admin/student/promotion/getData',[
+    Route::post('/student/promotion/getData',[
         admissionController::class ,
         'getPromotionData'
     ])->name('getPromotionData');
 
-    Route::post('/admin/student/promotion/confirm',[
+    Route::post('/student/promotion/confirm',[
         admissionController::class ,
         'confirmPromotData'
     ])->name('confirmPromotData');
@@ -755,83 +756,83 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Teacher route declaration
 
-    Route::get('/admin/teacher/admit',[
+    Route::get('/teacher/admit',[
         TeacherController::class ,
         'addTeacher'
     ])->name('addTeacher');
-    Route::post('/admin/teacher/admit/confirm',[
+    Route::post('/teacher/admit/confirm',[
         TeacherController::class ,
         'confirmTeacher'
     ])->name('confirmTeacher');
-    Route::get('/admin/view/teacher/{profileId}',[
+    Route::get('/view/teacher/{profileId}',[
         TeacherController::class,
         'viewTeacher'
     ])->name('viewTeacher');
-    Route::get('/admin/teacher/edit/{profileId}',[
+    Route::get('/teacher/edit/{profileId}',[
         TeacherController::class ,
         'editTeacher'
     ])->name('editTeacher');
-    Route::post('/admin/teacher/edit/confirm',[
+    Route::post('/teacher/edit/confirm',[
         TeacherController::class ,
         'updateTeacher'
     ])->name('updateTeacher');
-    Route::get('/admin/teacher/del/{profileId}',[
+    Route::get('/teacher/del/{profileId}',[
         TeacherController::class ,
         'delTeacher'
     ])->name('delTeacher');
-    Route::get('/admin/teacher/del/avatar/{profileId}',[
+    Route::get('/teacher/del/avatar/{profileId}',[
         TeacherController::class ,
         'delTeacherPhoto'
     ])->name('delTeacherPhoto');
 
 
-    Route::post('/admin/teacher/avatar/update',[
+    Route::post('/teacher/avatar/update',[
         TeacherController::class,
         'updateTeacherPhoto'
     ])->name('updateTeacherPhoto');
 
-    Route::get('/admin/teacher/list',[
+    Route::get('/teacher/list',[
         TeacherController::class ,
         'teacherList'
     ])->name('teacherList');
 
     //Teacher route declaration
 
-    Route::get('/admin/staff/admit',[
+    Route::get('/staff/admit',[
         StaffController::class ,
         'addStaff'
     ])->name('addStaff');
-    Route::post('/admin/staff/admit/confirm',[
+    Route::post('/staff/admit/confirm',[
         StaffController::class ,
         'confirmStaff'
     ])->name('confirmStaff');
-    Route::get('/admin/view/staff/{profileId}',[
+    Route::get('/view/staff/{profileId}',[
         StaffController::class,
         'viewStaff'
     ])->name('viewStaff');
-    Route::get('/admin/staff/edit/{profileId}',[
+    Route::get('/staff/edit/{profileId}',[
         StaffController::class ,
         'editStaff'
     ])->name('editStaff');
-    Route::post('/admin/staff/edit/confirm',[
+    Route::post('/staff/edit/confirm',[
         StaffController::class ,
         'updateStaff'
     ])->name('updateStaff');
-    Route::get('/admin/staff/del/{profileId}',[
+    Route::get('/staff/del/{profileId}',[
         StaffController::class ,
         'delStaff'
     ])->name('delStaff');
-    Route::get('/admin/staff/del/avatar/{profileId}',[
+    Route::get('/staff/del/avatar/{profileId}',[
         StaffController::class ,
         'delStaffPhoto'
     ])->name('delStaffPhoto');
 
-    Route::post('/admin/staff/avatar/update',[
+    Route::post('/staff/avatar/update',[
         StaffController::class,
         'updateStaffPhoto'
     ])->name('updateStaffPhoto');
 
-    Route::get('/admin/staff/list',[
+    Route::get('/staff/list',[
         StaffController::class ,
         'staffList'
     ])->name('staffList');
@@ -839,28 +840,28 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Classes route declaration
 
-    Route::get('/admin/class/create',[
+    Route::get('/class/create',[
         individualController::class ,
         'createClass'
     ])->name('createClass');
-    Route::post('/admin/class/create/confirm',[
+    Route::post('/class/create/confirm',[
         individualController::class ,
         'confirmClass'
     ])->name('confirmClass');
-    Route::get('/admin/class/edit/{itemId}',[
+    Route::get('/class/edit/{itemId}',[
         individualController::class ,
         'editClass'
     ])->name('editClass');
-    Route::post('/admin/class/edit/confirm',[
+    Route::post('/class/edit/confirm',[
         individualController::class ,
         'updateClass'
     ])->name('updateClass');
-    Route::get('/admin/class/del/{itemId}',[
+    Route::get('/class/del/{itemId}',[
         individualController::class ,
         'delClass'
     ])->name('delClass');
 
-    Route::get('/admin/class/list',[
+    Route::get('/class/list',[
         individualController::class ,
         'allClasses'
     ])->name('allClasses');
@@ -868,118 +869,118 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Department route declaration
 
-    Route::get('/admin/department/create',[
+    Route::get('/department/create',[
         individualController::class ,
         'createDepartment'
     ])->name('createDepartment');
-    Route::post('/admin/department/create/confirm',[
+    Route::post('/department/create/confirm',[
         individualController::class ,
         'confirmDepartment'
     ])->name('confirmDepartment');
-    Route::get('/admin/department/edit/{itemId}',[
+    Route::get('/department/edit/{itemId}',[
         individualController::class ,
         'editDepartment'
     ])->name('editDepartment');
-    Route::post('/admin/department/edit/confirm',[
+    Route::post('/department/edit/confirm',[
         individualController::class ,
         'updateDepartment'
     ])->name('updateDepartment');
-    Route::get('/admin/department/del/{itemId}',[
+    Route::get('/department/del/{itemId}',[
         individualController::class ,
         'delDepartment'
     ])->name('delDepartment');
 
-    Route::get('/admin/department/list',[
+    Route::get('/department/list',[
         individualController::class ,
         'allDepartment'
     ])->name('allDepartment');
 
     //Section route declaration
 
-    Route::get('/admin/section/create',[
+    Route::get('/section/create',[
         individualController::class ,
         'createSection'
     ])->name('createSection');
-    Route::post('/admin/Section/create/confirm',[
+    Route::post('/Section/create/confirm',[
         individualController::class ,
         'confirmSection'
     ])->name('confirmSection');
-    Route::get('/admin/Section/edit/{itemId}',[
+    Route::get('/Section/edit/{itemId}',[
         individualController::class ,
         'editSection'
     ])->name('editSection');
-    Route::post('/admin/Section/edit/confirm',[
+    Route::post('/Section/edit/confirm',[
         individualController::class ,
         'updateSection'
     ])->name('updateSection');
-    Route::get('/admin/Section/del/{itemId}',[
+    Route::get('/Section/del/{itemId}',[
         individualController::class ,
         'delSection'
     ])->name('delSection');
 
-    Route::get('/admin/Section/list',[
+    Route::get('/Section/list',[
         individualController::class ,
         'allSection'
     ])->name('allSection');
 
     //Session route declaration
 
-    Route::get('/admin/session/create',[
+    Route::get('/session/create',[
         individualController::class ,
         'createSession'
     ])->name('createSession');
-    Route::post('/admin/session/create/confirm',[
+    Route::post('/session/create/confirm',[
         individualController::class ,
         'confirmSession'
     ])->name('confirmSession');
-    Route::get('/admin/session/edit/{itemId}',[
+    Route::get('/session/edit/{itemId}',[
         individualController::class ,
         'editSession'
     ])->name('editSession');
-    Route::post('/admin/session/edit/confirm',[
+    Route::post('/session/edit/confirm',[
         individualController::class ,
         'updateSession'
     ])->name('updateSession');
-    Route::get('/admin/session/del/{itemId}',[
+    Route::get('/session/del/{itemId}',[
         individualController::class ,
         'delSession'
     ])->name('delSession');
 
-    Route::get('/admin/session/list',[
+    Route::get('/session/list',[
         individualController::class ,
         'allSession'
     ])->name('allSession');
 
     //Result Part
-    Route::get('/admin/result',[
+    Route::get('/result',[
         BackofficeController::class,
         'resultPart'
     ])->name('resultPart');
     
     //Subject route declaration
 
-    Route::get('/admin/subject/create',[
+    Route::get('/subject/create',[
         SubjectController::class ,
         'createSubject'
     ])->name('createSubject');
-    Route::post('/admin/subject/create/confirm',[
+    Route::post('/subject/create/confirm',[
         SubjectController::class ,
         'confirmSubject'
     ])->name('confirmSubject');
-    Route::get('/admin/subject/edit/{itemId}',[
+    Route::get('/subject/edit/{itemId}',[
         SubjectController::class ,
         'editSubject'
     ])->name('editSubject');
-    Route::post('/admin/subject/edit/confirm',[
+    Route::post('/subject/edit/confirm',[
         SubjectController::class ,
         'updateSubject'
     ])->name('updateSubject');
-    Route::get('/admin/subject/del/{itemId}',[
+    Route::get('/subject/del/{itemId}',[
         SubjectController::class ,
         'delSubject'
     ])->name('delSubject');
 
-    Route::get('/admin/subject/list',[
+    Route::get('/subject/list',[
         SubjectController::class,
         'allSubject'
     ])->name('allSubject');
@@ -987,28 +988,28 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Exam route declaration
 
-    Route::get('/admin/exam/create',[
+    Route::get('/exam/create',[
         ExamController::class ,
         'createExam'
     ])->name('createExam');
-    Route::post('/admin/exam/create/confirm',[
+    Route::post('/exam/create/confirm',[
         ExamController::class ,
         'confirmExam'
     ])->name('confirmExam');
-    Route::get('/admin/exam/edit/{itemId}',[
+    Route::get('/exam/edit/{itemId}',[
         ExamController::class ,
         'editExam'
     ])->name('editExam');
-    Route::post('/admin/exam/edit/confirm',[
+    Route::post('/exam/edit/confirm',[
         ExamController::class ,
         'updateExam'
     ])->name('updateExam');
-    Route::get('/admin/exam/del/{itemId}',[
+    Route::get('/exam/del/{itemId}',[
         ExamController::class ,
         'delExam'
     ])->name('delExam');
 
-    Route::get('/admin/exam/list',[
+    Route::get('/exam/list',[
         ExamController::class ,
         'allExam'
     ])->name('allExam');
@@ -1016,30 +1017,30 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Marks route declaration
 
-    Route::get('/admin/marks/add',[
+    Route::get('/marks/add',[
         MarksheetController::class ,
         'addMarks'
     ])->name('addMarks');
-    Route::post('/admin/marks/add/getData',[
+    Route::post('/marks/add/getData',[
         MarksheetController::class ,
         'getMarks'
     ])->name('getMarks');
-    Route::post('/admin/marks/add/confirm',[
+    Route::post('/marks/add/confirm',[
         MarksheetController::class ,
         'confirmMarks'
     ])->name('confirmMarks');
 
-    Route::get('/admin/marksheet/create',[
+    Route::get('/marksheet/create',[
         MarksheetController::class ,
         'createMarksheet'
     ])->name('createMarksheet');
 
-    Route::get('/admin/marksheet/all',[
+    Route::get('/marksheet/all',[
         MarksheetController::class ,
         'allMarksheet'
     ])->name('allMarksheet');
 
-    Route::post('/admin/marksheet/generate',[
+    Route::post('/marksheet/generate',[
         MarksheetController::class ,
         'generateMarksheet'
     ])->name('generateMarksheet');
@@ -1047,101 +1048,118 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //Admit Card route declaration
 
-    Route::get('/admin/admit/card/creation',[
+    Route::get('/admit/card/creation',[
         ExamController::class ,
         'admitCard'
     ])->name('admitCard');
-    Route::post('/admin/admit/card/getData',[
+    Route::post('/admit/card/getData',[
         ExamController::class ,
         'getAdmitCard'
     ])->name('getAdmitCard');
 
     //Attend Sheet route declaration
 
-    Route::get('/admin/attend/sheet/creation',[
+    Route::get('/attend/sheet/creation',[
         ExamController::class ,
         'attendSheet'
     ])->name('attendSheet');
-    Route::post('/admin/attend/sheet/getData',[
+    Route::post('/attend/sheet/getData',[
         ExamController::class ,
         'getAttendSheet'
     ])->name('getAttendSheet');
 
     //grade route declaration
 
-    Route::get('/admin/grade/create',[
+    Route::get('/grade/create',[
         GradeListController::class ,
         'createGrade'
     ])->name('createGrade');
-    Route::post('/admin/grade/create/confirm',[
+    Route::post('/grade/create/confirm',[
         GradeListController::class ,
         'confirmGrade'
     ])->name('confirmGrade');
-    Route::get('/admin/grade/edit/{itemId}',[
+    Route::get('/grade/edit/{itemId}',[
         GradeListController::class ,
         'editGrade'
     ])->name('editGrade');
-    Route::post('/admin/grade/edit/confirm',[
+    Route::post('/grade/edit/confirm',[
         GradeListController::class ,
         'updateGrade'
     ])->name('updateGrade');
-    Route::get('/admin/grade/del/{itemId}',[
+    Route::get('/grade/del/{itemId}',[
         GradeListController::class ,
         'delGrade'
     ])->name('delGrade');
 
-    Route::get('/admin/grade/list',[
+    Route::get('/grade/list',[
         GradeListController::class ,
         'allGrade'
     ])->name('allGrade');
 
-    //admin school Requst str
-    Route::get('/admin/register/request',[
+    // school Requst str
+    Route::get('/register/request',[
         registerController::class ,
         'registerForm'
     ])->name('registerForm');
 
-    Route::get('/admin/register/list',[
+    Route::get('/register/list',[
         registerController::class ,
         'registerList'
     ])->name('registerList');
 
-    Route::post('/admin/register/save',[
+    Route::post('/register/save',[
         registerController::class ,
         'saveRegForm'
     ])->name('saveRegForm');
 
 
-    Route::get('/admin/register/logo/delete/{regId}',[
+    Route::get('/register/logo/delete/{regId}',[
         registerController::class ,
         'registerLogoDel'
     ])->name('registerLogoDel');
 
-    Route::post('/admin/register/logo/update',[
+    Route::post('/register/logo/update',[
         registerController::class ,
         'registerLogoUpdate'
     ])->name('registerLogoUpdate');
 
-    Route::get('/admin/register/view/{regId}',[
+    Route::get('/register/view/{regId}',[
         registerController::class ,
         'registerView'
     ])->name('registerView');
 
-    Route::get('/admin/register/edit/{regId}',[
+    Route::get('/register/edit/{regId}',[
         registerController::class ,
         'registerEdit'
     ])->name('registerEdit');
 
-    Route::post('/admin/register/update',[
+    Route::post('/register/update',[
         registerController::class,
         'registerUpdate'
     ])->name('registerUpdate');
 
-    Route::get('/admin/register/del/{regId}',[
+    Route::get('/register/del/{regId}',[
         registerController::class ,
         'registerDel'
     ])->name('registerDel');
-    //admin school Requst end
+    // school Requst end
+
+    //school uesr panal
+     Route::get('/user/request',[
+        schoolUserController::class,
+        'userForm'
+    ])->name('userForm');
+
+    Route::get('/user/list',[
+        schoolUserController::class,
+        'userList'
+    ])->name('userList');
+
+    Route::post('/user/save',[
+       schoolUserController::class,
+        'saveUserForm'
+    ])->name('saveUserForm');
+
 });
 
 
@@ -1248,6 +1266,17 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('supportPage');
 
     //InstituteController str
+
+    Route::get('/teacher/user/register',[
+        CultivationController::class,
+        'techerRegForm'
+        ])->name('techerRegForm');
+        
+
+    Route::get('/teacher/user/list',[
+        CultivationController::class,
+        'techerRegList'
+    ])->name('techerRegList');
 
     //web font end
 

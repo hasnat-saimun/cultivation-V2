@@ -18,6 +18,10 @@
                     {{ session()->get('error') }}
                 </div>
                 @endif
+                    
+                    @error('insLogo')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 @if(!empty($regData))
                 <form action="{{ route('registerLogoUpdate') }}" class="form" enctype="multipart/form-data" method="POST">
                     @csrf

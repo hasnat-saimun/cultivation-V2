@@ -66,6 +66,15 @@ Institute Dashboard
                             {{ session()->get('error') }}
                         </div>
                     @endif
+                    @error('principalImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('boardChairmanImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('eduMinImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 </div>
             </div>
             <div class="card-body cultivation">

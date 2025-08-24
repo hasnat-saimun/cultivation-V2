@@ -24,6 +24,13 @@ class GalleryController extends Controller
 
         $item->title          = $requ->title;
         if(!empty($requ->avatar)):
+             $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],[
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $stdAvatar = $requ->file('avatar');
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
             $stdAvatar->move(public_path('upload/image/PhotoGallery/'),$newAvatar);
@@ -84,13 +91,20 @@ class GalleryController extends Controller
             $item   = VideoGallery::find($requ->itemId);
         endif;
 
-        $item->title          = $requ->title;
+        $item->galleryHeading          = $requ->title;
         if(!empty($requ->avatar)):
             $stdAvatar = $requ->file('avatar');
+             $validated = $requ->validate([
+                    'avatar' => 'required|mimes:mp4,mov,mkv,avi,wmv,flv,webm,3gp,ts,vob,mpeg,|max:358400',
+                     // max 5 MB
+                ],[
+                    'avatar.mimes'  => 'Allowed formats: mp4,mov,mkv,avi,wmv,flv,webm,3gp,ts,vob,mpeg.',
+                    'avatar.max'    => 'Each file must be less than 350MB.'
+                ]);
             $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
             $stdAvatar->move(public_path('upload/image/VideoGallery/'),$newAvatar);
 
-            $item->avatar = $newAvatar;
+            $item->attachment = $newAvatar;
         endif;
         // $item->status        = $requ->status;
 
@@ -113,7 +127,7 @@ class GalleryController extends Controller
             if(File::exists(public_path('upload/image/VideoGallery/').$item->avatar)):
                 File::delete(public_path('upload/image/VideoGallery/').$item->avatar);
             endif;
-            $item->avatar = NULL;
+            $item->attachment = NULL;
             $item->save();
             return back()->with('success','Item deleted successfully');
         else:

@@ -89,24 +89,56 @@ class CultivationController extends Controller
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;
+            $validated = $requ->validate([
+                    'logo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'logo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'logo.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newInsLogo     = rand().date('Ymd').'.'.$insLogo->getClientOriginalExtension();
             $insLogo->move(public_path('upload/image/cultivation'),$newInsLogo);
             $server->logo           = $newInsLogo;
         endif;
         if(!empty($requ->principalSign)):
             $principalSign          = $requ->principalSign;
+            $validated = $requ->validate([
+                    'principalSign' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'principalSign.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'principalSign.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newPrincipalSign       = rand().date('Ymd').'.'.$principalSign->getClientOriginalExtension();
             $principalSign->move(public_path('upload/image/cultivation'),$newPrincipalSign);
             $server->principalSign  = $newPrincipalSign;
         endif;
         if(!empty($requ->adminPhoto)):
             $adminPhoto             = $requ->adminPhoto;
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
             $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
             $server->avatar         = $newAdminPhoto;
         endif;
         if(!empty($requ->favicon)):
             $favicon                = $requ->favicon;
+            $validated = $requ->validate([
+                    'favicon' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'favicon.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'favicon.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newFavicon             = rand().date('Ymd').'.'.$favicon->getClientOriginalExtension();
             $favicon->move(public_path('upload/image/cultivation'),$newFavicon);
             $server->favicon        = $newFavicon;
@@ -183,6 +215,14 @@ class CultivationController extends Controller
                 File::delete(public_path('upload/image/cultivation/').$avatar->avatar);
             endif;
             $adminPhoto             = $requ->adminPhoto;
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
             $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
             $avatar->avatar         = $newAdminPhoto;
@@ -203,6 +243,14 @@ class CultivationController extends Controller
                 File::delete(public_path('upload/image/cultivation/').$sign->principalSign);
             endif;
             $principalSign             = $requ->principalSign;
+            $validated = $requ->validate([
+                    'principalSign' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'principalSign.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'principalSign.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newSign          = rand().date('Ymd').'.'.$principalSign->getClientOriginalExtension();
             $principalSign->move(public_path('upload/image/cultivation'),$newSign);
             $sign->principalSign         = $newSign;
@@ -223,6 +271,14 @@ class CultivationController extends Controller
                 File::delete(public_path('upload/image/cultivation/').$logo->logo);
             endif;
             $insLogo             = $requ->insLogo;
+            $validated = $requ->validate([
+                    'logo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'logo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'logo.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newLogo          = rand().date('Ymd').'.'.$insLogo->getClientOriginalExtension();
             $insLogo->move(public_path('upload/image/cultivation'),$newLogo);
             $logo->logo         = $newLogo;
@@ -243,6 +299,14 @@ class CultivationController extends Controller
                 File::delete(public_path('upload/image/cultivation/').$data->favicon);
             endif;
             $favicon             = $requ->favicon;
+            $validated = $requ->validate([
+                    'favicon' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'favicon.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'favicon.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newFavicon          = rand().date('Ymd').'.'.$favicon->getClientOriginalExtension();
             $favicon->move(public_path('upload/image/cultivation'),$newFavicon);
             $data->favicon         = $newFavicon;
@@ -254,5 +318,13 @@ class CultivationController extends Controller
         else:
             return back()->with('success','Favicon not found');
         endif;
+    }
+
+     public function techerRegForm(){
+        return view('userPanal.userRegister');
+    }
+
+     public function techerRegList(){
+        return view('userPanal.userList');
     }
 }

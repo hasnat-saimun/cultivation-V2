@@ -48,6 +48,14 @@ Needy Student Panel
                                 {{ session()->get('error') }}
                             </div>
                         @endif
+                @error('attachment')
+                    <div class="alert alert-danger">{{ $message }}</div>
+                @enderror
+                
+                
+                @error('avatar')
+                    <div class="alert alert-danger">{{ $message }}</div>
+                @enderror
                     </div>
                 </div>
                 <form action="{{ route('saveNeedyStdPanel') }}" class="form row" method="POST" enctype="multipart/form-data">

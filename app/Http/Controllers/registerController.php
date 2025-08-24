@@ -32,6 +32,15 @@ class registerController extends Controller
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;
+            
+            $validated = $requ->validate([
+                    'insLogo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'insLogo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'insLogo.max'    => 'Each file must be less than 5MB.'
+                ]);
             $newInsLogo     = rand().date('Ymd').'.'.$insLogo->getClientOriginalExtension();
             $insLogo->move(public_path('upload/image/registerLogo'),$newInsLogo);
             $server->insLogo           = $newInsLogo;
@@ -71,6 +80,15 @@ class registerController extends Controller
         if($regData):
             if(!empty($requ->insLogo)):
                 $regLogo = $requ->file('insLogo');
+            
+            $validated = $requ->validate([
+                    'insLogo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'insLogo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'insLogo.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newRegLogo = rand().date('Ymd').'.'.$regLogo->getClientOriginalExtension();
                 $regLogo->move(public_path('upload/image/registerLogo/'),$newRegLogo);
 

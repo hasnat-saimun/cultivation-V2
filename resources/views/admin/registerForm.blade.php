@@ -25,6 +25,10 @@ Register Form
                         {{ session()->get('error') }}
                     </div>
                 @endif
+                    
+                    @error('insLogo')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 <form action="{{ route('saveRegForm') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="row">

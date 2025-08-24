@@ -92,6 +92,12 @@ class admissionController extends Controller
             $data->stdId = $stdId;
 
             if(!empty($requ->avatar)):
+                $validated = $requ->validate([
+                    'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp,avif|max:2048',
+                     // max 2 MB
+                    'avatar' => 'required|image|max:2048'
+                     //(simpler: lets Laravel infer common image types)
+                ]);
                 $stdAvatar = $requ->file('avatar');
                 $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
                 $stdAvatar->move(public_path('upload/image/student/'),$newAvatar);
@@ -182,6 +188,12 @@ class admissionController extends Controller
         $data = newAdmission::find($requ->stdId);
         if($data->count()>0):
             if(!empty($requ->avatar)):
+                $validated = $requ->validate([
+                    'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp,avif|max:2048',
+                     // max 2 MB
+                    'avatar' => 'required|image|max:2048'
+                     //(simpler: lets Laravel infer common image types)
+                ]);
                 $stdAvatar = $requ->file('avatar');
                 $newAvatar = rand().date('Ymd').'.'.$stdAvatar->getClientOriginalExtension();
                 $stdAvatar->move(public_path('upload/image/student/'),$newAvatar);

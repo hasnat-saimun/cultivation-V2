@@ -41,6 +41,10 @@ Institute Info
                             {{ session()->get('error') }}
                         </div>
                     @endif
+                    
+                    @error('heroImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 </div>
             </div>
             <div class="card-header">Institute Info</div>

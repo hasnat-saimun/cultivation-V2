@@ -71,10 +71,9 @@ class FrontController extends Controller
 
     public function homePage(){
          $photo  =   PhotoGallery::all();
-         $server  =   ServerConfig::first();
          $home  =   HomeInfo::first();
          $slider = HomeSlider::orderBy('ID','DESC')->limit(5)->get();
-        return view('frontend.index',['Datakey'=>$home,'sliderData'=>$slider,'gallery'=>$photo,'config'=>$server]);
+        return view('frontend.index',['Datakey'=>$home,'sliderData'=>$slider,'gallery'=>$photo,]);
     }
     
 }

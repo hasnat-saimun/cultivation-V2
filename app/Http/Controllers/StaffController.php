@@ -24,6 +24,14 @@ class StaffController extends Controller
 
             if(!empty($requ->file('avatar'))):
                 $staffProfileAvatar = $requ->file('avatar');
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newStaffAvatar   = rand().date('Ymd').'.'.$staffProfileAvatar->getClientOriginalExtension();
                 $staffProfileAvatar->move(public_path('upload/image/staff'),$newStaffAvatar);
                 $staffProfile->avatar        = $newStaffAvatar; 
@@ -87,6 +95,14 @@ class StaffController extends Controller
 
             if(!empty($requ->file('avatar'))):
                 $staffProfileAvatar = $requ->file('avatar');
+            $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newStaffAvatar   = rand().date('Ymd').'.'.$staffProfileAvatar->getClientOriginalExtension();
                 $staffProfileAvatar->move(public_path('upload/image/staff'),$newStaffAvatar);
                 $staffProfile->avatar        = $newStaffAvatar;
@@ -128,6 +144,14 @@ class StaffController extends Controller
         if($staffProfileData):
             if(!empty($requ->avatar)):
                 $staffAvatar = $requ->file('avatar');
+                $validated = $requ->validate([
+                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'avatar.max'    => 'Each file must be less than 5MB.'
+                ]);
                 $newStaffAvatar = rand().date('Ymd').'.'.$staffAvatar->getClientOriginalExtension();
                 $staffAvatar->move(public_path('upload/image/staff/'),$newStaffAvatar);
 

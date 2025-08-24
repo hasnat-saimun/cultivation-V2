@@ -147,6 +147,9 @@
             </div>
         </div>
         <footer class="mt-5 container-fluid">
+            @php
+            $config = \App\Models\ServerConfig::first();
+            @endphp
              @if(!empty($config))
             <div class="row g-0">
                 <div class="col-12 col-md-5 mx-auto">
