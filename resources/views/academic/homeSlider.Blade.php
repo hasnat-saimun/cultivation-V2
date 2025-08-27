@@ -13,8 +13,8 @@ if(!empty($itemId)):
         $pageId                 = $homePage->id;
     endif; 
 else:
-        $pageId                 = null;
-        $headLine             = "";
+        $pageId              = null;
+        $headLine            = "";
         $detail              = "";
         $avatar              = "";
 endif;
