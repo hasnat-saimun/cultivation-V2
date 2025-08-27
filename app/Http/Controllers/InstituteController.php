@@ -47,7 +47,7 @@ class InstituteController extends Controller
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
             $path =  public_path('/upload/image/webHomepage/'.$newheroImg);
             $img = Image::read($heroImg)
-            ->resize(900, 450, function ($constraint) {
+            ->resize(900, 350, function ($constraint) {
                 $constraint->aspectRatio();
                 $constraint->upsize();
             })->save($path);
