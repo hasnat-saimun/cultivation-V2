@@ -14,6 +14,8 @@ use App\Models\HomeInfo;
 use App\Models\HomeSlider;
 use App\Models\newAdmission;
 use File;
+use Intervention\Image\Laravel\Facades\Image;
+use Storage;
 
 class InstituteController extends Controller
 
@@ -34,7 +36,7 @@ class InstituteController extends Controller
         $institute->detail      = $requ->detail;
         
         if(!empty($requ->avatar)):
-            $heroImg        = $requ->avatar;
+            $heroImg        = $requ->file('avatar');
              $validated = $requ->validate([
                     'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
@@ -43,7 +45,15 @@ class InstituteController extends Controller
                     'avatar.max'    => 'Each file must be less than 5MB.'
                 ]);
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
-            $heroImg->move(public_path('/upload/image/webHomepage'),$newheroImg);
+            $path =  public_path('/upload/image/webHomepage/'.$newheroImg);
+            $img = Image::read($heroImg)
+            ->resize(900, 450, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            })->save($path);
+            // $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80);
+            // public_path('/upload/image/webHomepage/'.$newheroImg, $binary);
+            
             $institute->avatar      = $newheroImg;
         endif;
 
