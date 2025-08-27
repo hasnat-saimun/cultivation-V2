@@ -45,12 +45,15 @@ class InstituteController extends Controller
                     'avatar.max'    => 'Each file must be less than 5MB.'
                 ]);
             $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
+            // $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80);
             $path =  public_path('/upload/image/webHomepage/'.$newheroImg);
             $img = Image::read($heroImg)
             ->resize(900, 350, function ($constraint) {
                 $constraint->aspectRatio();
                 $constraint->upsize();
-            })->save($path);
+            });
+            
+            $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80)->save($path);
             // $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80);
             // public_path('/upload/image/webHomepage/'.$newheroImg, $binary);
             
