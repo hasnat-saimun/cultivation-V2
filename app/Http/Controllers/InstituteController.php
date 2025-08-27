@@ -25,46 +25,98 @@ class InstituteController extends Controller
         return view('academic.homeSlider',['data'=>$sliderData]);
     }
 
-     public function sliderDetail(Request $requ){
-        if(empty($requ->pageId)):
-            $institute   = new HomeSlider();
-        else:
-            $institute = HomeSlider::find($requ->pageId);
-        endif;
+    //  public function sliderDetail(Request $requ){
+    //     if(empty($requ->pageId)):
+    //         $institute   = new HomeSlider();
+    //     else:
+    //         $institute = HomeSlider::find($requ->pageId);
+    //     endif;
 
-        $institute->headLine     = $requ->headLine;
-        $institute->detail      = $requ->detail;
+    //     $institute->headLine     = $requ->headLine;
+    //     $institute->detail      = $requ->detail;
         
-        if(!empty($requ->avatar)):
-            $heroImg        = $requ->file('avatar');
-             $validated = $requ->validate([
-                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
-                     // max 5 MB
-                ],[
-                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
-                    'avatar.max'    => 'Each file must be less than 5MB.'
-                ]);
-            $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
-            // $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80);
-            $path =  public_path('/upload/image/webHomepage/'.$newheroImg);
-            $img = Image::read($heroImg)
-            ->resize(900, 350, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+    //     if(!empty($requ->avatar)):
+    //         $heroImg        = $requ->file('avatar');
+    //          $validated = $requ->validate([
+    //                 'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+    //                  // max 5 MB
+    //             ],[
+    //                 'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+    //                 'avatar.max'    => 'Each file must be less than 5MB.'
+    //             ]);
+    //         $newheroImg     = rand().date('Ymd').'.'.$heroImg->getClientOriginalExtension();
+    //         $path =  public_path('/upload/image/webHomepage/'.$newheroImg);
+    //         $img = Image::read($heroImg)
+    //         ->resize(900, 350, function ($constraint) {
+    //             $constraint->aspectRatio();
+    //             $constraint->upsize();
+    //         });
             
-            $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80)->save($path);
-            // $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80);
-            // public_path('/upload/image/webHomepage/'.$newheroImg, $binary);
+    //         $binary = $img->encodeByExtension($heroImg->getClientOriginalExtension(), quality: 80)->save($path);
             
-            $institute->avatar      = $newheroImg;
-        endif;
+    //         $institute->avatar      = $newheroImg;
+    //     endif;
 
-        if($institute->save()):
-            return back()->with('success','Congrats! Data saved successfully');
-        else:
-            return back()->with('error','Sorry! Data failed to save. Please try later');
-        endif;
+    //     if($institute->save()):
+    //         return back()->with('success','Congrats! Data saved successfully');
+    //     else:
+    //         return back()->with('error','Sorry! Data failed to save. Please try later');
+    //     endif;
+    // }
+
+    public function sliderDetail(Request $request){
+        // Create or find the model
+        $slider = $request->filled('pageId')
+            ? (HomeSlider::find($request->pageId) ?? new HomeSlider())
+            : new HomeSlider();
+
+        $slider->headLine = $request->headLine;
+        $slider->detail   = $request->detail;
+
+        // Handle image upload (only images here; PDF excluded for a slider image)
+        if ($request->hasFile('avatar') && $request->file('avatar')->isValid()) {
+            $request->validate([
+                'avatar' => 'required|image|mimes:jpeg,png,jpg,gif,webp,avif|max:5120',
+            ],[
+                'avatar.mimes' => 'Allowed formats: JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                'avatar.max'   => 'Each file must be less than 5MB.',
+            ]);
+
+            $file = $request->file('avatar');
+
+            // Use guessed extension from MIME (safer than client original)
+            $ext  = strtolower($file->extension()); // e.g. jpg|jpeg|png|webp|avif
+            $name = Str::uuid().'.'.$ext;
+
+            // Ensure destination directory exists
+            $dir = public_path('upload/image/webHomepage');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $path = $dir.DIRECTORY_SEPARATOR.$name;
+
+            // Read & resize (keeps aspect, prevents upscaling)
+            $img = Image::read($file)
+                ->resize(900, 350, function ($constraint) {
+                    $constraint->aspectRatio();
+                    $constraint->upsize();
+                });
+
+            // Encode with quality for lossy formats (PNG will ignore "quality")
+            $binary = $img->encodeByExtension($ext, quality: 80);
+
+            // Write file to disk
+            file_put_contents($path, (string) $binary);
+
+            // Save filename on model
+            $slider->avatar = $name;
+        }
+
+        if ($slider->save()) {
+            return back()->with('success', 'Congrats! Data saved successfully');
+        }
+
+        return back()->with('error', 'Sorry! Data failed to save. Please try later');
     }
 
     
