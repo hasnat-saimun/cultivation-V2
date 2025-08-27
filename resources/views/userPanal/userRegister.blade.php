@@ -32,50 +32,54 @@ Register Form
                 <form action="{{ route('saveRegForm') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="row">
-                        <div class="col-md-6 col-12">
-                            <div class="mb-3">
+                            <div class="col-6 mb-3">
+                                <label for="adminName" class="form-label">Admin Name</label>
+                                <input type="text" name="adminName" class="form-control" id="adminName"  placeholder="Enter the admin name" required>
+                            </div>
+                            <div class="col-6 mb-3">
                                 <label for="userName" class="form-label">User Name</label>
-                                <input type="text" name="insName" class="form-control" id="insName"  placeholder="Enter the name of the institute" required>
+                                <input type="text" name="userName" class="form-control" id="userName"  placeholder="Enter the user name" required>
                             </div>
-                            <div class="mb-3">
-                                <label for="insAddress" class="form-label">Address</label>
-                                <input type="text" name="insAddress" class="form-control" id="insAddress"  placeholder="Enter institute address" required>
+                            <div class="col-6 mb-3">
+                                <label for="userMobile" class="form-label">User Mobile</label>
+                                <input type="text" name="userMobile" class="form-control" id="userMobile" placeholder="Enter user mobile number" required>
                             </div>
-                            <div class="mb-3">
-                                <label for="officeMobile" class="form-label">Official Mobile</label>
-                                <input type="text" name="officeMobile" class="form-control" id="officeMobile" placeholder="Enter office mobile number" required>
-                            </div><div class="mb-3">
-                                <label for="zilla" class="form-label">Zilla</label>
-                                <input type="text" name="zilla" class="form-control" id="zilla" placeholder="Enterthe zilla" required>
+                            <div class="col-6 mb-3">
+                                <label for="userMail" class="form-label">User Email</label>
+                                <input type="text" name="userMail" class="form-control" id="userMail" placeholder="Enter user email address" required>
                             </div>
-                        </div>
-                        <div class="col-md-6 col-12">
-                            <div class="mb-3">
-                                <label for="webName" class="form-label">Web Name</label>
-                                <input type="text" name="webName" class="form-control" id="webName"  placeholder="Choose web site name" required>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">User Type</label>
+                                <select class="form-select" id="userType" onchange="userSelect()" name="userType" required>
+                                    <option value="">Select</option>
+                                    <option value="1">x</option>
+                                    <option value="2">y</option>
+                                    <option value="3">z</option>
+                                </select>
                             </div>
-                            <div class="mb-3">
-                                <label for="officeMail" class="form-label">Official Email</label>
-                                <input type="text" name="officeMail" class="form-control" id="officeMail" placeholder="Enter office email address" required>
+                            <div class="col-6 mb-3">
+                                <label for="pass" class="form-label">User Password</label>
+                                <input type="password" name="pass" class="form-control" id="pass" placeholder="Enter the password" required>
                             </div>
-                            <div class="mb-3">
-                                <label for="division" class="form-label">Division</label>
-                                <input type="text" name="division" class="form-control" id="division" placeholder="Enter the division" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="upazila" class="form-label">Upazila</label>
-                                <input type="text" name="upazila" class="form-control" id="upazila" placeholder="Enter the upazila" required>
-                            </div>
-                            </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 col-12">
-                            <div class="mb-3">
-                                <label class="text-dark-medium">Logo</label>
-                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
+                            <div class="col-6 mb-3">
+                                <label for="confirmPass" class="form-label">Confirm Password</label>
+                                <input type="password" name="confirmPass" class="form-control" id="confirmPass" placeholder="Enter the confirm password" required>
                             </div>
                         </div>
-                    </div>
+                        <div id="accessBox" class="row p-4 d-none">
+                            <div class="col-6 mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="checkDefault">
+                                <label class="form-check-label" for="checkDefault">
+                                Default checkbox
+                                </label>
+                            </div>
+                            <div class="col-6 mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" value="" id="checkChecked" checked>
+                                <label class="form-check-label" for="checkChecked">
+                                Checked checkbox
+                                </label>
+                            </div>
+                        </div>
                     <button type="submit" class="mt-4 btn btn-primary btn-lg">Save</button>
                 </form>
             </div>
@@ -83,4 +87,21 @@ Register Form
     </div>
 </div>
 <!-- Dashboard summery End Here -->
+
+<script>
+    function userSelect() {
+        console.log('hasnat')
+        var str   = document.getElementById('userType').value;
+        if(str == "") {
+            $("#accessBox").addClass("d-none");
+            document.getElementById("accessBox").classList.add = "d-none";
+        }
+        if(str == 1) {
+            $("#accessBox").removeClass("d-none");
+        }else{
+            $("#accessBox").addClass("d-none");
+            document.getElementById("accessBox").classList.add = "d-none";
+        }
+    }
+</script>
 @endsection

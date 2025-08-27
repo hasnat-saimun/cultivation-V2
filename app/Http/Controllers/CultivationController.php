@@ -272,12 +272,12 @@ class CultivationController extends Controller
             endif;
             $insLogo             = $requ->insLogo;
             $validated = $requ->validate([
-                    'logo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                    'insLogo' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
                 ],
                 [
-                    'logo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
-                    'logo.max'    => 'Each file must be less than 5MB.'
+                    'insLogo.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'insLogo.max'    => 'Each file must be less than 5MB.'
                 ]);
             $newLogo          = rand().date('Ymd').'.'.$insLogo->getClientOriginalExtension();
             $insLogo->move(public_path('upload/image/cultivation'),$newLogo);

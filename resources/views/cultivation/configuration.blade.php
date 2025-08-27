@@ -70,7 +70,7 @@ Configuration
                     @error('principalSign')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
-                    @error('logo')
+                    @error('insLogo')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
                     @error('favicon')
