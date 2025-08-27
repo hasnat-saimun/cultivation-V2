@@ -13,6 +13,7 @@ use App\Models\ServerConfig;
 use App\Models\HomeInfo;
 use App\Models\HomeSlider;
 use App\Models\newAdmission;
+use Illuminate\Support\Str;
 use File;
 use Intervention\Image\Laravel\Facades\Image;
 use Storage;
