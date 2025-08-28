@@ -20,7 +20,7 @@ use Storage;
 
 class InstituteController extends Controller
 
-{   
+{    
      public function sliderInfo(){
         $sliderData = HomeSlider::all();
         return view('academic.homeSlider',['data'=>$sliderData]);
