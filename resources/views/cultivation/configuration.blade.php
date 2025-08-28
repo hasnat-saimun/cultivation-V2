@@ -76,7 +76,7 @@ Configuration
                     @error('favicon')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
-                    @error('avatar')
+                    @error('adminPhoto')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
                 <form action="{{ route('saveConfig') }}" method="POST" enctype="multipart/form-data">
@@ -86,19 +86,19 @@ Configuration
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="insName" class="form-label">Institute Name</label>
-                                <input type="text" name="insName" class="form-control" id="insName" value="{{ $insName }}" placeholder="Enter the name of the institute" required>
+                                <input type="text" name="insName" class="form-control" id="insName" value="{{ $insName }}" placeholder="Enter the name of the institute" >
                             </div>
                             <div class="mb-3">
                                 <label for="insAddress" class="form-label">Address</label>
-                                <input type="text" name="insAddress" class="form-control" id="insAddress" value="{{ $location }}" placeholder="Enter institute address" required>
+                                <input type="text" name="insAddress" class="form-control" id="insAddress" value="{{ $location }}" placeholder="Enter institute address" >
                             </div>
                             <div class="mb-3">
                                 <label for="einNumber" class="form-label">EIN Number</label>
-                                <input type="text" name="einNumber" class="form-control" id="einNumber" value="{{ $einNumber }}" placeholder="Enter institute EIN Number" required>
+                                <input type="text" name="einNumber" class="form-control" id="einNumber" value="{{ $einNumber }}" placeholder="Enter institute EIN Number" >
                             </div>
                             <div class="mb-3">
                                 <label for="officeMobile" class="form-label">Official Mobile</label>
-                                <input type="text" name="officeMobile" class="form-control" id="officeMobile" value="{{ $officeMobile }}" placeholder="Enter office mobile number" required>
+                                <input type="text" name="officeMobile" class="form-control" id="officeMobile" value="{{ $officeMobile }}" placeholder="Enter office mobile number" >
                             </div>
                             <div class="mb-3">
                                 <label for="establishDate" class="form-label">Establish Date</label>
@@ -110,33 +110,33 @@ Configuration
                             </div>
                             <!-- <div class="mb-3">
                                 <label for="studentIdPrefix" class="form-label">Student ID Prefix</label>
-                                <input type="text" name="studentIdPrefix" class="form-control" id="studentIdPrefix" value="{{ $studentIdPrefix }}" placeholder="Example: STDID" required>
+                                <input type="text" name="studentIdPrefix" class="form-control" id="studentIdPrefix" value="{{ $studentIdPrefix }}" placeholder="Example: STDID" >
                             </div>
                             <div class="mb-3">
                                 <label for="teacherIdPrefix" class="form-label">Teacher ID Prefix</label>
-                                <input type="text" name="teacherIdPrefix" class="form-control" id="teacherIdPrefix" value="{{ $teacherIdPrefix }}" placeholder="Example: TCRID" required>
+                                <input type="text" name="teacherIdPrefix" class="form-control" id="teacherIdPrefix" value="{{ $teacherIdPrefix }}" placeholder="Example: TCRID" >
                             </div>
                             <div class="mb-3">
                                 <label for="staffIdPrefix" class="form-label">Staff ID Prefix</label>
-                                <input type="text" name="staffIdPrefix" class="form-control" id="staffIdPrefix" value="{{ $staffIdPrefix }}" placeholder="Example: STFID" required>
+                                <input type="text" name="staffIdPrefix" class="form-control" id="staffIdPrefix" value="{{ $staffIdPrefix }}" placeholder="Example: STFID" >
                             </div> -->
                         </div>
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="principalName" class="form-label">Principal Name</label>
-                                <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" required>
+                                <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" >
                             </div>
                             <div class="mb-3">
                                 <label for="principalMobile" class="form-label">Principal Mobile</label>
-                                <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter principal mobile number" required>
+                                <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter principal mobile number" >
                             </div>
                             <div class="mb-3">
                                 <label for="principalMail" class="form-label">Principal Email</label>
-                                <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter principal email address" required>
+                                <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter principal email address" >
                             </div>
                             <div class="mb-3">
                                 <label for="officeMail" class="form-label">Official Email</label>
-                                <input type="text" name="officeMail" class="form-control" id="officeMail" value="{{ $officeMail }}" placeholder="Enter office email address" required>
+                                <input type="text" name="officeMail" class="form-control" id="officeMail" value="{{ $officeMail }}" placeholder="Enter office email address" >
                             </div>
                             <div class="mb-3">
                                 <label for="facebookPage" class="form-label">Facebook Page</label>
@@ -153,21 +153,21 @@ Configuration
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label class="text-dark-medium">Logo</label>
-                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" required>
+                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
                             </div>
                             <div class="mb-3">
                                 <label for="favicon" class="form-label">Favicon</label>
-                                <input type="file" name="favicon" class="form-control-file" id="favicon" required>
+                                <input type="file" name="favicon" class="form-control-file" id="favicon" >
                             </div>
                         </div>
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="adminPhoto" class="form-label">Admin Photo</label>
-                                <input type="file" name="adminPhoto" class="form-control-file" id="adminPhoto" required>
+                                <input type="file" name="adminPhoto" class="form-control-file" id="adminPhoto" >
                             </div>
                             <div class="mb-3">
                                 <label for="principalSign" class="form-label">Principal Sign</label>
-                                <input type="file" name="principalSign" class="form-control-file" id="principalSign" required>
+                                <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
                             </div>
                         </div>
                     </div>
@@ -183,7 +183,7 @@ Configuration
                             <form class="form" action="{{ route('saveLogo') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
-                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" required>
+                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
                                 <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
                             </form>
                             @else
@@ -221,7 +221,7 @@ Configuration
                             <form class="form" action="{{ route('saveAvatar') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}"class="form-control-file" >
-                                <input type="file" name="adminPhoto" id="adminPhoto" class="form-control-file" required>
+                                <input type="file" name="adminPhoto" id="adminPhoto" class="form-control-file" >
                                 <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
                             </form>
                             @else
@@ -239,7 +239,7 @@ Configuration
                             <form class="form" action="{{ route('saveSign') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
-                                <input type="file" name="principalSign" class="form-control-file" id="principalSign" required>
+                                <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
                                 <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
                             </form>
                             @else

@@ -497,6 +497,7 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class ,
         'serverConfig'
     ])->name('serverConfig');
+    
     Route::post('/configuration/save',[
         CultivationController::class ,
         'saveConfig'

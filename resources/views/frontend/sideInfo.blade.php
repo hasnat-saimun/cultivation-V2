@@ -3,7 +3,7 @@
         <div class="p-2 bg-success h5"><i class="fa-regular fa-user-tie"></i> Principal</div>
         <div class="p-2 text-center">
             @if(!empty($Datakey->principalImg)) 
-            <img class="w-75" alt="Principal" src="{{ env('APP_URL') }}public/upload/image/webHomepage/{{ $Datakey->principalImg }}" />
+            <img class="w-75" alt="Principal" src="{{ env('APP_URL') }}/public/upload/image/webHomepage/{{ $Datakey->principalImg }}" />
             @else
             <img class="w-75" alt="Principal" src="{{ env('APP_URL') }}/public/img/principal.jpg" />
             @endif

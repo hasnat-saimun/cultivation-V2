@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('loginPassword')->nullable();
             $table->string('adminMobile')->nullable();
             $table->string('adminMail')->nullable();
+            $table->string('accessClass')->nullable();
+            $table->string('accessSubject')->nullable();
             $table->timestamps();
         });
     }

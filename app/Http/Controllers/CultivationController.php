@@ -118,12 +118,12 @@ class CultivationController extends Controller
         if(!empty($requ->adminPhoto)):
             $adminPhoto             = $requ->adminPhoto;
             $validated = $requ->validate([
-                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                    'adminPhoto' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
                 ],
                 [
-                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
-                    'avatar.max'    => 'Each file must be less than 5MB.'
+                    'adminPhoto.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'adminPhoto.max'    => 'Each file must be less than 5MB.'
                 ]);
             $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
             $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
@@ -216,12 +216,12 @@ class CultivationController extends Controller
             endif;
             $adminPhoto             = $requ->adminPhoto;
             $validated = $requ->validate([
-                    'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                    'adminPhoto' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
                 ],
                 [
-                    'avatar.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
-                    'avatar.max'    => 'Each file must be less than 5MB.'
+                    'adminPhoto.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'adminPhoto.max'    => 'Each file must be less than 5MB.'
                 ]);
             $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
             $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
