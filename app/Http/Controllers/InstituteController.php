@@ -97,14 +97,10 @@ class InstituteController extends Controller
             $path = $dir.DIRECTORY_SEPARATOR.$name;
 
             // Read & resize (keeps aspect, prevents upscaling)
-            $img = Image::read($file)
-                ->resize(900, 350, function ($constraint) {
-                    $constraint->aspectRatio();
-                    $constraint->upsize();
-                });
+            $img = Image::read($file)->coverDown(900, 350);
 
             // Encode with quality for lossy formats (PNG will ignore "quality")
-            $binary = $img->encodeByExtension($ext, quality: 80);
+            $binary = $img->encodeByExtension($ext, quality: 80, progressive: true);
 
             // Write file to disk
             file_put_contents($path, (string) $binary);
