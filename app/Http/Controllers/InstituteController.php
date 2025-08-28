@@ -100,7 +100,7 @@ class InstituteController extends Controller
             $img = Image::read($file)->contain(900, 450);
 
             // Encode with quality for lossy formats (PNG will ignore "quality")
-            $binary = $img->encodeByExtension($ext, quality: 80, progressive: true);
+            $binary = $img->encodeByExtension($ext, quality: 80);
 
             // Write file to disk
             file_put_contents($path, (string) $binary);
