@@ -86,6 +86,8 @@ class CultivationController extends Controller
         $server->staffIdPrefix      = $requ->staffIdPrefix;
         $server->youtubeChanel      = $requ->youtubeChanel;
         $server->establishDate      = $requ->establishDate;
+        $server->eduMinName      = $requ->eduMinName;
+        $server->boardChairmanName      = $requ->boardChairmanName;
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;
@@ -142,6 +144,37 @@ class CultivationController extends Controller
             $newFavicon             = rand().date('Ymd').'.'.$favicon->getClientOriginalExtension();
             $favicon->move(public_path('upload/image/cultivation'),$newFavicon);
             $server->favicon        = $newFavicon;
+        endif;
+
+        
+        if(!empty($requ->eduMinImg)):
+            $eduMinImg                = $requ->eduMinImg;
+            $validated = $requ->validate([
+                    'eduMinImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'eduMinImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'eduMinImg.max'    => 'Each file must be less than 5MB.'
+                ]);
+            $newEduMinImg             = rand().date('Ymd').'.'.$eduMinImg->getClientOriginalExtension();
+            $eduMinImg->move(public_path('upload/image/cultivation'),$newEduMinImg);
+            $server->eduMinImg        = $newEduMinImg;
+        endif;
+
+        if(!empty($requ->boardChairmanImg)):
+            $boardChairmanImg                = $requ->boardChairmanImg;
+            $validated = $requ->validate([
+                    'boardChairmanImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'boardChairmanImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'boardChairmanImg.max'    => 'Each file must be less than 5MB.'
+                ]);
+            $newBoardChairmanImg             = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
+            $boardChairmanImg->move(public_path('upload/image/cultivation'),$newBoardChairmanImg);
+            $server->boardChairmanImg        = $newBoardChairmanImg;
         endif;
 
         if($server->save()):
@@ -205,6 +238,35 @@ class CultivationController extends Controller
             return back()->with('success','Favicon delete successful');
         else:
             return back()->with('success','Favicon failed to delete');
+        endif;
+    }
+
+    
+    public function delEduMinImg($id){
+        $eduMinImg = ServerConfig::find($id);
+        if(!empty($eduMinImg)):
+            if(File::exists(public_path('upload/image/cultivation/').$eduMinImg->eduMinImg)):
+                File::delete(public_path('upload/image/cultivation/').$eduMinImg->eduMinImg);
+            endif;
+            $eduMinImg->eduMinImg   = "";
+            $eduMinImg->save();
+            return back()->with('success','eduMinImg delete successful');
+        else:
+            return back()->with('success','eduMinImg failed to delete');
+        endif;
+    }
+
+     public function delBoardChairmanImg($id){
+        $boardChairmanImg = ServerConfig::find($id);
+        if(!empty($boardChairmanImg)):
+            if(File::exists(public_path('upload/image/cultivation/').$boardChairmanImg->boardChairmanImg)):
+                File::delete(public_path('upload/image/cultivation/').$boardChairmanImg->boardChairmanImg);
+            endif;
+            $boardChairmanImg->boardChairmanImg   = "";
+            $boardChairmanImg->save();
+            return back()->with('success','boardChairmanImg delete successful');
+        else:
+            return back()->with('success','boardChairmanImg failed to delete');
         endif;
     }
 
@@ -317,6 +379,63 @@ class CultivationController extends Controller
             endif;
         else:
             return back()->with('success','Favicon not found');
+        endif;
+    }
+
+    
+    public function saveEduMinImg(Request $requ){
+        $data = ServerConfig::find($requ->serverId);
+        if(!empty($data)):
+            if(File::exists(public_path('upload/image/cultivation/').$data->eduMinImg)):
+                File::delete(public_path('upload/image/cultivation/').$data->eduMinImg);
+            endif;
+            $eduMinImg             = $requ->eduMinImg;
+            $validated = $requ->validate([
+                    'eduMinImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'eduMinImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'eduMinImg.max'    => 'Each file must be less than 5MB.'
+                ]);
+            $newEduMinImg          = rand().date('Ymd').'.'.$eduMinImg->getClientOriginalExtension();
+            $eduMinImg->move(public_path('upload/image/cultivation'),$newEduMinImg);
+            $data->eduMinImg         = $newEduMinImg;
+            if($data->save()):
+                return back()->with('success','eduMinImg saved successfully');
+            else:
+                return back()->with('error','eduMinImg failed to save');
+            endif;
+        else:
+            return back()->with('success','eduMinImg not found');
+        endif;
+    } 
+    
+    public function saveBoardChairmanImg(Request $requ){
+        $data = ServerConfig::find($requ->serverId);
+        if(!empty($data)):
+            if(File::exists(public_path('upload/image/cultivation/').$data->boardChairmanImg)):
+                File::delete(public_path('upload/image/cultivation/').$data->boardChairmanImg);
+            endif;
+            $boardChairmanImg             = $requ->boardChairmanImg;
+            $validated = $requ->validate([
+                    'boardChairmanImg' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
+                     // max 5 MB
+                ],
+                [
+                    'boardChairmanImg.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                    'boardChairmanImg.max'    => 'Each file must be less than 5MB.'
+                ]);
+            $newBoardChairmanImg          = rand().date('Ymd').'.'.$boardChairmanImg->getClientOriginalExtension();
+            $boardChairmanImg->move(public_path('upload/image/cultivation'),$newBoardChairmanImg);
+            $data->boardChairmanImg         = $newBoardChairmanImg;
+            if($data->save()):
+                return back()->with('success','boardChairmanImg saved successfully');
+            else:
+                return back()->with('error','boardChairmanImg failed to save');
+            endif;
+        else:
+            return back()->with('success','boardChairmanImg not found');
         endif;
     }
 

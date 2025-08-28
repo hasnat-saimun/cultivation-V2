@@ -26,6 +26,10 @@ Configuration
         $teacherIdPrefix    = $serverData->teacherIdPrefix;
         $staffIdPrefix      = $serverData->staffIdPrefix;
         $establishDate      = $serverData->establishDate;
+        $eduMinName      = $serverData->eduMinName;
+        $boardChairmanName      = $serverData->boardChairmanName;
+        $eduMinImg      = $serverData->eduMinImg;
+        $boardChairmanImg      = $serverData->boardChairmanImg;
     else:
         $serverId           = "";
         $insName            = "";
@@ -47,6 +51,10 @@ Configuration
         $teacherIdPrefix    = "ID";
         $staffIdPrefix      = "ID";
         $establishDate      = "";
+        $eduMinName      = "";
+        $boardChairmanName      = "";
+        $eduMinImg      = "";
+        $boardChairmanImg      = "";
     endif;
 @endphp
 <!-- Dashboard summery Start Here -->
@@ -79,6 +87,12 @@ Configuration
                     @error('adminPhoto')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
+                    @error('eduMinImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
+                    @error('boardChairmanImg')
+                        <div class="alert alert-danger">{{ $message }}</div>
+                    @enderror
                 <form action="{{ route('saveConfig') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" name="serverId" value="{{ $serverId }}">
@@ -107,6 +121,10 @@ Configuration
                             <div class="mb-3">
                                 <label for="youtubeChanel" class="form-label">Youtube Chanel</label>
                                 <input type="text" name="youtubeChanel" class="form-control" id="youtubeChanel" value="{{ $youtubeLink }}" placeholder="Enter youtube chanel link">
+                            </div>
+                            <div class="mb-3">
+                                <label for="eduMinName" class="form-label">Education Ministar Name</label>
+                                <input type="text" name="eduMinName" class="form-control" id="eduMinName" value="{{ $eduMinName }}" placeholder="Enter the education ministar name">
                             </div>
                             <!-- <div class="mb-3">
                                 <label for="studentIdPrefix" class="form-label">Student ID Prefix</label>
@@ -146,6 +164,10 @@ Configuration
                                 <label for="twitterLink" class="form-label">Twitter Profile</label>
                                 <input type="text" name="twitterLink" class="form-control" id="twitterLink" value="{{ $twitterLink }}" placeholder="Enter twitter profile Link">
                             </div>
+                            <div class="mb-3">
+                                <label for="boardChairmanName" class="form-label">Board Chairman Name</label>
+                                <input type="text" name="boardChairmanName" class="form-control" id="boardChairmanName" value="{{ $boardChairmanName }}" placeholder="Enter board chairman name">
+                            </div>
                         </div>
                     </div>
                     @if(empty($serverId))
@@ -159,6 +181,10 @@ Configuration
                                 <label for="favicon" class="form-label">Favicon</label>
                                 <input type="file" name="favicon" class="form-control-file" id="favicon" >
                             </div>
+                            <div class="mb-3">
+                                <label for="eduMinImg" class="form-label">Education Ministar Image (150px X 150px)</label>
+                                <input type="file" name="eduMinImg" class="form-control-file" id="eduMinImg" >
+                            </div>
                         </div>
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
@@ -168,6 +194,10 @@ Configuration
                             <div class="mb-3">
                                 <label for="principalSign" class="form-label">Principal Sign</label>
                                 <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
+                            </div>
+                            <div class="mb-3">
+                                <label for="boardChairmanImg" class="form-label">Board Chairman Image  (150px X 150px)</label>
+                                <input type="file" name="boardChairmanImg" class="form-control-file" id="boardChairmanImg" >
                             </div>
                         </div>
                     </div>
@@ -180,11 +210,11 @@ Configuration
                         <div class="mb-3">
                             <label for="insLogo" class="form-label fw-bold">Logo</label>
                             @if(empty($logo))
-                            <form class="form" action="{{ route('saveLogo') }}" method="POST" enctype="multipart/form-data">
+                                <form class="form" action="{{ route('saveLogo') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
-                                <input type="hidden" name="serverId" value="{{ $serverId }}">
-                                <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                    <input type="hidden" name="serverId" value="{{ $serverId }}">
+                                    <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
+                                    <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -213,10 +243,28 @@ Configuration
                             </div>
                             @endif
                         </div>
+                        <div class="mb-3">
+                            <label for="boardChairmanImg" class="form-label fw-bold">Board Chairman Image (150px X 150px)</label>
+                            @if(empty($boardChairmanImg))
+                            <form class="form" action="{{ route('saveBoardChairmanImg') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="serverId" value="{{ $serverId }}">
+                                <input type="file" name="boardChairmanImg" class="form-control-file" id="boardChairmanImg">
+                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                            </form>
+                            @else
+                            <div class="pt-1">
+                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $boardChairmanImg }}" alt="{{ $insName }}">
+                                <div>
+                                    <a href="{{ route('delBoardChairmanImg',['id'=>$serverId]) }}">Delete</a>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="mb-3">
-                            <label for="adminPhoto" class="form-label fw-bold">Admin Photo</label>
+                            <label for="adminPhoto" class="form-label fw-bold">Principal Photo</label>
                             @if(empty($avatar))
                             <form class="form" action="{{ route('saveAvatar') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
@@ -247,6 +295,24 @@ Configuration
                                 <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $principalSign }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delSign',['id'=>$serverId]) }}">Delete</a>
+                                </div>
+                            </div>
+                            @endif
+                        </div>
+                        <div class="mb-3">
+                            <label for="eduMinImg" class="form-label fw-bold">Education Ministar Image (150px X 150px)</label>
+                            @if(empty($eduMinImg))
+                            <form class="form" action="{{ route('saveEduMinImg') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="serverId" value="{{ $serverId }}">
+                                <input type="file" name="eduMinImg" class="form-control-file" id="eduMinImg">
+                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                            </form>
+                            @else
+                            <div class="pt-1">
+                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $eduMinImg }}" alt="{{ $insName }}">
+                                <div>
+                                    <a href="{{ route('delEduMinImg',['id'=>$serverId]) }}">Delete</a>
                                 </div>
                             </div>
                             @endif

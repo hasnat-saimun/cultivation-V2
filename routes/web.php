@@ -518,6 +518,18 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class ,
         'saveLogo'
     ])->name('saveLogo');
+
+    Route::post('/boardChairmanImg/save',[
+        CultivationController::class ,
+        'saveBoardChairmanImg'
+    ])->name('saveBoardChairmanImg');
+
+    Route::post('/eduMinImg/save',[
+        CultivationController::class ,
+        'saveEduMinImg'
+    ])->name('saveEduMinImg');
+
+
     Route::get('/favicon/del/{id}',[
         CultivationController::class ,
         'delFavicon'
@@ -526,6 +538,17 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class ,
         'saveFavicon'
     ])->name('saveFavicon');
+    
+    Route::get('/boardChairmanImg/del/{id}',[
+        CultivationController::class ,
+        'delBoardChairmanImg'
+    ])->name('delBoardChairmanImg');
+    
+    Route::get('/eduMinImg/del/{id}',[
+        CultivationController::class ,
+        'delEduMinImg'
+    ])->name('delEduMinImg');
+
     Route::get('/avatar/del/{id}',[
         CultivationController::class ,
         'delAvatar'
