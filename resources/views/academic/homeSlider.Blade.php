@@ -54,7 +54,7 @@ endif;
                         <label for="detail">Details</label>
                         <textarea name="detail" class="form-control" placeholder="Enter description about institute">{{ $detail }}</textarea>
                     <div class="mt-4">
-                    <label for="avatar">Avatar (150px X 150px)</label>
+                    <label for="avatar">Avatar (950 X 350)</label>
                          @if(!empty($avatar))
                             <div>
                                 <img src="{{ asset('public/upload/image/webHomepage/').'/'.$avatar }}" class="w-50" >

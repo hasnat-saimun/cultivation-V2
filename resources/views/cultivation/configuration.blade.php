@@ -6,55 +6,57 @@ Configuration
 @php
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     if(!empty($serverData)):
-        $serverId           = $serverData->id;
-        $insName            = $serverData->institueName;
-        $location           = $serverData->address;
-        $officeMobile       = $serverData->officeMobile;
-        $officeMail         = $serverData->officeEmail;
-        $principalMail      = $serverData->principalMail;
-        $principalMobile    = $serverData->principalMobile;
-        $principalName      = $serverData->principalName;
-        $principalSign      = $serverData->principalSign;
-        $logo               = $serverData->logo;
-        $favicon            = $serverData->favicon;
-        $avatar             = $serverData->avatar;
-        $fbPage             = $serverData->facebookPage;
-        $twitterLink        = $serverData->twitterLink;
-        $youtubeLink        = $serverData->youtubeChanel;
-        $einNumber          = $serverData->einNumber;
-        $studentIdPrefix    = $serverData->studentIdPrefix;
-        $teacherIdPrefix    = $serverData->teacherIdPrefix;
-        $staffIdPrefix      = $serverData->staffIdPrefix;
-        $establishDate      = $serverData->establishDate;
-        $eduMinName      = $serverData->eduMinName;
+        $serverId               = $serverData->id;
+        $insName                = $serverData->institueName;
+        $location               = $serverData->address;
+        $officeMobile           = $serverData->officeMobile;
+        $officeMail             = $serverData->officeEmail;
+        $principalMail          = $serverData->principalMail;
+        $principalDesignation   = $serverData->principalDesignation;
+        $principalMobile        = $serverData->principalMobile;
+        $principalName          = $serverData->principalName;
+        $principalSign          = $serverData->principalSign;
+        $logo                   = $serverData->logo;
+        $favicon                = $serverData->favicon;
+        $avatar                 = $serverData->avatar;
+        $fbPage                 = $serverData->facebookPage;
+        $twitterLink            = $serverData->twitterLink;
+        $youtubeLink            = $serverData->youtubeChanel;
+        $einNumber              = $serverData->einNumber;
+        $studentIdPrefix        = $serverData->studentIdPrefix;
+        $teacherIdPrefix        = $serverData->teacherIdPrefix;
+        $staffIdPrefix          = $serverData->staffIdPrefix;
+        $establishDate          = $serverData->establishDate;
+        $eduMinName             = $serverData->eduMinName;
         $boardChairmanName      = $serverData->boardChairmanName;
-        $eduMinImg      = $serverData->eduMinImg;
-        $boardChairmanImg      = $serverData->boardChairmanImg;
+        $eduMinImg              = $serverData->eduMinImg;
+        $boardChairmanImg       = $serverData->boardChairmanImg;
     else:
-        $serverId           = "";
-        $insName            = "";
-        $location           = "";
-        $officeMobile       = "";
-        $officeMail         = "";
-        $principalMail      = "";
-        $principalMobile    = "";
-        $principalName      = "";
-        $principalSign      = "";
-        $logo               = "";
-        $favicon            = "";
-        $avatar             = "";
-        $fbPage             = "";
-        $twitterLink        = "";
-        $youtubeLink        = "";
-        $einNumber          = "";
-        $studentIdPrefix    = "ID";
-        $teacherIdPrefix    = "ID";
-        $staffIdPrefix      = "ID";
-        $establishDate      = "";
-        $eduMinName      = "";
+        $serverId               = "";
+        $insName                = "";
+        $location               = "";
+        $officeMobile           = "";
+        $officeMail             = "";
+        $principalMail          = "";
+        $principalMobile        = "";
+        $principalDesignation   = "";
+        $principalName          = "";
+        $principalSign          = "";
+        $logo                   = "";
+        $favicon                = "";
+        $avatar                 = "";
+        $fbPage                 = "";
+        $twitterLink            = "";
+        $youtubeLink            = "";
+        $einNumber              = "";
+        $studentIdPrefix        = "ID";
+        $teacherIdPrefix        = "ID";
+        $staffIdPrefix          = "ID";
+        $establishDate          = "";
+        $eduMinName             = "";
         $boardChairmanName      = "";
-        $eduMinImg      = "";
-        $boardChairmanImg      = "";
+        $eduMinImg              = "";
+        $boardChairmanImg       = "";
     endif;
 @endphp
 <!-- Dashboard summery Start Here -->
@@ -138,11 +140,19 @@ Configuration
                                 <label for="staffIdPrefix" class="form-label">Staff ID Prefix</label>
                                 <input type="text" name="staffIdPrefix" class="form-control" id="staffIdPrefix" value="{{ $staffIdPrefix }}" placeholder="Example: STFID" >
                             </div> -->
+                            <div class="mb-3">
+                                <label for="boardChairmanName" class="form-label">Board Chairman Name</label>
+                                <input type="text" name="boardChairmanName" class="form-control" id="boardChairmanName" value="{{ $boardChairmanName }}" placeholder="Enter board chairman name">
+                            </div>
                         </div>
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="principalName" class="form-label">Principal Name</label>
                                 <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" >
+                            </div>
+                            <div class="mb-3">
+                                <label for="principalDesignation" class="form-label">Principal Designation</label>
+                                <input type="text" name="principalDesignation" class="form-control" id="principalDesignation" value="{{ $principalDesignation }}" placeholder="Enter the current designation of the principal" >
                             </div>
                             <div class="mb-3">
                                 <label for="principalMobile" class="form-label">Principal Mobile</label>
@@ -163,10 +173,6 @@ Configuration
                             <div class="mb-3">
                                 <label for="twitterLink" class="form-label">Twitter Profile</label>
                                 <input type="text" name="twitterLink" class="form-control" id="twitterLink" value="{{ $twitterLink }}" placeholder="Enter twitter profile Link">
-                            </div>
-                            <div class="mb-3">
-                                <label for="boardChairmanName" class="form-label">Board Chairman Name</label>
-                                <input type="text" name="boardChairmanName" class="form-control" id="boardChairmanName" value="{{ $boardChairmanName }}" placeholder="Enter board chairman name">
                             </div>
                         </div>
                     </div>
@@ -202,7 +208,11 @@ Configuration
                         </div>
                     </div>
                     @endif
-                    <button type="submit" class="mt-4 btn btn-primary btn-lg">Save</button>
+                    @if(!empty($serverId))
+                    <button type="submit" class="mt-4 btn btn-success btn-lg">Update Details</button>
+                    @else
+                    <button type="submit" class="mt-4 btn btn-success btn-lg">Save Details</button>
+                    @endif
                 </form>
                 @if(!empty($serverId))
                 <div class="row mt-4">
@@ -214,7 +224,7 @@ Configuration
                                 @csrf
                                     <input type="hidden" name="serverId" value="{{ $serverId }}">
                                     <input type="file" name="insLogo" class="form-control-file" id="insLogo" >
-                                    <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                    <button type="submit" class="btn btn-success btn-lg mt-4">Update Logo</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -232,7 +242,7 @@ Configuration
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
                                 <input type="file" name="favicon" class="form-control-file" id="favicon">
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update Icon</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -244,13 +254,13 @@ Configuration
                             @endif
                         </div>
                         <div class="mb-3">
-                            <label for="boardChairmanImg" class="form-label fw-bold">Board Chairman Image (150px X 150px)</label>
+                            <label for="boardChairmanImg" class="form-label fw-bold">Board Chairman(300 X 350)</label>
                             @if(empty($boardChairmanImg))
                             <form class="form" action="{{ route('saveBoardChairmanImg') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
                                 <input type="file" name="boardChairmanImg" class="form-control-file" id="boardChairmanImg">
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                <button type="submit" class="btn btn-danger btn-lg mt-4">Update Chairman</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -264,13 +274,13 @@ Configuration
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="mb-3">
-                            <label for="adminPhoto" class="form-label fw-bold">Principal Photo</label>
+                            <label for="adminPhoto" class="form-label fw-bold">Principal(300 X 350)</label>
                             @if(empty($avatar))
                             <form class="form" action="{{ route('saveAvatar') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}"class="form-control-file" >
                                 <input type="file" name="adminPhoto" id="adminPhoto" class="form-control-file" >
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                <button type="submit" class="btn btn-danger btn-lg mt-4">Update Principal Photo</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -288,7 +298,7 @@ Configuration
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
                                 <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                <button type="submit" class="btn btn-warning btn-lg mt-4">Update Principal Sign</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -300,13 +310,13 @@ Configuration
                             @endif
                         </div>
                         <div class="mb-3">
-                            <label for="eduMinImg" class="form-label fw-bold">Education Ministar Image (150px X 150px)</label>
+                            <label for="eduMinImg" class="form-label fw-bold">Education Ministar(300 X 350)</label>
                             @if(empty($eduMinImg))
                             <form class="form" action="{{ route('saveEduMinImg') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
                                 <input type="file" name="eduMinImg" class="form-control-file" id="eduMinImg">
-                                <button type="submit" class="btn btn-primary btn-lg mt-4">Update</button>
+                                <button type="submit" class="btn btn-danger btn-lg mt-4">Update Minister</button>
                             </form>
                             @else
                             <div class="pt-1">

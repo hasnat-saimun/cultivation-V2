@@ -20,6 +20,8 @@ return new class extends Migration
             $table->string('heroImg')->nullable();
             $table->longText('mission')->nullable();
             $table->longText('vision')->nullable();
+            $table->longText('totalStudent')->nullable();
+            $table->longText('totalTeacher')->nullable();
             $table->timestamps();
         });
     }

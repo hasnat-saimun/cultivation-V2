@@ -14,6 +14,8 @@ Institute Info
         $mission        = $institute->mission;
         $vision         = $institute->vision;
         $pageId         = $institute->id;
+        $totalTeacher   = $institute->totalTeacher;
+        $totalStd       = $institute->totalStudent;
     else:
         $pageId         = null;
         $headline       = "";
@@ -23,6 +25,8 @@ Institute Info
         $heroImg        = "";
         $mission        = "";
         $vision         = "";
+        $totalTeacher   = "";
+        $totalStd       = "";
     endif;
 @endphp
 <!-- Dashboard summery Start Here -->
@@ -57,12 +61,20 @@ Institute Info
                         <input type="text" name="insHeadline" class="form-control" placeholder="Enter the headline" value="{{ $headline }}">
                     </div>
                     <div class="mb-3">
-                        <label for="establishDate">Founded</label>
-                        <input type="text" name="establishDate" class="form-control" placeholder="Enter establish date" value="{{ $foundedDate }}">
+                        <label for="establishDate">Founded Date</label>
+                        <input type="text" name="establishDate" class="form-control" placeholder="Enter establish date" value="{{ $foundedDate }}" max="15">
                     </div>
                     <div class="mb-3">
                         <label for="landSize">Land Size</label>
-                        <input type="text" name="landSize" class="form-control" placeholder="Enter total land size" value="{{ $landSize }}">
+                        <input type="text" name="landSize" class="form-control" placeholder="Enter total land size" max="15" value="{{ $landSize }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="totalTeacher">Total Teacher</label>
+                        <input type="text" name="totalTeacher" class="form-control" placeholder="Enter total number of teacher" value="{{ $totalTeacher }}" max="15">
+                    </div>
+                    <div class="mb-3">
+                        <label for="totalStd">Total Student</label>
+                        <input type="text" name="totalStd" class="form-control" placeholder="Enter total number of student" value="{{ $totalStd }}" max="10">
                     </div>
                     <div class="mb-3">
                         <label for="insDetails">Details</label>

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ServerConfig;
 use App\Models\CultivationAdmin;
+use Illuminate\Support\Str;
 use Hash;
 use sessionData;
 use File;
+use Intervention\Image\Laravel\Facades\Image;
 
 class CultivationController extends Controller
 {
@@ -75,6 +77,7 @@ class CultivationController extends Controller
         $server->address            = $requ->insAddress;
         $server->principalName      = $requ->principalName;
         $server->principalMobile    = $requ->principalMobile;
+        $server->principalDesignation = $requ->principalDesignation;
         $server->principalMail      = $requ->principalMail;
         $server->officeMobile       = $requ->officeMobile;
         $server->officeEmail        = $requ->officeMail;
@@ -86,8 +89,8 @@ class CultivationController extends Controller
         $server->staffIdPrefix      = $requ->staffIdPrefix;
         $server->youtubeChanel      = $requ->youtubeChanel;
         $server->establishDate      = $requ->establishDate;
-        $server->eduMinName      = $requ->eduMinName;
-        $server->boardChairmanName      = $requ->boardChairmanName;
+        $server->eduMinName         = $requ->eduMinName;
+        $server->boardChairmanName  = $requ->boardChairmanName;
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;
@@ -118,7 +121,7 @@ class CultivationController extends Controller
             $server->principalSign  = $newPrincipalSign;
         endif;
         if(!empty($requ->adminPhoto)):
-            $adminPhoto             = $requ->adminPhoto;
+            // $adminPhoto             = $requ->adminPhoto;
             $validated = $requ->validate([
                     'adminPhoto' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:5120',
                      // max 5 MB
@@ -127,9 +130,29 @@ class CultivationController extends Controller
                     'adminPhoto.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
                     'adminPhoto.max'    => 'Each file must be less than 5MB.'
                 ]);
-            $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
-            $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
-            $server->avatar         = $newAdminPhoto;
+
+            $file = $requ->file('adminPhoto');
+
+            // Use guessed extension from MIME (safer than client original)
+            $ext  = strtolower($file->extension()); // e.g. jpg|jpeg|png|webp|avif
+            $name = Str::uuid().'.'.$ext;
+
+            // Ensure destination directory exists
+            $dir = public_path('upload/image/cultivation');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $path = $dir.DIRECTORY_SEPARATOR.$name;
+
+            // Read & resize (keeps aspect, prevents upscaling)
+            $img = Image::read($file)->cover(200, 300);
+
+            // Encode with quality for lossy formats (PNG will ignore "quality")
+            $binary = $img->encodeByExtension($ext, quality: 80);
+
+            // Write file to disk
+            file_put_contents($path, (string) $binary);
+            $server->avatar         = $name;
         endif;
         if(!empty($requ->favicon)):
             $favicon                = $requ->favicon;
@@ -285,9 +308,29 @@ class CultivationController extends Controller
                     'adminPhoto.mimes'  => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
                     'adminPhoto.max'    => 'Each file must be less than 5MB.'
                 ]);
-            $newAdminPhoto          = rand().date('Ymd').'.'.$adminPhoto->getClientOriginalExtension();
-            $adminPhoto->move(public_path('upload/image/cultivation'),$newAdminPhoto);
-            $avatar->avatar         = $newAdminPhoto;
+
+            $file = $requ->file('adminPhoto');
+
+            // Use guessed extension from MIME (safer than client original)
+            $ext  = strtolower($file->extension()); // e.g. jpg|jpeg|png|webp|avif
+            $fileName = Str::uuid().'.'.$ext;
+
+            // Ensure destination directory exists
+            $dir = public_path('upload/image/cultivation');
+            if (!is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $path = $dir.DIRECTORY_SEPARATOR.$fileName;
+
+            // Read & resize (keeps aspect, prevents upscaling)
+            $img = Image::read($file)->cover(400, 450);
+
+            // Encode with quality for lossy formats (PNG will ignore "quality")
+            $binary = $img->encodeByExtension($ext, quality: 80);
+
+            // Write file to disk
+            file_put_contents($path, (string) $binary);
+            $avatar->avatar         = $fileName;
             if($avatar->save()):
                 return back()->with('success','Avatar saved successfully');
             else:

@@ -29,8 +29,13 @@ return new class extends Migration
             $table->string('avatar')->nullable();
             $table->string('principalName')->nullable();
             $table->string('principalMobile')->nullable();
+            $table->string('principalDesignation')->nullable();
             $table->string('principalMail')->nullable();
             $table->string('principalSign')->nullable();
+            $table->string('eduMinName')->nullable();
+            $table->string('eduMinImg')->nullable();
+            $table->string('boardChairmanName')->nullable();
+            $table->string('boardChairmanImg')->nullable();
             $table->string('studentIdPrefix')->nullable();
             $table->string('teacherIdPrefix')->nullable();
             $table->string('staffIdPrefix')->nullable();
