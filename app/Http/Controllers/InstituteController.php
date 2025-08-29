@@ -171,8 +171,8 @@ class InstituteController extends Controller
         $institute->principalDetail         = $requ->principalDetail;
         $institute->founded                 = $requ->founded;
         $institute->area                    = $requ->area;
-        $institute->teacherTotal            = $requ->teacherTotal;
-        $institute->studentTotal            = $requ->studentTotal;
+        $institute->totalTeacher            = $requ->totalTeacher;
+        $institute->totalStudent            = $requ->totalStudent;
         $institute->notice                  = $requ->notice;
         $institute->wcMsgHadeline           = $requ->wcMsgHadeline;
         $institute->wclMsgDescription       = $requ->wclMsgDescription;
