@@ -171,8 +171,6 @@ class InstituteController extends Controller
         $institute->principalDetail         = $requ->principalDetail;
         $institute->founded                 = $requ->founded;
         $institute->area                    = $requ->area;
-        $institute->totalTeacher            = $requ->totalTeacher;
-        $institute->totalStudent            = $requ->totalStudent;
         $institute->notice                  = $requ->notice;
         $institute->wcMsgHadeline           = $requ->wcMsgHadeline;
         $institute->wclMsgDescription       = $requ->wclMsgDescription;
@@ -299,6 +297,8 @@ class InstituteController extends Controller
         $institute->landSize        = $requ->landSize;
         $institute->mission         = $requ->ourMission;
         $institute->vision          = $requ->ourVision;
+        $institute->totalTeacher    = $requ->totalTeacher;
+        $institute->totalStudent    = $requ->totalStd;
         
         if(!empty($requ->heroImg)):
             $heroImg        = $requ->heroImg;
