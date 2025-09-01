@@ -31,6 +31,7 @@ Configuration
         $boardChairmanName      = $serverData->boardChairmanName;
         $eduMinImg              = $serverData->eduMinImg;
         $boardChairmanImg       = $serverData->boardChairmanImg;
+        $mapEmbed               = $serverData->mapEmbed;
     else:
         $serverId               = "";
         $insName                = "";
@@ -57,6 +58,7 @@ Configuration
         $boardChairmanName      = "";
         $eduMinImg              = "";
         $boardChairmanImg       = "";
+        $mapEmbed               = "";
     endif;
 @endphp
 <!-- Dashboard summery Start Here -->
@@ -173,6 +175,10 @@ Configuration
                             <div class="mb-3">
                                 <label for="twitterLink" class="form-label">Twitter Profile</label>
                                 <input type="text" name="twitterLink" class="form-control" id="twitterLink" value="{{ $twitterLink }}" placeholder="Enter twitter profile Link">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mapEmbed" class="form-label">Google Map</label>
+                                <input type="text" name="mapEmbed" class="form-control" id="mapEmbed" value="{{ $mapEmbed }}" placeholder="Enter google map embed pb value from iframe">
                             </div>
                         </div>
                     </div>

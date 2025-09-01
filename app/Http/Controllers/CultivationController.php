@@ -91,6 +91,7 @@ class CultivationController extends Controller
         $server->establishDate      = $requ->establishDate;
         $server->eduMinName         = $requ->eduMinName;
         $server->boardChairmanName  = $requ->boardChairmanName;
+        $server->mapEmbed           = $requ->mapEmbed;
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;

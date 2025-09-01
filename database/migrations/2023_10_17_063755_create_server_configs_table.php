@@ -40,6 +40,7 @@ return new class extends Migration
             $table->string('teacherIdPrefix')->nullable();
             $table->string('staffIdPrefix')->nullable();
             $table->string('establishDate')->nullable();
+            $table->string('mapEmbed')->nullable();
             $table->timestamps();
         });
     }
