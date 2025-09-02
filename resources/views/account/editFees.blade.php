@@ -41,7 +41,7 @@ Institute Info
                         </div>
                         <div class="col-6 mb-2">
                             <label for="feesName" class="form-label ">Fees Type</label>
-                            <input t ype="text" class="form-control form-control-sm" id="feesName" name="feesName" placeholder="Enter the fees name" value="{{$editData->feesName}}" required>
+                            <input type="text" class="form-control form-control-sm" id="feesName" name="feesName" placeholder="Enter the fees name" value="{{$editData->feesName}}" required>
                         </div>
                         <div class="col-6 mb-2">
                             <label for="feesAmount" class="form-label ">Fees Amount</label>
