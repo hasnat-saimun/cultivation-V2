@@ -286,8 +286,9 @@ class individualController extends Controller
 
      //add fees
     public function feesForm(){
+        $classLi = classManage::all();
         $feesLi = feesManager::all();
-        return view ('account.feesForm',['feesList'=>$feesLi]); 
+        return view ('account.feesForm',['feesList'=>$feesLi],['classList'=>$classLi]); 
     }
     //save fees 
     public function saveFees(Request $requ){
@@ -298,7 +299,9 @@ class individualController extends Controller
         else:
             $savedata = new feesManager();
             
-            $savedata ->feesName = $requ->feesName;
+            $savedata ->class = $requ->class;            
+            $savedata ->feesName = $requ->feesName;            
+            $savedata ->feesAmount = $requ->feesAmount;
 
             if($savedata->save()):
                 return back()->with('success','Data saved successfully');
@@ -312,24 +315,25 @@ class individualController extends Controller
     //edit fees
     public function editFees($id){
         $feesData = feesManager::find($id);
-        return view('account.editFees',['editData'=>$feesData]);
+        $classDetails= classManage::all();
+        return view('account.editFees',['editData'=>$feesData],['classDetails'=>$classDetails]);
     }
 
     //update fees 
     public function updateFees(Request $requ){
-        $chkData = feesManager::where(['feesName'=>$requ->feesName])->get();
-
-        if(!empty($chkData) && count($chkData)>0):
-            return back()->with('error','Data entry failed');
-        else:
             $updateData =  feesManager::find($requ->feesId);
-            $updateData ->feesName = $requ->feesName;
+        if(!empty($updateData)):
+            $updateData ->feesName = $requ->feesName;           
+            $updateData ->class = $requ->class;            
+            $updateData ->feesAmount = $requ->feesAmount;
 
             if($updateData->save()):
                 return redirect(route('feesForm'))->with("success",'update successfully');
             else:
                 return back()->with("error",'Data update failed');
             endif;
+        else:
+            return back()->with('error','Sorry! No data found');
         endif;
     
     }

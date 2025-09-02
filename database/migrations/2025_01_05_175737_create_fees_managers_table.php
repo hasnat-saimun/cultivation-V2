@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('fees_managers', function (Blueprint $table) {
             $table->id();
             $table->string('feesName')->nullable();
+            $table->string('class')->nullable();
+            $table->string('fessAmount')->nullable();
             $table->timestamps();
         });
     }
