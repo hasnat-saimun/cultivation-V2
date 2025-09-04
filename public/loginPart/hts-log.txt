@@ -1,0 +1,13 @@
+HTTrack3.49-2+htsswf+htsjava launched on Wed, 03 Sep 2025 12:29:58 at https://themeknit.com/demo/html/authfy/demo/login-07.html +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar
+(winhttrack -qwC2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A25000%f#f -F "Mozilla/4.5 (compatible; HTTrack 3.0x; Windows 98)" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://themeknit.com/demo/html/authfy/demo/login-07.html -O1 "F:\login" +*.png +*.gif +*.jpg +*.jpeg +*.css +*.js -ad.doubleclick.net/* -mime:application/foobar )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+12:30:03	Error: 	"Not Found" (404) at link https://themeknit.com/demo/html/authfy/demo/images/favicon-16x16.png (from https://themeknit.com/demo/html/authfy/demo/login-07.html)
+12:30:17	Error: 	"Not Found" (404) at link https://themeknit.com/demo/html/authfy/demo/fonts/glyphicons-halflings-regular.woff2 (from https://themeknit.com/demo/html/authfy/demo/css/bootstrap.min.css)
+
+HTTrack Website Copier/3.49-2 mirror complete in 19 seconds : 24 links scanned, 21 files written (1136138 bytes overall) [793196 bytes received at 41747 bytes/sec], 950116 bytes transferred using HTTP compression in 13 files, ratio 29%, 4.0 requests per connection
+(2 errors, 0 warnings, 0 messages)

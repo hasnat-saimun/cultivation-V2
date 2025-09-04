@@ -45,6 +45,10 @@ Create Subject
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
+                                        <label>Base Mark *</label>
+                                        <input type="text" name="baseMark" placeholder="Enter the base make" class="form-control" required>
+                                    </div>
+                                    <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         <div class="form-check form-check-inline">
                                             <input class="form-check-input" name="cqValue" type="checkbox" id="CQ" value="CQ">

@@ -22,8 +22,6 @@
 
         <!-- Main structure css file -->
         <link rel="stylesheet" href="{{ asset('/public/loginPart/themeknit/css') }}/login7-style.css" />
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  
 
         <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -55,7 +53,8 @@
                     @endif
                 </div>
             </div>
-            <div class="row d-flex align-items-center vh-100">
+            <div class="row">
+                
                 <div class="authfy-container col-xs-12 col-sm-10 col-md-8 col-lg-6 col-sm-offset-1 col-md-offset-2 col-lg-offset-3">
                     <div class="col-sm-5 authfy-panel-left">
                         <div class="brand-col">
@@ -65,9 +64,9 @@
                                     <img src="{{ asset('/public/loginPart/themeknit/images') }}/logo1.png" width="150" alt="brand-logo" />
                                 </div>
                                 <!-- ./brand-logo -->
-                                <h4>Login using social media to get quick access</h4>
+                                <p>Login using social media to get quick access</p>
                                 <!-- social login buttons start -->
-                                <!-- <div class="row social-buttons">
+                                <div class="row social-buttons">
                                     <div class="col-xs-4 col-sm-4 col-md-12">
                                         <a href="#" class="btn btn-block btn-facebook"> <i class="fa fa-facebook"></i> <span class="hidden-xs hidden-sm">Signin with facebook</span> </a>
                                     </div>
@@ -77,7 +76,7 @@
                                     <div class="col-xs-4 col-sm-4 col-md-12">
                                         <a href="#" class="btn btn-block btn-google"> <i class="fa fa-google-plus"></i> <span class="hidden-xs hidden-sm">Signin with google</span> </a>
                                     </div>
-                                </div> -->
+                                </div>
                                 <!-- ./social-buttons -->
                             </div>
                         </div>
@@ -89,74 +88,69 @@
                             <div class="authfy-panel panel-login text-center active">
                                 <div class="authfy-heading">
                                     <h3 class="auth-title">Login to your account</h3>
+                                    <p>Don’t have an account? <a class="lnk-toggler" data-panel=".panel-signup" href="#">Sign Up Free!</a></p>
                                 </div>
                                 <div class="row">
-                                    @if($cultivation->count()>0) 
-                                        <div class="col-xs-12 col-sm-12">                
-                                            <form action="{{ route('cultivationLogin') }}" class="login-form" method="POST">
-                                                @csrf
-                                                <div class="form-group wrap-input">
-                                                    <input type="text" class="form-control " name="cultivationUser" placeholder="Enter the user name" />
+                                @if($cultivation->count()>0) 
+                                    <div class="col-xs-12 col-sm-12">                
+                                        <form action="{{ route('cultivationLogin') }}" class="login-form" method="POST">
+                                            @csrf
+                                            <div class="form-group wrap-input">
+                                                <input type="text" class="form-control email" name="cultivationUser" placeholder="Enter the user name" />
+                                                <span class="focus-input"></span>
+                                            </div>
+                                            <div class="form-group wrap-input">
+                                                <div class="pwdMask">
+                                                    <input type="cultivationPass" class="form-control password" name="cultivationPass" placeholder="Password" />
                                                     <span class="focus-input"></span>
+                                                    <span class="fa fa-eye-slash pwd-toggle"></span>
                                                 </div>
-                                                <div class="form-group wrap-input">
-                                                    <div class="pwdMask">
-                                                        <input type="cultivationPass" class="form-control password" name="cultivationPass" placeholder="Password" />
-                                                        <span class="focus-input"></span>
-                                                        <span class="fa fa-eye-slash pwd-toggle"></span>
-                                                    </div>
+                                            </div>
+                                            <!-- start remember-row -->
+                                            <div class="row remember-row">
+                                                <div class="col-xs-6 col-sm-6">
+                                                    <label class="checkbox text-left">
+                                                        <input type="checkbox" value="remember-me" />
+                                                        <span class="label-text">Remember me</span>
+                                                    </label>
                                                 </div>
-                                                <!-- start remember-row -->
-                                                <!-- <div class="row remember-row">
-                                                    <div class="col-xs-6 col-sm-6">
-                                                        <label class="checkbox text-left">
-                                                            <input type="checkbox" value="remember-me" />
-                                                            <span class="label-text">Remember me</span>
-                                                        </label>
-                                                    </div>
-                                                    <div class="col-xs-6 col-sm-6">
-                                                        <p class="forgotPwd">
-                                                            <a class="lnk-toggler" data-panel=".panel-forgot" href="#">Forgot password?</a>
-                                                        </p>
-                                                    </div>
-                                                </div> -->
-                                                <!-- ./remember-row -->
-                                                <div class="form-group mt-5">
-                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Login with User</button>
+                                                <div class="col-xs-6 col-sm-6">
+                                                    <p class="forgotPwd">
+                                                        <a class="lnk-toggler" data-panel=".panel-forgot" href="#">Forgot password?</a>
+                                                    </p>
                                                 </div>
-                                            </form>
-                                        </div>
-                                        
+                                            </div>
+                                            <!-- ./remember-row -->
+                                            <div class="form-group">
+                                                <button class="btn btn-lg btn-primary btn-block" type="submit">Login with email</button>
+                                            </div>
+                                        </form>
+                                    @else
+                                    </div>
                                 </div>
                             </div>
                             <!-- ./panel-login -->
                             <!-- panel-signup start -->
                             <div class="authfy-panel panel-signup text-center">
-                                @else
-                                <form action="{{ route('adminRegister') }}" class="row" method="POST">
+                                <div class="row">
+                                    <div class="col-xs-12 col-sm-12">
                                         <div class="authfy-heading">
                                             <h3 class="auth-title">Sign up for free!</h3>
                                         </div>
+                                        <form action="{{ route('adminRegister') }}" class="login-form" method="POST">
                                         @csrf
-                                        <div class="col-6">
                                             <div class="form-group wrap-input">
                                                 <input type="text" class="form-control" name="adminName" placeholder="Admin name" />
                                                 <span class="focus-input"></span>
                                             </div>
-                                        </div>
-                                        <div class="col-6">
                                             <div class="form-group wrap-input">
                                                 <input type="email" class="form-control" name="username" placeholder="Email address" />
                                                 <span class="focus-input"></span>
                                             </div>
-                                        </div>
-                                        <div class="col-6">
                                             <div class="form-group wrap-input">
                                                 <input type="text" class="form-control" name="cultivationUser" placeholder="User name" />
                                                 <span class="focus-input"></span>
                                             </div>
-                                        </div>
-                                        <div class="col-6">
                                             <div class="form-group wrap-input">
                                                 <div class="pwdMask">
                                                     <input type="password" class="form-control" name="cultivationPass" placeholder="Password" />
@@ -164,17 +158,17 @@
                                                     <span class="fa fa-eye-slash pwd-toggle"></span>
                                                 </div>
                                             </div>
-                                        </div>
-                                                <div class="form-group">
-                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Login with email</button>
-                                                </div>
                                             <div class="form-group">
                                                 <p class="term-policy text-muted small">I agree to the <a href="#">privacy policy</a> and <a href="#">terms of service</a>.</p>
                                             </div>
+                                            <div class="form-group">
+                                                <button class="btn btn-lg btn-primary btn-block" type="submit">Sign up with email</button>
+                                            </div>
+                                        </form>
+                                    @endif
                                         <a class="lnk-toggler" data-panel=".panel-login" href="#">Already have an account?</a>
-                                    </form>
+                                    </div>
                                 </div>
-                                @endif  
                             </div>
                             <!-- ./panel-signup -->
                             <!-- panel-forget start -->

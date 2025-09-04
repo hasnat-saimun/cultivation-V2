@@ -7,6 +7,9 @@ Edit Subject
                 <div class="row gutters-20 mb-4">
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto">
+                        <div class="card-header bg-light">
+                            <a href="{{ route('allSubject') }}" class="btn btn-success">Subject List</a>
+                        </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-12">
@@ -45,6 +48,10 @@ Edit Subject
                                             <option value="Main">Main</option>
                                             <option value="Optional">Optional</option>
                                         </select>
+                                    </div>
+                                    <div class="col-12 form-group">
+                                        <label>Base Mark *</label>
+                                        <input type="text" name="baseMark" value="{{ $item->baseMark }}" placeholder="Enter the base make" class="form-control" required>
                                     </div>
                                     <div class="col-12 form-group">
                                         <label>Available Feature *</label>

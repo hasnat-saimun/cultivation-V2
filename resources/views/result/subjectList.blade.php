@@ -31,6 +31,7 @@ All Subject
                                         <tr>
                                             <th>Sl</th>
                                             <th>Name</th>
+                                            <th>Base Mark</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -43,6 +44,7 @@ All Subject
                                             <tr>
                                                 <td>{{ $x }}</td>
                                                 <td>{{ $item->subjectName }}</td>
+                                                <td>{{ $item->baseMark }}</td>
                                                 <td>
                                                     <a href="{{ route('editSubject',['itemId'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
                                                     <a href="{{ route('delSubject',['itemId'=>$item->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>

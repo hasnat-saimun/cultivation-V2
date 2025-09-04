@@ -49,6 +49,7 @@ class TeacherController extends Controller
             $teacherProfile->blGroup       = $requ->blGroup;
             $teacherProfile->designation   = $requ->designation;
             $teacherProfile->religion      = $requ->religion;
+            $teacherProfile->rank      = $requ->rank;
             $teacherProfile->teacherId     = $requ->teacherId;
             $teacherProfile->save();
 
@@ -89,6 +90,7 @@ class TeacherController extends Controller
             $teacherProfile->blGroup       = $requ->blGroup;
             $teacherProfile->designation   = $requ->designation;
             $teacherProfile->religion      = $requ->religion;
+            $teacherProfile->rank      = $requ->rank;
             $teacherProfile->teacherId     = $requ->teacherId;
             $teacherProfile->save();
 

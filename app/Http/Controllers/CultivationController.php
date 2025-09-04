@@ -484,7 +484,7 @@ class CultivationController extends Controller
     }
 
      public function techerRegForm(){
-        return view('userPanal.userRegister');
+        return view('cultivation.login1');
     }
 
      public function techerRegList(){
