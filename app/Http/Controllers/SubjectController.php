@@ -25,6 +25,9 @@ class SubjectController extends Controller
             $subject->subjectName   = $requ->subjectName;
             $subject->subjectType   = $requ->subjectType;
             $subject->baseMark      = $requ->baseMark;
+            $subject->CQ            = $requ->cqValue;
+            $subject->MCQ           = $requ->mcqValue;
+            $subject->Practical     = $requ->practicalValue;
             $subject->alias         = $alias;
             $subject->save();
             return back()->with('success','Record successfully saved');

@@ -51,16 +51,21 @@ Create Subject
                                     <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" name="cqValue" type="checkbox" id="CQ" value="CQ">
+                                            <input class="form-check-input" onclick="cqMarks(this)" name="cqValue" type="checkbox" id="CQ" value="CQ">
                                             <label class="form-check-label" for="CQ">CQ</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" name="mcqValue" type="checkbox" id="MCQ" value="MCQ">
+                                            <input class="form-check-input" onclick="mcqMarks(this)" name="mcqValue" type="checkbox" id="MCQ" value="MCQ">
                                             <label class="form-check-label" for="MCQ">MCQ</label>
                                         </div>
                                         <div class="form-check form-check-inline">
-                                            <input class="form-check-input" name="practicalValue" type="checkbox" id="Practical" value="Practical">
+                                            <input class="form-check-input" onclick="practicalMarks(this)" name="practicalValue" type="checkbox" id="Practical" value="Practical">
                                             <label class="form-check-label" for="Practical">Practical</label>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-4" id="cqFiled"></div>
+                                            <div class="col-4" id="mcqFiled"></div>
+                                            <div class="col-4" id="practicalFiled"></div>
                                         </div>
                                     </div>
                                     <div class="col-12 form-group mg-t-8">
@@ -72,4 +77,13 @@ Create Subject
                         </div>
                     </div>
                 </div>
+                <script>
+                    function cqMarks(checkbox){
+                        if(checkbox.checked){
+                            document.getElementById("cqField").innerHTML = `<lable for='cqMarksValue'>CQ Marks</label><input type='text' name='cqValue' class='form-control' placeholder='Enter the cq total marks'>`;
+                        }else{
+                            document.getElementById("cqField").innerHTML = "";
+                        }
+                    }
+                </script>
 @endsection
