@@ -1291,10 +1291,15 @@ Route::middleware(['adminGuard'])->group (function(){
 
     //InstituteController str
 
-    Route::get('/teacher/user/register',[
+    Route::get('/teacher/user/type',[
         CultivationController::class,
         'userType'
         ])->name('userType');
+
+    Route::post('/save/user',[
+    CultivationController::class,
+    'saveUser'
+    ])->name('saveUser');
         
 
     Route::get('/teacher/user/list',[

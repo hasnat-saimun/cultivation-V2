@@ -487,6 +487,24 @@ class CultivationController extends Controller
         return view('userPanal.userRegister');
     }
 
+     public function saveUser(Request $requ){
+
+        $cultivation = New CultivationAdmin;
+        
+        $cultivation->adminName     = $requ->adminName;
+        $cultivation->adminMail     = $requ->userMail;
+        $cultivation->adminMobile   = $requ->userMobile;
+        $cultivation->adminUser     = $requ->userName;
+        $cultivation->userType     = $requ->userType;
+        $cultivation->loginPassword = $authPass;
+            
+        if($cultivation->save()):
+            return back()->with('success','Success! Admin profile created successfully');
+        else:
+            return back()->with('success','error! There was an error. Please try later');
+        endif;
+    }
+
      public function userRegList(){
         return view('userPanal.userList');
     }

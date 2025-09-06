@@ -29,7 +29,7 @@ Register Form
                     @error('insLogo')
                         <div class="alert alert-danger">{{ $message }}</div>
                     @enderror
-                <form action="{{ route('saveRegForm') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('saveUser') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="row">
                             <div class="col-6 mb-3">
