@@ -121,7 +121,15 @@
                         <tr>
                             <th width="30%">Gender</th>
                             <td width="2%">:</td>
-                            <td>{{$singleData->gender}}</td>
+                            <td>
+                                @if($singleData->gender==1)
+                                Male
+                                @elseif($singleData->gender==2)
+                                Female
+                                @else
+                                Others
+                                @endif
+                            </td>
                         </tr>
                         <tr>
                             <th width="30%">Birth Date</th>
@@ -131,12 +139,41 @@
                         <tr>
                             <th width="30%">Blood Group</th>
                             <td width="2%">:</td>
-                            <td>{{$singleData->blGroup}}</td>
+                            <td> @if($singleData->blGroup==1)
+                                A+
+                                @elseif($singleData->blGroup==2)
+                                A-
+                                @elseif($singleData->blGroup==3)
+                                B+
+                                @elseif($singleData->blGroup==4)
+                                B-
+                                @elseif($singleData->blGroup==5)
+                                O+
+                                @elseif($singleData->blGroup==6)
+                                O-
+                                @elseif($singleData->blGroup==7)
+                                AB+
+                                @else
+                                AB-
+                                @endif
+                            </td>
                         </tr>
                         <tr>
                             <th width="30%">Religion</th>
                             <td width="2%">:</td>
-                            <td>{{$singleData->religion}}</td>
+                            <td>
+                                @if($singleData->religion==1)
+                                Islam
+                                @elseif($singleData->religion==2)
+                                Hindu
+                                @elseif($singleData->religion==3)
+                                Christian
+                                @elseif($singleData->religion==4)
+                                Buddish
+                                @else
+                                Others
+                                @endif
+                            </td>
                         </tr>
                         <tr>
                             <th width="30%">Location</th>

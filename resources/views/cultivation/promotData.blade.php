@@ -55,7 +55,8 @@ Get Promotional Student Data
                         <tr>
                             <th>Eligible</th>
                             <th>Student ID</th>
-                            <th>Roll</th>
+                            <th> Roll</th>
+                            <th>New Roll</th>
                             <th>Student Name</th>
                         </tr>
                     </thead>
@@ -72,6 +73,9 @@ Get Promotional Student Data
                             </td>
                             <td>{{ $std->stdId }}</td>
                             <td>{{ $std->rollNumber }}</td>
+                            <td width="9%">
+                                <input type="rollNum" class="form-control" id="rollNum" name="rollNum[]"/>
+                            </td>
                             <td>{{ $std->fullName.' '.$std->sureName }}</td>
                         </tr>
                         @endforeach
