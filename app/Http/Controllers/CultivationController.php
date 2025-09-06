@@ -483,11 +483,11 @@ class CultivationController extends Controller
         endif;
     }
 
-     public function techerRegForm(){
-        return view('cultivation.login1');
+     public function userType(){
+        return view('userPanal.userRegister');
     }
 
-     public function techerRegList(){
+     public function userRegList(){
         return view('userPanal.userList');
     }
 }

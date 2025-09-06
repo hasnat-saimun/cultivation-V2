@@ -1293,14 +1293,14 @@ Route::middleware(['adminGuard'])->group (function(){
 
     Route::get('/teacher/user/register',[
         CultivationController::class,
-        'techerRegForm'
-        ])->name('techerRegForm');
+        'userType'
+        ])->name('userType');
         
 
     Route::get('/teacher/user/list',[
         CultivationController::class,
-        'techerRegList'
-    ])->name('techerRegList');
+        'userRegList'
+    ])->name('userRegList');
 
     //web font end
 

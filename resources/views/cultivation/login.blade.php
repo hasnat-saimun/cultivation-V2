@@ -101,7 +101,7 @@
                                                 </div>
                                                 <div class="form-group wrap-input">
                                                     <div class="pwdMask">
-                                                        <input type="cultivationPass" class="form-control password" name="cultivationPass" placeholder="Password" />
+                                                        <input type="password" class="form-control password" name="cultivationPass" placeholder="Password" />
                                                         <span class="focus-input"></span>
                                                         <span class="fa fa-eye-slash pwd-toggle"></span>
                                                     </div>
