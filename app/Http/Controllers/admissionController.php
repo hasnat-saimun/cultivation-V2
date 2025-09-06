@@ -43,7 +43,8 @@ class admissionController extends Controller
             $update = newAdmission::where(['stdId'=>$requ->studentId[$x]])->first();
 
             $update->className         = $requ->promotId;
-            $update->save();
+            $update->rollNumber         = $requ->rollNum[$x];
+            $update->save(); 
             $x++;
         }
         // return $x;
