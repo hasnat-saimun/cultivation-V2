@@ -79,7 +79,7 @@
                             <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>User Panel</span></a>
                             <ul class="nav sub-group-menu">
                                 <li class="nav-item">
-                                    <a href="{{route('userType')}}" class="nav-link"><i class="fas fa-angle-right"></i>User Type</a>
+                                    <a href="{{route('userType')}}" class="nav-link"><i class="fas fa-angle-right"></i>User Register</a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="{{route('userRegList')}}" class="nav-link"><i class="fas fa-angle-right"></i>User List</a>

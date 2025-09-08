@@ -49,6 +49,18 @@ Create Subject
                                         <input type="text" name="baseMark" placeholder="Enter the base make" class="form-control" required>
                                     </div>
                                     <div class="col-12 form-group">
+                                        <label>Assign Class *</label>
+                                        <select name="classId" id="" class="form-control">
+                                            <option value="">Select Class</option>
+                                            <option value="0">All</option>
+                                            @if($classList->count() > 0)
+                                                @foreach($classList as $class)
+                                                    <option value="{{ $class->id }}">{{ $class->className }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                    <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         <div class="form-check form-check-inline">
                                             <input class="form-check-input" onclick="cqMarks(this)" name="cqValue" type="checkbox" id="CQ" value="CQ">
@@ -78,11 +90,25 @@ Create Subject
                     </div>
                 </div>
                 <script>
+                    function mcqMarks(checkbox){
+                        if(checkbox.checked){
+                            document.getElementById("mcqFiled").innerHTML = `<label for='mcqMarksValue'>MCQ Marks</label><input type='text' name='mcqValue' class='form-control' placeholder='Enter the mcq total marks'>`;
+                        }else{
+                            document.getElementById("mcqFiled").innerHTML = "";
+                        }
+                    }
                     function cqMarks(checkbox){
                         if(checkbox.checked){
-                            document.getElementById("cqField").innerHTML = `<lable for='cqMarksValue'>CQ Marks</label><input type='text' name='cqValue' class='form-control' placeholder='Enter the cq total marks'>`;
+                            document.getElementById("cqFiled").innerHTML = `<label for='cqMarksValue'>CQ Marks</label><input type='text' name='cqValue' class='form-control' placeholder='Enter the cq total marks'>`;
                         }else{
-                            document.getElementById("cqField").innerHTML = "";
+                            document.getElementById("cqFiled").innerHTML = "";
+                        }
+                    }
+                    function practicalMarks(checkbox){
+                        if(checkbox.checked){
+                            document.getElementById("practicalFiled").innerHTML = `<label for='practicalMarksValue'>Practical Marks</label><input type='text' name='practicalValue' class='form-control' placeholder='Enter the practical total marks'>`;
+                        }else{
+                            document.getElementById("practicalFiled").innerHTML = "";
                         }
                     }
                 </script>

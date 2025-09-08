@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use App\Models\classManage;
 use App\Models\Subject;
 
 class SubjectController extends Controller
@@ -10,7 +11,8 @@ class SubjectController extends Controller
     
     
     public function createSubject(){
-        return view('result.new-subject');
+        $classList = classManage::orderBy('id','ASC')->get();
+        return view('result.new-subject',['classList'=>$classList]);
     }
 
     public function confirmSubject(Request $requ){
@@ -25,6 +27,7 @@ class SubjectController extends Controller
             $subject->subjectName   = $requ->subjectName;
             $subject->subjectType   = $requ->subjectType;
             $subject->baseMark      = $requ->baseMark;
+            $subject->assign_class  = $requ->classId;
             $subject->CQ            = $requ->cqValue;
             $subject->MCQ           = $requ->mcqValue;
             $subject->Practical     = $requ->practicalValue;

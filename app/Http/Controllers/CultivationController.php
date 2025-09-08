@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\ServerConfig;
 use App\Models\CultivationAdmin;
+use App\Models\Subject;
+use App\Models\classManage as ClassModel;
 use Illuminate\Support\Str;
 use Hash;
 use sessionData;
@@ -484,7 +486,9 @@ class CultivationController extends Controller
     }
 
      public function userType(){
-        return view('userPanal.userRegister');
+        $subjectList = Subject::orderBy('id','ASC')->get();
+        $classList   = ClassModel::orderBy('id','ASC')->get();
+        return view('userPanal.userRegister',compact('subjectList','classList'));
     }
 
      public function saveUser(Request $requ){

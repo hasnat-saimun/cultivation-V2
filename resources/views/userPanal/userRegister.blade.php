@@ -52,9 +52,9 @@ Register Form
                                 <label class="form-label">User Type</label>
                                 <select class="form-select" id="userType" onchange="userSelect()" name="userType" required>
                                     <option value="">Select</option>
-                                    <option value="1">x</option>
-                                    <option value="2">y</option>
-                                    <option value="3">z</option>
+                                    <option value="1">Teacher Admin</option>
+                                    <option value="2">Cash Admin</option>
+                                    <option value="3">General Admin</option>
                                 </select>
                             </div>
                             <div class="col-6 mb-3">
@@ -67,17 +67,31 @@ Register Form
                             </div>
                         </div>
                         <div id="accessBox" class="row p-4 d-none">
-                            <div class="col-6 mb-3 form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="checkDefault">
-                                <label class="form-check-label" for="checkDefault">
-                                Default checkbox
-                                </label>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Assign Class</label>
+                                @if($classList->count() > 0)
+                                    @foreach($classList as $cls)
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="{{ $cls->id }}" id="cls{{ $cls->id }}" name="className[]">
+                                            <label class="form-check-label" for="cls{{ $cls->id }}">
+                                            {{ $cls->className }}
+                                            </label>
+                                        </div>
+                                    @endforeach 
+                                @endif
                             </div>
-                            <div class="col-6 mb-3 form-check">
-                                <input class="form-check-input" type="checkbox" value="" id="checkChecked" checked>
-                                <label class="form-check-label" for="checkChecked">
-                                Checked checkbox
-                                </label>
+                            <div id="subjectBox" class="col-6 mb-3">
+                                @if($subjectList)
+                                    <label class="form-label">Assign Subject</label>
+                                    @foreach($subjectList as $sub)
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" value="{{ $sub->id }}" id="sub{{ $sub->id }}" name="subject[]">
+                                            <label class="form-check-label" for="sub{{ $sub->id }}">
+                                            {{ $sub->subjectName }} ( {{ $sub->subjectType }} )
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                @endif
                             </div>
                         </div>
                     <button type="submit" class="mt-4 btn btn-primary btn-lg">Save</button>
@@ -101,6 +115,22 @@ Register Form
         }else{
             $("#accessBox").addClass("d-none");
             document.getElementById("accessBox").classList.add = "d-none";
+        }
+    }
+
+    
+    function classSelect() {
+        console.log('hasnat')
+        var str   = document.getElementById('classType').value;
+        if(str == "") {
+            $("#subjectBox").addClass("d-none");
+            document.getElementById("subjectBox").classList.add = "d-none";
+        }
+        if(str == 1) {
+            $("#subjectBox").removeClass("d-none");
+        }else{
+            $("#subjectBox").addClass("d-none");
+            document.getElementById("subjectBox").classList.add = "d-none";
         }
     }
 </script>
