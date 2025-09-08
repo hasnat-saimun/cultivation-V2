@@ -50,6 +50,7 @@ class StaffController extends Controller
             $staffProfile->blGroup       = $requ->blGroup;
             $staffProfile->designation   = $requ->designation;
             $staffProfile->religion      = $requ->religion;
+            $staffProfile->rank      = $requ->rank;
             $staffProfile->staffId     = $requ->staffId;
             $staffProfile->save();
 
@@ -91,6 +92,7 @@ class StaffController extends Controller
             $staffProfile->blGroup       = $requ->blGroup;
             $staffProfile->designation   = $requ->designation;
             $staffProfile->religion      = $requ->religion;
+            $staffProfile->rank      = $requ->rank;
             $staffProfile->staffId     = $requ->staffId;
 
             if(!empty($requ->file('avatar'))):

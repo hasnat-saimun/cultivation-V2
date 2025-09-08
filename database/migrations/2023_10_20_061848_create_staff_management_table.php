@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('blGroup')->nullable();
             $table->string('religion')->nullable();
             $table->string('avatar')->nullable();
+            $table->string('rank')->nullable();
             $table->timestamps();
         });
     }
