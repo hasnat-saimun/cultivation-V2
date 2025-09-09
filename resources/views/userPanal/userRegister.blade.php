@@ -9,7 +9,7 @@ Register Form
     <div class="col-md-10 col-12 mx-auto">
         <div class="card">
             <div class="card-header bg-light">
-                <a href="{{ route('registerList') }}" class="btn btn-success"> Registered List</a>
+                <a href="{{ route('userRegList') }}" class="btn btn-success"> Registered List</a>
             </div>
             <div class="card-header">
                 <i class="fa-duotone fa-toolbox"></i> User Register Form

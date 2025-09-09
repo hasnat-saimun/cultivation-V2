@@ -510,6 +510,9 @@ class CultivationController extends Controller
     }
 
      public function userRegList(){
-        return view('userPanal.userList');
+        $currentUserId = auth()->id();
+        $userList = CultivationAdmin::where('id', '!=', $currentUserId)
+            ->orderBy('id','ASC')->get();
+        return view('userPanal.userList',compact('userList'));
     }
 }
