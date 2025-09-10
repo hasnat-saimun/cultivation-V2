@@ -491,26 +491,50 @@ class CultivationController extends Controller
         return view('userPanal.userRegister',compact('subjectList','classList'));
     }
 
-     public function saveUser(Request $requ){
+     public function editUser($id){
+        $user = CultivationAdmin::find($id);
+        if(empty($user)){
+            return back()->with('error','Sorry! No data found');
+        }
+        $subjectList = Subject::orderBy('id','ASC')->get();
+        $classList   = ClassModel::orderBy('id','ASC')->get();
+        return view('userPanal.userRegister',compact('subjectList','classList','user'));
+    }
 
-        $cultivation = New CultivationAdmin;
-        
+     public function saveUser(Request $requ){
+        if($requ->filled('userId')) {
+            $cultivation = CultivationAdmin::find($requ->userId);
+            if(!$cultivation) {
+                return back()->with('error', 'User not found for update');
+            }
+            // Only update password if a new password is provided
+            if($requ->filled('pass')) {
+                $cultivation->loginPassword = Hash::make($requ->pass);
+            }
+        } else {
+            if($requ->pass !== $requ->confirmPass) {
+                return back()->with('error', 'Password and Confirm Password do not match');
+            }
+            $cultivation = new CultivationAdmin;
+            $cultivation->loginPassword = Hash::make($requ->pass);
+        }
+
         $cultivation->adminName     = $requ->adminName;
         $cultivation->adminMail     = $requ->userMail;
         $cultivation->adminMobile   = $requ->userMobile;
         $cultivation->adminUser     = $requ->userName;
-        $cultivation->userType     = $requ->userType;
-        $cultivation->loginPassword = $authPass;
-            
+        $cultivation->userType      = $requ->userType;
+
         if($cultivation->save()):
-            return back()->with('success','Success! Admin profile created successfully');
+            $msg = $requ->filled('userId') ? 'Success! Admin profile updated successfully' : 'Success! Admin profile created successfully';
+            return back()->with('success', $msg);
         else:
             return back()->with('success','error! There was an error. Please try later');
         endif;
     }
 
      public function userRegList(){
-        $currentUserId = auth()->id();
+        $currentUserId = session('cultivationAdmin');
         $userList = CultivationAdmin::where('id', '!=', $currentUserId)
             ->orderBy('id','ASC')->get();
         return view('userPanal.userList',compact('userList'));
