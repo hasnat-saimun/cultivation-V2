@@ -516,18 +516,18 @@ class CultivationController extends Controller
                 return back()->with('error', 'Password and Confirm Password do not match');
             }
             
-            $cultivation = CultivationAdmin::find($requ->userId);
+            $cultivation = CultivationAdmin::where('adminUser',$requ->userName)->orWhere('adminMail',$requ->userMail)->first();
             if($cultivation) {
-                return back()->with('error', 'User already exists with this ID('.$requ->userId.')');
+                return back()->with('error', 'User already exists with this ID('.$requ->userName.') or Email('.$requ->userMail.')');
             }
             $cultivation = new CultivationAdmin;
             $cultivation->loginPassword = Hash::make($requ->pass);
+            $cultivation->adminUser     = $requ->userName;
+            $cultivation->adminMail     = $requ->userMail;
         }
 
         $cultivation->adminName     = $requ->adminName;
-        $cultivation->adminMail     = $requ->userMail;
         $cultivation->adminMobile   = $requ->userMobile;
-        $cultivation->adminUser     = $requ->userName;
         $cultivation->userType      = $requ->userType;
 
         if($cultivation->save()):
@@ -543,5 +543,17 @@ class CultivationController extends Controller
         $userList = CultivationAdmin::where('id', '!=', $currentUserId)
             ->orderBy('id','ASC')->get();
         return view('userPanal.userList',compact('userList'));
+    }
+    public function deleteUser($id)
+    {
+        $user = CultivationAdmin::find($id);
+        if (!$user) {
+            return back()->with('error', 'User not found');
+        }
+        if ($user->delete()) {
+            return back()->with('success', 'User deleted successfully');
+        } else {
+            return back()->with('error', 'Failed to delete user');
+        }
     }
 }

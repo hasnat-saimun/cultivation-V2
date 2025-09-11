@@ -56,7 +56,7 @@ User List
 									</td>
 									<td>
 										<a href="{{ route('editUser', $user->id) }}" class="btn btn-sm btn-warning">Edit</a>
-										<form action="{{ route('deleteUser', $user->id) }}" method="POST" style="display:inline-block;">
+										<form action="{{ route('deleteUser', $user->id) }}" method="get" style="display:inline-block;">
 											@csrf
 											@method('DELETE')
 											<button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>

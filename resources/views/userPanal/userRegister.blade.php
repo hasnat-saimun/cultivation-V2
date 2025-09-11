@@ -44,7 +44,7 @@ Register Form
                         </div>
                         <div class="col-6 mb-3">
                             <label for="userName" class="form-label">User Name</label>
-                            <input type="text" name="userName" class="form-control" id="userName"  placeholder="Enter the user name" required value="{{ isset($user) ? $user->adminUser : '' }}">
+                            <input type="text" name="userName" class="form-control" id="userName"  placeholder="Enter the user name" required value="{{ isset($user) ? $user->adminUser : '' }}" {{ isset($user) ? 'readonly' : '' }}>
                         </div>
                         <div class="col-6 mb-3">
                             <label for="userMobile" class="form-label">User Mobile</label>
@@ -52,7 +52,7 @@ Register Form
                         </div>
                         <div class="col-6 mb-3">
                             <label for="userMail" class="form-label">User Email</label>
-                            <input type="text" name="userMail" class="form-control" id="userMail" placeholder="Enter user email address" required value="{{ isset($user) ? $user->adminMail : '' }}">
+                            <input type="text" name="userMail" class="form-control" id="userMail" placeholder="Enter user email address" required value="{{ isset($user) ? $user->adminMail : '' }}" {{ isset($user) ? 'readonly' : '' }}>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label">User Type</label>
