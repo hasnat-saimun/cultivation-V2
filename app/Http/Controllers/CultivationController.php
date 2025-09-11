@@ -515,6 +515,11 @@ class CultivationController extends Controller
             if($requ->pass !== $requ->confirmPass) {
                 return back()->with('error', 'Password and Confirm Password do not match');
             }
+            
+            $cultivation = CultivationAdmin::find($requ->userId);
+            if($cultivation) {
+                return back()->with('error', 'User already exists with this ID('.$requ->userId.')');
+            }
             $cultivation = new CultivationAdmin;
             $cultivation->loginPassword = Hash::make($requ->pass);
         }
@@ -533,7 +538,7 @@ class CultivationController extends Controller
         endif;
     }
 
-     public function userRegList(){
+    public function userRegList(){
         $currentUserId = session('cultivationAdmin');
         $userList = CultivationAdmin::where('id', '!=', $currentUserId)
             ->orderBy('id','ASC')->get();

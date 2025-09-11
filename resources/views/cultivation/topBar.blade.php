@@ -38,7 +38,8 @@
                 </ul>
                 <ul class="navbar-nav">
                     @php
-                        $cultivationAdmin = \App\Models\CultivationAdmin::orderBy('id','DESC')->limit(1)->first();
+                        $currentUserId = session('cultivationAdmin');
+                        $cultivationAdmin = \App\Models\CultivationAdmin::find($currentUserId);
                         if(!empty($cultivationAdmin)):
                             $adminName      =   $cultivationAdmin->adminName;
                             $adminEmail     =   $cultivationAdmin->adminMail;
