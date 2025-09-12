@@ -51,7 +51,7 @@ User List
 										@elseif($user->userType == 3)
 											General Admin
 										@else
-											N/A
+											Super Admin
 										@endif
 									</td>
 									<td>

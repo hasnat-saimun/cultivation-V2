@@ -490,6 +490,13 @@ class CultivationController extends Controller
         $classList   = ClassModel::orderBy('id','ASC')->get();
         return view('userPanal.userRegister',compact('subjectList','classList'));
     }
+    public function editUser($id)
+    {
+        $subjectList = Subject::orderBy('id','ASC')->get();
+        $classList   = ClassModel::orderBy('id','ASC')->get();
+        $user = User::findOrFail($id);
+        return view('userPanal.userRegister', compact('user'));
+    }
 
      public function editUser($id){
         $user = CultivationAdmin::find($id);
