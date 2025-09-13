@@ -37,6 +37,16 @@ Register Form
                     @if(isset($user))
                         <input type="hidden" name="userId" value="{{ $user->id }}">
                     @endif
+                    @php
+                        $showAccessBox = false;
+                        $assignedClasses = [];
+                        $assignedSubjects = [];
+                        if(isset($user) && $user->userType == 1) {
+                            $showAccessBox = true;
+                            $assignedClasses = $user->accessClass ? explode(',', $user->accessClass) : [];
+                            $assignedSubjects = $user->accessSubject ? explode(',', $user->accessSubject) : [];
+                        }
+                    @endphp
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label for="adminName" class="form-label">Admin Name</label>
@@ -77,13 +87,13 @@ Register Form
                         </div>
                         @endif
                     </div>
-                        <div id="accessBox" class="row p-4 d-none">
+                        <div id="accessBox" class="row p-4 {{ (old('userType') == 1 || (isset($user) && $user->userType == 1)) ? '' : 'd-none' }}">
                             <div class="col-6 mb-3">
                                 <label class="form-label">Assign Class</label>
                                 @if($classList->count() > 0)
                                     @foreach($classList as $cls)
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="{{ $cls->id }}" id="cls{{ $cls->id }}" name="className[]">
+                                            <input class="form-check-input" type="checkbox" value="{{ $cls->id }}" id="cls{{ $cls->id }}" name="className[]" {{ (in_array($cls->id, old('className', $assignedClasses))) ? 'checked' : '' }}>
                                             <label class="form-check-label" for="cls{{ $cls->id }}">
                                             {{ $cls->className }}
                                             </label>
@@ -96,7 +106,7 @@ Register Form
                                     <label class="form-label">Assign Subject</label>
                                     @foreach($subjectList as $sub)
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="{{ $sub->id }}" id="sub{{ $sub->id }}" name="subject[]">
+                                            <input class="form-check-input" type="checkbox" value="{{ $sub->id }}" id="sub{{ $sub->id }}" name="subject[]" {{ (in_array($sub->id, old('subject', $assignedSubjects))) ? 'checked' : '' }}>
                                             <label class="form-check-label" for="sub{{ $sub->id }}">
                                             {{ $sub->subjectName }} ( {{ $sub->subjectType }} )
                                             </label>
@@ -115,17 +125,11 @@ Register Form
 
 <script>
     function userSelect() {
-        console.log('hasnat')
-        var str   = document.getElementById('userType').value;
-        if(str == "") {
-            $("#accessBox").addClass("d-none");
-            document.getElementById("accessBox").classList.add = "d-none";
-        }
-        if(str == 1) {
+        var str = document.getElementById('userType').value;
+        if(str == "1") {
             $("#accessBox").removeClass("d-none");
-        }else{
+        } else {
             $("#accessBox").addClass("d-none");
-            document.getElementById("accessBox").classList.add = "d-none";
         }
     }
 

@@ -490,13 +490,6 @@ class CultivationController extends Controller
         $classList   = ClassModel::orderBy('id','ASC')->get();
         return view('userPanal.userRegister',compact('subjectList','classList'));
     }
-    public function editUser($id)
-    {
-        $subjectList = Subject::orderBy('id','ASC')->get();
-        $classList   = ClassModel::orderBy('id','ASC')->get();
-        $user = User::findOrFail($id);
-        return view('userPanal.userRegister', compact('user'));
-    }
 
      public function editUser($id){
         $user = CultivationAdmin::find($id);
@@ -536,6 +529,16 @@ class CultivationController extends Controller
         $cultivation->adminName     = $requ->adminName;
         $cultivation->adminMobile   = $requ->userMobile;
         $cultivation->userType      = $requ->userType;
+        
+
+        // Only store accessClass and accessSubject for Teacher Admin (userType == 1)
+        if ($requ->userType == 1) {
+            $cultivation->accessClass = ($requ->has('className') && is_array($requ->className)) ? implode(',', $requ->className) : null;
+            $cultivation->accessSubject = ($requ->has('subject') && is_array($requ->subject)) ? implode(',', $requ->subject) : null;
+        } else {
+            $cultivation->accessClass = null;
+            $cultivation->accessSubject = null;
+        }
 
         if($cultivation->save()):
             $msg = $requ->filled('userId') ? 'Success! Admin profile updated successfully' : 'Success! Admin profile created successfully';
