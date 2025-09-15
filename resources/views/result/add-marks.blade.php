@@ -53,24 +53,24 @@ Add New Marks
                                             @endif
                                         </select>
                                     </div><!-- Class Dropdown -->
-<div class="col-12 form-group">
-    <label>Class *</label>
-    <!-- Class Dropdown -->
-    <select class="select2" name="classId" required>
-        <option value="">Select *</option>
-        @php
-            if($isTeacherAdmin) {
-                $classIds = $user->access_class_array ?? [];
-                $classes = \App\Models\classManage::whereIn('id', $classIds)->get();
-            } else {
-                $classes = \App\Models\classManage::orderBy('id','DESC')->get();
-            }
-        @endphp
-        @foreach($classes as $cls)
-            <option value="{{ $cls->id }}">{{ $cls->className }}</option>
-        @endforeach
-    </select>
-</div>
+                                    <div class="col-12 form-group">
+                                        <label>Class *</label>
+                                        <!-- Class Dropdown -->
+                                        <select class="select2" name="classId" required>
+                                            <option value="">Select *</option>
+                                            @php
+                                                if($isTeacherAdmin) {
+                                                    $classIds = $user->access_class_array ?? [];
+                                                    $classes = \App\Models\classManage::whereIn('id', $classIds)->get();
+                                                } else {
+                                                    $classes = \App\Models\classManage::orderBy('id','DESC')->get();
+                                                }
+                                            @endphp
+                                            @foreach($classes as $cls)
+                                                <option value="{{ $cls->id }}">{{ $cls->className }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
 
                                     <div class="col-12 form-group">
                                         <label>Session *</label>
@@ -101,24 +101,24 @@ Add New Marks
                                         </select>
                                     </div>
                                     
-<!-- Subject Dropdown -->
-<div class="col-12 form-group">
-    <label>Subject *</label>
-   <select class="select2" name="subjectId" required>
-    <option value="">Select *</option>
-    @php
-        if($isTeacherAdmin) {
-            $subjectIds = $user->access_subject_array ?? [];
-            $subjectId = \App\Models\Subject::whereIn('id', $subjectIds)->get();
-        } else {
-            $subjectId = \App\Models\Subject::orderBy('id','DESC')->get();
-        }
-    @endphp
-    @foreach($subjectId as $sub)
-        <option value="{{ $sub->id }}">{{ $sub->subjectName }}</option>
-    @endforeach
-</select>
-</div>
+                                    <!-- Subject Dropdown -->
+                                    <div class="col-12 form-group">
+                                        <label>Subject *</label>
+                                        <select class="select2" name="subjectId" required>
+                                            <option value="">Select *</option>
+                                            @php
+                                                if($isTeacherAdmin) {
+                                                    $subjectIds = $user->access_subject_array ?? [];
+                                                    $subjectId = \App\Models\Subject::whereIn('id', $subjectIds)->get();
+                                                } else {
+                                                    $subjectId = \App\Models\Subject::orderBy('id','DESC')->get();
+                                                }
+                                            @endphp
+                                            @foreach($subjectId as $sub)
+                                                <option value="{{ $sub->id }}">{{ $sub->subjectName }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <div class="col-12 form-group mg-t-8">
                                         <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</button>
                                     </div>
