@@ -33,7 +33,6 @@ class CultivationController extends Controller
             return back()->with('error','Sorry! No data found');
         else:
             $cultivation->adminName     = $requ->adminName;
-            $cultivation->adminMail     = $requ->adminEmail;
             $cultivation->adminMobile   = $requ->adminMobile;
             
             if($cultivation->save()):

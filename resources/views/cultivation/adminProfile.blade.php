@@ -53,7 +53,7 @@ Admin Profile
                             </div>
                             <div class="mb-3">
                                 <label for="adminEmail" class="form-label">Admin Email</label>
-                                <input type="text" name="adminEmail" class="form-control" id="adminEmail" value="{{ $adminEmail }}" placeholder="Enter admin email address" required>
+                                <input type="text" class="form-control" id="adminEmail" value="{{ $adminEmail }}" placeholder="Enter admin email address" readonly>   
                             </div>
                             <div class="mb-3">
                                 <label for="adminMobile" class="form-label">Admin Mobile</label>
