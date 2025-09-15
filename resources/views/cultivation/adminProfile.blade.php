@@ -1,5 +1,5 @@
 @php
-    $cultivationAdmin = \App\Models\CultivationAdmin::orderBy('id','DESC')->limit(1)->first();
+    $cultivationAdmin = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
     if(!empty($cultivationAdmin)):
         $adminName      =   $cultivationAdmin->adminName;
         $adminId        =   $cultivationAdmin->id;

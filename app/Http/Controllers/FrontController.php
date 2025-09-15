@@ -51,7 +51,7 @@ class FrontController extends Controller
             $cultivation->adminName     = $requ->adminName;
             $cultivation->adminMail     = $requ->adminEmail;
             $cultivation->adminMobile   = $requ->adminMobile;
-            $cultivation->userType      = "Admin";
+            $cultivation->userType      = 3;
             $cultivation->adminUser     = $requ->cultivationUser;
             $cultivation->loginPassword = $authPass;
             
