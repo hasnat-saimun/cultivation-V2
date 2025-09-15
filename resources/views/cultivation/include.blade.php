@@ -21,86 +21,19 @@
                     @include('cultivation.logoSection')
                </div>
                 <div class="sidebar-menu-content">
-                    <ul class="nav nav-sidebar-menu sidebar-toggle-view">
-                        <li class="nav-item">
-                            <a href="{{ route('cultivationIndex') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{route('academicPart') }}" class="nav-link"><i class="fa-solid fa-building-columns"></i><span>Academic Panel</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('resultPart') }}" class="nav-link"><i class="fa-sharp fa-thin fa-square-poll-horizontal"></i><span>Results Management</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="{{ route('accountPart') }}" class="nav-link"><i class="fa-solid fa-receipt"></i><span>Accounts Management</span></a>
-                        </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="flaticon-classmates"></i><span>Admission</span></a>
-                            <ul class="nav sub-group-menu">
-                                <li class="nav-item">
-                                    <a href="{{ route('admitStudent') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>New Admission</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('studentList') }}" class="nav-link"><i class="fas fa-angle-right"></i> Student List</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('studentPromotion') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Manage Promotion</a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i
-                                    class="flaticon-multiple-users-silhouette"></i><span>Teachers Panel</span></a>
-                            <ul class="nav sub-group-menu">
-                                <li class="nav-item">
-                                    <a href="{{ route('teacherList') }}" class="nav-link"><i class="fas fa-angle-right"></i> Teacher List</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('addTeacher') }}" class="nav-link"><i class="fas fa-angle-right"></i> New Profile</a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>Staffs</span></a>
-                            <ul class="nav sub-group-menu">
-                                <li class="nav-item">
-                                    <a href="{{ route('staffList') }}" class="nav-link"><i class="fas fa-angle-right"></i>All
-                                        Staffs</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{ route('addStaff') }}" class="nav-link"><i class="fas fa-angle-right"></i> New
-                                        Profile</a>
-                                </li>
-                            </ul>
-                        </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>User Panel</span></a>
-                            <ul class="nav sub-group-menu">
-                                <li class="nav-item">
-                                    <a href="{{route('userType')}}" class="nav-link"><i class="fas fa-angle-right"></i>User Register</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{route('userRegList')}}" class="nav-link"><i class="fas fa-angle-right"></i>User List</a>
-                                </li>
-                            </ul>
-                        </li>   
-                        <li class="nav-item">
-                            <a href="{{ route('serverConfig') }}" class="nav-link"><i class="fa-solid fa-screwdriver-wrench"></i><span>Configuration</span></a>
-                        </li>
-                        <!-- <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="flaticon-couple"></i><span>Admin</span></a>
-                            <ul class="nav sub-group-menu">
-                                <li class="nav-item">
-                                    <a href="{{route('registerForm')}}" class="nav-link"><i class="fas fa-angle-right"></i>Register Form</a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="{{route('registerList')}}" class="nav-link"><i class="fas fa-angle-right"></i> Register List</a>
-                                </li>
-                            </ul>
-                        </li> -->
-                    </ul>
+                    @php
+                        // Get logged-in user info from session
+                        $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
+                        $userType = $loginUser['userType'] ?? null;
+                    @endphp
+
+                    @if($userType == 3) {{-- General Admin: Full Menu --}}
+                        @include('cultivation.fullMenu')
+                    @elseif($userType == 2) {{-- Cash Admin: Only Accounts Management --}}
+                        @include('cultivation.cashMenu')
+                    @elseif($userType == 1) {{-- Teacher Admin: Only Result Management --}}
+                        @include('cultivation.teacherMenu')
+                    @endif
                 </div>
             </div>
             <!-- Sidebar Area End Here -->
