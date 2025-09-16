@@ -13,7 +13,7 @@
         <!-- For Search Engine Meta Data  -->
         <meta name="description" content="" />
         <meta name="keywords" content="" />
-        <meta name="author" content="yoursite.com" />
+        <meta name="author" content="cultivationapp.com" />
 
         <title>Cultivation | Login</title>
 
@@ -65,20 +65,7 @@
                                     <img src="{{ asset('/public/loginPart/themeknit/images') }}/logo1.png" width="150" alt="brand-logo" />
                                 </div>
                                 <!-- ./brand-logo -->
-                                <h4>Login using social media to get quick access</h4>
-                                <!-- social login buttons start -->
-                                <!-- <div class="row social-buttons">
-                                    <div class="col-xs-4 col-sm-4 col-md-12">
-                                        <a href="#" class="btn btn-block btn-facebook"> <i class="fa fa-facebook"></i> <span class="hidden-xs hidden-sm">Signin with facebook</span> </a>
-                                    </div>
-                                    <div class="col-xs-4 col-sm-4 col-md-12">
-                                        <a href="#" class="btn btn-block btn-twitter"> <i class="fa fa-twitter"></i> <span class="hidden-xs hidden-sm">Signin with twitter</span> </a>
-                                    </div>
-                                    <div class="col-xs-4 col-sm-4 col-md-12">
-                                        <a href="#" class="btn btn-block btn-google"> <i class="fa fa-google-plus"></i> <span class="hidden-xs hidden-sm">Signin with google</span> </a>
-                                    </div>
-                                </div> -->
-                                <!-- ./social-buttons -->
+                                <h4>Let's get you logged in with cultivation and check your progress</h4>
                             </div>
                         </div>
                     </div>
@@ -106,23 +93,8 @@
                                                         <span class="fa fa-eye-slash pwd-toggle"></span>
                                                     </div>
                                                 </div>
-                                                <!-- start remember-row -->
-                                                <!-- <div class="row remember-row">
-                                                    <div class="col-xs-6 col-sm-6">
-                                                        <label class="checkbox text-left">
-                                                            <input type="checkbox" value="remember-me" />
-                                                            <span class="label-text">Remember me</span>
-                                                        </label>
-                                                    </div>
-                                                    <div class="col-xs-6 col-sm-6">
-                                                        <p class="forgotPwd">
-                                                            <a class="lnk-toggler" data-panel=".panel-forgot" href="#">Forgot password?</a>
-                                                        </p>
-                                                    </div>
-                                                </div> -->
-                                                <!-- ./remember-row -->
                                                 <div class="form-group mt-5">
-                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Login with User</button>
+                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Login</button>
                                                 </div>
                                             </form>
                                         </div>
@@ -135,7 +107,7 @@
                                 @else
                                 <form action="{{ route('adminRegister') }}" class="row" method="POST">
                                         <div class="authfy-heading">
-                                            <h3 class="auth-title">Sign up for free!</h3>
+                                            <h3 class="auth-title">Get Started with cultivation</h3>
                                         </div>
                                         @csrf
                                         <div class="col-6">
@@ -166,44 +138,12 @@
                                             </div>
                                         </div>
                                                 <div class="form-group">
-                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Login with email</button>
+                                                    <button class="btn btn-lg btn-primary btn-block" type="submit">Get Register</button>
                                                 </div>
-                                            <div class="form-group">
-                                                <p class="term-policy text-muted small">I agree to the <a href="#">privacy policy</a> and <a href="#">terms of service</a>.</p>
-                                            </div>
-                                        <a class="lnk-toggler" data-panel=".panel-login" href="#">Already have an account?</a>
                                     </form>
                                 </div>
                                 @endif  
                             </div>
-                            <!-- ./panel-signup -->
-                            <!-- panel-forget start -->
-                            <div class="authfy-panel panel-forgot">
-                                <div class="row">
-                                    <div class="col-xs-12 col-sm-12">
-                                        <div class="authfy-heading">
-                                            <h3 class="auth-title">Recover your password</h3>
-                                            <p>Fill in your e-mail address below and we will send you an email with further instructions.</p>
-                                        </div>
-                                        <form name="forgetForm" class="forgetForm" action="#" method="POST">
-                                            <div class="form-group wrap-input">
-                                                <input type="email" class="form-control" name="username" placeholder="Email address" />
-                                                <span class="focus-input"></span>
-                                            </div>
-                                            <div class="form-group">
-                                                <button class="btn btn-lg btn-primary btn-block" type="submit">Recover your password</button>
-                                            </div>
-                                            <div class="form-group">
-                                                <a class="lnk-toggler" data-panel=".panel-login" href="#">Already have an account?</a>
-                                            </div>
-                                            <div class="form-group">
-                                                <a class="lnk-toggler" data-panel=".panel-signup" href="#">Don’t have an account?</a>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- ./panel-forgot -->
                         </div>
                         <!-- ./authfy-login -->
                     </div>
