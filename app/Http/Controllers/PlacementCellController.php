@@ -22,6 +22,17 @@ class PlacementCellController extends Controller
         else:
             $item   = PlacementCell::find($requ->itemId);
         endif;
+        $chkRoll = PlacementCell::where('rollNumber',$requ->rollNumber);
+        if($chkRoll->count() > 0):
+            if(empty($requ->itemId)):
+                return back()->with('error','This roll number already exists');
+            else:
+                $chkRoll = $chkRoll->where('id','!=',$requ->itemId);
+                if($chkRoll->count() > 0):
+                    return back()->with('error','This roll number already exists');
+                endif;
+            endif;
+        endif;
 
         $item->fullName            = $requ->fullName;
         $item->mobile              = $requ->mobile;
@@ -99,6 +110,17 @@ class PlacementCellController extends Controller
             $item   = new needyStudentPanel();
         else:
             $item   = needyStudentPanel::find($requ->itemId);
+        endif;
+        $chkRoll = PlacementCell::where('rollNumber',$requ->rollNumber);
+        if($chkRoll->count() > 0):
+            if(empty($requ->itemId)):
+                return back()->with('error','This roll number already exists');
+            else:
+                $chkRoll = $chkRoll->where('id','!=',$requ->itemId);
+                if($chkRoll->count() > 0):
+                    return back()->with('error','This roll number already exists');
+                endif;
+            endif;
         endif;
 
         $item->fullName            = $requ->fullName;
