@@ -7,7 +7,7 @@ Configuration
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     if(!empty($serverData)):
         $serverId               = $serverData->id;
-        $insName                = $serverData->institueName;
+        $insName                = $serverData->instituteName;
         $location               = $serverData->address;
         $officeMobile           = $serverData->officeMobile;
         $officeMail             = $serverData->officeEmail;

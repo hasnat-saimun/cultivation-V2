@@ -46,14 +46,26 @@ Get Mark
                 </div>
                 @csrf
                 <table class="table table-bordered">
+                @php
+                    // Get available features for the subject
+                    $showCQ         = $subjectData->CQ;
+                    $showMCQ        = $subjectData->MCQ;
+                    $showPractical  = $subjectData->Practical;
+                    $showAll        = $subjectData->Practical == null && $subjectData->MCQ == null && $subjectData->CQ == null;
+                @endphp
                     <thead>
                         <tr>
                             <th>Student ID</th>
                             <th>Roll</th>
                             <th>Student Name</th>
+                            @if($showCQ)<th>CQ</th>@endif
+                            @if($showMCQ)<th>MCQ</th>@endif
+                            @if($showPractical)<th>Practical</th>@endif
+                            @if($showAll)
                             <th>CQ</th>
                             <th>MCQ</th>
                             <th>Practical</th>
+                            @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -63,27 +75,40 @@ Get Mark
                         <input type="hidden" name="examId" value="{{ $examId }}">
                         <input type="hidden" name="groupId" value="{{ $groupId }}">
                         <input type="hidden" name="subjectId" value="{{ $subjectId }}">
-                        @foreach($studentList as $std)
+                         @foreach($studentList as $std)
                         @php
-                            $marksData = \App\Models\Marksheet::where(['sessionId'=>$sessionId,'classId'=>$classId,'groupId'=>$groupId,'studentId'=>$std->id,'examId'=>$examId,'subjectId'=>$subjectId])->first();
-                            if($marksData):
-                                $subjectMarks = $marksData->subjectMarks;
-                                $objectMarks = $marksData->objectMarks;
-                                $practicalMarks = $marksData->practicalMarks;
-                            else:
-                                $subjectMarks = "";
-                                $objectMarks = "";
-                                $practicalMarks = "";
-                            endif;
+                            $marksData = \App\Models\Marksheet::where([
+                                'sessionId'=>$sessionId,
+                                'classId'=>$classId,
+                                'groupId'=>$groupId,
+                                'studentId'=>$std->id,
+                                'examId'=>$examId,
+                                'subjectId'=>$subjectId
+                            ])->first();
+                            $subjectMarks = $marksData ? $marksData->subjectMarks : "";
+                            $objectMarks = $marksData ? $marksData->objectMarks : "";
+                            $practicalMarks = $marksData ? $marksData->practicalMarks : "";
                         @endphp
                         <input type="hidden" name="studentId[]" value="{{ $std->id }}">
                         <tr>
                             <td>{{ $std->stdId }}</td>
                             <td>{{ $std->rollNumber }}</td>
                             <td>{{ $std->fullName.' '.$std->sureName }}</td>
-                            <td><input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" id="" placeholder="Enter CQ Marks"></td>
-                            <td><input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" id="" placeholder="Enter MCQ Marks"></td>
-                            <td><input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" id="" placeholder="Enter Practical Marks"></td>
+                            @if($showCQ)
+                                <td><input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks"></td>
+                            @endif
+                            @if($showMCQ)
+                                <td><input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks"></td>
+                            @endif
+                            @if($showPractical)
+                                <td><input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks"></td>
+                            @endif
+                            
+                            @if($showAll)
+                            <td><input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks"></td>
+                            <td><input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks"></td>
+                            <td><input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks"></td>
+                            @endif
                         </tr>
                         @endforeach
                         <div class="mb-4"><input type="submit" value="Save" class="btn btn-success"> <a href="{{ route('addMarks') }}" class="btn btn-primary">Back</a></div>

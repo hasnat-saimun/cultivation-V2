@@ -26,7 +26,7 @@ class SubjectController extends Controller
 
             $subject->subjectName   = $requ->subjectName;
             $subject->subjectType   = $requ->subjectType;
-            $subject->baseMark      = $requ->baseMark;
+            $subject->passingSystem = $requ->passingSystem;
             $subject->assign_class  = $requ->classId;
             $subject->CQ            = $requ->cqValue;
             $subject->MCQ           = $requ->mcqValue;
@@ -56,8 +56,11 @@ class SubjectController extends Controller
 
             $subject->subjectName   = $requ->subjectName;
             $subject->subjectType   = $requ->subjectType;
-            $subject->baseMark   = $requ->baseMark;
-            $subject->alias       = $alias;
+            $subject->passingSystem = $requ->passingSystem;
+            $subject->CQ            = $requ->cqValue;
+            $subject->MCQ           = $requ->mcqValue;
+            $subject->Practical     = $requ->practicalValue;
+            $subject->alias         = $alias;
             $subject->save();
             return back()->with('success','Record successfully updated');
         else:

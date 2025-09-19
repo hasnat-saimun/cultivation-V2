@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\GradeList;
+use App\Models\serverConfig;
 
 class MarksheetController extends Controller
 {
@@ -26,7 +27,16 @@ class MarksheetController extends Controller
             if(isset($chkData) && !empty($chkData)):
                 $chkData->delete();
             endif;
-            $totalMarks = $requ->cqMarks[$x]+$requ->mcqMarks[$x]+$requ->practical[$x];
+            $totalMarks = 0;
+            if(isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== null && $requ->cqMarks[$x] !== '') {
+                $totalMarks += $requ->cqMarks[$x];
+            }
+            if(isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== null && $requ->mcqMarks[$x] !== '') {
+                $totalMarks += $requ->mcqMarks[$x];
+            }
+            if(isset($requ->practical[$x]) && $requ->practical[$x] !== null && $requ->practical[$x] !== '') {
+                $totalMarks += $requ->practical[$x];
+            }
             $grade = GradeList::whereRaw("'$totalMarks' BETWEEN minMark AND maxMark")->first();
             if(isset($grade) && !empty($grade)):
                 $gradePoint = $grade->gradePoint;
@@ -43,9 +53,12 @@ class MarksheetController extends Controller
             $marks->examId          = $requ->examId;
             $marks->subjectId       = $requ->subjectId;
             $marks->groupId         = $requ->groupId;
-            $marks->subjectMarks    = $requ->cqMarks[$x];
-            $marks->objectMarks     = $requ->mcqMarks[$x];
-            $marks->practicalMarks  = $requ->practical[$x];
+            $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? $requ->cqMarks[$x] : null;
+
+            $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? $requ->mcqMarks[$x] : null;
+
+            $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? $requ->practical[$x] : null;
+            
             $marks->totalMarks      = $totalMarks;
             $marks->laterGrade      = $laterGrade;
             $marks->gradePoint      = $gradePoint;
@@ -55,9 +68,9 @@ class MarksheetController extends Controller
         }
         // return $x;
         if($x>=$totalData):
-            return redirect(route('addMarks'))->with('success','Marksentry successfull');
+            return redirect(route('addMarks'))->with('success','Marks added successfull');
         else:
-            return redirect(route('addMarks'))->with('error','Marksentry failed');
+            return redirect(route('addMarks'))->with('error','Marks added failed');
         endif;
     }
 
@@ -70,9 +83,13 @@ class MarksheetController extends Controller
     }
 
     public function generateMarksheet(Request $requ){
-        // return $requ->stdId;
-        $studentList = newAdmission::where(['stdId'=>$requ->stdId])->first();
-        return view('result.marksheetGenerate',['studentDetails'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
+        // return $requ->all();
+        $config = ServerConfig::first(); 
+
+        $student = newAdmission::where('stdId', $requ->stdId)
+        ->with(['marksheet'])
+        ->first();
+        return view('result.marksheetGenerate',['studentDetails'=>$student,'examId'=>$requ->examId,'config'=>$config]);
     }
 
 

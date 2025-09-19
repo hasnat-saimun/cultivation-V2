@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('server_configs', function (Blueprint $table) {
             $table->id();
-            $table->string('institueName')->nullable();
+            $table->string('instituteName')->nullable();
             $table->string('address')->nullable();
             $table->string('officeMobile')->nullable();
             $table->string('officeEmail')->nullable();

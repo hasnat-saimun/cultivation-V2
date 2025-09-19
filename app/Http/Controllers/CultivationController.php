@@ -74,7 +74,7 @@ class CultivationController extends Controller
             $server = ServerConfig::find($requ->serverId);
         endif;
 
-        $server->institueName       = $requ->insName;
+        $server->instituteName      = $requ->insName;
         $server->address            = $requ->insAddress;
         $server->principalName      = $requ->principalName;
         $server->principalMobile    = $requ->principalMobile;

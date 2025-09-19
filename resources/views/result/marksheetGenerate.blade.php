@@ -4,16 +4,16 @@ Marksheet Generate
 @endsection
 @section('backIndex')
     @php
-        if($studentDetails->count()>0):
+        if($studentDetails):
             $adminId        = $studentDetails->admitId;
-            $stdName        = $studentDetails->firstName." ".$studentDetails->lastName;
-            $rollNumber     = $studentDetails->roll;
-            $fName          = $studentDetails->fathersName;
-            $mName          = $studentDetails->mothersName;
-            $sessionDetails = $studentDetails->session;
+            echo $stdName        = $studentDetails->fullName." ".$studentDetails->sureName;
+            $rollNumber     = $studentDetails->rollNumber;
+            $fName          = $studentDetails->father;
+            $mName          = $studentDetails->mother;
+            $sessionDetails = $studentDetails->sessName;
             $classDetails   = $studentDetails->class;
             if($sessionDetails):
-                $sessionName    = \App\Models\Session::find($sessionDetails->sessionName);
+                $sessionName    = \App\Models\sessionManage::find($sessionDetails)->session;
             else:
                 $sessionName    = "-";
             endif;
@@ -22,7 +22,7 @@ Marksheet Generate
             else:
                 $className    = "-";
             endif;
-        else:;
+        else:
             $adminId        = "";
             $stdName        = "";
             $rollNumber     = "";
@@ -39,18 +39,27 @@ Marksheet Generate
         else:
             $examName   = "";
         endif;
-
+        
+        $subtotalMarks = 0;
+        if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()) {
+            foreach($studentDetails->marksheet as $ckMark) {
+                $subjectMarks   = $ckMark->subjectMarks ?? 0;
+                $objectMarks    = $ckMark->objectMarks ?? 0;
+                $parcticalMarks = $ckMark->practicalMarks ?? 0;
+                $subtotalMarks += ($subjectMarks + $objectMarks + $parcticalMarks);
+            }
+        }
     @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4 marksheet">
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto col-12 mx-auto">
                         <div class="card-body row">
-                            @if($studentDetails->count()>0)
+                            @if($studentDetails)
                             <div class="card-header bg-light border-bottom-0 col-12">
                                 <div class="item-title text-center">
-                                    <h1 class="mb-2 fw-bold">Sonar Bangla University College</h1>
-                                    <h3 class="mb-0 text-uppercase fw-bold">Academic Transcript</h3>
+                                    <h1 class="mb-2 fw-bold">@if($config)   {{ $config->instituteName }} @else Jahanara Ayub Academy @endif</h1>
+                                    <h3 class="mb-0 text-uppercase fw-bold">{{ $config->transcript_title ?? 'Academic Transcript' }}</h3>
                                     <p class="text-left fw-bold">SL No- </p>
                                     <button class="btn btn-warning btn-sm d-print-none" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
                                     <p class="fw-bold">{{ $examName }} </p>
@@ -87,18 +96,15 @@ Marksheet Generate
                             </table>
                             <table class="col-4 col-md-4 mb-4 table-bordered text-center">
                                 <thead>
-                                    <th>
-                                        Range of Marks<br>
-                                        (Percentage)
-                                    </th>
+                                    <th>Range of Marks</th>
                                     <th>Grade</th>
                                     <th>Point</th>
                                 </thead>
                                 <tbody>
                                     @php 
-                                        $gradeList = \App\Models\GradeList::orderBy('id','ASC')->get();
+                                        $gradeList = \App\Models\GradeList::orderBy('gradePoint','DESC')->get();
                                     @endphp
-                                    @if(isset($gradeList))
+                                    @if($gradeList)
                                         @foreach($gradeList as $gl)
                                             <tr>
                                                 <td>{{ $gl->minMark }} - {{ $gl->maxMark }}</td>
@@ -121,12 +127,8 @@ Marksheet Generate
                                     <th>Point</th>
                                 </thead>
                                 <tbody>
-                                    @php
-                                        $chkMarks = \App\Models\Marksheet::where(['studentId'=>$adminId,'classId'=>$classId,'examId'=>$examId,'sessionId'=>$sessionId])->get();
-                                        $subtotalMarks = $chkMarks->sum('totalMarks');
-                                    @endphp
-                                    @if(isset($chkMarks))
-                                        @foreach($chkMarks as $ckMark)
+                                    @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
+                                        @foreach($studentDetails->marksheet as $ckMark)
                                             @php 
                                                 $subjectMarks   = $ckMark->subjectMarks;
                                                 $objectMarks    = $ckMark->objectMarks;
@@ -159,8 +161,14 @@ Marksheet Generate
                                                 <td>{{ $grade }}</td>
                                                 <td>{{ $gradePoint }}</td>
                                             </tr>
+                                            @else
+                                            No data found
                                             @endif
                                         @endforeach
+                                    @else
+                                    <tr>
+                                        <td colspan="7">No data found</td>
+                                    </tr>
                                     @endif
                                 </tbody>
                             </table>
@@ -176,8 +184,8 @@ Marksheet Generate
                                     <th>Point</th>
                                 </thead>
                                 <tbody>
-                                    @if(isset($chkMarks))
-                                        @foreach($chkMarks as $ckMark)
+                                    @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count())
+                                        @foreach($studentDetails->marksheet as $ckMark)
                                             @php 
                                                 $subjectMarks   = $ckMark->subjectMarks;
                                                 $objectMarks    = $ckMark->objectMarks;

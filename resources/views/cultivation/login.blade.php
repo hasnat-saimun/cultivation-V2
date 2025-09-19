@@ -41,20 +41,6 @@
         <!-- Preloader End -->
 
         <div class="container-fluid">
-            <div class="row">
-                <div class="col-12">
-                    @if(session()->has('success'))
-                        <div class="alert alert-success w-100">
-                            {{ session()->get('success') }}
-                        </div>
-                    @endif
-                    @if(session()->has('error'))
-                        <div class="alert alert-danger w-100">
-                            {{ session()->get('error') }}
-                        </div>
-                    @endif
-                </div>
-            </div>
             <div class="row d-flex align-items-center vh-100">
                 <div class="authfy-container col-xs-12 col-sm-10 col-md-8 col-lg-6 col-sm-offset-1 col-md-offset-2 col-lg-offset-3">
                     <div class="col-sm-5 authfy-panel-left">
@@ -73,7 +59,19 @@
                         <!-- authfy-login start -->
                         <div class="authfy-login">
                             <!-- panel-login start -->
-                            <div class="authfy-panel panel-login text-center active">
+                            <div class="authfy-panel panel-login text-center active">             
+                                <div class="col-12">
+                                    @if(session()->has('success'))
+                                        <div class="alert alert-success w-100">
+                                            {{ session()->get('success') }}
+                                        </div>
+                                    @endif
+                                    @if(session()->has('error'))
+                                        <div class="alert alert-danger w-100">
+                                            {{ session()->get('error') }}
+                                        </div>
+                                    @endif
+                                </div>
                                 <div class="authfy-heading">
                                     <h3 class="auth-title">Login to your account</h3>
                                 </div>

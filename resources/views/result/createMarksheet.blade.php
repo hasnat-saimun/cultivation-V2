@@ -24,7 +24,7 @@ Create Marksheet
                             </div>
                             <div class="heading-layout1">
                                 <div class="item-title">
-                                    <h3>Create Marksheet</h3>
+                                    <h3>Generate Marksheet</h3>
                                 </div>
                             </div>
                             <form class="new-added-form" action="{{ route('generateMarksheet') }}" method="POST">
@@ -44,48 +44,6 @@ Create Marksheet
                                             @if(!empty($examList))
                                                 @foreach($examList as $exm)
                                                 <option value="{{ $exm->id }}">{{ $exm->examName }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
-                                        <label>Class *</label>
-                                        <select class="select2" name="classId" required>
-                                            <option value="">Select *</option>
-                                            @php
-                                                $classes = \App\Models\classManage::orderBy('id','DESC')->get();
-                                            @endphp
-                                            @if(!empty($classes))
-                                                @foreach($classes as $cls)
-                                                <option value="{{ $cls->id }}">{{ $cls->className }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
-                                        <label>Session *</label>
-                                        <select class="select2" name="sessionId" required>
-                                            <option value="">Select *</option>
-                                            @php
-                                                $sessions = \App\Models\sessionManage::orderBy('id','DESC')->get();
-                                            @endphp
-                                            @if(!empty($sessions))
-                                                @foreach($sessions as $sess)
-                                                <option value="{{ $sess->id }}">{{ $sess->session }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
-                                        <label>Section/Group *</label>
-                                        <select class="select2" name="groupId" required>
-                                            <option value="">Select *</option>
-                                            @php
-                                                $department = \App\Models\sectionManage::orderBy('id','DESC')->get();
-                                            @endphp
-                                            @if(!empty($department))
-                                                @foreach($department as $dept)
-                                                <option value="{{ $dept->id }}">{{ $dept->section }}</option>
                                                 @endforeach
                                             @endif
                                         </select>

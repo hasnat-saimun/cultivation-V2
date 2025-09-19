@@ -45,8 +45,11 @@ Create Subject
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
-                                        <label>Base Mark *</label>
-                                        <input type="text" name="baseMark" placeholder="Enter the base make" class="form-control" required>
+                                        <label>Passing System *</label>
+                                        <select name="passingSystem" id="passingSystem" class="form-control">
+                                            <option value="1">Feature Wise</option>
+                                            <option value="2" selected>Total Marks</option>
+                                        </select>
                                     </div>
                                     <div class="col-12 form-group">
                                         <label>Assign Class *</label>
@@ -90,6 +93,33 @@ Create Subject
                     </div>
                 </div>
                 <script>
+                function validateTotalMarks() {
+                    let cq = document.querySelector("input[name='cqValue'][type='text']");
+                    let mcq = document.querySelector("input[name='mcqValue'][type='text']");
+                    let practical = document.querySelector("input[name='practicalValue'][type='text']");
+
+                    let cqVal = cq ? parseInt(cq.value) || 0 : 0;
+                    let mcqVal = mcq ? parseInt(mcq.value) || 0 : 0;
+                    let practicalVal = practical ? parseInt(practical.value) || 0 : 0;
+
+                    let total = cqVal + mcqVal + practicalVal;
+
+                    if (total > 100) {
+                        alert("Total marks for CQ, MCQ, and Practical cannot exceed 100.");
+                        return false;
+                    }
+                    return true;
+                }
+
+                // Attach validation to form submit
+                document.addEventListener("DOMContentLoaded", function() {
+                    let form = document.querySelector("form.new-added-form");
+                    if(form){
+                        form.onsubmit = function() {
+                            return validateTotalMarks();
+                        }
+                    }
+                });
                     function mcqMarks(checkbox){
                         if(checkbox.checked){
                             document.getElementById("mcqFiled").innerHTML = `<label for='mcqMarksValue'>MCQ Marks</label><input type='text' name='mcqValue' class='form-control' placeholder='Enter the mcq total marks'>`;

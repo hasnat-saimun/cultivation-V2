@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('subjectName')->nullable();
             $table->string('alias')->nullable();
             $table->string('subjectType')->nullable();
-            $table->string('baseMark')->nullable();
+            $table->string('passingSystem')->nullable();
             $table->string('assign_class')->nullable();
             $table->string('CQ')->nullable();
             $table->string('MCQ')->nullable();
