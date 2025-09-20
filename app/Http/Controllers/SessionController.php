@@ -48,9 +48,9 @@ class SessionController extends Controller
             $session->sessionName   = $requ->sessionName;
             $session->alias       = $alias;
             $session->save();
-            return back()->with('success','Record successfully updated');
+            return route('editSession',['id'=>$requ->itemId])->with('success','Record successfully updated');
         else:
-            return back()->with('error','No alias found for update');
+            return route('editSession',['id'=>$requ->itemId])->with('error','No alias found for update');
         endif;
     }
 

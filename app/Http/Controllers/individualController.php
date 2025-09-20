@@ -49,18 +49,18 @@ class individualController extends Controller
 
     //update session 
     public function updateSession(Request $requ){
-        $chkData = sessionManage::where(['session'=>$requ->session])->get();
+        $chkData = sessionManage::where(['session'=>$requ->itemId])->get();
 
         if(!empty($chkData) && count($chkData)>0):
-            return back()->with('error','Data entry failed');
+            return back()->with('error','No record found for update');
         else:
             $updateData =  sessionManage::find($requ->itemId);
             $updateData ->session = $requ->session;
 
             if($updateData->save()):
-                return redirect(route('sessionForm'))->with("success",'update successfully');
+                return redirect(route('editSession',['itemId'=>$requ->itemId]))->with("success",'Session updated successfully');
             else:
-                return back()->with("error",'Data update failed');
+                return redirect(route('editSession',['itemId'=>$requ->itemId]))->with("error",'Session updated failed');
             endif;
         endif;
     

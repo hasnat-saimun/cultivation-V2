@@ -126,4 +126,96 @@ Get Mark
     </div>
     <div class="mb-4"> <a href="{{ route('addMarks') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
     @endif
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var maxCQ = {{ $subjectData->CQ ?? 0 }};
+    var maxMCQ = {{ $subjectData->MCQ ?? 0 }};
+    var maxPractical = {{ $subjectData->Practical ?? 0 }};
+
+    function showError(input, max) {
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) errorDiv.remove();
+
+        input.classList.add('is-invalid');
+        errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.innerText = 'Value cannot be greater than ' + max;
+        input.parentNode.appendChild(errorDiv);
+
+        // Show alert
+        alert('Value for this field cannot be greater than ' + max);
+    }
+
+    function removeError(input) {
+        input.classList.remove('is-invalid');
+        let errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) errorDiv.remove();
+    }
+
+    function limitInput(input, max) {
+        input.addEventListener('input', function() {
+            var val = parseFloat(input.value);
+            if (!isNaN(val) && val > max) {
+                input.value = max;
+                showError(input, max);
+            } else {
+                removeError(input);
+            }
+            if (!isNaN(val) && val < 0) {
+                input.value = 0;
+            }
+        });
+    }
+
+    document.querySelectorAll('input[name="cqMarks[]"]').forEach(function(input) {
+        limitInput(input, maxCQ);
+    });
+    document.querySelectorAll('input[name="mcqMarks[]"]').forEach(function(input) {
+        limitInput(input, maxMCQ);
+    });
+    document.querySelectorAll('input[name="practical[]"]').forEach(function(input) {
+        limitInput(input, maxPractical);
+    });
+
+    // Prevent form submit if any value is greater than allowed
+    var form = document.querySelector('form');
+    if(form) {
+        form.addEventListener('submit', function(e) {
+            var error = false;
+            document.querySelectorAll('input[name="cqMarks[]"]').forEach(function(input) {
+                var val = parseFloat(input.value);
+                if (!isNaN(val) && val > maxCQ) {
+                    error = true;
+                    showError(input, maxCQ);
+                } else {
+                    removeError(input);
+                }
+            });
+            document.querySelectorAll('input[name="mcqMarks[]"]').forEach(function(input) {
+                var val = parseFloat(input.value);
+                if (!isNaN(val) && val > maxMCQ) {
+                    error = true;
+                    showError(input, maxMCQ);
+                } else {
+                    removeError(input);
+                }
+            });
+            document.querySelectorAll('input[name="practical[]"]').forEach(function(input) {
+                var val = parseFloat(input.value);
+                if (!isNaN(val) && val > maxPractical) {
+                    error = true;
+                    showError(input, maxPractical);
+                } else {
+                    removeError(input);
+                }
+            });
+            if(error) {
+                alert('One or more marks fields exceed the allowed maximum value.');
+                e.preventDefault();
+            }
+        });
+    }
+});
+</script>
 @endsection
