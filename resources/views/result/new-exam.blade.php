@@ -60,6 +60,13 @@ Create Exam
                                         <label>Exam Base Mark *</label>
                                         <input type="text" name="baseMark" placeholder="Enter the value of base mark of the exam" class="form-control" required>
                                     </div>
+                                    <div class="col-12 form-group">
+                                        <label>Passing System *</label>
+                                        <select name="passingSystem" id="passingSystem" class="form-control">
+                                            <option value="1">Feature Wise</option>
+                                            <option value="2" selected>Total Marks</option>
+                                        </select>
+                                    </div>
                                     <div class="col-12 form-group mg-t-8">
                                         <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Save</button>
                                         <button type="reset" class="btn-fill-lg bg-blue-dark btn-hover-bluedark">Reset</button>

@@ -35,6 +35,7 @@ All Exam
                                             <th>Start Date</th>
                                             <th>End Date</th>
                                             <th>Base Mark</th>
+                                            <th>Passing System</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -58,6 +59,7 @@ All Exam
                                                 <td>{{ $item->examDate }}</td>
                                                 <td>{{ $item->closeDate }}</td>
                                                 <td>{{ $item->baseMark }}</td>
+                                                <td> {{ $item->passingSystem == 1 ? 'Feature Wise' : 'Total Marks' }}</td>
                                                 <td>
                                                     <a href="{{ route('editExam',['itemId'=>$item->id]) }}"><i class="fa-light fa-pen-to-square fa-xl"></i></a>
                                                     <a href="{{ route('delExam',['itemId'=>$item->id]) }}"><i class="fa-thin fa-circle-trash fa-xl"></i></a>

@@ -45,13 +45,6 @@ Create Subject
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
-                                        <label>Passing System *</label>
-                                        <select name="passingSystem" id="passingSystem" class="form-control">
-                                            <option value="1">Feature Wise</option>
-                                            <option value="2" selected>Total Marks</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
                                         <label>Assign Class *</label>
                                         <select name="classId" id="" class="form-control">
                                             <option value="">Select Class</option>

@@ -115,144 +115,187 @@ Marksheet Generate
                                     @endif
                                 </tbody>
                             </table>
-                            
-                            <h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
-                            <table class="table table-bordered col-12 text-center">
-                                <thead>
-                                    <th>Subject Name</th>
-                                    <th>Theory</th>
-                                    <th>Grade</th>
-                                    <th>M.C.Q</th>
-                                    <th>Grade</th>
-                                    <th>Practical</th>
-                                    <th>Grade</th>
-                                    <th>Total</th>
-                                    <th>Grade</th>
-                                    <th>Point</th>
-                                </thead>
-                                <tbody>
-                                    @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
-                                        @foreach($studentDetails->marksheet as $ckMark)
-                                        @php
-                                        $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+@php
+    $isFeatureWise = isset($examDetails) && $examDetails->passingSystem == 1;
+    $finalLetterGrade = '-';
+    $hasFail = false;
+@endphp
 
-                                                // Get full marks from subject table
-                                                $fullCQ        = $subjectDetails->CQ ?? 0;
-                                                $fullMCQ       = $subjectDetails->MCQ ?? 0;
-                                                $fullPractical = $subjectDetails->Practical ?? 0;
+<!-- Main Subject Table -->
+<h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
+<table class="table table-bordered col-12 text-center">
+    <thead>
+        <th>Subject Name</th>
+        <th>Theory</th>
+        <th>Grade</th>
+        <th>M.C.Q</th>
+        <th>Grade</th>
+        <th>Practical</th>
+        <th>Grade</th>
+        <th>Total</th>
+        <th>Grade</th>
+        <th>Point</th>
+    </thead>
+    <tbody>
+        @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
+            @foreach($studentDetails->marksheet as $ckMark)
+                @php
+                    $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
 
-                                                // Get obtained marks
-                                                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
-                                                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
-                                                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                    $fullCQ        = $subjectDetails->CQ ?? 0;
+                    $fullMCQ       = $subjectDetails->MCQ ?? 0;
+                    $fullPractical = $subjectDetails->Practical ?? 0;
 
-                                                // Calculate percentages for each part
-                                                $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : null;
-                                                $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : null;
-                                                $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : null;
+                    $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                    $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                    $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
 
-                                                // Get grade for each part from GradeList table
-                                                $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
-                                                $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
-                                                $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
+                    $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : null;
+                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : null;
+                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : null;
 
-                                                $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
-                                                $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
-                                                $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
+                    $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
+                    $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
+                    $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
 
-                                                // Calculate total marks and overall grade
-                                                $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
-                                                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                                                    ->where('maxMark', '>=', $totalMarks)
-                                                    ->first();
-                                                $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                                                $gradePoint = $gradeRow ? $gradeRow->gradePoint : '-';
+                    $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
+                    $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
+                    $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
 
-                                                
-                                            @endphp
-                                            @if($subjectDetails->subjectType=="Main")
-                                            <tr>
-                                                <td>{{ $subjectDetails->subjectName }}</td>
-                                                <td>{{ $subjectMarks }}</td>
-                                                <td>{{ $cqGrade }}</td>
-                                                <td>{{ $objectMarks }}</td>
-                                                <td>{{ $mcqGrade }}</td>
-                                                <td>{{ $parcticalMarks }}</td>
-                                                <td>{{ $practicalGrade }}</td>
-                                                <td>{{ $totalMarks }}</td>
-                                                <td>{{ $grade }}</td>
-                                                <td>{{ $gradePoint }}</td>
-                                            </tr>
-                                            @else
-                                            No data found
-                                            @endif
-                                        @endforeach
-                                    @else
-                                    <tr>
-                                        <td colspan="7">No data found</td>
-                                    </tr>
-                                    @endif
-                                </tbody>
-                            </table>
-                            <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
-                            <table class="table table-bordered col-12 text-center">
-                                <thead>
-                                    <th>Subject Name</th>
-                                    <th>Theory</th>
-                                    <th>M.C.Q</th>
-                                    <th>Practical</th>
-                                    <th>Total</th>
-                                    <th>Grade</th>
-                                    <th>Point</th>
-                                </thead>
-                                <tbody>
-                                    @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count())
-                                        @foreach($studentDetails->marksheet as $ckMark)
-                                            @php 
-                                                $subjectMarks   = $ckMark->subjectMarks;
-                                                $objectMarks    = $ckMark->objectMarks;
-                                                $parcticalMarks = $ckMark->practicalMarks;
-                                                $totalMarks     = $subjectMarks+$objectMarks+$parcticalMarks;
-                                                $grade          = $ckMark->laterGrade;
-                                                $gradePoint     = $ckMark->gradePoint;
+                    $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
+                    $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                        ->where('maxMark', '>=', $totalMarks)
+                        ->first();
+                    $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                    $gradePoint = $gradeRow ? $gradeRow->gradePoint : '-';
 
-                                                if(empty($subjectMarks)):
-                                                    $subjectMarks = "-";
-                                                endif;
+                    // Feature Wise F logic
+                    if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
+                        $grade = 'F';
+                        $hasFail = true;
+                    }
+                @endphp
+                @if($subjectDetails->subjectType=="Main")
+                <tr>
+                    <td>{{ $subjectDetails->subjectName }}</td>
+                    <td>{{ $subjectMarks }}</td>
+                    <td>{{ $cqGrade }}</td>
+                    <td>{{ $objectMarks }}</td>
+                    <td>{{ $mcqGrade }}</td>
+                    <td>{{ $parcticalMarks }}</td>
+                    <td>{{ $practicalGrade }}</td>
+                    <td>{{ $totalMarks }}</td>
+                    <td>{{ $grade }}</td>
+                    <td>{{ $gradePoint }}</td>
+                </tr>
+                @endif
+            @endforeach
+        @else
+        <tr>
+            <td colspan="7">No data found</td>
+        </tr>
+        @endif
+    </tbody>
+</table>
 
-                                                if(empty($objectMarks)):
-                                                    $objectMarks = "-";
-                                                endif;
+<!-- Main Subject Table -->
+<h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
+<table class="table table-bordered col-12 text-center">
+    <thead>
+        <th>Subject Name</th>
+        <th>Theory</th>
+        <th>Grade</th>
+        <th>M.C.Q</th>
+        <th>Grade</th>
+        <th>Practical</th>
+        <th>Grade</th>
+        <th>Total</th>
+        <th>Grade</th>
+        <th>Point</th>
+    </thead>
+    <tbody>
+        @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
+            @foreach($studentDetails->marksheet as $ckMark)
+                @php
+                    $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
 
-                                                if(empty($parcticalMarks)):
-                                                    $parcticalMarks = "-";
-                                                endif;
+                    $fullCQ        = $subjectDetails->CQ ?? 0;
+                    $fullMCQ       = $subjectDetails->MCQ ?? 0;
+                    $fullPractical = $subjectDetails->Practical ?? 0;
 
-                                                $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
-                                            @endphp
-                                            @if($subjectDetails->subjectType=="Optional")
-                                            <tr>
-                                                <td>{{ $subjectDetails->subjectName }}</td>
-                                                <td>{{ $subjectMarks }}</td>
-                                                <td>{{ $objectMarks }}</td>
-                                                <td>{{ $parcticalMarks }}</td>
-                                                <td>{{ $totalMarks }}</td>
-                                                <td>{{ $grade }}</td>
-                                                <td>{{ $gradePoint }}</td>
-                                            </tr>
-                                            @endif
-                                        @endforeach
-                                    @endif
-                                </tbody>
-                            </table>
-                            <table class="col-12 mb-4  table table-bordered">
-                                <thead>
-                                        <th width="20%">Total Marks: {{ $subtotalMarks }}</th>
-                                        <th width="20%">Letter Grade: </th>
-                                        <th width="20%">Grade Point: </th>
-                                        <th>Remark- </th>
-                                </thead>
-                            </table>
+                    $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                    $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                    $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+
+                    $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : null;
+                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : null;
+                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : null;
+
+                    $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
+                    $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
+                    $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
+
+                    $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
+                    $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
+                    $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
+
+                    $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
+                    $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                        ->where('maxMark', '>=', $totalMarks)
+                        ->first();
+                    $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                    $gradePoint = $gradeRow ? $gradeRow->gradePoint : '-';
+
+                    // Feature Wise F logic
+                    if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
+                        $grade = 'F';
+                        $hasFail = true;
+                    }
+                @endphp
+                @if($subjectDetails->subjectType=="Optional")
+                <tr>
+                    <td>{{ $subjectDetails->subjectName }}</td>
+                    <td>{{ $subjectMarks }}</td>
+                    <td>{{ $cqGrade }}</td>
+                    <td>{{ $objectMarks }}</td>
+                    <td>{{ $mcqGrade }}</td>
+                    <td>{{ $parcticalMarks }}</td>
+                    <td>{{ $practicalGrade }}</td>
+                    <td>{{ $totalMarks }}</td>
+                    <td>{{ $grade }}</td>
+                    <td>{{ $gradePoint }}</td>
+                </tr>
+                @endif
+            @endforeach
+        @else
+        <tr>
+            <td colspan="7">No data found</td>
+        </tr>
+        @endif
+    </tbody>
+</table>
+
+<!-- Final Grade Point and Letter Grade -->
+@php
+    // If feature wise and any subject failed, set final grade and point to F
+    if($isFeatureWise && $hasFail) {
+        $finalLetterGrade = 'F';
+    } else {
+        // Your existing logic for calculating final grade/point
+        // Example:
+        // $finalGradePoint = ...;
+        // $finalLetterGrade = ...;
+    }
+@endphp
+
+<table class="col-12 mb-4  table table-bordered">
+    <thead>
+        <th width="20%">Total Marks: {{ $subtotalMarks }}</th>
+        <th width="20%">Letter Grade: {{ $finalLetterGrade }}</th>
+        <th width="20%">Grade Point: {{ '-' }}</th>
+        <th>Remark- </th>
+    </thead>
+</table>
 
                             
                             <table class="col-3 my-4 mx-auto  table table-bordered text-center">

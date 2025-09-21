@@ -50,13 +50,6 @@ Edit Subject
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
-                                        <label>Passing System *</label>
-                                        <select name="passingSystem" class="form-control">
-                                            <option value="1" {{ $item->passingSystem == 1 ? 'selected' : '' }}>Feature Wise</option>
-                                            <option value="2" {{ $item->passingSystem == 2 ? 'selected' : '' }}>Total Marks</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         @php
                                             $features = $item->availableFeature ? explode(',', $item->availableFeature) : [];

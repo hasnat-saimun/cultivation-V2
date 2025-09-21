@@ -27,6 +27,7 @@ class ExamController extends Controller
             $exam->examDate     = $requ->examDate;
             $exam->closeDate    = $requ->closeDate;
             $exam->baseMark     = $requ->baseMark;
+            $exam->passingSystem = $requ->passingSystem;
             $exam->alias        = $alias;
             $exam->save();
             return back()->with('success','Record successfully saved');
@@ -55,6 +56,7 @@ class ExamController extends Controller
             $exam->examDate     = $requ->examDate;
             $exam->closeDate    = $requ->closeDate;
             $exam->baseMark     = $requ->baseMark;
+            $exam->passingSystem = $requ->passingSystem;
             $exam->alias        = $alias;
             $exam->save();
             return back()->with('success','Record successfully updated');
