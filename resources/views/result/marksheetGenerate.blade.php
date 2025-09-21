@@ -157,6 +157,23 @@ Marksheet Generate
                     $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
                     $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
                     $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
+                    
+
+                    if($fullCQ == '-'):
+                        $subjectMarks = '-';
+                        $cqPercent = '-';
+                        $cqGrade = '-';
+                    endif;
+                    if($fullMCQ == '-'):
+                        $objectMarks = '-';
+                        $mcqPercent = 'h';
+                        $mcqGrade = '-';
+                    endif;
+                    if($fullPractical == '-'):
+                        $parcticalMarks = '-';
+                        $practicalPercent = '-';
+                        $practicalGrade = '-';
+                    endif;  
 
                     $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
                     $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
@@ -198,7 +215,7 @@ Marksheet Generate
     </tbody>
 </table>
 
-<!-- Main Subject Table -->
+<!-- Optional Subject Table -->
 <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
 <table class="table table-bordered col-12 text-center">
     <thead>
@@ -214,45 +231,75 @@ Marksheet Generate
         <th>Point</th>
     </thead>
     <tbody>
-        @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
+        @php
+            $hasOptional = false;
+            if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0) {
+                foreach($studentDetails->marksheet as $ckMark) {
+                    $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+                    if($subjectDetails && $subjectDetails->subjectType=="Optional") {
+                        $hasOptional = true;
+                        break;
+                    }
+                }
+            }
+        @endphp
+        @if($hasOptional)
             @foreach($studentDetails->marksheet as $ckMark)
                 @php
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
 
-                    $fullCQ        = $subjectDetails->CQ ?? 0;
-                    $fullMCQ       = $subjectDetails->MCQ ?? 0;
-                    $fullPractical = $subjectDetails->Practical ?? 0;
+                    if($subjectDetails && $subjectDetails->subjectType=="Optional") {
+                        $fullCQ        = $subjectDetails->CQ ?? '-';
+                        $fullMCQ       = $subjectDetails->MCQ ?? '-';
+                        $fullPractical = $subjectDetails->Practical ?? '-';
 
-                    $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
-                    $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
-                    $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                        $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : '-';
+                        $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : '-';
+                        $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : '-';
 
-                    $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : null;
-                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : null;
-                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : null;
+                        $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : "-";
+                        $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : "-";
+                        $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : "-";
 
-                    $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
-                    $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
-                    $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
+                        if($fullCQ == '-'):
+                            $subjectMarks = '-';
+                            $cqPercent = '-';
+                            $cqGrade = '-';
+                        endif;
+                        if($fullMCQ == '-'):
+                            $objectMarks = '-';
+                            $mcqPercent = 'h';
+                            $mcqGrade = '-';
+                        endif;
+                        if($fullPractical == '-'):
+                            $parcticalMarks = '-';
+                            $practicalPercent = '-';
+                            $practicalGrade = '-';
+                        endif;  
 
-                    $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
-                    $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
-                    $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
+                        $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
+                        $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
+                        $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
 
-                    $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
-                    $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                        ->where('maxMark', '>=', $totalMarks)
-                        ->first();
-                    $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                    $gradePoint = $gradeRow ? $gradeRow->gradePoint : '-';
+                        $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
+                        $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
+                        $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
 
-                    // Feature Wise F logic
-                    if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
-                        $grade = 'F';
-                        $hasFail = true;
+                        $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
+                        $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                            ->where('maxMark', '>=', $totalMarks)
+                            ->first();
+                        $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                        $gradePoint = $gradeRow ? $gradeRow->gradePoint : '-';
+
+                        // Feature Wise F logic
+                        if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
+                            $grade = 'F';
+                            $hasFail = true;
+                        }
                     }
                 @endphp
-                @if($subjectDetails->subjectType=="Optional")
+                @if($subjectDetails && $subjectDetails->subjectType=="Optional")
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
                     <td>{{ $subjectMarks }}</td>
@@ -269,22 +316,85 @@ Marksheet Generate
             @endforeach
         @else
         <tr>
-            <td colspan="7">No data found</td>
+            <td colspan="10">No data found</td>
         </tr>
         @endif
     </tbody>
 </table>
-
-<!-- Final Grade Point and Letter Grade -->
 @php
     // If feature wise and any subject failed, set final grade and point to F
-    if($isFeatureWise && $hasFail) {
+    $mainSubjects = [];
+    $mainGradePoints = [];
+    $hasFail = false;
+
+    if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count() > 0) {
+        foreach($studentDetails->marksheet as $ckMark) {
+            $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+            if($subjectDetails && $subjectDetails->subjectType == "Main") {
+                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
+
+                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                    ->where('maxMark', '>=', $totalMarks)
+                    ->first();
+
+                $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                $gradePoint = $gradeRow ? $gradeRow->gradePoint : 0;
+                
+                // Feature Wise F logic
+                if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
+                    $grade = 'F';
+                    $hasFail = true;
+                }
+                
+                if($grade == 'F') {
+                    $hasFail = true;
+                }
+                $mainGradePoints[] = $gradePoint;
+            }
+            
+            // Optional subject logic
+            if($subjectDetails && $subjectDetails->subjectType == "Optional") {
+                $optionalSubjectFound = true;
+                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
+
+                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                    ->where('maxMark', '>=', $totalMarks)
+                    ->first();
+
+                $optionalPoint = $gradeRow ? $gradeRow->gradePoint : 0;
+            }else {
+                $optionalSubjectFound = false;
+                $optionalPoint = 0; 
+            }
+        }
+    }
+    // NCTB: If optional subject grade point > 2, only the excess over 2 is added to GPA
+    $optionalBonus = 0;
+    if($optionalSubjectFound && $optionalPoint > 2) {
+        $optionalBonus = $optionalPoint - 2;
+    }
+
+    // Calculate GPA
+    $mainSubjectCount = count($mainGradePoints);
+    $finalGradePoint = $mainSubjectCount > 0 ? round((array_sum($mainGradePoints) + $optionalBonus) / $mainSubjectCount, 2) : '-';
+    
+    if($hasFail) {
         $finalLetterGrade = 'F';
+    } elseif(count($mainGradePoints) > 0) {
+        // Find letter grade by average point
+        $gradeListRow = \App\Models\GradeList::where('gradePoint', '<=', $finalGradePoint)
+            ->orderBy('gradePoint', 'desc')
+            ->first();
+        $finalLetterGrade = $gradeListRow ? $gradeListRow->gradeName : '-';
     } else {
-        // Your existing logic for calculating final grade/point
-        // Example:
-        // $finalGradePoint = ...;
-        // $finalLetterGrade = ...;
+        $finalLetterGrade = '-';
+        $finalGradePoint = '-';
     }
 @endphp
 
@@ -292,7 +402,7 @@ Marksheet Generate
     <thead>
         <th width="20%">Total Marks: {{ $subtotalMarks }}</th>
         <th width="20%">Letter Grade: {{ $finalLetterGrade }}</th>
-        <th width="20%">Grade Point: {{ '-' }}</th>
+        <th width="20%">Grade Point: {{ $finalGradePoint }}</th>
         <th>Remark- </th>
     </thead>
 </table>
