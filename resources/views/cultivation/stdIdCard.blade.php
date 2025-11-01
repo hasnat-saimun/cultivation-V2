@@ -61,9 +61,9 @@
                                                     <div class="row mt-1 align-items-center no-gutter">
                                                         <div class="col-3 mt-4">
                                                             @if(!empty($std->avatar))
-                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-75 img-thumbnail">
+                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @else
-                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
+                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @endif
                                                         </div>
                                                         <div class="col-9 text-left text-dark">
@@ -112,9 +112,9 @@
                                                     <div class="row mt-1 align-items-center no-gutter">
                                                         <div class="col-3">
                                                             @if(!empty($std->avatar))
-                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-75 img-thumbnail">
+                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @else
-                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
+                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @endif
                                                         </div>
                                                         <div class="col-9 text-left text-dark">
@@ -163,9 +163,9 @@
                                                     <div class="row mt-1 align-items-center no-gutter">
                                                         <div class="col-3">
                                                             @if(!empty($std->avatar))
-                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-75 img-thumbnail">
+                                                            <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @else
-                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
+                                                            <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-100 img-thumbnail">
                                                             @endif
                                                         </div>
                                                         <div class="col-9 text-left text-dark">
