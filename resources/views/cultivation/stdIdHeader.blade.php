@@ -1,8 +1,8 @@
 @php
-    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
-    if(!empty($serverData)):
+    $serverData = \App\Models\ServerConfig::leatest('id')->first();
+    if($serverData->count()>0):
         $serverId           = $serverData->id;
-        $insName            = $serverData->institueName;
+        $insName            = $serverData->instituteName;
         $location           = $serverData->address;
         $officeMobile       = $serverData->officeMobile;
         $officeMail         = $serverData->officeEmail;
@@ -14,8 +14,8 @@
         $establishDate      = $serverData->establishDate;
     else:
         $serverId           = "";
-        $insName            = "Sonar Bangla College";
-        $location           = "Poyat, Burichong, Cumilla";
+        $insName            = "Jahanara Ayub Academy";
+        $location           = "North Shampur, Burichong, Cumilla";
         $officeMobile       = "01716841785";
         $officeMail         = "";
         $principalSign      = "";
