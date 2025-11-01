@@ -59,21 +59,18 @@
                                                     </div>
                                                     <div class="col-6 mx-auto display-5 fw-bold bg-success text-white rounded mb-2">STUDENT ID CARD</div>
                                                     <div class="row mt-1 align-items-center no-gutter">
-                                                        <div class="col-4 mt-4">
+                                                        <div class="col-3 mt-4">
                                                             @if(!empty($std->avatar))
                                                             <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @else
                                                             <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @endif
                                                         </div>
-                                                        <div class="col-8 text-left text-dark">
+                                                        <div class="col-9 text-left text-dark">
                                                             <p class="mb-0"><span class="fw-bold"> Student ID:</span> {{ $std->stdId }}</p>
                                                             <p class="mb-0"><span class="fw-bold"> Name:</span> {{ $std->fullName }} {{ $std->lastName }}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Class:</span> {{ $className}}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Department:</span> {{ $departmentName}}</p>
-                                                            <p class="mb-0">
-                                                                <span class="fw-bold"> Session:</span> {{ $sessionName}}</p>
+                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}<span class="fw-bold ml-2"> Class:</span> {{ $className}}</p>
+                                                            <p class="mb-0"><span class="fw-bold"> Department:</span> {{ $departmentName}}<span class="fw-bold ml-2"> Session:</span> {{ $sessionName}}</p>
                                                         </div>
                                                         <div class="text-center mt-4 col-4">
                                                             <p class="fw-bold text-dark mb-0">Student Sign</p>
@@ -99,22 +96,20 @@
                                                     </div>
                                                     <div class="col-6 mx-auto display-5 fw-bold bg-success text-white rounded mb-2">STUDENT ID CARD</div>
                                                     <div class="row mt-1 align-items-center no-gutter">
-                                                        <div class="col-4">
+                                                        <div class="col-3">
                                                             @if(!empty($std->avatar))
                                                             <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @else
                                                             <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @endif
                                                         </div>
-                                                        <div class="col-8 text-left text-dark">
+                                                        <div class="col-9 text-left text-dark">
                                                             <p class="mb-0"><span class="fw-bold"> Student ID:</span> {{ $std->stdId }}</p>
                                                             <p class="mb-0"><span class="fw-bold"> Name:</span> {{ $std->fullName }} {{ $std->lastName }}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Class:</span> {{ $className }}</p>
+                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}
+                                                            <span class="ml-2 fw-bold"> Class:</span> {{ $className }}</p>
                                                             <p class="mb-0">
-                                                            <span class="fw-bold"> Department:</span> {{ $departmentName}}</p>
-                                                            <p class="mb-0">
-                                                                <span class="fw-bold"> Session:</span> {{ $sessionName }}</p>
+                                                            <span class="fw-bold"> Department:</span> {{ $departmentName}}<span class="fw-bold ml-2"> Session:</span> {{ $sessionName }}</p>
                                                         </div>
                                                         <div class="text-center mt-4 col-4">
                                                             <p class="fw-bold text-dark mb-0">Student Sign</p>
@@ -140,21 +135,18 @@
                                                     </div>
                                                     <div class="col-6 mx-auto display-5 fw-bold bg-success text-white rounded mb-2">STUDENT ID CARD</div>
                                                     <div class="row mt-1 align-items-center no-gutter">
-                                                        <div class="col-4">
+                                                        <div class="col-3">
                                                             @if(!empty($std->avatar))
                                                             <img src="{{ asset('/public/upload/image/student/') }}/{{ $std->avatar }}" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @else
                                                             <img src="{{ asset('/public/back-office/img/') }}/avatar.jpeg" alt="{{ $std->stdId }}" class="w-50 img-thumbnail">
                                                             @endif
                                                         </div>
-                                                        <div class="col-8 text-left text-dark">
+                                                        <div class="col-9 text-left text-dark">
                                                             <p class="mb-0"><span class="fw-bold"> Student ID:</span> {{ $std->stdId }}</p>
                                                             <p class="mb-0"><span class="fw-bold"> Name:</span> {{ $std->fullName }} {{ $std->sureName }}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Class:</span> {{ $className }}</p>
-                                                            <p class="mb-0"><span class="fw-bold"> Department:</span> {{ $departmentName}}</p>
-                                                            <p class="mb-0">
-                                                                <span class="fw-bold"> Session:</span> {{ $sessionName }}</p>
+                                                            <p class="mb-0"><span class="fw-bold"> Roll Number:</span> {{ $std->rollNumber}}<span class="fw-bold ml-2"> Class:</span> {{ $className }}</p>
+                                                            <p class="mb-0"><span class="fw-bold"> Department:</span> {{ $departmentName}}<span class="fw-bold ml-2"> Session:</span> {{ $sessionName }}</p>
                                                         </div>
                                                         <div class="text-center mt-4 col-4">
                                                             <p class="fw-bold text-dark mb-0">Student Sign</p>
