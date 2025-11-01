@@ -1,5 +1,5 @@
 @php
-    $serverData = \App\Models\ServerConfig::leatest('id')->first();
+    $serverData = \App\Models\ServerConfig::latest('id')->first();
     if($serverData->count()>0):
         $serverId           = $serverData->id;
         $insName            = $serverData->instituteName;
