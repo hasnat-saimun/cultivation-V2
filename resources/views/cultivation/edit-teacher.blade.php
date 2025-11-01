@@ -108,20 +108,15 @@ Edit Profile
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Designation *</label>
                                         <select class="select2" name="designation">
-                                            <option value="{{ $profileData->designation }}"> @if($profileData->designation==1)
-                                                 Principal
-                                                @elseif($profileData->designation==2)
-                                                Principal(Incharge)
-                                                @elseif($profileData->designation==3)
-                                                Vice Principal
-                                                @else
-                                                Teacher
-                                                @endif</option>
-                                            <option value="">Select *</option>
-                                            <option value="1">Principal</option>
-                                            <option value="2">Principal(Incharge)</option>
-                                            <option value="3">Vice Principal</option>
-                                            <option value="4">Teacher</option>
+                                            <option value="">Select Designation</option>
+                                            <option value="1" {{ $profileData->designation == 1 ? 'selected' : '' }}>Principal</option>
+                                            <option value="2" {{ $profileData->designation == 2 ? 'selected' : '' }}>Principal(Incharge)</option>
+                                            <option value="3" {{ $profileData->designation == 3 ? 'selected' : '' }}>Vice Principal</option>
+                                            <option value="4" {{ $profileData->designation == 4 ? 'selected' : '' }}>Head Master</option>
+                                            <option value="5" {{ $profileData->designation == 5 ? 'selected' : '' }}>Head Master(Incharge)</option>
+                                            <option value="6" {{ $profileData->designation == 6 ? 'selected' : '' }}>Assistant Head Master</option>
+                                            <option value="7" {{ $profileData->designation == 7 ? 'selected' : '' }}>Senior Teacher</option>
+                                            <option value="8" {{ $profileData->designation == 8 ? 'selected' : '' }}>Assistant Teacher</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">

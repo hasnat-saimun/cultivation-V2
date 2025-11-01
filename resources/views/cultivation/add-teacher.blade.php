@@ -108,7 +108,11 @@ New Profile
                                             <option value="1">Principal</option>
                                             <option value="2">Principal(Incharge)</option>
                                             <option value="3">Vice Principal</option>
-                                            <option value="4">Teacher</option>
+                                            <option value="4">Head Master</option>
+                                            <option value="5">Head Master(Incharge)</option>
+                                            <option value="6">Assistant Head Master</option>
+                                            <option value="7">Senior Teacher</option>
+                                            <option value="8">Assistant Teacher</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
