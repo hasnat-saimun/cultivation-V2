@@ -4,7 +4,7 @@ New Profile
 @endsection
 @section('backIndex')
 @php
-    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)
+    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1);
     if(!empty($serverData)):
         $serverId           = $serverData->id;
         $insName            = $serverData->institueName;
