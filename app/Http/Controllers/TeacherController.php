@@ -51,7 +51,7 @@ class TeacherController extends Controller
             $teacherProfile->mobile = $requ->mobile;
             $teacherProfile->address = $requ->address;
             $teacherProfile->mpoIndex = $requ->mpoIndex;
-            $teacherProfile->pdoId = $requ->pdoId;
+            $teacherProfile->pdsId = $requ->pdsId;
             $teacherProfile->rank = $requ->rank;
 
             $teacherProfile->save();
@@ -93,7 +93,7 @@ class TeacherController extends Controller
             $teacherProfile->mobile = $requ->mobile;
             $teacherProfile->address = $requ->address;
             $teacherProfile->mpoIndex = $requ->mpoIndex;
-            $teacherProfile->pdoId = $requ->pdoId;
+            $teacherProfile->pdsId = $requ->pdsId;
             $teacherProfile->rank = $requ->rank;
             $teacherProfile->save();
 
