@@ -10,14 +10,14 @@ class AddMpoPdoFieldsToTeachersTable extends Migration
     {
         Schema::table('teacher_management', function (Blueprint $table) {
             $table->string('mpoIndex')->nullable()->after('address');
-            $table->string('pdoId')->nullable()->after('mpoIndex');
+            $table->string('pdsId')->nullable()->after('mpoIndex');
         });
     }
 
     public function down()
     {
         Schema::table('teacher_management', function (Blueprint $table) {
-            $table->dropColumn(['mpoIndex', 'pdoId']);
+            $table->dropColumn(['mpoIndex', 'pdsId']);
         });
     }
 }
