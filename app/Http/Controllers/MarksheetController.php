@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\GradeList;
-use App\Models\serverConfig;
+use App\Models\ServerConfig;
 
 class MarksheetController extends Controller
 {
