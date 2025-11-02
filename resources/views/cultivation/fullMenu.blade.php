@@ -1,6 +1,9 @@
 
 <ul class="nav nav-sidebar-menu sidebar-toggle-view">
     <li class="nav-item">
+        <a href="{{ url('/') }}" target="_blank" class="nav-link"><i class="flaticon-home"></i><span>Visit Website</span></a>
+    </li>
+    <li class="nav-item">
         <a href="{{ route('cultivationIndex') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
     </li>
     <li class="nav-item">
