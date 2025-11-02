@@ -27,9 +27,9 @@ New Profile
     $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
     
     // Format: running year + six digit system (padded with zeros)
-    $currentYear = date('y');
+    $prefix = "STF";
     $sixDigitId = str_pad($nextId, 3, "0", STR_PAD_LEFT);
-    $teacherId = $currentYear . $sixDigitId;
+    $staffId = $prefix . $sixDigitId;
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
@@ -67,7 +67,7 @@ New Profile
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Staff ID *</label>
-                                        <input type="text" name="staffId" value="{{ $staffIdPrefix }}-@if(empty($chk)) 1 @else {{ $chk->id+1 }} @endif" placeholder="Example: {{ $staffIdPrefix }}-127420" class="form-control" required readonly>
+                                        <input type="text" name="staffId" value="{{ $staffId }}"placeholder="Example: 127420" class="form-control" required readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
