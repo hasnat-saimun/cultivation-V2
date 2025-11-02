@@ -79,8 +79,6 @@ class TeacherController extends Controller
         if(empty($teacherProfile)):
             return back()->with('error','Opps Sorry! Profile not found for update');
         else:
-            // return 1;
-            $teacherProfile->teacherId = $requ->teacherId;
             $teacherProfile->firstName = $requ->firstName;
             $teacherProfile->lastName = $requ->lastName;
             $teacherProfile->fathersName = $requ->fathersName;

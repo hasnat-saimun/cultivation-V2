@@ -66,7 +66,7 @@ Edit Profile
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Teacher ID</label>
-                                        <input type="text" value="{{ $profileData->teacherId }}" class="form-control">
+                                        <input type="text" value="{{ $profileData->teacherId }}" readonly class="form-control">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
