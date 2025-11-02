@@ -4,7 +4,7 @@ New Profile
 @endsection
 @section('backIndex')
 @php
-    $serverData = \App\Models\ServerConfig::latest('id')->first();
+    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)
     if(!empty($serverData)):
         $serverId           = $serverData->id;
         $insName            = $serverData->institueName;
@@ -20,6 +20,16 @@ New Profile
         $teacherIdPrefix    = "SBCTID";
         $staffIdPrefix      = "SBCSTFID";
     endif;
+    // Get the last record ID from newAdmission table
+    $lastRecord = \App\Models\StaffManagement::latest('id')->first();
+    
+    // If no records exist, start from 1, otherwise increment by 1
+    $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
+    
+    // Format: running year + six digit system (padded with zeros)
+    $currentYear = date('y');
+    $sixDigitId = str_pad($nextId, 3, "0", STR_PAD_LEFT);
+    $teacherId = $currentYear . $sixDigitId;
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">

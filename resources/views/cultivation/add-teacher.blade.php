@@ -20,6 +20,17 @@ New Profile
         $teacherIdPrefix    = "SBCTID";
         $staffIdPrefix      = "SBCSTFID";
     endif;
+    
+    // Get the last record ID from newAdmission table
+    $lastRecord = \App\Models\TeacherManagement::latest('id')->first();
+    
+    // If no records exist, start from 1, otherwise increment by 1
+    $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
+    
+    // Format: running year + six digit system (padded with zeros)
+    $currentYear = date('y');
+    $sixDigitId = str_pad($nextId, 3, "0", STR_PAD_LEFT);
+    $teacherId = $currentYear . $sixDigitId;
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
@@ -70,7 +81,7 @@ New Profile
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Teacher ID</label>
-                                        <input type="text" name="teacherId" value="@if(empty($chk)) 1 @else {{ $chk->id+1 }} @endif" placeholder="Example: {{ $teacherIdPrefix }}-127420" class="form-control" reauired readonly>
+                                        <input type="text" name="teacherId" value="{{ $teacherId }}" placeholder="Example: {{ $teacherIdPrefix }}-127420" class="form-control" required readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
