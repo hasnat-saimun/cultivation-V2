@@ -4,8 +4,8 @@ New Profile
 @endsection
 @section('backIndex')
 @php
-    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1);
-    if(!empty($serverData)):
+    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
+    if($serverData):
         $serverId           = $serverData->id;
         $insName            = $serverData->institueName;
         $location           = $serverData->address;
