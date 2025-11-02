@@ -27,6 +27,8 @@ return new class extends Migration
             $table->string('joinDate')->nullable();
             $table->string('mobile')->nullable();
             $table->string('address')->nullable();
+            $table->string('mpoIndex')->nullable();
+            $table->string('pdsId')->nullable();
             $table->string('rank')->nullable();
             $table->string('avatar')->nullable();
             $table->timestamps();
