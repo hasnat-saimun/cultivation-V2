@@ -113,6 +113,13 @@ New Profile
                                             <option value="6">Assistant Head Master</option>
                                             <option value="7">Senior Teacher</option>
                                             <option value="8">Assistant Teacher</option>
+                                            <option value="9">Muallim</option>
+                                            <option value="10">Assistant Muallim</option>
+                                            <option value="11">Lecturer (Fazil/Kamil)</option>
+                                            <option value="12">Hafiz & Hafezia Instructor</option>
+                                            <option value="13">Arabic Teacher</option>
+                                            <option value="14">Quran Teacher</option>
+                                            <option value="14">Hadith Teacher</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -161,8 +168,8 @@ New Profile
                                         <input type="text" name="mpoIndex" placeholder="Enter MPO Index" class="form-control">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>PDO ID</label>
-                                        <input type="text" name="pdoId" placeholder="Enter PDO ID" class="form-control">
+                                        <label>PDS ID</label>
+                                        <input type="text" name="pdsId" placeholder="Enter PDS ID" class="form-control">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group mg-t-30">
                                         <label class="text-dark-medium">Avatar (150px X 150px)</label>

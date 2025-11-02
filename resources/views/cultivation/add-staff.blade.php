@@ -4,7 +4,7 @@ New Profile
 @endsection
 @section('backIndex')
 @php
-    $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
+    $serverData = \App\Models\ServerConfig::latest('id')->first();
     if(!empty($serverData)):
         $serverId           = $serverData->id;
         $insName            = $serverData->institueName;
@@ -91,11 +91,26 @@ New Profile
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Designation *</label>
                                         <select class="select2" name="designation" required>
-                                            <option value="">Select *</option>
-                                            <option value="1">Principal</option>
-                                            <option value="2">Vice Principal</option>
-                                            <option value="3">Teacher</option>
-                                            <option value="4">Staff</option>
+                                            <option value="1">Administrative Officer</option>
+                                            <option value="2">Office Assistant-cum-Computer Operator</option>
+                                            <option value="3">Accounts Assistant</option>
+                                            <option value="4">Office Assistant</option>
+                                            <option value="5">Registrar</option>
+                                            <option value="6">Librarian</option>
+                                            <option value="7">Assistant Librarian</option>
+                                            <option value="7">IT Officer / System Admin / ICT Technician</option>
+                                            <option value="8">Data Entry Operator</option>
+                                            <option value="9">Lab Assistant / Lab Attendant</option>
+                                            <option value="10">Sports Instructor / Coach</option>
+                                            <option value="11">Music Teacher / Art Teacher</option>
+                                            <option value="12">Hostel Superintendent / Hostel Warden</option>
+                                            <option value="13">Office Peon / Office Assistant</option>
+                                            <option value="14">MLSS</option>
+                                            <option value="15">Security Guard</option>
+                                            <option value="16">Gatekeeper</option>
+                                            <option value="17">Gardener</option>
+                                            <option value="18">Cleaner / Ayah</option>
+                                            <option value="19">Driver</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">

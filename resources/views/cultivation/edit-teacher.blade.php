@@ -87,18 +87,9 @@ Edit Profile
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Gender *</label>
                                         <select class="select2" name="gender">
-                                            <option value="{{ $profileData->gender }}">
-                                                @if($profileData->gender==1)
-                                                Male
-                                                @elseif($profileData->gender==2)
-                                                Female
-                                                @else
-                                                Others
-                                                @endif
-                                            </option>
-                                            <option value="1">Male</option>
-                                            <option value="2">Female</option>
-                                            <option value="3">Others</option>
+                                            <option value="1" {{ $profileData->gender == 1 ? 'selected' : '' }}>Male</option>
+                                            <option value="2" {{ $profileData->gender == 2 ? 'selected' : '' }}>Female</option>
+                                            <option value="3" {{ $profileData->gender == 3 ? 'selected' : '' }}>Others</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -117,6 +108,12 @@ Edit Profile
                                             <option value="6" {{ $profileData->designation == 6 ? 'selected' : '' }}>Assistant Head Master</option>
                                             <option value="7" {{ $profileData->designation == 7 ? 'selected' : '' }}>Senior Teacher</option>
                                             <option value="8" {{ $profileData->designation == 8 ? 'selected' : '' }}>Assistant Teacher</option>
+                                            <option value="9" {{ $profileData->designation == 9 ? 'selected' : '' }}>Muallim</option>
+                                            <option value="10" {{ $profileData->designation == 10 ? 'selected' : '' }}>Assistant Muallim</option>
+                                            <option value="11" {{ $profileData->designation == 11 ? 'selected' : '' }}>Lecturer (Fazil/Kamil)</option>
+                                            <option value="12" {{ $profileData->designation == 12 ? 'selected' : '' }}>Hafiz & Hafezia Instructor</option>
+                                            <option value="13" {{ $profileData->designation == 13 ? 'selected' : '' }}>Arabic Teacher</option>
+                                            <option value="14">Hadith Teacher</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -126,57 +123,24 @@ Edit Profile
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Blood Group *</label>
                                         <select class="select2" name="blGroup">
-                                            <option value="{{ $profileData->blGroup }}">
-                                                @if($profileData->blGroup==1)
-                                                A+
-                                                @elseif($profileData->blGroup==2)
-                                                A-
-                                                @elseif($profileData->blGroup==3)
-                                                B+
-                                                @elseif($profileData->blGroup==4)
-                                                B-
-                                                @elseif($profileData->blGroup==5)
-                                                O+
-                                                @elseif($profileData->blGroup==6)
-                                                O-
-                                                @elseif($profileData->blGroup==7)
-                                                AB+
-                                                @else
-                                                AB-
-                                                @endif
-                                            </option>
-                                            <option value="">Select *</option>
-                                            <option value="1">A+</option>
-                                            <option value="2">A-</option>
-                                            <option value="3">B+</option>
-                                            <option value="4">B-</option>
-                                            <option value="5">O+</option>
-                                            <option value="6">O-</option>
-                                            <option value="7">AB+</option>
-                                            <option value="8">AB-</option>
+                                            <option value="1" {{ $profileData->blGroup == 1 ? 'selected' : '' }}>A+</option>
+                                            <option value="2" {{ $profileData->blGroup == 2 ? 'selected' : '' }}>A-</option>
+                                            <option value="3" {{ $profileData->blGroup == 3 ? 'selected' : '' }}>B+</option>
+                                            <option value="4" {{ $profileData->blGroup == 4 ? 'selected' : '' }}>B-</option>
+                                            <option value="5" {{ $profileData->blGroup == 5 ? 'selected' : '' }}>O+</option>
+                                            <option value="6" {{ $profileData->blGroup == 6 ? 'selected' : '' }}>O-</option>
+                                            <option value="7" {{ $profileData->blGroup == 7 ? 'selected' : '' }}>AB+</option>
+                                            <option value="8" {{ $profileData->blGroup == 8 ? 'selected' : '' }}>AB-</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Religion *</label>
                                         <select class="select2" name="religion">
-                                            <option value="{{ $profileData->religion }}">
-                                                @if($profileData->religion==1)
-                                                Islam
-                                                @elseif($profileData->religion==2)
-                                                Hindu
-                                                @elseif($profileData->religion==3)
-                                                Christian
-                                                @elseif($profileData->religion==4)
-                                                Buddish
-                                                @else
-                                                Others
-                                                @endif</option>
-                                            <option value="">Select *</option>
-                                            <option value="1">Islam</option>
-                                            <option value="2">Hindu</option>
-                                            <option value="3">Christian</option>
-                                            <option value="4">Buddish</option>
-                                            <option value="5">Others</option>
+                                            <option value="1" {{ $profileData->religion == 1 ? 'selected' : '' }}>Islam</option>
+                                            <option value="2" {{ $profileData->religion == 2 ? 'selected' : '' }}>Hindu</option>
+                                            <option value="3" {{ $profileData->religion == 3 ? 'selected' : '' }}>Christian</option>
+                                            <option value="4" {{ $profileData->religion == 4 ? 'selected' : '' }}>Buddish</option>
+                                            <option value="5" {{ $profileData->religion == 5 ? 'selected' : '' }}>Others</option>
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -200,52 +164,51 @@ Edit Profile
                                         <input type="text" name="mpoIndex" placeholder="Enter MPO Index" class="form-control" value="{{ $profileData->mpoIndex }}">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>PDO ID</label>
-                                        <input type="text" name="pdoId" placeholder="Enter PDO ID" class="form-control" value="{{ $profileData->pdoId }}">
+                                        <label>PDS ID</label>
+                                        <input type="text" name="pdsId" placeholder="Enter PDS ID" class="form-control" value="{{ $profileData->pdsId }}">
                                     </div>
                                     
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Rnaking *</label>
+                                        <label>Ranking *</label>
                                         <select class="select2" name="rank">
-                                            <option value="{{ $profileData->rank }}">{{ $profileData->rank }}</option>
-                                            <option value="1">1</option>
-                                            <option value="2">2</option>
-                                            <option value="3">3</option>
-                                            <option value="4">4</option>
-                                            <option value="5">5</option>
-                                            <option value="6">6</option>
-                                            <option value="7">7</option>
-                                            <option value="8">8</option>
-                                            <option value="9">9</option>
-                                            <option value="10">10</option>
-                                            <option value="11">11</option>
-                                            <option value="12">12</option>
-                                            <option value="13">13</option>
-                                            <option value="14">14</option>
-                                            <option value="15">15</option>
-                                            <option value="16">16</option>
-                                            <option value="17">17</option>
-                                            <option value="18">18</option>
-                                            <option value="19">19</option>
-                                            <option value="20">20</option>
-                                            <option value="21">21</option>
-                                            <option value="23">23</option>
-                                            <option value="24">24</option>
-                                            <option value="25">25</option>
-                                            <option value="26">26</option>
-                                            <option value="27">27</option>
-                                            <option value="28">28</option>
-                                            <option value="29">29</option>
-                                            <option value="30">30</option>
-                                            <option value="31">31</option>
-                                            <option value="32">32</option>
-                                            <option value="34">34</option>
-                                            <option value="35">35</option>
-                                            <option value="36">36</option>
-                                            <option value="37">37</option>
-                                            <option value="38">38</option>
-                                            <option value="39">39</option>
-                                            <option value="40">40</option>
+                                            <option value="1" {{ $profileData->rank == 1 ? 'selected' : '' }}>1</option>
+                                            <option value="2" {{ $profileData->rank == 2 ? 'selected' : '' }}>2</option>
+                                            <option value="3" {{ $profileData->rank == 3 ? 'selected' : '' }}>3</option>
+                                            <option value="4" {{ $profileData->rank == 4 ? 'selected' : '' }}>4</option>
+                                            <option value="5" {{ $profileData->rank == 5 ? 'selected' : '' }}>5</option>
+                                            <option value="6" {{ $profileData->rank == 6 ? 'selected' : '' }}>6</option>
+                                            <option value="7" {{ $profileData->rank == 7 ? 'selected' : '' }}>7</option>
+                                            <option value="8" {{ $profileData->rank == 8 ? 'selected' : '' }}>8</option>
+                                            <option value="9" {{ $profileData->rank == 9 ? 'selected' : '' }}>9</option>
+                                            <option value="10" {{ $profileData->rank == 10 ? 'selected' : '' }}>10</option>
+                                            <option value="11" {{ $profileData->rank == 11 ? 'selected' : '' }}>11</option>
+                                            <option value="12" {{ $profileData->rank == 12 ? 'selected' : '' }}>12</option>
+                                            <option value="13" {{ $profileData->rank == 13 ? 'selected' : '' }}>13</option>
+                                            <option value="14" {{ $profileData->rank == 14 ? 'selected' : '' }}>14</option>
+                                            <option value="15" {{ $profileData->rank == 15 ? 'selected' : '' }}>15</option>
+                                            <option value="16" {{ $profileData->rank == 16 ? 'selected' : '' }}>16</option>
+                                            <option value="17" {{ $profileData->rank == 17 ? 'selected' : '' }}>17</option>
+                                            <option value="18" {{ $profileData->rank == 18 ? 'selected' : '' }}>18</option>
+                                            <option value="19" {{ $profileData->rank == 19 ? 'selected' : '' }}>19</option>
+                                            <option value="20" {{ $profileData->rank == 20 ? 'selected' : '' }}>20</option>
+                                            <option value="21" {{ $profileData->rank == 21 ? 'selected' : '' }}>21</option>
+                                            <option value="23" {{ $profileData->rank == 23 ? 'selected' : '' }}>23</option>
+                                            <option value="24" {{ $profileData->rank == 24 ? 'selected' : '' }}>24</option>
+                                            <option value="25" {{ $profileData->rank == 25 ? 'selected' : '' }}>25</option>
+                                            <option value="26" {{ $profileData->rank == 26 ? 'selected' : '' }}>26</option>
+                                            <option value="27" {{ $profileData->rank == 27 ? 'selected' : '' }}>27</option>
+                                            <option value="28" {{ $profileData->rank == 28 ? 'selected' : '' }}>28</option>
+                                            <option value="29" {{ $profileData->rank == 29 ? 'selected' : '' }}>29</option>
+                                            <option value="30" {{ $profileData->rank == 30 ? 'selected' : '' }}>30</option>
+                                            <option value="31" {{ $profileData->rank == 31 ? 'selected' : '' }}>31</option>
+                                            <option value="32" {{ $profileData->rank == 32 ? 'selected' : '' }}>32</option>
+                                            <option value="34" {{ $profileData->rank == 34 ? 'selected' : '' }}>34</option>
+                                            <option value="35" {{ $profileData->rank == 35 ? 'selected' : '' }}>35</option>
+                                            <option value="36" {{ $profileData->rank == 36 ? 'selected' : '' }}>36</option>
+                                            <option value="37" {{ $profileData->rank == 37 ? 'selected' : '' }}>37</option>
+                                            <option value="38" {{ $profileData->rank == 38 ? 'selected' : '' }}>38</option>
+                                            <option value="39" {{ $profileData->rank == 39 ? 'selected' : '' }}>39</option>
+                                            <option value="40" {{ $profileData->rank == 40 ? 'selected' : '' }}>40</option>
                                         </select>
                                     </div>
                                     <div class="col-12 form-group mg-t-8">
