@@ -191,6 +191,18 @@ Edit Profile
                                         <label>Address</label>
                                         <input type="text" class="form-control" placeholder="Teacher full address" name="address" value="{{ $profileData->address }}">
                                     </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
+                                        <label>Address</label>
+                                        <input type="text" class="form-control" placeholder="Enter full address" value="{{ $profileData->address }}" name="address">
+                                    </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
+                                        <label>MPO Index</label>
+                                        <input type="text" name="mpoIndex" placeholder="Enter MPO Index" class="form-control" value="{{ $profileData->mpoIndex }}">
+                                    </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
+                                        <label>PDO ID</label>
+                                        <input type="text" name="pdoId" placeholder="Enter PDO ID" class="form-control" value="{{ $profileData->pdoId }}">
+                                    </div>
                                     
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Rnaking *</label>

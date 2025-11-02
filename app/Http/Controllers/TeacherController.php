@@ -36,21 +36,24 @@ class TeacherController extends Controller
                 $teacherProfile->avatar        = $newTeacherAvatar; 
             endif;
 
-            $teacherProfile->firstName     = $requ->firstName;
-            $teacherProfile->lastName      = $requ->lastName;
-            $teacherProfile->fathersName   = $requ->fathersName;
-            $teacherProfile->mothersName   = $requ->mothersName;
-            $teacherProfile->address       = $requ->address;
-            $teacherProfile->gender        = $requ->gender;
-            $teacherProfile->dob           = $requ->dob;
-            $teacherProfile->joinDate      = $requ->joinDate;
-            $teacherProfile->email         = $requ->email;
-            $teacherProfile->mobile        = $requ->mobile;
-            $teacherProfile->blGroup       = $requ->blGroup;
-            $teacherProfile->designation   = $requ->designation;
-            $teacherProfile->religion      = $requ->religion;
-            $teacherProfile->rank      = $requ->rank;
-            $teacherProfile->teacherId     = $requ->teacherId;
+            $teacherProfile->teacherId = $requ->teacherId;
+            $teacherProfile->firstName = $requ->firstName;
+            $teacherProfile->lastName = $requ->lastName;
+            $teacherProfile->fathersName = $requ->fathersName;
+            $teacherProfile->mothersName = $requ->mothersName;
+            $teacherProfile->gender = $requ->gender;
+            $teacherProfile->dob = $requ->dob;
+            $teacherProfile->designation = $requ->designation;
+            $teacherProfile->blGroup = $requ->blGroup;
+            $teacherProfile->religion = $requ->religion;
+            $teacherProfile->email = $requ->email;
+            $teacherProfile->joinDate = $requ->joinDate;
+            $teacherProfile->mobile = $requ->mobile;
+            $teacherProfile->address = $requ->address;
+            $teacherProfile->mpoIndex = $requ->mpoIndex;
+            $teacherProfile->pdoId = $requ->pdoId;
+            $teacherProfile->rank = $requ->rank;
+
             $teacherProfile->save();
 
             return back()->with('success','Owo Success! Profile created successfully');
@@ -77,21 +80,23 @@ class TeacherController extends Controller
             return back()->with('error','Opps Sorry! Profile not found for update');
         else:
             // return 1;
-            $teacherProfile->firstName     = $requ->firstName;
-            $teacherProfile->lastName      = $requ->lastName;
-            $teacherProfile->fathersName   = $requ->fathersName;
-            $teacherProfile->mothersName   = $requ->mothersName;
-            $teacherProfile->address       = $requ->address;
-            $teacherProfile->gender        = $requ->gender;
-            $teacherProfile->dob           = $requ->dob;
-            $teacherProfile->joinDate      = $requ->joinDate;
-            $teacherProfile->email         = $requ->email;
-            $teacherProfile->mobile        = $requ->mobile;
-            $teacherProfile->blGroup       = $requ->blGroup;
-            $teacherProfile->designation   = $requ->designation;
-            $teacherProfile->religion      = $requ->religion;
-            $teacherProfile->rank      = $requ->rank;
-            $teacherProfile->teacherId     = $requ->teacherId;
+            $teacherProfile->teacherId = $requ->teacherId;
+            $teacherProfile->firstName = $requ->firstName;
+            $teacherProfile->lastName = $requ->lastName;
+            $teacherProfile->fathersName = $requ->fathersName;
+            $teacherProfile->mothersName = $requ->mothersName;
+            $teacherProfile->gender = $requ->gender;
+            $teacherProfile->dob = $requ->dob;
+            $teacherProfile->designation = $requ->designation;
+            $teacherProfile->blGroup = $requ->blGroup;
+            $teacherProfile->religion = $requ->religion;
+            $teacherProfile->email = $requ->email;
+            $teacherProfile->joinDate = $requ->joinDate;
+            $teacherProfile->mobile = $requ->mobile;
+            $teacherProfile->address = $requ->address;
+            $teacherProfile->mpoIndex = $requ->mpoIndex;
+            $teacherProfile->pdoId = $requ->pdoId;
+            $teacherProfile->rank = $requ->rank;
             $teacherProfile->save();
 
             return back()->with('success','Owo Success! Profile updated successfully');
