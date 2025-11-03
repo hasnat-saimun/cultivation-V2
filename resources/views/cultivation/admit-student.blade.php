@@ -38,9 +38,12 @@ New Admission
                         <h3>Add New Students</h3>
                     </div>
                     <!-- Admit Form Area Start Here -->
-                    <div class="card height-auto">
+                        <div class="card height-auto">
                             <div class="card-header bg-light">
                                 <a href="{{route('studentList')}}" class="btn btn-success">Student List</a>
+                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#bulkUploadModal">
+                                    Bulk Upload Students
+                                </button>
                             </div>
                         <div class="card-body">
                             <div class="row">
@@ -248,4 +251,39 @@ New Admission
                         </div>
                     </div>
                 </div>
+                <!-- Add this modal before -->
+<!-- Bulk Upload Modal -->
+<div class="modal fade" id="bulkUploadModal" tabindex="-1" role="dialog" aria-labelledby="bulkUploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bulkUploadModalLabel">Bulk Upload Students</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="{{ route('bulkUploadStudents') }}" method="POST" enctype="multipart/form-data">
+                @csrf
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Upload CSV/Excel File</label>
+                        <input type="file" name="student_file" class="form-control-file" accept=".csv,.xlsx,.xls" required>
+                        <small class="form-text text-muted">
+                            Upload CSV or Excel file with student data. 
+                            <a href="{{ route('downloadStudentTemplate') }}" class="text-primary">Download Template</a>
+                        </small>
+                    </div>
+                    <div class="alert alert-info">
+                        <strong>File Format:</strong><br>
+                        Columns: Full Name, Sure Name, Father Name, Mother Name, Gender, DOB, Blood Group, Religion, Email, Phone, Address, Session, Class, Department, Section, Roll, Guardian, Guardian Phone, Relation
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary">Upload Students</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endsection

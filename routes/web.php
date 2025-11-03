@@ -74,6 +74,9 @@ Route::post('/register',[
     'adminRegister'
 ])->name('adminRegister');
 
+Route::post('/bulk-upload-students', [StudentController::class, 'bulkUploadStudents'])->name('bulkUploadStudents');
+Route::get('/download-student-template', [StudentController::class, 'downloadStudentTemplate'])->name('downloadStudentTemplate');
+
 
 Route::middleware(['adminGuard'])->group (function(){
     
