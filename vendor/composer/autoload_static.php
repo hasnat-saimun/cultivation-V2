@@ -582,6 +582,7 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
     public static $classMap = array (
         'App\\Console\\Kernel' => __DIR__ . '/../..' . '/app/Console/Kernel.php',
         'App\\Exceptions\\Handler' => __DIR__ . '/../..' . '/app/Exceptions/Handler.php',
+        'App\\Exports\\StudentTemplateExport' => __DIR__ . '/../..' . '/app/Exports/StudentTemplateExport.php',
         'App\\Http\\Controllers\\AcademicController' => __DIR__ . '/../..' . '/app/Http/Controllers/AcademicController.php',
         'App\\Http\\Controllers\\BackofficeController' => __DIR__ . '/../..' . '/app/Http/Controllers/BackofficeController.php',
         'App\\Http\\Controllers\\ClassController' => __DIR__ . '/../..' . '/app/Http/Controllers/ClassController.php',
@@ -598,6 +599,7 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
         'App\\Http\\Controllers\\PlacementCellController' => __DIR__ . '/../..' . '/app/Http/Controllers/PlacementCellController.php',
         'App\\Http\\Controllers\\SessionController' => __DIR__ . '/../..' . '/app/Http/Controllers/SessionController.php',
         'App\\Http\\Controllers\\StaffController' => __DIR__ . '/../..' . '/app/Http/Controllers/StaffController.php',
+        'App\\Http\\Controllers\\StudentController' => __DIR__ . '/../..' . '/app/Http/Controllers/StudentController.php',
         'App\\Http\\Controllers\\SubjectController' => __DIR__ . '/../..' . '/app/Http/Controllers/SubjectController.php',
         'App\\Http\\Controllers\\TeacherController' => __DIR__ . '/../..' . '/app/Http/Controllers/TeacherController.php',
         'App\\Http\\Controllers\\admissionController' => __DIR__ . '/../..' . '/app/Http/Controllers/admissionController.php',
@@ -625,6 +627,7 @@ class ComposerStaticInit626b9e7ddd47fb7eff9aaa53cce0c9ad
         'App\\Http\\Middleware\\VerifyCsrfToken' => __DIR__ . '/../..' . '/app/Http/Middleware/VerifyCsrfToken.php',
         'App\\Http\\Middleware\\adminGuard' => __DIR__ . '/../..' . '/app/Http/Middleware/adminGuard.php',
         'App\\Http\\Middleware\\cultivationAdmin' => __DIR__ . '/../..' . '/app/Http/Middleware/cultivationAdmin.php',
+        'App\\Imports\\StudentsImport' => __DIR__ . '/../..' . '/app/Imports/StudentsImport.php',
         'App\\Models\\ClassRoutine' => __DIR__ . '/../..' . '/app/Models/ClassRoutine.php',
         'App\\Models\\Classes' => __DIR__ . '/../..' . '/app/Models/Classes.php',
         'App\\Models\\CultivationAdmin' => __DIR__ . '/../..' . '/app/Models/CultivationAdmin.php',

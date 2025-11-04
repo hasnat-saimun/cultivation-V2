@@ -8,6 +8,7 @@ $baseDir = dirname($vendorDir);
 return array(
     'App\\Console\\Kernel' => $baseDir . '/app/Console/Kernel.php',
     'App\\Exceptions\\Handler' => $baseDir . '/app/Exceptions/Handler.php',
+    'App\\Exports\\StudentTemplateExport' => $baseDir . '/app/Exports/StudentTemplateExport.php',
     'App\\Http\\Controllers\\AcademicController' => $baseDir . '/app/Http/Controllers/AcademicController.php',
     'App\\Http\\Controllers\\BackofficeController' => $baseDir . '/app/Http/Controllers/BackofficeController.php',
     'App\\Http\\Controllers\\ClassController' => $baseDir . '/app/Http/Controllers/ClassController.php',
@@ -24,6 +25,7 @@ return array(
     'App\\Http\\Controllers\\PlacementCellController' => $baseDir . '/app/Http/Controllers/PlacementCellController.php',
     'App\\Http\\Controllers\\SessionController' => $baseDir . '/app/Http/Controllers/SessionController.php',
     'App\\Http\\Controllers\\StaffController' => $baseDir . '/app/Http/Controllers/StaffController.php',
+    'App\\Http\\Controllers\\StudentController' => $baseDir . '/app/Http/Controllers/StudentController.php',
     'App\\Http\\Controllers\\SubjectController' => $baseDir . '/app/Http/Controllers/SubjectController.php',
     'App\\Http\\Controllers\\TeacherController' => $baseDir . '/app/Http/Controllers/TeacherController.php',
     'App\\Http\\Controllers\\admissionController' => $baseDir . '/app/Http/Controllers/admissionController.php',
@@ -51,6 +53,7 @@ return array(
     'App\\Http\\Middleware\\VerifyCsrfToken' => $baseDir . '/app/Http/Middleware/VerifyCsrfToken.php',
     'App\\Http\\Middleware\\adminGuard' => $baseDir . '/app/Http/Middleware/adminGuard.php',
     'App\\Http\\Middleware\\cultivationAdmin' => $baseDir . '/app/Http/Middleware/cultivationAdmin.php',
+    'App\\Imports\\StudentsImport' => $baseDir . '/app/Imports/StudentsImport.php',
     'App\\Models\\ClassRoutine' => $baseDir . '/app/Models/ClassRoutine.php',
     'App\\Models\\Classes' => $baseDir . '/app/Models/Classes.php',
     'App\\Models\\CultivationAdmin' => $baseDir . '/app/Models/CultivationAdmin.php',
