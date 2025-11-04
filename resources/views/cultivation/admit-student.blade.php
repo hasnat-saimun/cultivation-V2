@@ -21,8 +21,12 @@ New Admission
         $staffIdPrefix      = "SBCSTFID";
     endif;
     
-    // Remove the ID generation logic from here
+    // Generate student ID here
+    $lastRecord = \App\Models\newAdmission::latest('id')->first();
+    $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
     $currentYear = date('Y');
+    $sixDigitId = str_pad($nextId, 6, "0", STR_PAD_LEFT);
+    $stdId = $currentYear . $sixDigitId;
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
@@ -78,7 +82,7 @@ New Admission
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Admission ID</label>
-                                        <input type="text" name="stdId" value="Auto Generated" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
+                                        <input type="text" name="stdId" value="{{ $stdId }}" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
