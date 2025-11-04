@@ -21,16 +21,8 @@ New Admission
         $staffIdPrefix      = "SBCSTFID";
     endif;
     
-    // Get the last record ID from newAdmission table
-    $lastRecord = \App\Models\newAdmission::latest('id')->first();
-    
-    // If no records exist, start from 1, otherwise increment by 1
-    $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
-    
-    // Format: running year + six digit system (padded with zeros)
+    // Remove the ID generation logic from here
     $currentYear = date('Y');
-    $sixDigitId = str_pad($nextId, 6, "0", STR_PAD_LEFT);
-    $stdId = $currentYear . $sixDigitId;
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
@@ -86,7 +78,7 @@ New Admission
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Admission ID</label>
-                                        <input type="text" name="stdId" value="{{ $stdId }}" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
+                                        <input type="text" name="stdId" value="Auto Generated" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
@@ -180,13 +172,18 @@ New Admission
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Class *</label>
                                         <select class="select2" name="className" >
-                                            <option value="">Select *</option>@if(!empty($classDetails) && count($classDetails)>0)
+                                            <option value="">Select *</option>
+                                            @php 
+                                                $classDetails = \App\Models\classManage::all();
+                                            @endphp
+                                            @if(!empty($classDetails) && count($classDetails)>0)
                                             @foreach($classDetails as $cd)
                                                 <option value="{{ $cd->id }}">{{ $cd->className}}</option>
                                                 @endforeach
                                             @endif
                                         </select>
-                                    </div><div class="col-xl-3 col-lg-6 col-12 form-group">
+                                    </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Department *</label>
                                         <select class="select2" name="departmentName" >
                                             <option value="">Select *</option>
@@ -204,6 +201,9 @@ New Admission
                                         <label>Section/Group *</label>
                                         <select class="select2" name="sectionName" >
                                             <option value="">Select *</option>
+                                            @php 
+                                                $sectionDatails = \App\Models\sectionManage::all();
+                                            @endphp
                                             @if(!empty($sectionDatails) && count($sectionDatails)>0)
                                             @foreach($sectionDatails as $sec)
                                             <option value="{{$sec->id}}">{{$sec->section}}</option>
