@@ -50,8 +50,8 @@ class StaffController extends Controller
             $staffProfile->blGroup       = $requ->blGroup;
             $staffProfile->designation   = $requ->designation;
             $staffProfile->religion      = $requ->religion;
-            $staffProfile->rank      = $requ->rank;
-            $staffProfile->staffId     = $requ->staffId;
+            $staffProfile->rank           = $requ->rank;
+            $staffProfile->staffId        = $requ->staffId;
             $staffProfile->save();
 
             return back()->with('success','Owo Success! Profile created successfully');

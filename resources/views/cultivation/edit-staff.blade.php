@@ -150,7 +150,7 @@ Edit Profile
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>E-Mail</label>
-                                        <input type="email" name="teacherEmail" placeholder="Enter email" class="form-control" value="{{ $profileData->email }}">
+                                        <input type="email" name="staffMail" placeholder="Enter email" class="form-control" value="{{ $profileData->email }}">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Phone</label>
