@@ -14,19 +14,23 @@ Institute Info
                         $sectionData = \App\Models\sectionManage::find($student->sectionName);
                     endif;
                     $sumAmount = $feesList->sum('amount');
+                    // Prefer explicit report context passed from controller
+                    $reportType = $reportType ?? null;
+                    $betweenText = null;
+                    if($reportType === 'multiple' && !empty($selectedDates)){
+                        $sorted = collect($selectedDates)->sort()->values();
+                        $minDate = \Carbon\Carbon::parse($sorted->first())->format('d-M-Y');
+                        $maxDate = \Carbon\Carbon::parse($sorted->last())->format('d-M-Y');
+                        $betweenText = "Between {$minDate} to {$maxDate}";
+                    } elseif($reportType === 'range' && !empty($fromDate) && !empty($toDate)){
+                        $minDate = \Carbon\Carbon::parse($fromDate)->format('d-M-Y');
+                        $maxDate = \Carbon\Carbon::parse($toDate)->format('d-M-Y');
+                        $betweenText = "Between {$minDate} to {$maxDate}";
+                    }
                 @endphp
                 @if(!empty($student))
                 <div class="receipt-main col-12 mx-auto">
-                    <div class="receipt-header row">
-                        <div class="col-xs-12 col-sm-12 col-md-12 text-center mb-3">
-                            <div class="receipt-right">
-                                <h5>Sonar Bangla College</h5>
-                                <p>Gubinathpur,Burichong,Comilla</p>
-                                <p> <i class="fa fa-phone"></i> +800 17550-48017</p>
-                                <p> <i class="fa fa-envelope-o"></i> sonarbangla003@gmail.com</p>
-                            </div>
-                        </div>
-                    </div>
+                    @include('components.institute-header')
                     <div class="receipt-header receipt-header-mid row">
                         <div class="col-xs-8 col-sm-8 col-md-8 text-left">
                             <div class="receipt-right">
@@ -60,6 +64,9 @@ Institute Info
                                 <p><b>Date : </b> {{date('d-M-Y')}}</p>
                                 <p><b>Mobile : </b> {{ $student->phone }}</p>
                                 <p><b>Email : </b> {{ $student->mail }}</p>
+                                @if(!empty($betweenText))
+                                <p><b>Report: </b> {{ $betweenText }}</p>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -67,7 +74,6 @@ Institute Info
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
-                                    <th>sl.</th>
                                     <th>Date</th>
                                     <th>Description</th>
                                     <th>Amount</th>
@@ -87,14 +93,13 @@ Institute Info
                                         endif;
                                     @endphp
                                     <tr>
-                                        <td></td>
                                         <td>{{ $fl->created_at->format('Y-m-d') }}</td>
                                         <td >{{ $feesName }}</td>
                                         <td > {{ $amount }}/-</td>
                                     </tr>
                                 @endforeach
                                 <tr>
-                                    <td class="text-right" colspan="3">
+                                    <td class="text-right" colspan="2">
                                         <h2><strong>Total: </strong></h2>
                                     </td>
                                     <td class="text-left text-danger">
@@ -113,18 +118,19 @@ Institute Info
                     </div>
 
                     <div class="receipt-header receipt-header-mid receipt-footer row ">
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-start mt-5">
+                            <div class="col-xs-6 col-sm-6 col-md-6 text-left mt-5">
                                     <p><u>Gurdian Sign</u></p>
                             </div>
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-end mt-5">
+                            <div class="col-xs-6 col-sm-6 col-md-6 text-right mt-5">
                                     <p><u>Cash Incharge</u></p>
                             </div>
                     </div>
                     <div class="row text-center">
-                        <div class=" col-2  d-grid gap-2 mt-5">
-                        <div class=" col-2  d-grid gap-2 mt-5">
-                        <button class="btn btn-success btn-lg my-4 d-print-none" onclick="printDiv('report')"><i class="fa-regular fa-print"></i> Print</button>
+                        <div class="col-2 d-grid gap-2 mt-5">
+                            <a href="{{ route('feesReport') }}" class="btn btn-secondary btn-lg my-4 d-print-none">&larr; Go Back</a>
                         </div>
+                        <div class="col-2 d-grid gap-2 mt-5">
+                            <button class="btn btn-success btn-lg my-4 d-print-none" onclick="printDiv('report')"><i class="fa-regular fa-print"></i> Print</button>
                         </div>
                     </div>
                 </div>

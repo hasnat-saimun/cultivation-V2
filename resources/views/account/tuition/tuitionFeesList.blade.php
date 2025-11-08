@@ -7,9 +7,18 @@ Tuition Fee List
     <div class="col-10 mx-auto">
         <div class="row">
             <div class="card card-body  border  ">
-                <table id="myTable"class="  table table-striped table-hover shadow-lg p-3 rounded" >
+                <form method="POST" action="{{ route('bulkDeleteTuitionFees') }}" id="bulkDeleteForm">
+                    @csrf
+                    <div class="d-flex justify-content-between mb-2">
+                        <div>
+                            <button type="submit" class="btn btn-danger btn-sm" id="bulkDeleteBtn" disabled onclick="return confirm('Delete selected records?')">Delete Selected</button>
+                        </div>
+                        <div class="small text-muted">Select multiple fee records to delete in one action.</div>
+                    </div>
+                <table id="myTable" class="table table-striped table-hover shadow-lg p-3 rounded" >
                     <thead class="table-info">
                         <tr>
+                        <th><input type="checkbox" id="selectAll"></th>
                         <th>Date</th>
                         <th>Student ID</th>
                         <th>Fees Type</th>
@@ -29,6 +38,7 @@ Tuition Fee List
                             endif;
                         @endphp
                         <tr>
+                            <td><input type="checkbox" class="row-check" name="feeIds[]" value="{{ $tfdData->id }}"></td>
                             <td>{{ $tfdData->created_at->format('Y-m-d') }}</td>
                             <td>{{ $tfdData->stdId }}</td>
                             <td>{{ $feesName }}</td>
@@ -44,9 +54,29 @@ Tuition Fee List
                         @endif
                     </tbody>
                 </table>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const selectAll = document.getElementById('selectAll');
+    const checks = document.querySelectorAll('.row-check');
+    const btn = document.getElementById('bulkDeleteBtn');
+    function updateBtn(){
+        const any = Array.from(document.querySelectorAll('.row-check:checked')).length>0;
+        btn.disabled = !any;
+    }
+    if(selectAll){
+        selectAll.addEventListener('change', function(){
+            const checked = this.checked;
+            document.querySelectorAll('.row-check').forEach(c=>{c.checked=checked;});
+            updateBtn();
+        });
+    }
+    checks.forEach(c=> c.addEventListener('change', updateBtn));
+});
+</script>
 @endsection

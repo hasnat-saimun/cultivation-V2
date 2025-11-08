@@ -20,17 +20,7 @@ New Fees Name
                 <form method="POST" class="card-body form form-group" action="{{route('saveFees')}}">
                     @csrf
                     <div class="row">
-                        <div class="col-6 mb-2">
-                            <label for="class" class="form-label ">Class Name</label>
-                            <select class="select2" name="class" >
-                                <option value="">Select *</option>
-                                @if(!empty($classList) && count($classList)>0)
-                                    @foreach($classList as $cd)
-                                        <option value="{{ $cd->id }}">{{ $cd->className}}</option>
-                                    @endforeach
-                                @endif
-                            </select>
-                        </div>
+                        <!-- Class selection removed -->
                         <div class="col-6 mb-2">
                             <label for="feesName" class="form-label ">Fees Type</label>
                             <input type="text" class="form-control form-control-sm" id="feesName" name="feesName" placeholder="Enter the fees name" required>
@@ -57,7 +47,7 @@ New Fees Name
                     <table class=" table table-striped table-hover  shadow-lg  rounded" >
                         <thead class="table-info">
                             <tr>
-                            <th>Class</th>
+                            <!-- Class column removed -->
                             <th>Fees Name</th>
                             <th>Amount</th>
                             <th>Action</th>
@@ -66,15 +56,7 @@ New Fees Name
                         <tbody class="">
                         @if(!empty($feesList) && count($feesList)>0)
                             @foreach($feesList as $fd)
-                        @php
-                        $classData  =\App\Models\classManage::find($fd->class);
-                        @endphp
                             <tr>
-                                @if(!empty($classData))
-                                <td>{{$classData->className}}</td>
-                                @else
-                                <td>-</td>
-                                @endif
                                 <td>{{$fd->feesName}}</td>
                                 <td>{{$fd->feesAmount}}</td>
                             <td>

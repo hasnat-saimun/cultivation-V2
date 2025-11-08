@@ -17,16 +17,7 @@ Report
                 @endphp
                 @if(!empty($stdData))
                 <div class="receipt-main col-8 mx-auto">
-                    <div class="receipt-header row">
-                        <div class="col-xs-12 col-sm-12 col-md-12 text-center mb-3">
-                            <div class="receipt-right">
-                                <h5>Sonar Bangla College</h5>
-                                <p>Gubinathpur,Burichong,Comilla</p>
-                                <p> <i class="fa fa-phone"></i> +800 17550-48017</p>
-                                <p> <i class="fa fa-envelope-o"></i> sonarbangla003@gmail.com</p>
-                            </div>
-                        </div>
-                    </div>
+                    @include('components.institute-header')
                     <div class="receipt-header receipt-header-mid row">
                         <div class="col-xs-8 col-sm-8 col-md-8 text-left">
                             <div class="receipt-right">
@@ -66,8 +57,7 @@ Report
                     </div>
                     @php
                         $amount = $singleView->amount;
-                        $vat = ($singleView->amount*10)/100;
-                        $totalAmount = $amount+$vat;
+                        $totalAmount = $amount;
                     @endphp
                     <div class="mb-4">
                         <table class="table table-bordered">
@@ -95,16 +85,10 @@ Report
                                         <p>
                                             <strong>Amount: </strong>
                                         </p>
-                                        <p>
-                                            <strong>Vat(10%): </strong>
-                                        </p>
                                     </td>
                                     <td>
                                         <p>
                                             <strong> {{ $amount }}/-</strong>
-                                        </p>
-                                        <p>
-                                            <strong> {{ $vat }}/-</strong>
                                         </p>
                                     </td>
                                 </tr>
@@ -123,10 +107,10 @@ Report
                     </div>
 
                     <div class="receipt-header receipt-header-mid receipt-footer row ">
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-start mt-5">
+                            <div class="col-xs-6 col-sm-6 col-md-6 text-left mt-5">
                                     <p><u>Gurdian Sign</u></p>
                             </div>
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-end mt-5">
+                            <div class="col-xs-6 col-sm-6 col-md-6 text-right mt-5">
                                     <p><u>Cash Incharge</u></p>
                             </div>
                     </div>

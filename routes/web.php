@@ -669,6 +669,10 @@ Route::middleware(['adminGuard'])->group (function(){
         tuitionController::class,   // tuition free list
         'tuitionFeeList'
     ])->name('tuitionFeeList');
+    Route::post('/tuition-fee/bulk-delete',[
+        tuitionController::class,
+        'bulkDeleteTuitionFees'
+    ])->name('bulkDeleteTuitionFees');
 
     Route::get('/tuition-fee-view/{id}',[
         tuitionController::class,   // tuition free view

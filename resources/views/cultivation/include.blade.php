@@ -67,6 +67,54 @@
             $(".alert").fadeTo(2000, 500).slideUp(500, function() {
                 $(".alert").slideUp(500);
             });
+            // Persistent open groups for cultivation full menu (only if fullMenu included)
+            const storageKey = 'cultivationSidebarOpenGroups';
+            let openGroups = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            function save(){ localStorage.setItem(storageKey, JSON.stringify(openGroups)); }
+            function apply(){
+                openGroups.forEach(id=>{
+                    const li = document.querySelector('li.sidebar-nav-item[data-group="'+id+'"]');
+                    if(li){
+                        li.classList.add('open');
+                        const sub = li.querySelector('ul.sub-group-menu');
+                        if(sub) sub.style.display='block';
+                        const a = li.querySelector('> a.nav-link');
+                        if(a) a.classList.add('active');
+                    }
+                });
+            }
+            const groups = document.querySelectorAll('.sidebar-menu-content li.sidebar-nav-item');
+            groups.forEach((li, idx)=>{
+                if(!li.dataset.group) li.dataset.group = 'cg'+idx;
+                const a = li.querySelector('> a.nav-link');
+                if(a){
+                    a.addEventListener('click', function(e){
+                        if(this.getAttribute('href')==='#'){
+                            e.preventDefault();
+                            const id = li.dataset.group;
+                            const sub = li.querySelector('ul.sub-group-menu');
+                            const open = li.classList.contains('open');
+                            if(open){
+                                li.classList.remove('open'); if(sub) sub.style.display='none';
+                                openGroups = openGroups.filter(g=>g!==id);
+                                this.classList.remove('active');
+                            }else{
+                                li.classList.add('open'); if(sub) sub.style.display='block';
+                                if(!openGroups.includes(id)) openGroups.push(id);
+                                this.classList.add('active');
+                            }
+                            save();
+                        }
+                    });
+                }
+            });
+            // record server-open groups
+            groups.forEach(li=>{
+                if(li.classList.contains('open')){
+                    const id = li.dataset.group; if(id && !openGroups.includes(id)) openGroups.push(id);
+                }
+            });
+            apply(); save();
         });
     </script>
     <!-- Plugins js -->

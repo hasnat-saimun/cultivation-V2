@@ -16,80 +16,66 @@ Edit Tuition Fee
                             {{session()->get('success')}}
                         </div>
                     @endif
+                    @if(session()->has('warning'))
+                        <div class="alert alert-warning">
+                            {{session()->get('warning')}}
+                        </div>
+                    @endif
         <form method="POST" class="card-body form form-group" action="{{route('updateTuitionFee')}}">
             @csrf
             <input type="hidden" name="tuitionFeeId" value="{{$editData->id}}">
             <div class="row mb-4">
-                <h4 class="text-bold">Tuition Fees Collection</h4>
+                <h4 class="text-bold">Edit Tuition Fee</h4>
             </div>
             <div class="row">
-            @php 
-                $sessionData  = \App\Models\sessionManage::find($stdData->sessName);
-                $classData  = \App\Models\classManage::find($stdData->className);
-                $sectionData  = \App\Models\sectionManage::find($stdData->sectionName);
-            @endphp
-                <div class="col-md-4 mb-2">
-                    <label for="session" class="form-label">Session Name</label>
-                    <select class="form-select select2 " id="session" name="session" aria-label="Default select example" required>
-                        @if(!empty($sessionData))
-                        <option value="{{$sessionData->id}}">{{$sessionData->session}}</option>
-                        @endif
-                        @if(!empty($sessionDetails) && count($sessionDetails)>0)
-                            @foreach($sessionDetails as $sd)
-                            <option value="{{ $sd->id }}">{{ $sd->session}}</option>
+                <div class="col-md-4 mb-3">
+                    <label for="stdId" class="form-label">Student ID</label>
+                    <input type="text" class="form-control" id="stdId" name="stdId" value="{{ $editData->stdId }}" required>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="feesType" class="form-label">Fees Type</label>
+                    <select class="form-select form-control" id="feesType" name="feesType" required>
+                        @if(!empty($feesData) && count($feesData)>0)
+                            @foreach($feesData as $f)
+                                <option value="{{ $f->id }}" data-amount="{{ $f->feesAmount }}" {{ $editData->feesType == $f->id ? 'selected' : '' }}>{{ $f->feesName }}</option>
                             @endforeach
-                        @endif         
-                    </select>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <label for="className" class="form-label ">Class Name</label>
-                    <select class="form-select select2" id="className" name="className" aria-label="Default select example" required>
-                        @if(!empty($classData))
-                        <option value="{{$classData->id}}">{{$classData->className}}</option>
+                        @else
+                            <option value="">No fees found</option>
                         @endif
-                            @if(!empty($classDetails) && count($classDetails)>0)
-                                @foreach($classDetails as $cd)
-                                <option value="{{ $cd->id }}">{{ $cd->className}}</option>
-                                @endforeach
-                            @endif  
-                        
                     </select>
                 </div>
-                <div class="col-md-4 mb-2">
-                    <label for="section" class="form-label">Section Name</label>
-                    <select class="form-select select2 " id="section" name="section" aria-label="Default select example" required>
-                        @if(!empty($sectionData))
-                        <option value="{{$sectionData->id}}">{{$sectionData->section}}</option>
-                        @endif
-                            @if(!empty($sectionDetails) && count($sectionDetails)>0)
-                                @foreach($sectionDetails as $sec)
-                                <option value="{{ $sec->id }}">{{ $sec->section}}</option>
-                                @endforeach
-                            @endif  
-                    </select>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <label for="stdName" class="form-label">Student Name</label>
-                    <input type="text" class="form-control " id="stdName" name="stdName" placeholder="" value="{{$stdData->fullName}}" required>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-2">
-                    <label for="rollNumber" class="form-label">Roll Number</label>
-                    <input type="text" class="form-control " id="rollNumber" name="rollNumber" placeholder="" value="{{$stdData->rollNumber}}" required>
-                    </select>
-                </div>
-                <div class="col-md-4 mb-2">
+                <div class="col-md-4 mb-3">
                     <label for="amount" class="form-label">Amount</label>
-                    <input type="number" class="form-control " id="amount" name="amount" placeholder="" value="{{$editData->amount}}" required>
-                    </select>
+                    <input type="number" class="form-control" id="amount" name="amount" value="{{ $editData->amount }}" required>
                 </div>
                 <div class="gap-2 mt-4">
                     <button class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark" type="submit">Update</button>
-                    <a href="{{route('tuitionFeeList')}}"class="btn-fill-lg bg-blue-dark btn-hover-bluedark">Back</a>
+                    <a href="{{route('tuitionFeeList')}}" class="btn-fill-lg bg-blue-dark btn-hover-bluedark">Back</a>
                 </div>
             </div>
         </form>
     </div>
 </div>
 
+<script>
+    (function(){
+        const sel = document.getElementById('feesType');
+        const amountInput = document.getElementById('amount');
+        if(sel && amountInput){
+            function applySelectedAmount(){
+                const opt = sel.options[sel.selectedIndex];
+                if(!opt) return;
+                const amt = opt.getAttribute('data-amount');
+                if(amt !== null && amt !== ''){
+                    amountInput.value = amt; // auto-fill / override to default
+                }
+            }
+            sel.addEventListener('change', applySelectedAmount);
+            // Optional: if existing amount empty (shouldn't usually) we hydrate once
+            if(amountInput.value === '' || amountInput.value === '0'){
+                applySelectedAmount();
+            }
+        }
+    })();
+</script>
 @endsection

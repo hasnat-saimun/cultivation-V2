@@ -21,44 +21,56 @@
                     @include('cultivation.logoSection')
                </div>
                 <div class="sidebar-menu-content">
+                    @php
+                        // Determine active routes for highlighting and keeping groups open
+                        $isCultivationHome = request()->routeIs('cultivationIndex');
+
+                        $studentFeesRoutes = [
+                            'tuitionFee','tuitionFeeList','feesReport','tuitionFeeView','editTuitionFee','tuitionReport'
+                        ];
+                        $cashRoutes = [
+                            'cashCalculasView','reportListView','cashDateReport'
+                        ];
+                        $addFeesRoutes = ['feesForm'];
+
+                        $studentFeesOpen = request()->routeIs($studentFeesRoutes);
+                        $cashOpen = request()->routeIs($cashRoutes);
+                        $addFeesActive = request()->routeIs($addFeesRoutes);
+                    @endphp
                     <ul class="nav nav-sidebar-menu sidebar-toggle-view">
                         <li class="nav-item">
-                            <a href="{{ route('cultivationIndex') }}" class="nav-link"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
+                            <a href="{{ route('cultivationIndex') }}" class="nav-link {{ $isCultivationHome ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
                         </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="fa-regular fa-building-flag"></i><span>student Fees</span></a>
-                            <ul class="nav sub-group-menu">
+                        <li class="nav-item sidebar-nav-item {{ $studentFeesOpen ? 'open' : '' }}">
+                            <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-regular fa-building-flag"></i> <span>student Fees</span></a>
+                            <ul class="nav sub-group-menu" style="{{ $studentFeesOpen ? 'display:block;' : '' }}">
                                 <li class="nav-item">
-                                    <a href="{{ route('tuitionFee') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Collect Fees</a>
+                                    <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('tuitionFeeList') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Fees List</a>
+                                    <a href="{{ route('tuitionFeeList') }}" class="nav-link {{ request()->routeIs('tuitionFeeList') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Single Fees Voucher</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('feesReport') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Genetrate Report</a>
+                                    <a href="{{ route('feesReport') }}" class="nav-link {{ request()->routeIs('feesReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Genetrate Report</a>
                                 </li>
                             </ul>
                         </li>
-                        <li class="nav-item sidebar-nav-item">
-                            <a href="#" class="nav-link"><i class="fa-regular fa-book-open"></i><span>Cash Calculas</span></a>
-                            <ul class="nav sub-group-menu">
+                        <li class="nav-item sidebar-nav-item {{ $cashOpen ? 'open' : '' }}">
+                            <a href="#" class="nav-link {{ $cashOpen ? 'active' : '' }}"><i class="fa-regular fa-book-open"></i> <span>Cash Calculas</span></a>
+                            <ul class="nav sub-group-menu" style="{{ $cashOpen ? 'display:block;' : '' }}">
                                 <li class="nav-item">
-                                    <a href="{{ route('cashCalculasView') }}" class="nav-link"><i
-                                            class="fas fa-angle-right"></i>Debit/Credit</a>
+                                    <a href="{{ route('cashCalculasView') }}" class="nav-link {{ request()->routeIs('cashCalculasView') ? 'active' : '' }}"><i  class="fas fa-angle-right"></i>Debit/Credit</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('reportListView') }}" class="nav-link"><i class="fas fa-angle-right"></i> Get Report</a>
+                                    <a href="{{ route('reportListView') }}" class="nav-link {{ request()->routeIs('reportListView') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Single Voucher</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('cashDateReport') }}" class="nav-link"><i class="fas fa-angle-right"></i> Get Date Report</a>
+                                    <a href="{{ route('cashDateReport') }}" class="nav-link {{ request()->routeIs('cashDateReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Generate Report</a>
                                 </li>
                             </ul>
                         </li>
                         <li class="nav-item ">
-                            <a href="{{route('feesForm')}}" class="nav-link"><i class="fa-thin fa-database"></i> <span>Add Fees Name</span></a>
+                            <a href="{{route('feesForm')}}" class="nav-link {{ $addFeesActive ? 'active' : '' }}"><i class="fa-thin fa-database"></i> <span>Add New Fees</span></a>
                         </li>
                     </ul>
                 </div>

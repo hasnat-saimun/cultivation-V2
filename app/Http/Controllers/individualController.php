@@ -286,9 +286,8 @@ class individualController extends Controller
 
      //add fees
     public function feesForm(){
-        $classLi = classManage::all();
         $feesLi = feesManager::all();
-        return view ('account.feesForm',['feesList'=>$feesLi],['classList'=>$classLi]); 
+        return view ('account.feesForm',['feesList'=>$feesLi]); 
     }
     //save fees 
     public function saveFees(Request $requ){
@@ -299,7 +298,6 @@ class individualController extends Controller
         else:
             $savedata = new feesManager();
             
-            $savedata ->class = $requ->class;            
             $savedata ->feesName = $requ->feesName;            
             $savedata ->feesAmount = $requ->feesAmount;
 
@@ -314,9 +312,8 @@ class individualController extends Controller
 
     //edit fees
     public function editFees($id){
-        $feesData = feesManager::find($id);
-        $classDetails= classManage::all();
-        return view('account.editFees',['editData'=>$feesData],['classDetails'=>$classDetails]);
+    $feesData = feesManager::find($id);
+    return view('account.editFees',['editData'=>$feesData]);
     }
 
     //update fees 
@@ -324,7 +321,6 @@ class individualController extends Controller
             $updateData =  feesManager::find($requ->feesId);
         if(!empty($updateData)):
             $updateData ->feesName = $requ->feesName;           
-            $updateData ->class = $requ->class;            
             $updateData ->feesAmount = $requ->feesAmount;
 
             if($updateData->save()):

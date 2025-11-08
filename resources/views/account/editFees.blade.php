@@ -18,26 +18,11 @@ Institute Info
                         {{session()->get('success')}}
                     </div>
                 @endif
-                    <form method="POST" class="card-body form form-group" action="{{route222('updateFees')}}">
+                    <form method="POST" class="card-body form form-group" action="{{ route('updateFees') }}">
                         @csrf
                     <div class="row">
                         <input type="hidden" name="feesId" value="{{$editData->id}}">
-                        <div class="col-6 mb-2">
-                            @php
-                                 $classData  =\App\Models\classManage::find($editData->class);
-                            @endphp
-                            <label for="class" class="form-label">Class Name</label>
-                            <select class="select2" name="class" >
-                                @if(!empty($classData))
-                                <option value="{{$classData->id}}">{{$classData->className}}</option>
-                                @endif
-                                @if(!empty($classDetails) && count($classDetails)>0)
-                                    @foreach($classDetails as $cd)
-                                    <option value="{{ $cd->id}}">{{ $cd->className}}</option>
-                                    @endforeach
-                                @endif
-                            </select>
-                        </div>
+                        <!-- Class selection removed -->
                         <div class="col-6 mb-2">
                             <label for="feesName" class="form-label ">Fees Type</label>
                             <input type="text" class="form-control form-control-sm" id="feesName" name="feesName" placeholder="Enter the fees name" value="{{$editData->feesName}}" required>
