@@ -2,7 +2,7 @@
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     if(!empty($serverData)):
         $serverId           = $serverData->id;
-        $insName            = $serverData->institueName;
+        $insName            = $serverData->instituteName;
         $location           = $serverData->address;
         $officeMobile       = $serverData->officeMobile;
         $officeMail         = $serverData->officeEmail;
@@ -13,19 +13,32 @@
         $einNumber          = $serverData->einNumber;
         $establishDate      = $serverData->establishDate;
     else:
-        $serverId           = "";
-        $insName            = "Sonar Bangla College";
-        $location           = "Poyat, Burichong, Cumilla";
-        $officeMobile       = "01716841785";
-        $officeMail         = "";
-        $principalSign      = "";
-        $logo               = "";
-        $favicon            = "";
-        $avatar             = "";
-        $einNumber          = "434713";
-        $establishDate      = "";
+        // No server config found; keep variables empty so header stays minimal
+        $serverId = $insName = $location = $officeMobile = $officeMail = $principalSign = $logo = $favicon = $avatar = $einNumber = $establishDate = "";
     endif;
 @endphp
-<h3 class="fw-bold mb-0 display-4">{{ $insName }}</h3>
-<p class="fw-bold mb-0 h3">{{ $location }}</p>
-<p class="fw-bold mb-0">Tel:- {{ $officeMobile }}, EIN:- {{ $einNumber }}</p>
+<style>
+    .notice-header{font-family:'Segoe UI',Tahoma,Arial,sans-serif; text-align:center; position:relative;}
+    .notice-header .nh-logo{width:70px;height:70px;object-fit:contain;margin:0 auto 10px;border-radius:50%;background:#fff;border:2px solid #ddd;padding:6px;}
+    .notice-header h1{font-size:34px;font-weight:600;margin:0 0 6px;letter-spacing:.5px;}
+    .notice-header .meta-line{color:#526275;font-size:16px;margin:2px 0;display:flex;align-items:center;justify-content:center;gap:6px;}
+    .notice-header .meta-line i{color:#2c4259;}
+    /* Date removed as per new requirement */
+    .notice-header .date-box{display:none;}
+</style>
+<div class="notice-header">
+    @if(!empty($logo))
+        <img src="{{ asset('public') }}/upload/image/cultivation/{{ $logo }}" alt="{{ $insName }}" class="nh-logo">
+    @endif
+    <h1>{{ $insName }}</h1>
+    @if(!empty($location))
+    <div class="meta-line"><i class="fa-solid fa-location-dot"></i> <span>{{ $location }}</span></div>
+    @endif
+    @if(!empty($officeMobile))
+    <div class="meta-line"><i class="fa-solid fa-phone"></i> <span>{{ $officeMobile }}</span></div>
+    @endif
+    @if(!empty($officeMail))
+    <div class="meta-line"><i class="fa-solid fa-envelope"></i> <span>{{ $officeMail }}</span></div>
+    @endif
+    <div class="date-box"></div>
+</div>

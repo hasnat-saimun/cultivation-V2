@@ -31,7 +31,7 @@ All Notice
                                         <tr>
                                             <th>SL</th>
                                             <th>Headline</th>
-                                            <th>Details</th>
+                                            <th>Details / Attachment</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -44,7 +44,21 @@ All Notice
                                             <tr>
                                                 <td>{{ $x }}</td>
                                                 <td>{{ $notice->headline }}</td>
-                                                <td>{!! Str::limit($notice->body,'30','......') !!}</td>
+                                                <td>
+                                                    @if(!empty($notice->attachment))
+                                                        <span class="badge bg-info">Attachment</span>
+                                                        @php $ext = strtolower(pathinfo($notice->attachment, PATHINFO_EXTENSION)); @endphp
+                                                        @if(in_array($ext,['jpg','jpeg','png','gif','webp']))
+                                                            <img src="{{ asset('public/'.$notice->attachment) }}" alt="thumb" style="height:40px;width:auto;" class="ms-2 rounded border">
+                                                        @elseif($ext==='pdf')
+                                                            <i class="fa-regular fa-file-pdf ms-2" style="font-size:28px;color:#c00;"></i>
+                                                        @else
+                                                            <i class="fa-regular fa-paperclip ms-2" style="font-size:20px;color:#555;"></i>
+                                                        @endif
+                                                    @else
+                                                        {!! Str::limit($notice->body,'30','......') !!}
+                                                    @endif
+                                                </td>
                                                 <td>
                                         <a href="{{ route('prevNotice',  ['id'=>$notice->id]) }}"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                                         <a href="{{ route('editNotice',['id'=>$notice->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
