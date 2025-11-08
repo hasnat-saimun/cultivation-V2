@@ -42,7 +42,7 @@
                             <a href="{{ route('cultivationIndex') }}" class="nav-link {{ $isCultivationHome ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $studentFeesOpen ? 'open' : '' }}">
-                            <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-regular fa-building-flag"></i> <span>student Fees</span></a>
+                            <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-regular fa-building-flag"></i> <span>Student Fees</span></a>
                             <ul class="nav sub-group-menu" style="{{ $studentFeesOpen ? 'display:block;' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>

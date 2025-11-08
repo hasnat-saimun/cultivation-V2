@@ -51,10 +51,6 @@ Report Into Date
                                     <input class="form-check-input" type="radio" name="reportType" id="rtRange" value="range" checked>
                                     <label class="form-check-label border-0" style="border:none;" for="rtRange">By Date Range</label>
                                 </div>
-                                <div class="form-check form-check-inline">
-                                    <input class="form-check-input" type="radio" name="reportType" id="rtMultiple" value="multiple">
-                                    <label class="form-check-label border-0" style="border:none;" for="rtMultiple">By Multiple Dates</label>
-                                </div>
                             </div>
                             
                         </div>
@@ -79,17 +75,6 @@ Report Into Date
                             </div>
                         </div>
 
-                        <div id="multipleDateGroup" class="mb-2" style="display:none;">
-                            <label class="form-label border-0" style="border:none;">Select Dates</label>
-                            <div id="datesContainer">
-                                <div class="input-group input-group-sm mb-2 date-row">
-                                    <input type="date" name="dates[]" class="form-control" />
-                                    <button type="button" class="btn btn-outline-danger remove-date" tabindex="-1">Remove</button>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="addDate">+ Add another date</button>
-                        </div>
-
                         
                         <div class=" row   mt-5">
                             <div class="col-6">
@@ -108,65 +93,31 @@ Report Into Date
     (function(){
         const rtSingle = document.getElementById('rtSingle');
         const rtRange = document.getElementById('rtRange');
-        const rtMultiple = document.getElementById('rtMultiple');
+        
         const singleGroup = document.getElementById('singleDateGroup');
         const rangeGroup = document.getElementById('rangeDateGroup');
-        const multipleGroup = document.getElementById('multipleDateGroup');
         const singleInput = document.getElementById('singleDate');
         const fromInput = document.getElementById('fromDate');
         const toInput = document.getElementById('toDate');
-        const datesContainer = document.getElementById('datesContainer');
-        const addDateBtn = document.getElementById('addDate');
 
         function toggleGroups(){
             [singleInput, fromInput, toInput].forEach(el=> el && el.removeAttribute('required'));
-            // remove required from all multiple date inputs
-            if(datesContainer){
-                Array.from(datesContainer.querySelectorAll('input[type="date"]')).forEach(el=> el.removeAttribute('required'));
-            }
 
             if(rtSingle && rtSingle.checked){
                 singleGroup.style.display = '';
                 rangeGroup.style.display = 'none';
-                multipleGroup.style.display = 'none';
                 singleInput && singleInput.setAttribute('required','required');
-            } else if(rtMultiple && rtMultiple.checked){
-                singleGroup.style.display = 'none';
-                rangeGroup.style.display = 'none';
-                multipleGroup.style.display = '';
-                // make first multiple date required
-                const first = datesContainer && datesContainer.querySelector('input[type="date"]');
-                first && first.setAttribute('required','required');
             } else { // range default
                 singleGroup.style.display = 'none';
                 rangeGroup.style.display = '';
-                multipleGroup.style.display = 'none';
                 fromInput && fromInput.setAttribute('required','required');
                 toInput && toInput.setAttribute('required','required');
             }
         }
 
-        [rtSingle, rtRange, rtMultiple].forEach(r=> r && r.addEventListener('change', toggleGroups));
+        [rtSingle, rtRange].forEach(r=> r && r.addEventListener('change', toggleGroups));
         toggleGroups();
 
-        if(addDateBtn && datesContainer){
-            addDateBtn.addEventListener('click', function(){
-                const row = document.createElement('div');
-                row.className = 'input-group input-group-sm mb-2 date-row';
-                row.innerHTML = '<input type="date" name="dates[]" class="form-control" />'+
-                                '<button type="button" class="btn btn-outline-danger remove-date" tabindex="-1">Remove</button>';
-                datesContainer.appendChild(row);
-            });
-
-            datesContainer.addEventListener('click', function(e){
-                if(e.target.classList.contains('remove-date')){
-                    const row = e.target.closest('.date-row');
-                    if(row && datesContainer.children.length > 1){
-                        row.remove();
-                    }
-                }
-            });
-        }
     })();
 </script>
 @endsection

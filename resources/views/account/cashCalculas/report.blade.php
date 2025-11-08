@@ -7,16 +7,7 @@ Report Generate
     <div class="col-10 mx-auto">
         <div class="row" id="report">
             <div class="receipt-main col-8 mx-auto">
-                <div class="receipt-header row">
-                    <div class="col-xs-12 col-sm-12 col-md-12 text-center mb-3">
-                        <div class="receipt-right">
-                            <h5>Sonar Bangla College</h5>
-                            <p>Gubinathpur,Burichong,Comilla</p>
-                            <p> <i class="fa fa-phone"></i> +800 17550-48017</p>
-                            <p> <i class="fa fa-envelope-o"></i> sonarbangla003@gmail.com</p>
-                        </div>
-                    </div>
-                </div>
+                @include('components.institute-header')
                 <div class="receipt-header receipt-header-mid row">
                     <div class="col-xs-8 col-sm-8 col-md-8 text-left">
                         <div class="receipt-right">

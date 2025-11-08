@@ -27,6 +27,8 @@ Institute Info
                         $maxDate = \Carbon\Carbon::parse($toDate)->format('d-M-Y');
                         $betweenText = "Between {$minDate} to {$maxDate}";
                     }
+                    // Hide Date column when report is by a single date
+                    $hideDateCol = ($reportType === 'single');
                 @endphp
                 @if(!empty($student))
                 <div class="receipt-main col-12 mx-auto">
@@ -74,7 +76,9 @@ Institute Info
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
+                                    @unless($hideDateCol)
                                     <th>Date</th>
+                                    @endunless
                                     <th>Description</th>
                                     <th>Amount</th>
                                 </tr>
@@ -93,13 +97,15 @@ Institute Info
                                         endif;
                                     @endphp
                                     <tr>
+                                        @unless($hideDateCol)
                                         <td>{{ $fl->created_at->format('Y-m-d') }}</td>
+                                        @endunless
                                         <td >{{ $feesName }}</td>
                                         <td > {{ $amount }}/-</td>
                                     </tr>
                                 @endforeach
                                 <tr>
-                                    <td class="text-right" colspan="2">
+                                    <td class="text-right" colspan="{{ $hideDateCol ? 1 : 2 }}">
                                         <h2><strong>Total: </strong></h2>
                                     </td>
                                     <td class="text-left text-danger">
@@ -110,7 +116,7 @@ Institute Info
                                 </tr>
                                 @else
                                 <tr>
-                                    <td colspan="2">Sorry! No data found with your query</td>
+                                    <td colspan="{{ $hideDateCol ? 2 : 3 }}">Sorry! No data found with your query</td>
                                 </tr>
                                 @endif
                             </tbody>
