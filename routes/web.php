@@ -21,6 +21,8 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\cashCalculasController;
 use App\Http\Controllers\tuitionController;
 use App\Http\Controllers\registerController;
+use App\Http\Controllers\schoolUserController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\cultivationAdmin;
 use App\Http\Middleware\EncryptCookies;
@@ -36,7 +38,6 @@ use App\Http\Middleware\SuperAdmin;
 use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
-use App\Http\Middleware\schoolUserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -79,6 +80,13 @@ Route::get('/download-student-template', [StudentController::class, 'downloadStu
 
 
 Route::middleware(['adminGuard'])->group (function(){
+    // Attendance (teacher & general access)
+    Route::get('/attendance', [AttendanceController::class,'index'])->name('attendanceIndex');
+    Route::post('/attendance/fetch', [AttendanceController::class,'fetch'])->name('attendanceFetch');
+    Route::post('/attendance/store', [AttendanceController::class,'store'])->name('attendanceStore');
+    Route::get('/attendance/report', [AttendanceController::class,'report'])->name('attendanceReport');
+    Route::get('/attendance/export', [AttendanceController::class,'exportCsv'])->name('attendanceExport');
+    Route::get('/attendance/print', [AttendanceController::class,'print'])->name('attendancePrint');
     
     //Cultivation Part
     
@@ -561,93 +569,90 @@ Route::middleware(['adminGuard'])->group (function(){
         'saveAvatar'
     ])->name('saveAvatar');
 
-    //Account Part
-    Route::get('/account',[
-        BackofficeController::class ,
-        'accountPart'
-    ])->name('accountPart');
+    // Account Part (Cash Admin + General)
+    Route::middleware(\App\Http\Middleware\Roles::class.':2')->group(function(){
+        Route::get('/account',[
+            BackofficeController::class ,
+            'accountPart'
+        ])->name('accountPart');
 
-    //Fees str
-    Route::get('/add-fees',[
-        individualController::class, //add Fees
-        'feesForm'
-    ])->name('feesForm');
+        // Fees
+        Route::get('/add-fees',[
+            individualController::class, //add Fees
+            'feesForm'
+        ])->name('feesForm');
 
-    Route::get('/edit-fees-data/{id}',[
-        individualController::class, //edit Fees
-        'editFees'
-    ])->name('editFees');
+        Route::get('/edit-fees-data/{id}',[
+            individualController::class, //edit Fees
+            'editFees'
+        ])->name('editFees');
 
-    Route::post('/update-fees',[
-        individualController::class, //update Fees
-        'updateFees'
-    ])->name('updateFees');
+        Route::post('/update-fees',[
+            individualController::class, //update Fees
+            'updateFees'
+        ])->name('updateFees');
 
+        Route::post('/save-fees',[
+            individualController::class, //add Fees
+            'saveFees'
+        ])->name('saveFees');
 
-    Route::post('/save-fees',[
-        individualController::class, //add Fees
-        'saveFees'
-    ])->name('saveFees');
+        Route::get('/delete-fees-data/{id}',[
+            individualController::class,      // delete Fees
+            'deleteFees'
+        ])->name('deleteFees');
 
-    Route::get('/delete-fees-data/{id}',[
-        individualController::class,      // delete Fees
-        'deleteFees'
-    ])->name('deleteFees');
+        // cashCalculas
+        Route::get('/cash-calculas-from',[
+            cashCalculasController::class,    //cashCalculas main page
+            'cashCalculasView'
+        ])->name('cashCalculasView');
 
-    //Fees end
+        Route::get('/get-report',[
+            cashCalculasController::class,    //reportList page
+            'reportListView'
+        ])->name('reportListView');
 
-    //cashCalculas str
-    Route::get('/cash-calculas-from',[
-        cashCalculasController::class,    //cashCalculas main page
-        'cashCalculasView'
-    ])->name('cashCalculasView');
+        Route::get('/single-report/{id}',[
+            cashCalculasController::class,    // report single page
+            'singleView'
+        ])->name('singleView');
 
-    Route::get('/get-report',[
-        cashCalculasController::class,    //reportList page
-        'reportListView'
-    ])->name('reportListView');
+        Route::post('/save-cash-calculas',[
+            cashCalculasController::class,    //saveCashCalculas brackhand
+            'saveCashCalculas'
+        ])->name('saveCashCalculas');
 
-    Route::get('/single-report/{id}',[
-        cashCalculasController::class,    // report single page
-        'singleView'
-    ])->name('singleView');
+        Route::get('/edit-cash-calculas/{id}',[
+            cashCalculasController::class,     // edit calculas 
+            'editCashCalculas'
+        ])->name('editCashCalculas');
 
+        Route::post('/update-cash-calculas',[
+            cashCalculasController::class,   //update calculas
+            'updateCashCalculas'
+        ])->name('updateCashCalculas');
 
-    Route::post('/save-cash-calculas',[
-        cashCalculasController::class,    //saveCashCalculas brackhand
-        'saveCashCalculas'
-    ])->name('saveCashCalculas');
+        Route::get('/delete-calculas-data/{id}',[
+            cashCalculasController::class,      // delete calculas
+            'dltCalculasData'
+        ])->name('dltCalculasData');
 
-    Route::get('/edit-cash-calculas/{id}',[
-        cashCalculasController::class,     // edit calculas 
-        'editCashCalculas'
-    ])->name('editCashCalculas');
+        Route::get('/calculas-repot-generate/{id}',[
+            cashCalculasController::class,   // calculas Report
+            'cashReport'
+        ])->name('cashReport');
 
-    Route::post('/update-cash-calculas',[
-        cashCalculasController::class,   //update calculas
-        'updateCashCalculas'
-    ])->name('updateCashCalculas');
+        Route::get('/calculas-date-repot-generate',[
+            cashCalculasController::class,   // calculas Report
+            'cashDateReport'
+        ])->name('cashDateReport');
 
-    Route::get('/delete-calculas-data/{id}',[
-        cashCalculasController::class,      // delete calculas
-        'dltCalculasData'
-    ])->name('dltCalculasData');
-
-    Route::get('/calculas-repot-generate/{id}',[
-        cashCalculasController::class,   // calculas Report
-        'cashReport'
-    ])->name('cashReport');
-
-    Route::get('/calculas-date-repot-generate',[
-        cashCalculasController::class,   // calculas Report
-        'cashDateReport'
-    ])->name('cashDateReport');
-
-    Route::post('/calculas-date-repot-recipit',[
-        cashCalculasController::class, //  free
-        'getCashReport'
-    ])->name('getCashReport');
-    //cashCalculas end
+        Route::post('/calculas-date-repot-recipit',[
+            cashCalculasController::class, //  free
+            'getCashReport'
+        ])->name('getCashReport');
+    });
 
         //Tuition str
     Route::get('/getStudentForTutionFee/{stdId}',[
@@ -1046,20 +1051,21 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('allExam');
 
 
-    //Marks route declaration
-
-    Route::get('/marks/add',[
-        MarksheetController::class ,
-        'addMarks'
-    ])->name('addMarks');
-    Route::post('/marks/add/getData',[
-        MarksheetController::class ,
-        'getMarks'
-    ])->name('getMarks');
-    Route::post('/marks/add/confirm',[
-        MarksheetController::class ,
-        'confirmMarks'
-    ])->name('confirmMarks');
+    //Marks route declaration (Teacher + General)
+    Route::middleware(\App\Http\Middleware\Roles::class.':1')->group(function(){
+        Route::get('/marks/add',[
+            MarksheetController::class ,
+            'addMarks'
+        ])->name('addMarks');
+        Route::post('/marks/add/getData',[
+            MarksheetController::class ,
+            'getMarks'
+        ])->name('getMarks');
+        Route::post('/marks/add/confirm',[
+            MarksheetController::class ,
+            'confirmMarks'
+        ])->name('confirmMarks');
+    });
 
     Route::get('/marksheet/create',[
         MarksheetController::class ,

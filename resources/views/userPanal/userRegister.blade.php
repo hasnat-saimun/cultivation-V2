@@ -43,8 +43,9 @@ Register Form
                         $assignedSubjects = [];
                         if(isset($user) && $user->userType == 1) {
                             $showAccessBox = true;
-                            $assignedClasses = $user->accessClass ? explode(',', $user->accessClass) : [];
-                            $assignedSubjects = $user->accessSubject ? explode(',', $user->accessSubject) : [];
+                            // Use pivot-based accessors; no reliance on legacy string columns
+                            $assignedClasses = $user->access_class_array ?? [];
+                            $assignedSubjects = $user->access_subject_array ?? [];
                         }
                     @endphp
                     <div class="row">

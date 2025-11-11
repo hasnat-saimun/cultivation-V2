@@ -13,14 +13,49 @@ use App\Models\Exam;
 class MarksheetController extends Controller
 {
     public function addMarks(){
-        return view('result.add-marks');
+        // Restrict visible classes & subjects if teacher
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        $isTeacher = $user && $user->isTeacher();
+        $classIds = $isTeacher ? $user->access_class_array : [];
+        $subjectIds = $isTeacher ? $user->access_subject_array : [];
+        return view('result.add-marks', [
+            'restrictedClassIds' => $classIds,
+            'restrictedSubjectIds' => $subjectIds,
+            'isTeacherAdmin' => $isTeacher,
+        ]);
     }
     public function getMarks(Request $requ){
+        // Server-side enforcement of teacher's assigned class & subject
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        if($user && $user->isTeacher()){
+            $allowedClasses = $user->access_class_array;
+            $allowedSubjects = $user->access_subject_array;
+            if(!in_array($requ->classId, $allowedClasses) || !in_array($requ->subjectId, $allowedSubjects)){
+                return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
+            }
+        }
         $studentList = newAdmission::where(['sessName'=>$requ->sessionId,'sectionName'=>$requ->groupId])->get();
-        return view('result.get-marks',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId,'subjectId'=>$requ->subjectId]);
+        return view('result.get-marks',[
+            'studentList'=>$studentList,
+            'groupId'=>$requ->groupId,
+            'classId'=>$requ->classId,
+            'sessionId'=>$requ->sessionId,
+            'examId'=>$requ->examId,
+            'subjectId'=>$requ->subjectId
+        ]);
     }
 
     public function confirmMarks(Request $requ){
+        // Enforce teacher role restrictions before saving
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        if($user && $user->isTeacher()){
+            if(!in_array($requ->classId, $user->access_class_array) || !in_array($requ->subjectId, $user->access_subject_array)){
+                return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
+            }
+        }
         $studentId = $requ->studentId;
         $totalData = count($studentId);
         $x = 0;

@@ -2,6 +2,8 @@
 <html class="no-js" lang="">
 <head>
     @include('cultivation.includeSection')
+    {{-- Page-level stacked styles --}}
+    @stack('styles')
 </head>
 <body>
     <!-- Preloader Start Here -->
@@ -139,6 +141,9 @@
     <script src="{{ asset('/public/back-office/') }}/js/Chart.min.js"></script>
     <!-- Custom Js -->
     <script src="{{ asset('/public/back-office/') }}/js/main.js"></script>
+
+    {{-- Stacked page scripts --}}
+    @stack('scripts')
 
 </body>
 </html>

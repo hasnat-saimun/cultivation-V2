@@ -7,6 +7,11 @@ use App\Models\ServerConfig;
 use App\Models\CultivationAdmin;
 use App\Models\Subject;
 use App\Models\classManage as ClassModel;
+use App\Models\Attendance;
+use App\Models\newAdmission;
+use App\Models\cashManage;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Hash;
 use sessionData;
@@ -16,7 +21,81 @@ use Intervention\Image\Laravel\Facades\Image;
 class CultivationController extends Controller
 {
     public function cultivationIndex(){
-        return view('cultivation.index');
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        $isTeacher = $user && $user->isTeacher();
+        $today = date('Y-m-d');
+        // Earnings timeframe (today|month|all) via query param ?earningsScope=
+        $scope = request()->query('earningsScope','all');
+        $q = Attendance::query()->where('attendance_date', $today);
+        if($isTeacher){
+            $classIds = $user->access_class_array ?? [];
+            if(!empty($classIds)){
+                $q->whereIn('class_id', $classIds);
+            } else {
+                // If teacher has no classes assigned, show zeroes
+                $summary = [
+                    'total' => 0,
+                    'present' => 0,
+                    'absent' => 0,
+                    'late' => 0,
+                    'excused' => 0,
+                ];
+                return view('cultivation.index', compact('summary','today','isTeacher'));
+            }
+        }
+        $summary = [
+            'total' => (clone $q)->count(),
+            'present' => (clone $q)->where('status','Present')->count(),
+            'absent' => (clone $q)->where('status','Absent')->count(),
+            'late' => (clone $q)->where('status','Late')->count(),
+            'excused' => (clone $q)->where('status','Excused')->count(),
+        ];
+        // Dashboard headline metrics
+        // Earnings: sum incoming cash transactions filtered by timeframe
+        $incomingMarkers = ['credit','income','in','cr','receive','received','payment_in','deposit'];
+        $cashQ = cashManage::query()->whereIn('transaction', $incomingMarkers);
+        // date column stored as string; attempt Y-m-d match for today scope
+        if($scope === 'today'){
+            $cashQ->whereDate('created_at', $today);
+        } elseif($scope === 'month'){
+            $cashQ->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'));
+        } // 'all' no additional constraint
+        $cashIncoming = $cashQ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+        // Fallback if markers produce zero but there is data without markers (avoid missing ledger entries)
+        if((float)$cashIncoming <= 0){
+            $fallbackQ = cashManage::query();
+            if($scope === 'today'){
+                $fallbackQ->whereDate('created_at', $today);
+            } elseif($scope === 'month'){
+                $fallbackQ->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'));
+            }
+            $cashIncoming = $fallbackQ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+        }
+        // Parents count: prefer guardian phone if column exists, else guardian name, else fallback to student count
+        $parentsCount = 0;
+        if (Schema::hasColumn('new_admissions', 'gurdianPhone')) {
+            $parentsCount = newAdmission::whereNotNull('gurdianPhone')
+                ->where('gurdianPhone','!=','')
+                ->distinct('gurdianPhone')
+                ->count('gurdianPhone');
+        } elseif (Schema::hasColumn('new_admissions', 'gurdian')) {
+            $parentsCount = newAdmission::whereNotNull('gurdian')
+                ->where('gurdian','!=','')
+                ->distinct('gurdian')
+                ->count('gurdian');
+        } else {
+            $parentsCount = newAdmission::count();
+        }
+        $metrics = [
+            'students' => newAdmission::count(),
+            'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
+            'parents'  => $parentsCount,
+            'earnings' => (float)$cashIncoming,
+            'earningsScope' => $scope,
+        ];
+        $attendanceRate = $summary['total'] > 0 ? round(($summary['present'] / $summary['total']) * 100) : 0;
+        return view('cultivation.index', compact('summary','today','isTeacher','metrics','attendanceRate'));
     }
 
     public function serverConfig(){
@@ -528,18 +607,20 @@ class CultivationController extends Controller
         $cultivation->adminName     = $requ->adminName;
         $cultivation->adminMobile   = $requ->userMobile;
         $cultivation->userType      = $requ->userType;
-        
-
-        // Only store accessClass and accessSubject for Teacher Admin (userType == 1)
-        if ($requ->userType == 1) {
-            $cultivation->accessClass = ($requ->has('className') && is_array($requ->className)) ? implode(',', $requ->className) : null;
-            $cultivation->accessSubject = ($requ->has('subject') && is_array($requ->subject)) ? implode(',', $requ->subject) : null;
-        } else {
-            $cultivation->accessClass = null;
-            $cultivation->accessSubject = null;
-        }
 
         if($cultivation->save()):
+            // Sync teacher assignments to pivot tables (pivot-only; no legacy columns)
+            if ((int)$requ->userType === \App\Models\CultivationAdmin::ROLE_TEACHER) {
+                $clsIds = ($requ->has('className') && is_array($requ->className)) ? array_map('intval', $requ->className) : [];
+                $subIds = ($requ->has('subject') && is_array($requ->subject)) ? array_map('intval', $requ->subject) : [];
+                // Sync to pivots
+                $cultivation->classes()->sync($clsIds);
+                $cultivation->subjects()->sync($subIds);
+            } else {
+                // Clear assignments for non-teacher
+                $cultivation->classes()->sync([]);
+                $cultivation->subjects()->sync([]);
+            }
             $msg = $requ->filled('userId') ? 'Success! Admin profile updated successfully' : 'Success! Admin profile created successfully';
             return back()->with('success', $msg);
         else:
