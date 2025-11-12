@@ -87,6 +87,9 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/attendance/report', [AttendanceController::class,'report'])->name('attendanceReport');
     Route::get('/attendance/export', [AttendanceController::class,'exportCsv'])->name('attendanceExport');
     Route::get('/attendance/print', [AttendanceController::class,'print'])->name('attendancePrint');
+    Route::get('/attendance/monthly', [AttendanceController::class,'monthly'])->name('attendanceMonthly');
+    Route::get('/attendance/monthly/export', [AttendanceController::class,'monthlyExport'])->name('attendanceMonthlyExport');
+    Route::get('/attendance/monthly/print', [AttendanceController::class,'monthlyPrint'])->name('attendanceMonthlyPrint');
     
     //Cultivation Part
     

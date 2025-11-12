@@ -97,7 +97,7 @@
                                     <td>{{ $r->section ? $r->section->section : $r->section_id }}</td>
                                     <td>{{ $r->session ? $r->session->session : $r->session_id }}</td>
                                     <td>{{ $r->status }}</td>
-                                    <td>{{ $r->teacher_id }}</td>
+                                    <td>{{ $r->teacher ? $r->teacher->adminName : $r->teacher_id }}</td>
                                 </tr>
                             @empty
                                 <tr>

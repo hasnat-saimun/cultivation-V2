@@ -11,12 +11,12 @@ use App\Models\Attendance;
 use App\Models\newAdmission;
 use App\Models\cashManage;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Hash;
 use sessionData;
 use File;
 use Intervention\Image\Laravel\Facades\Image;
+use Illuminate\Support\Facades\Schema;
 
 class CultivationController extends Controller
 {
@@ -27,6 +27,26 @@ class CultivationController extends Controller
         $today = date('Y-m-d');
         // Earnings timeframe (today|month|all) via query param ?earningsScope=
         $scope = request()->query('earningsScope','all');
+        // Handle missing table gracefully on fresh setups
+        if(!Schema::hasTable('attendances')){
+            $summary = [
+                'total' => 0,
+                'present' => 0,
+                'absent' => 0,
+                'late' => 0,
+                'excused' => 0,
+            ];
+            $attendanceRate = 0;
+            $metrics = [
+                'students' => newAdmission::count(),
+                'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
+                'parents'  => 0,
+                'earnings' => 0,
+                'earningsScope' => $scope,
+            ];
+            return view('cultivation.index', compact('summary','today','isTeacher','metrics','attendanceRate'))
+                ->with('error','Attendance table not migrated yet.');
+        }
         $q = Attendance::query()->where('attendance_date', $today);
         if($isTeacher){
             $classIds = $user->access_class_array ?? [];

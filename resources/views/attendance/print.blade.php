@@ -24,13 +24,8 @@
         <button onclick="window.print()">Print</button>
         <button onclick="window.close()">Close</button>
     </div>
-    <h2>Attendance Sheet</h2>
-    <div class="meta">
-        <strong>Date:</strong> {{ $filters['date'] ?? 'All' }} &nbsp;|
-        <strong>Class ID:</strong> {{ $filters['classId'] ?? 'All' }} &nbsp;|
-        <strong>Session:</strong> {{ $filters['sessionId'] ?? 'All' }} &nbsp;|
-        <strong>Section:</strong> {{ $filters['sectionId'] ?? 'All' }}
-    </div>
+    @include('attendance._printHeader')
+    <h2 style="text-align:center;margin-top:10px;">Attendance Sheet</h2>
     <table>
         <thead>
             <tr>

@@ -20,6 +20,24 @@
     <li class="nav-item">
         <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
     </li>
+    @php
+        $attendanceRoutes = ['attendanceIndex','attendanceReport','attendanceMonthly'];
+        $attendanceOpen = request()->routeIs($attendanceRoutes);
+    @endphp
+    <li class="nav-item sidebar-nav-item {{ $attendanceOpen ? 'open' : '' }}" data-group="admin-attendance">
+        <a href="#" class="nav-link {{ $attendanceOpen ? 'active' : '' }}"><i class="fa-regular fa-calendar-check"></i> <span>Attendance Management</span></a>
+        <ul class="nav sub-group-menu" style="{{ $attendanceOpen ? 'display:block;' : '' }}">
+            <li class="nav-item">
+                <a href="{{ route('attendanceIndex') }}" class="nav-link {{ request()->routeIs('attendanceIndex') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Mark Attendance</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('attendanceReport') }}" class="nav-link {{ request()->routeIs('attendanceReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Daily Report</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('attendanceMonthly') }}" class="nav-link {{ request()->routeIs('attendanceMonthly') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Monthly Sheet</a>
+            </li>
+        </ul>
+    </li>
     {{-- ...rest of the full menu... --}}
     @php
         $admissionRoutes = ['admitStudent','studentList','studentPromotion'];
