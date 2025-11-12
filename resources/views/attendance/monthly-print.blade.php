@@ -28,7 +28,7 @@
             <tr>
                 <th style="white-space:nowrap;">Student</th>
                 @for($d=1;$d<=$daysInMonth;$d++)
-                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                     <th class="{{ $isWknd ? 'weekend' : '' }}" style="width:20px;text-align:center;">{{ $d }}</th>
                 @endfor
                 <th>P</th><th>A</th><th>T</th><th>E</th>
@@ -36,7 +36,7 @@
             <tr>
                 <th></th>
                 @for($d=1;$d<=$daysInMonth;$d++)
-                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                     <th class="{{ $isWknd ? 'weekend' : '' }}" style="text-align:center;">{{ substr($wk,0,2) }}</th>
                 @endfor
                 <th colspan="4"></th>
@@ -48,7 +48,7 @@
                 <tr>
                     <td style="white-space:nowrap;">{{ $st->rollNumber ? $st->rollNumber.'. ' : '' }}{{ trim(($st->fullName ?? '').' '.($st->sureName ?? '')) }}</td>
                     @for($d=1;$d<=$daysInMonth;$d++)
-                        @php $code = $matrix[$st->id][$d] ?? ''; $wk = $weekdays[$d]; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                        @php $code = $matrix[$st->id][$d] ?? ''; $wk = $weekdays[$d]; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                         <td class="{{ $isWknd ? 'weekend' : '' }}" style="text-align:center;">{{ $code }}</td>
                     @endfor
                     <td>{{ $s['present'] }}</td>
@@ -66,7 +66,7 @@
             <tr>
                 <th>Type</th>
                 @for($d=1;$d<=$daysInMonth;$d++)
-                    @php $wk = $weekdays[$d]; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                    @php $wk = $weekdays[$d]; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                     <th class="{{ $isWknd ? 'weekend' : '' }}" style="text-align:center;">{{ $d }}</th>
                 @endfor
             </tr>

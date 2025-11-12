@@ -75,7 +75,7 @@
                             <tr>
                                 <th style="white-space:nowrap;">Student</th>
                                 @for($d=1;$d<=$daysInMonth;$d++)
-                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                                     <th style="width:26px;text-align:center;" class="{{ $isWknd ? 'weekend' : '' }}">{{ $d }}</th>
                                 @endfor
                                 <th style="white-space:nowrap;">Present</th>
@@ -86,7 +86,7 @@
                             <tr class="weekday-row">
                                 <th></th>
                                 @for($d=1;$d<=$daysInMonth;$d++)
-                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                                     <th class="text-center {{ $isWknd ? 'weekend' : '' }}">{{ $wk }}</th>
                                 @endfor
                                 <th colspan="4"></th>
@@ -100,7 +100,7 @@
                                         {{ trim(($st->fullName ?? '').' '.($st->sureName ?? '')) }}
                                     </td>
                                     @for($d=1;$d<=$daysInMonth;$d++)
-                                        @php $cell = $matrix[$st->id][$d] ?? ''; $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                                        @php $cell = $matrix[$st->id][$d] ?? ''; $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                                         <td style="text-align:center;" class="{{ $isWknd ? 'weekend' : '' }}">{{ $cell }}</td>
                                     @endfor
                                     @php $s = $summary[$st->id] ?? ['present'=>0,'absent'=>0,'late'=>0,'excused'=>0]; @endphp
@@ -124,7 +124,7 @@
                             <tr>
                                 <th>Totals</th>
                                 @for($d=1;$d<=$daysInMonth;$d++)
-                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Sat','Sun']); @endphp
+                                    @php $wk = $weekdays[$d] ?? ''; $isWknd = in_array($wk,['Fri','Sat']); @endphp
                                     <th class="text-center {{ $isWknd ? 'weekend' : '' }}">{{ $d }}</th>
                                 @endfor
                                 <th colspan="4"></th>
