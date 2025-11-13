@@ -72,26 +72,41 @@ class CultivationController extends Controller
             'excused' => (clone $q)->where('status','Excused')->count(),
         ];
         // Dashboard headline metrics
-        // Earnings: sum incoming cash transactions filtered by timeframe
+        // Incoming vs outgoing markers for cash ledger classification
         $incomingMarkers = ['credit','income','in','cr','receive','received','payment_in','deposit'];
+        // Attempt profit/loss for current month using 'date' column first (fallback to created_at)
+        $firstMonthDay = date('Y-m-01');
+        $lastMonthDay  = date('Y-m-t');
+        $incomeMonth = cashManage::query()
+            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->whereIn('transaction',$incomingMarkers)
+            ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+        $expenseMonth = cashManage::query()
+            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->whereNotIn('transaction',$incomingMarkers)
+            ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+        // Fallback using created_at if result zero and records exist with timestamps
+        if((float)$incomeMonth === 0 && (float)$expenseMonth === 0){
+            $incomeMonth = cashManage::query()
+                ->whereMonth('created_at', date('m'))
+                ->whereYear('created_at', date('Y'))
+                ->whereIn('transaction',$incomingMarkers)
+                ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+            $expenseMonth = cashManage::query()
+                ->whereMonth('created_at', date('m'))
+                ->whereYear('created_at', date('Y'))
+                ->whereNotIn('transaction',$incomingMarkers)
+                ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
+        }
+        $monthlyProfitLoss = (float)$incomeMonth - (float)$expenseMonth;
+        // Earnings (legacy box) still available but now mapped to selected scope; keep for backward compatibility
         $cashQ = cashManage::query()->whereIn('transaction', $incomingMarkers);
-        // date column stored as string; attempt Y-m-d match for today scope
         if($scope === 'today'){
             $cashQ->whereDate('created_at', $today);
         } elseif($scope === 'month'){
             $cashQ->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'));
-        } // 'all' no additional constraint
-        $cashIncoming = $cashQ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
-        // Fallback if markers produce zero but there is data without markers (avoid missing ledger entries)
-        if((float)$cashIncoming <= 0){
-            $fallbackQ = cashManage::query();
-            if($scope === 'today'){
-                $fallbackQ->whereDate('created_at', $today);
-            } elseif($scope === 'month'){
-                $fallbackQ->whereMonth('created_at', date('m'))->whereYear('created_at', date('Y'));
-            }
-            $cashIncoming = $fallbackQ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
         }
+        $cashIncoming = $cashQ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
         // Parents count: prefer guardian phone if column exists, else guardian name, else fallback to student count
         $parentsCount = 0;
         if (Schema::hasColumn('new_admissions', 'gurdianPhone')) {
@@ -112,6 +127,9 @@ class CultivationController extends Controller
             'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
             'parents'  => $parentsCount,
             'earnings' => (float)$cashIncoming,
+            'monthlyProfitLoss' => $monthlyProfitLoss,
+            'monthlyProfitIncome' => (float)$incomeMonth,
+            'monthlyProfitExpense' => (float)$expenseMonth,
             'earningsScope' => $scope,
         ];
         $attendanceRate = $summary['total'] > 0 ? round(($summary['present'] / $summary['total']) * 100) : 0;

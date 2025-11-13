@@ -163,20 +163,25 @@ Dashboard
     <div class="col-xl-3 col-sm-6 col-12">
         <div class="dashboard-summery-one mg-b-20">
             <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-red">
-                        <i class="flaticon-money text-red"></i>
+                <div class="col-5">
+                    @php
+                        $p = $metrics['monthlyProfitLoss'] ?? 0;
+                        $profitClass = $p > 0 ? 'bg-light-green' : ($p < 0 ? 'bg-light-red' : 'bg-light');
+                        $iconClass = $p > 0 ? 'fa-arrow-trend-up text-green' : ($p < 0 ? 'fa-arrow-trend-down text-red' : 'fa-minus text-dark');
+                    @endphp
+                    <div class="item-icon {{ $profitClass }}">
+                        <i class="fa-solid {{ $iconClass }}" style="font-size:26px;"></i>
                     </div>
                 </div>
-                <div class="col-6">
+                <div class="col-7">
                     <div class="item-content">
-                        <div class="item-title">Earnings</div>
-                        <div class="item-number"><span>$</span><span class="counter" data-num="{{ $metrics['earnings'] ?? 0 }}">{{ number_format($metrics['earnings'] ?? 0, 2) }}</span></div>
-                        @php $es = $metrics['earningsScope'] ?? 'all'; @endphp
-                        <div class="mt-1">
-                            <a href="{{ route('cultivationIndex',['earningsScope'=>'today']) }}" class="badge {{ $es==='today' ? 'bg-primary' : 'bg-light text-dark' }}">Today</a>
-                            <a href="{{ route('cultivationIndex',['earningsScope'=>'month']) }}" class="badge {{ $es==='month' ? 'bg-primary' : 'bg-light text-dark' }}">This Month</a>
-                            <a href="{{ route('cultivationIndex',['earningsScope'=>'all']) }}" class="badge {{ $es==='all' ? 'bg-primary' : 'bg-light text-dark' }}">All</a>
+                        <div class="item-title">Month Profit/Loss</div>
+                        <div class="item-number">
+                            <span class="{{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0 ? '-' : '' }}$ {{ number_format(abs($p),2) }}</span>
+                        </div>
+                        <div class="small mt-1 text-muted">
+                            <span>Income: ${{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</span> &middot;
+                            <span>Expense: ${{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</span>
                         </div>
                     </div>
                 </div>
