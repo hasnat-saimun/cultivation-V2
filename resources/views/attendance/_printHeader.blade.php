@@ -5,8 +5,24 @@
     $address      = $serverData->address ?? ($institute['address'] ?? '');
     $phone        = $serverData->officeMobile ?? ($institute['phone'] ?? '');
     $logoFile     = $serverData->logo ?? null;
-    // Logo is stored under public/upload/image/cultivation per ServerConfig upload handlers
-    $logoUrl      = $logoFile ? asset('upload/image/cultivation/'.$logoFile) : ($institute['logo'] ?? null);
+    // Build logo URL explicitly from APP_URL (config('app.url')) to avoid relative path issues
+    $appUrl = rtrim(config('app.url'), '/');
+    if($logoFile){
+        // If logo file already looks like a full URL, use it directly
+        if(preg_match('~^https?://~i', $logoFile)){
+            $logoUrl = $logoFile;
+        } else {
+            $logoUrl = $appUrl.'/upload/image/cultivation/'.$logoFile;
+        }
+    } else {
+        // Fallback: if provided institute logo is relative, prefix APP_URL
+        $instLogo = $institute['logo'] ?? null;
+        if($instLogo){
+            $logoUrl = preg_match('~^https?://~i', $instLogo) ? $instLogo : $appUrl.'/'.ltrim($instLogo,'/');
+        } else {
+            $logoUrl = null;
+        }
+    }
 @endphp
 <div class="att-print-header" style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #444;padding-bottom:8px;">
     @if($logoUrl)
