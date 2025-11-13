@@ -74,7 +74,7 @@ class CultivationController extends Controller
         ];
         // Dashboard headline metrics
         // Incoming vs outgoing markers for cash ledger classification
-        $incomingMarkers = ['credit','income','in','cr','receive','received','payment_in','deposit'];
+        $incomingMarkers = ['credit','income','in','cr','receive','received','payment_in','deposit','Credit','Income','In','CR','Receive','Received','Payment_In','Deposit'];
         // Attempt profit/loss for current month using 'date' column first (fallback to created_at)
         $firstMonthDay = date('Y-m-01');
         $lastMonthDay  = date('Y-m-t');
