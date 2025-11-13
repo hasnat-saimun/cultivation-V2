@@ -7,20 +7,38 @@
     $logoFile     = $serverData->logo ?? null;
     // Build logo URL explicitly from APP_URL (config('app.url')) to avoid relative path issues
     $appUrl = rtrim(config('app.url'), '/');
+    $logoUrl = null;
     if($logoFile){
-        // If logo file already looks like a full URL, use it directly
         if(preg_match('~^https?://~i', $logoFile)){
-            $logoUrl = $logoFile;
+            $logoUrl = $logoFile; // already full URL
         } else {
-            $logoUrl = $appUrl.'/upload/image/cultivation/'.$logoFile;
+            // Detect actual public path; avoid duplicate /public if APP_URL already points to public
+            $publicSegmentEnds = preg_match('~/public$~i', $appUrl);
+            $relativePath = 'upload/image/cultivation/'.$logoFile;
+            // Check existence at standard public_path
+            $fullFsPath = public_path($relativePath);
+            if(!file_exists($fullFsPath)){
+                // Try alternative with explicit public/ prefix if first attempt fails
+                $altRelative = 'public/upload/image/cultivation/'.$logoFile;
+                if(file_exists(public_path($altRelative))){
+                    $relativePath = $altRelative;
+                }
+            }
+            // Build URL (avoid double public)
+            $logoUrl = $appUrl.'/'.ltrim($relativePath,'/');
+            if($publicSegmentEnds && str_contains($relativePath,'public/upload/')){
+                // Remove duplicate public if APP_URL already ends with /public
+                $logoUrl = rtrim($appUrl,'/').'/'.ltrim(preg_replace('~^public/~','',$relativePath),'/' );
+            }
         }
     } else {
-        // Fallback: if provided institute logo is relative, prefix APP_URL
         $instLogo = $institute['logo'] ?? null;
         if($instLogo){
-            $logoUrl = preg_match('~^https?://~i', $instLogo) ? $instLogo : $appUrl.'/'.ltrim($instLogo,'/');
-        } else {
-            $logoUrl = null;
+            if(preg_match('~^https?://~i', $instLogo)){
+                $logoUrl = $instLogo;
+            } else {
+                $logoUrl = $appUrl.'/'.ltrim($instLogo,'/');
+            }
         }
     }
 @endphp
