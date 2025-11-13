@@ -132,33 +132,36 @@ class CultivationController extends Controller
             'monthlyProfitExpense' => (float)$expenseMonth,
             'earningsScope' => $scope,
         ];
-        // Build monthly cash chart (labels, income, expense)
+        // Build monthly cash chart (labels, income, expense) with fallback to created_at if date column empty
         $daysInMonth = (int)date('t');
         $labels = [];
-        $incomeSeries = [];
-        $expenseSeries = [];
-        // Pull grouped sums for efficiency
-        $incomeMap = cashManage::query()
-            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
-            ->whereIn('transaction',$incomingMarkers)
-            ->selectRaw('date, COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')
-            ->groupBy('date')->pluck('total','date');
-        $expenseMap = cashManage::query()
-            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
-            ->whereNotIn('transaction',$incomingMarkers)
-            ->selectRaw('date, COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')
-            ->groupBy('date')->pluck('total','date');
-        for($d=1;$d<=$daysInMonth;$d++){
-            $dateStr = date('Y-m-').str_pad((string)$d,2,'0',STR_PAD_LEFT);
-            $labels[] = (string)$d;
-            $incomeSeries[] = (float)($incomeMap[$dateStr] ?? 0);
-            $expenseSeries[] = (float)($expenseMap[$dateStr] ?? 0);
+        $incomeSeries = array_fill(0,$daysInMonth,0.0);
+        $expenseSeries = array_fill(0,$daysInMonth,0.0);
+        $ledgerRows = cashManage::query()
+            ->where(function($qq) use($firstMonthDay,$lastMonthDay){
+                $qq->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+                   ->orWhereBetween(DB::raw('DATE(created_at)'), [$firstMonthDay,$lastMonthDay]);
+            })
+            ->select(['id','transaction','amount','date','created_at'])
+            ->get();
+        foreach($ledgerRows as $row){
+            // Determine effective date (prefer explicit date column if non-empty)
+            $effectiveDate = $row->date && trim($row->date) !== '' ? $row->date : ($row->created_at ? $row->created_at->format('Y-m-d') : null);
+            if(!$effectiveDate) continue;
+            if(substr($effectiveDate,0,7) !== date('Y-m')) continue; // ensure current month
+            $day = (int)substr($effectiveDate,8,2); // 1-31
+            $index = $day - 1;
+            if($index < 0 || $index >= $daysInMonth) continue;
+            $amt = (float)$row->amount;
+            $isIncome = in_array(strtolower($row->transaction), $incomingMarkers, true);
+            if($isIncome){
+                $incomeSeries[$index] += $amt;
+            } else {
+                $expenseSeries[$index] += $amt;
+            }
         }
-        $metrics['cashChart'] = [
-            'labels' => $labels,
-            'income' => $incomeSeries,
-            'expense'=> $expenseSeries,
-        ];
+        for($d=1;$d<=$daysInMonth;$d++){ $labels[] = (string)$d; }
+        $metrics['cashChart'] = [ 'labels'=>$labels, 'income'=>$incomeSeries, 'expense'=>$expenseSeries ];
         $attendanceRate = $summary['total'] > 0 ? round(($summary['present'] / $summary['total']) * 100) : 0;
         return view('cultivation.index', compact('summary','today','isTeacher','metrics','attendanceRate'));
     }

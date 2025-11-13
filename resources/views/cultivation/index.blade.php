@@ -3,193 +3,69 @@
 Dashboard
 @endsection
 @section('backIndex')
-<!-- Dashboard summery Start Here -->
-<div class="row gutters-20 mb-4">
+<!-- Dashboard summary Start -->
+<style>
+    .summary-box{background:#fff;border:1px solid #e5e8ec;border-radius:12px;padding:16px;display:flex;align-items:center;box-shadow:0 1px 2px rgba(0,0,0,0.04);min-height:110px}
+    .summary-icon{width:60px;height:60px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;margin-right:14px}
+    .summary-icon.date{background:#e9f2ff;color:#2f6fed}
+    .summary-icon.present{background:#e9f9ef;color:#1a9d55}
+    .summary-icon.absent{background:#ffe9eb;color:#d04949}
+    .summary-icon.total{background:#fff3e1;color:#c78922}
+    .summary-meta{font-size:13px;font-weight:600;color:#69707a;text-transform:uppercase;letter-spacing:.5px}
+    .summary-value{font-size:24px;font-weight:700;line-height:1.2;margin-top:4px}
+    @media (max-width:767px){.summary-box{margin-bottom:12px}}
+    .summary-grid>.col-xl-3{margin-bottom:18px}
+    .summary-date-banner{font-size:14px;font-weight:600;color:#445367;margin:0 0 6px}
+    .summary-wrapper{width:100%}
+    .summary-value small{font-size:12px;color:#8a9199;font-weight:400}
+    .summary-box .summary-icon i{transition:transform .3s}
+    .summary-box:hover .summary-icon i{transform:scale(1.1)}
+    .summary-box[data-type="present"]{border-color:#caf3d9}
+    .summary-box[data-type="absent"]{border-color:#ffd1d6}
+    .summary-box[data-type="total"]{border-color:#fde3b5}
+</style>
+<div class="summary-date-banner">Date: <strong>{{ $today ?? date('Y-m-d') }}</strong></div>
+<div class="row summary-grid gutters-20 mb-3">
     @isset($summary)
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-blue">
-                        <i class="flaticon-calendar text-blue"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Today</div>
-                        <div class="item-number"><span>{{ $today ?? date('Y-m-d') }}</span></div>
-                    </div>
-                </div>
+    <div class="col-xl-3 col-sm-6 col-12">
+        <div class="summary-box" data-type="present">
+            <div class="summary-icon present"><i class="fa-solid fa-user-check"></i></div>
+            <div class="summary-wrapper text-end flex-grow-1">
+                <div class="summary-meta">Present</div>
+                <div class="summary-value">{{ $summary['present'] }} <small>students</small></div>
             </div>
         </div>
     </div>
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-green ">
-                        <i class="flaticon-check text-green"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Present</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $summary['present'] }}">{{ $summary['present'] }}</span></div>
-                    </div>
-                </div>
+    <div class="col-xl-3 col-sm-6 col-12">
+        <div class="summary-box" data-type="absent">
+            <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
+            <div class="summary-wrapper text-end flex-grow-1">
+                <div class="summary-meta">Absent</div>
+                <div class="summary-value">{{ $summary['absent'] }} <small>students</small></div>
             </div>
         </div>
     </div>
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-red">
-                        <i class="flaticon-cancel text-red"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Absent</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $summary['absent'] }}">{{ $summary['absent'] }}</span></div>
-                    </div>
-                </div>
+    <div class="col-xl-3 col-sm-6 col-12">
+        <div class="summary-box" data-type="total">
+            <div class="summary-icon total"><i class="fa-solid fa-users"></i></div>
+            <div class="summary-wrapper text-end flex-grow-1">
+                <div class="summary-meta">Total Student</div>
+                <div class="summary-value">{{ number_format($metrics['students'] ?? 0) }}</div>
             </div>
         </div>
     </div>
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-yellow">
-                        <i class="flaticon-alarm text-orange"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Late</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $summary['late'] }}">{{ $summary['late'] }}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light">
-                        <i class="flaticon-document text-dark"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Excused</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $summary['excused'] }}">{{ $summary['excused'] }}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-2 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light">
-                        <i class="flaticon-classmates text-dark"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Total</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $summary['total'] }}">{{ $summary['total'] }}</span></div>
-                    </div>
-                </div>
+    <div class="col-xl-3 col-sm-6 col-12">
+        <div class="summary-box" data-type="total">
+            <div class="summary-icon date"><i class="fa-regular fa-calendar-days"></i></div>
+            <div class="summary-wrapper text-end flex-grow-1">
+                <div class="summary-meta">Today</div>
+                <div class="summary-value">{{ $today ?? date('Y-m-d') }}</div>
             </div>
         </div>
     </div>
     @endisset
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-green ">
-                        <i class="flaticon-classmates text-green"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Students</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $metrics['students'] ?? 0 }}">{{ number_format($metrics['students'] ?? 0) }}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-blue">
-                        <i class="flaticon-multiple-users-silhouette text-blue"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Teachers</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $metrics['teachers'] ?? 0 }}">{{ number_format($metrics['teachers'] ?? 0) }}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-6">
-                    <div class="item-icon bg-light-yellow">
-                        <i class="flaticon-couple text-orange"></i>
-                    </div>
-                </div>
-                <div class="col-6">
-                    <div class="item-content">
-                        <div class="item-title">Parents</div>
-                        <div class="item-number"><span class="counter" data-num="{{ $metrics['parents'] ?? 0 }}">{{ number_format($metrics['parents'] ?? 0) }}</span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="dashboard-summery-one mg-b-20">
-            <div class="row align-items-center">
-                <div class="col-5">
-                    @php
-                        $p = $metrics['monthlyProfitLoss'] ?? 0;
-                        $profitClass = $p > 0 ? 'bg-light-green' : ($p < 0 ? 'bg-light-red' : 'bg-light');
-                        $iconClass = $p > 0 ? 'fa-arrow-trend-up text-green' : ($p < 0 ? 'fa-arrow-trend-down text-red' : 'fa-minus text-dark');
-                    @endphp
-                    <div class="item-icon {{ $profitClass }}">
-                        <i class="fa-solid {{ $iconClass }}" style="font-size:26px;"></i>
-                    </div>
-                </div>
-                <div class="col-7">
-                    <div class="item-content">
-                        <div class="item-title">Month Profit/Loss</div>
-                        <div class="item-number">
-                            <span class="{{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0 ? '-' : '' }}$ {{ number_format(abs($p),2) }}</span>
-                        </div>
-                        <div class="small mt-1 text-muted">
-                            <span>Income: ${{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</span> &middot;
-                            <span>Expense: ${{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
-<!-- Dashboard summery End Here -->
+<!-- Dashboard summary End -->
 <div class="row gutters-20 mb-4">
     <div class="col-md-6 col-12">
         <a href="{{ route('attendanceIndex') }}" class="btn btn-primary btn-lg w-100">Mark Attendance</a>
