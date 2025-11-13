@@ -28,11 +28,15 @@ Dashboard
 <div class="summary-date-banner">Date: <strong>{{ $today ?? date('Y-m-d') }}</strong></div>
 <div class="row summary-grid gutters-20 mb-3">
     @isset($summary)
+    @php $absentRate = ($summary['total'] ?? 0) > 0 ? (100 - ($attendanceRate ?? 0)) : 0; @endphp
     <div class="col-xl-3 col-sm-6 col-12">
         <div class="summary-box" data-type="present">
             <div class="summary-icon present"><i class="fa-solid fa-user-check"></i></div>
             <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta">Present</div>
+                <div class="summary-meta d-flex justify-content-between align-items-center">
+                    <span class="flex-grow-1 text-start">Present</span>
+                    <span class="badge bg-success" style="font-size:11px;">{{ $attendanceRate ?? 0 }}%</span>
+                </div>
                 <div class="summary-value">{{ $summary['present'] }} <small>students</small></div>
             </div>
         </div>
@@ -41,7 +45,10 @@ Dashboard
         <div class="summary-box" data-type="absent">
             <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
             <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta">Absent</div>
+                <div class="summary-meta d-flex justify-content-between align-items-center">
+                    <span class="flex-grow-1 text-start">Absent</span>
+                    <span class="badge bg-danger" style="font-size:11px;">{{ $absentRate }}%</span>
+                </div>
                 <div class="summary-value">{{ $summary['absent'] }} <small>students</small></div>
             </div>
         </div>
@@ -82,9 +89,12 @@ Dashboard
     @isset($summary)
     <div class="col-lg-8 col-12 mt-3">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <strong>Cash Management — This Month</strong>
-                <span class="text-muted small">Debit vs Credit</span>
+                <div class="btn-group btn-group-sm" role="group" aria-label="Chart type toggle">
+                    <button type="button" class="btn btn-outline-secondary active" id="chartBarBtn">Bar</button>
+                    <button type="button" class="btn btn-outline-secondary" id="chartLineBtn">Line</button>
+                </div>
             </div>
             <div class="card-body">
                 <canvas id="cashChart" height="120"></canvas>
@@ -122,21 +132,37 @@ Dashboard
         const labels = @json($metrics['cashChart']['labels'] ?? []);
         const income = @json($metrics['cashChart']['income'] ?? []);
         const expense = @json($metrics['cashChart']['expense'] ?? []);
-        new Chart(el, {
-            type: 'bar',
-            data: {
+        let currentType = 'bar';
+        const makeConfig = (type)=>({
+            type,
+            data:{
                 labels,
-                datasets: [
-                    {label:'Credit', data: income, backgroundColor:'#1a9d55'},
-                    {label:'Debit', data: expense, backgroundColor:'#d04949'}
+                datasets:[
+                    {label:'Credit', data: income, backgroundColor:type==='bar'?'#1a9d55':'#1a9d55', borderColor:'#1a9d55', tension:.25, stack:type==='bar'?'cash':undefined},
+                    {label:'Debit', data: expense, backgroundColor:type==='bar'?'#d04949':'#d04949', borderColor:'#d04949', tension:.25, stack:type==='bar'?'cash':undefined}
                 ]
             },
-            options: {
-                responsive: true,
-                plugins: { legend: { position: 'top' } },
-                scales: { y: { beginAtZero:true } }
+            options:{
+                responsive:true,
+                plugins:{legend:{position:'top'}, tooltip:{callbacks:{label:(ctx)=> ctx.dataset.label+': BDT '+Number(ctx.parsed.y).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}}},
+                scales:{
+                    x:{stacked: type==='bar'},
+                    y:{beginAtZero:true, stacked: type==='bar', ticks:{callback:(v)=>'BDT '+v}}
+                }
             }
         });
+        let chart = new Chart(el, makeConfig('bar'));
+        const barBtn = document.getElementById('chartBarBtn');
+        const lineBtn = document.getElementById('chartLineBtn');
+        function setType(t){
+            if(t===currentType) return; currentType=t;
+            chart.destroy();
+            chart = new Chart(el, makeConfig(t));
+            barBtn.classList.toggle('active', t==='bar');
+            lineBtn.classList.toggle('active', t==='line');
+        }
+        barBtn.addEventListener('click',()=>setType('bar'));
+        lineBtn.addEventListener('click',()=>setType('line'));
     })();
 </script>
 @endif
