@@ -10,6 +10,7 @@ use App\Models\classManage as ClassModel;
 use App\Models\Attendance;
 use App\Models\newAdmission;
 use App\Models\cashManage;
+use App\Models\TeacherManagement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Hash;
