@@ -122,17 +122,10 @@ class CultivationController extends Controller
         } else {
             $parentsCount = newAdmission::count();
         }
-        // Teacher Panel: Only count teachers who are not deleted/disabled (if such columns exist)
-        $teacherQuery = CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER);
-        if (Schema::hasColumn('cultivation_admins', 'is_active')) {
-            $teacherQuery->where('is_active', 1);
-        }
-        if (Schema::hasColumn('cultivation_admins', 'is_deleted')) {
-            $teacherQuery->where('is_deleted', 0);
-        }
+        // Teacher Panel: Count all teachers (userType=ROLE_TEACHER) since no is_active/is_deleted columns exist
         $metrics = [
             'students' => newAdmission::count(),
-            'teachers' => $teacherQuery->count(),
+            'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
             'parents'  => $parentsCount,
             'earnings' => (float)$cashIncoming,
             'monthlyProfitLoss' => $monthlyProfitLoss,
