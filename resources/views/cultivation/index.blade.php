@@ -161,15 +161,12 @@ Dashboard
                     </div>
                 </div>
             @endif
-            @endisset
         </div>
-                    <div>Credit<br><strong>BDT {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
-                    <div>Debit<br><strong>BDT {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
-                </div>
-            </div>
-        </div>
+        <div>Credit<br><strong>BDT {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
+        <div>Debit<br><strong>BDT {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
     </div>
-    @endisset
+    </div>
+    </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
 @if(!empty($metrics['cashChart']))
