@@ -88,7 +88,7 @@ Dashboard
     @endisset
     @isset($summary)
     <div class="col-lg-8 col-12 mt-3">
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <strong>Cash Management — This Month</strong>
                 <div class="btn-group btn-group-sm" role="group" aria-label="Chart type toggle">
@@ -98,6 +98,45 @@ Dashboard
             </div>
             <div class="card-body">
                 <canvas id="cashChart" height="120"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><strong>CashManage Diagnostic (Current Month)</strong></div>
+            <div class="card-body p-2">
+                <div style="overflow-x:auto;max-height:220px">
+                <table class="table table-bordered table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Transaction</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @php
+                        $firstMonthDay = date('Y-m-01');
+                        $lastMonthDay = date('Y-m-t');
+                        $rows = \App\Models\cashManage::query()
+                            ->where(function($q){
+                                $q->whereBetween('date', [date('Y-m-01'),date('Y-m-t')])
+                                  ->orWhereBetween(\DB::raw('DATE(created_at)'), [date('Y-m-01'),date('Y-m-t')]);
+                            })
+                            ->orderBy('date','asc')
+                            ->orderBy('created_at','asc')
+                            ->get();
+                        @endphp
+                        @forelse($rows as $row)
+                        <tr>
+                            <td>{{ $row->date ?: ($row->created_at ? $row->created_at->format('Y-m-d') : '') }}</td>
+                            <td>{{ $row->transaction }}</td>
+                            <td>BDT {{ number_format((float)$row->amount,2) }}</td>
+                        </tr>
+                        @empty
+                        <tr><td colspan="3" class="text-center text-muted">No cashManage data for this month.</td></tr>
+                        @endforelse
+                    </tbody>
+                </table>
+                </div>
             </div>
         </div>
     </div>
