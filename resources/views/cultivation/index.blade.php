@@ -11,6 +11,7 @@ Dashboard
     .summary-icon.present{background:#e9f9ef;color:#1a9d55}
     .summary-icon.absent{background:#ffe9eb;color:#d04949}
     .summary-icon.total{background:#fff3e1;color:#c78922}
+    .summary-icon.teacher{background:#e9f2ff;color:#2f6fed}
     .summary-meta{font-size:13px;font-weight:600;color:#69707a;text-transform:uppercase;letter-spacing:.5px}
     .summary-value{font-size:24px;font-weight:700;line-height:1.2;margin-top:4px}
     @media (max-width:767px){.summary-box{margin-bottom:12px}}
@@ -56,10 +57,10 @@ Dashboard
     </div>
     <div class="col-xl-3 col-sm-6 col-12">
         <div class="summary-box" data-type="total">
-            <div class="summary-icon date"><i class="fa-regular fa-calendar-days"></i></div>
+            <div class="summary-icon teacher"><i class="fa-solid fa-chalkboard-user"></i></div>
             <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta">Today</div>
-                <div class="summary-value">{{ $today ?? date('Y-m-d') }}</div>
+                <div class="summary-meta">Teachers</div>
+                <div class="summary-value">{{ number_format($metrics['teachers'] ?? 0) }}</div>
             </div>
         </div>
     </div>
@@ -100,12 +101,12 @@ Dashboard
                     </div>
                     <div>
                         <div class="text-muted">Month Profit/Loss</div>
-                        <div class="h4 mb-0 {{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0?'-':'' }}$ {{ number_format(abs($p),2) }}</div>
+                        <div class="h4 mb-0 {{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0?'-':'' }}BDT {{ number_format(abs($p),2) }}</div>
                     </div>
                 </div>
                 <div class="d-flex justify-content-between text-muted">
-                    <div>Income<br><strong>$ {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
-                    <div>Expense<br><strong>$ {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
+                    <div>Credit<br><strong>BDT {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
+                    <div>Debit<br><strong>BDT {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
                 </div>
             </div>
         </div>
