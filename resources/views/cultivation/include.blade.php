@@ -30,13 +30,12 @@
                     @endphp
 
                     @if($userType == 3) {{-- General Admin: Full Menu --}}
-                        @if($userType == 3)
-                            @include('cultivation.fullMenu')
-                        @elseif($userType == 2)
-                            @include('cultivation.cashMenu')
-                        @elseif($userType == 1)
-                            @include('cultivation.teacherMenu')
-                        @endif
+                        @include('cultivation.fullMenu')
+                    @elseif($userType == 2) {{-- Cash Admin: Only Accounts Management --}}
+                        @include('cultivation.cashMenu')
+                    @elseif($userType == 1) {{-- Teacher Admin: Only Result Management --}}
+                        @include('cultivation.teacherMenu')
+                    @endif
                 </div>
             </div>
             <!-- Sidebar Area End Here -->
