@@ -78,27 +78,21 @@ class CultivationController extends Controller
         // Attempt profit/loss for current month using 'date' column first (fallback to created_at)
         $firstMonthDay = date('Y-m-01');
         $lastMonthDay  = date('Y-m-t');
+        // Use same logic for box and chart: always include both date and created_at for current month
         $incomeMonth = cashManage::query()
-            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->where(function($qq) use($firstMonthDay,$lastMonthDay){
+                $qq->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+                   ->orWhereBetween(DB::raw('DATE(created_at)'), [$firstMonthDay,$lastMonthDay]);
+            })
             ->whereIn('transaction',$incomingMarkers)
             ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
         $expenseMonth = cashManage::query()
-            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->where(function($qq) use($firstMonthDay,$lastMonthDay){
+                $qq->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+                   ->orWhereBetween(DB::raw('DATE(created_at)'), [$firstMonthDay,$lastMonthDay]);
+            })
             ->whereNotIn('transaction',$incomingMarkers)
             ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
-        // Fallback using created_at if result zero and records exist with timestamps
-        if((float)$incomeMonth === 0 && (float)$expenseMonth === 0){
-            $incomeMonth = cashManage::query()
-                ->whereMonth('created_at', date('m'))
-                ->whereYear('created_at', date('Y'))
-                ->whereIn('transaction',$incomingMarkers)
-                ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
-            $expenseMonth = cashManage::query()
-                ->whereMonth('created_at', date('m'))
-                ->whereYear('created_at', date('Y'))
-                ->whereNotIn('transaction',$incomingMarkers)
-                ->selectRaw('COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')->value('total');
-        }
         $monthlyProfitLoss = (float)$incomeMonth - (float)$expenseMonth;
         // Earnings (legacy box) still available but now mapped to selected scope; keep for backward compatibility
         $cashQ = cashManage::query()->whereIn('transaction', $incomingMarkers);
