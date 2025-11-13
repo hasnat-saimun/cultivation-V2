@@ -125,7 +125,7 @@ class CultivationController extends Controller
         // Teacher Panel: Count all teachers (userType=ROLE_TEACHER) since no is_active/is_deleted columns exist
         $metrics = [
             'students' => newAdmission::count(),
-            'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
+            'teachers' => TeacherManagement::count(),
             'parents'  => $parentsCount,
             'earnings' => (float)$cashIncoming,
             'monthlyProfitLoss' => $monthlyProfitLoss,
