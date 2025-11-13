@@ -132,6 +132,33 @@ class CultivationController extends Controller
             'monthlyProfitExpense' => (float)$expenseMonth,
             'earningsScope' => $scope,
         ];
+        // Build monthly cash chart (labels, income, expense)
+        $daysInMonth = (int)date('t');
+        $labels = [];
+        $incomeSeries = [];
+        $expenseSeries = [];
+        // Pull grouped sums for efficiency
+        $incomeMap = cashManage::query()
+            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->whereIn('transaction',$incomingMarkers)
+            ->selectRaw('date, COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')
+            ->groupBy('date')->pluck('total','date');
+        $expenseMap = cashManage::query()
+            ->whereBetween('date', [$firstMonthDay,$lastMonthDay])
+            ->whereNotIn('transaction',$incomingMarkers)
+            ->selectRaw('date, COALESCE(SUM(CAST(amount as DECIMAL(18,2))),0) as total')
+            ->groupBy('date')->pluck('total','date');
+        for($d=1;$d<=$daysInMonth;$d++){
+            $dateStr = date('Y-m-').str_pad((string)$d,2,'0',STR_PAD_LEFT);
+            $labels[] = (string)$d;
+            $incomeSeries[] = (float)($incomeMap[$dateStr] ?? 0);
+            $expenseSeries[] = (float)($expenseMap[$dateStr] ?? 0);
+        }
+        $metrics['cashChart'] = [
+            'labels' => $labels,
+            'income' => $incomeSeries,
+            'expense'=> $expenseSeries,
+        ];
         $attendanceRate = $summary['total'] > 0 ? round(($summary['present'] / $summary['total']) * 100) : 0;
         return view('cultivation.index', compact('summary','today','isTeacher','metrics','attendanceRate'));
     }

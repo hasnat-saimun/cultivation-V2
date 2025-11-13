@@ -203,19 +203,64 @@ Dashboard
         @endif
     @endisset
     @isset($summary)
-    <div class="col-12 mt-3">
+    <div class="col-lg-8 col-12 mt-3">
         <div class="card">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Attendance Rate Today:</strong>
-                    <span class="ms-1">{{ $attendanceRate ?? 0 }}%</span>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Cash Management — This Month</strong>
+                <span class="text-muted small">Debit vs Credit</span>
+            </div>
+            <div class="card-body">
+                <canvas id="cashChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 col-12 mt-3">
+        <div class="card h-100">
+            <div class="card-body d-flex flex-column justify-content-center">
+                @php $p = $metrics['monthlyProfitLoss'] ?? 0; @endphp
+                <div class="d-flex align-items-center mb-2">
+                    <div class="me-2">
+                        <i class="fa-solid {{ $p>0?'fa-arrow-trend-up text-success':($p<0?'fa-arrow-trend-down text-danger':'fa-minus text-muted') }}" style="font-size:28px;"></i>
+                    </div>
+                    <div>
+                        <div class="text-muted">Month Profit/Loss</div>
+                        <div class="h4 mb-0 {{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0?'-':'' }}$ {{ number_format(abs($p),2) }}</div>
+                    </div>
                 </div>
-                <div class="progress w-50" style="height: 8px;">
-                    <div class="progress-bar bg-success" role="progressbar" style="width: {{ $attendanceRate ?? 0 }}%" aria-valuenow="{{ $attendanceRate ?? 0 }}" aria-valuemin="0" aria-valuemax="100"></div>
+                <div class="d-flex justify-content-between text-muted">
+                    <div>Income<br><strong>$ {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
+                    <div>Expense<br><strong>$ {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
                 </div>
             </div>
         </div>
     </div>
     @endisset
 </div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+@if(!empty($metrics['cashChart']))
+<script>
+    (function(){
+        const el = document.getElementById('cashChart');
+        if(!el) return;
+        const labels = @json($metrics['cashChart']['labels'] ?? []);
+        const income = @json($metrics['cashChart']['income'] ?? []);
+        const expense = @json($metrics['cashChart']['expense'] ?? []);
+        new Chart(el, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {label:'Credit', data: income, backgroundColor:'#1a9d55'},
+                    {label:'Debit', data: expense, backgroundColor:'#d04949'}
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { position: 'top' } },
+                scales: { y: { beginAtZero:true } }
+            }
+        });
+    })();
+</script>
+@endif
 @endsection
