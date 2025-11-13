@@ -147,7 +147,7 @@ class AttendanceController extends Controller
             'studentId' => $requ->query('studentId'),
             'studentName' => $requ->query('studentName'),
         ];
-        $records = collect();
+    $records = collect();
         if($filters['classId']){
             if(!Schema::hasTable('attendances')){
                 return view('attendance.report', compact('classes','sections','sessions','filters','records'))
@@ -171,6 +171,14 @@ class AttendanceController extends Controller
                 });
             }
             $records = $q->orderBy('attendance_date','DESC')->limit(500)->get();
+            // Derive teacher name(s) for header
+            $teacherNames = $records->map(function($r){ return $r->teacher ? $r->teacher->adminName : null; })
+                                     ->filter()
+                                     ->unique()
+                                     ->values();
+            if($teacherNames->count()){
+                $filters['teacherName'] = $teacherNames->implode(', ');
+            }
         }
         return view('attendance.report', compact('classes','sections','sessions','filters','records'));
     }
@@ -256,12 +264,19 @@ class AttendanceController extends Controller
                    ->orWhere('sureName','like',"%$name%");
             });
         }
-        $rows = $q->orderBy('attendance_date','DESC')->get();
+    $rows = $q->orderBy('attendance_date','DESC')->get();
 
         // Resolve human readable names for filters
         $classObj = classManage::find((int)$requ->classId);
         $sessionObj = $requ->sessionId ? sessionManage::find((int)$requ->sessionId) : null;
         $sectionObj = $requ->sectionId ? sectionManage::find((int)$requ->sectionId) : null;
+
+        // Build teacher header value (could be multiple across rows)
+        $teacherNames = $rows->map(function($r){ return $r->teacher ? $r->teacher->adminName : null; })
+                             ->filter()
+                             ->unique()
+                             ->values();
+        $teacherHeader = $teacherNames->count() ? $teacherNames->implode(', ') : null;
 
         $institute = method_exists($this,'getInstituteMeta') ? $this->getInstituteMeta() : [];
         return view('attendance.print', [
@@ -274,6 +289,7 @@ class AttendanceController extends Controller
                 'sessionName' => $sessionObj ? $sessionObj->session : null,
                 'sectionId' => $requ->sectionId,
                 'sectionName' => $sectionObj ? $sectionObj->section : null,
+                'teacherName' => $teacherHeader,
             ],
             'institute' => $institute,
         ]);

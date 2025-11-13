@@ -5,7 +5,8 @@
     $address      = $serverData->address ?? ($institute['address'] ?? '');
     $phone        = $serverData->officeMobile ?? ($institute['phone'] ?? '');
     $logoFile     = $serverData->logo ?? null;
-    $logoUrl      = $logoFile ? asset('public/upload/image/config/'.$logoFile) : ($institute['logo'] ?? null);
+    // Logo is stored under public/upload/image/cultivation per ServerConfig upload handlers
+    $logoUrl      = $logoFile ? asset('upload/image/cultivation/'.$logoFile) : ($institute['logo'] ?? null);
 @endphp
 <div class="att-print-header" style="display:flex;align-items:center;gap:12px;border-bottom:2px solid #444;padding-bottom:8px;">
     @if($logoUrl)
@@ -26,5 +27,8 @@
         <div><strong>Class:</strong> {{ $filters['className'] ?? ($filters['classId'] ?? '-') }}</div>
         <div><strong>Session:</strong> {{ $filters['sessionName'] ?? ($filters['sessionId'] ?? '-') }}</div>
         <div><strong>Section:</strong> {{ $filters['sectionName'] ?? ($filters['sectionId'] ?? '-') }}</div>
+        @if(!empty($filters['teacherName']))
+        <div><strong>Teacher:</strong> {{ $filters['teacherName'] }}</div>
+        @endif
     </div>
 </div>

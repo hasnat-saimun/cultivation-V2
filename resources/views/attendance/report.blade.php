@@ -14,6 +14,22 @@
                 </div>
             </div>
             <div class="card-body">
+                @include('attendance._printHeader')
+                <style>
+                    /* Unified styling for daily attendance tables */
+                    .att-daily-container{display:flex;justify-content:center;}
+                    .att-daily-wrapper{width:100%;max-width:760px;background:#ffffff;border:1px solid #e2e6ea;border-radius:6px;padding:14px 18px;box-shadow:0 2px 4px rgba(0,0,0,0.05);}
+                    .att-daily-wrapper .table-responsive{margin-bottom:0;}
+                    table.att-daily,table.att-daily-summary{width:100% !important;border-collapse:collapse;margin:0 auto;table-layout:auto;}
+                    @media (min-width:600px){table.att-daily,table.att-daily-summary{table-layout:fixed;}}
+                    table.att-daily th,table.att-daily td,table.att-daily-summary th,table.att-daily-summary td{padding:5px 7px;font-size:12px;vertical-align:middle;}
+                    table.att-daily th,table.att-daily-summary th{background:#f8f9fa;font-weight:600;}
+                    table.att-daily tbody tr:nth-child(even),table.att-daily-summary tbody tr:nth-child(even){background:#fcfcfc;}
+                    .att-daily-wrapper .legend{margin:8px 0 6px 0;font-size:11px;}
+                    table.att-daily td.small-meta{font-size:11px;color:#666;}
+                    table.att-daily td.status-cell,table.att-daily-summary td.status-cell{font-weight:600;letter-spacing:.5px;}
+                    @media (min-width:992px){.att-daily-wrapper{padding:18px 22px;}}
+                </style>
                 @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
                 @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
                 <form method="GET" action="{{ route('attendanceReport') }}" class="row align-items-end">
@@ -73,39 +89,72 @@
                     }
                 </script>
 
-                <div class="table-responsive">
-                    <table class="table table-bordered">
+                @php
+                    // Map statuses to codes similar to monthly view
+                    $statusMap = ['Present' => 'P', 'Absent' => 'A', 'Late' => 'T', 'Excused' => 'E'];
+                    $totals = ['P'=>0,'A'=>0,'T'=>0,'E'=>0];
+                    foreach($records as $rr){
+                        $code = $statusMap[$rr->status] ?? substr($rr->status,0,1);
+                        if(isset($totals[$code])){ $totals[$code]++; }
+                    }
+                @endphp
+                <div class="att-daily-container">
+                <div class="att-daily-wrapper">
+                    <div class="table-responsive">
+                    <table class="table table-bordered table-sm att-daily">
                         <thead>
                             <tr>
-                                <th>Date</th>
-                                <th>Student ID</th>
-                                <th>Name</th>
-                                <th>Class</th>
-                                <th>Section</th>
-                                <th>Session</th>
-                                <th>Status</th>
-                                <th>Teacher</th>
+                                <th style="width:60px;">Sl</th>
+                                <th style="white-space:nowrap;">Class Roll</th>
+                                <th style="white-space:nowrap;">Student</th>
+                                <th style="width:80px;text-align:center;">Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($records as $r)
+                            @forelse($records as $idx => $r)
+                                @php $code = $statusMap[$r->status] ?? substr($r->status,0,1); @endphp
                                 <tr>
-                                    <td>{{ $r->attendance_date }}</td>
-                                    <td>{{ $r->student_id }}</td>
-                                    <td>{{ $r->student ? trim(($r->student->fullName ?? '').' '.($r->student->sureName ?? '')) : '' }}</td>
-                                    <td>{{ $r->class ? $r->class->className : $r->class_id }}</td>
-                                    <td>{{ $r->section ? $r->section->section : $r->section_id }}</td>
-                                    <td>{{ $r->session ? $r->session->session : $r->session_id }}</td>
-                                    <td>{{ $r->status }}</td>
-                                    <td>{{ $r->teacher ? $r->teacher->adminName : $r->teacher_id }}</td>
+                                    <td>{{ $idx + 1 }}</td>
+                                    <td>{{ $r->student && $r->student->rollNumber ? $r->student->rollNumber : '' }}</td>
+                                    <td style="white-space:nowrap;">
+                                        @php $nm = $r->student ? trim(($r->student->fullName ?? '').' '.($r->student->sureName ?? '')) : ''; @endphp
+                                        {{ $nm }}
+                                        <div class="small-meta">ID: {{ $r->student_id }}</div>
+                                    </td>
+                                    <td class="status-cell" style="text-align:center;">{{ $code }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center">{{ empty($filters['classId']) ? 'Select filters to view report.' : 'No attendance found for selection.' }}</td>
+                                    <td colspan="4" class="text-center">{{ empty($filters['classId']) ? 'Select filters to view report.' : 'No attendance found for selection.' }}</td>
                                 </tr>
                             @endforelse
                         </tbody>
                     </table>
+                    </div>
+                    <div class="legend"><strong>Legend:</strong> Present = P, Absent = A, Tardy = T, Excused = E</div>
+                    @if($records->count())
+                    <div class="table-responsive mt-3">
+                    <table class="table table-bordered table-sm att-daily-summary">
+                        <thead>
+                            <tr>
+                                <th>Present</th>
+                                <th>Absent</th>
+                                <th>Late</th>
+                                <th>Excused</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="text-center fw-semibold">{{ $totals['P'] }}</td>
+                                <td class="text-center fw-semibold">{{ $totals['A'] }}</td>
+                                <td class="text-center fw-semibold">{{ $totals['T'] }}</td>
+                                <td class="text-center fw-semibold">{{ $totals['E'] }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    @endif
+                </div>
                 </div>
             </div>
         </div>
