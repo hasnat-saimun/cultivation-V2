@@ -39,7 +39,7 @@ class CultivationController extends Controller
             $attendanceRate = 0;
             $metrics = [
                 'students' => newAdmission::count(),
-                'teachers' => CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)->count(),
+                'teachers' => TeacherManagement::count(),
                 'parents'  => 0,
                 'earnings' => 0,
                 'earningsScope' => $scope,
