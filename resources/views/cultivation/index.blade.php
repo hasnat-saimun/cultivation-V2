@@ -3,7 +3,6 @@
 Dashboard
 @endsection
 @section('backIndex')
-    @endisset
 </div>
                     <div class="summary-box" data-type="absent">
                         <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
