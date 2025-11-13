@@ -9,7 +9,7 @@
     <li class="nav-item">
         <a href="{{ route('cultivationIndex') }}" class="nav-link {{ request()->routeIs('cultivationIndex') ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Admin</span></a>
     </li>
-    <li class="nav-item sidebar-nav-item open" data-group="teacher-marks">
+    <li class="nav-item sidebar-nav-item {{ $marksOpen ? 'open' : '' }}" data-group="teacher-marks">
         <a href="#" class="nav-link {{ $marksOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Marks Entry</span></a>
         <ul class="nav sub-group-menu" style="display:block;">
             <li class="nav-item">
@@ -17,7 +17,7 @@
             </li>
         </ul>
     </li>
-    <li class="nav-item sidebar-nav-item open" data-group="teacher-attendance">
+    <li class="nav-item sidebar-nav-item {{ $attendanceOpen ? 'open' : '' }}" data-group="teacher-attendance">
         <a href="#" class="nav-link {{ $attendanceOpen ? 'active' : '' }}"><i class="fa-regular fa-calendar-check"></i><span>Attendance Management</span></a>
         <ul class="nav sub-group-menu" style="display:block;">
             <li class="nav-item">
