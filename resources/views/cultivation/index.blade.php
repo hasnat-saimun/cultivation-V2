@@ -29,48 +29,84 @@ Dashboard
 <div class="row summary-grid gutters-20 mb-3">
     @isset($summary)
     @php $absentRate = ($summary['total'] ?? 0) > 0 ? (100 - ($attendanceRate ?? 0)) : 0; @endphp
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="summary-box" data-type="present">
-            <div class="summary-icon present"><i class="fa-solid fa-user-check"></i></div>
-            <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta d-flex justify-content-between align-items-center">
-                    <span class="flex-grow-1 text-start">Present</span>
-                    <span class="badge bg-success" style="font-size:11px;">{{ $attendanceRate ?? 0 }}%</span>
+    @if(!empty($isTeacher))
+        <div class="col-xl-4 col-sm-6 col-12">
+            <div class="summary-box" data-type="present">
+                <div class="summary-icon present"><i class="fa-solid fa-user-check"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta d-flex justify-content-between align-items-center">
+                        <span class="flex-grow-1 text-start">Present</span>
+                        <span class="badge bg-success" style="font-size:11px;">{{ $attendanceRate ?? 0 }}%</span>
+                    </div>
+                    <div class="summary-value">{{ $summary['present'] }} <small>students</small></div>
                 </div>
-                <div class="summary-value">{{ $summary['present'] }} <small>students</small></div>
             </div>
         </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="summary-box" data-type="absent">
-            <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
-            <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta d-flex justify-content-between align-items-center">
-                    <span class="flex-grow-1 text-start">Absent</span>
-                    <span class="badge bg-danger" style="font-size:11px;">{{ $absentRate }}%</span>
+        <div class="col-xl-4 col-sm-6 col-12">
+            <div class="summary-box" data-type="absent">
+                <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta d-flex justify-content-between align-items-center">
+                        <span class="flex-grow-1 text-start">Absent</span>
+                        <span class="badge bg-danger" style="font-size:11px;">{{ $absentRate }}%</span>
+                    </div>
+                    <div class="summary-value">{{ $summary['absent'] }} <small>students</small></div>
                 </div>
-                <div class="summary-value">{{ $summary['absent'] }} <small>students</small></div>
             </div>
         </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="summary-box" data-type="total">
-            <div class="summary-icon total"><i class="fa-solid fa-users"></i></div>
-            <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta">Total Student</div>
-                <div class="summary-value">{{ number_format($metrics['students'] ?? 0) }}</div>
+        <div class="col-xl-4 col-sm-6 col-12">
+            <div class="summary-box" data-type="total">
+                <div class="summary-icon total"><i class="fa-solid fa-users"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta">Total Student</div>
+                    <div class="summary-value">{{ number_format($metrics['students'] ?? 0) }}</div>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-xl-3 col-sm-6 col-12">
-        <div class="summary-box" data-type="total">
-            <div class="summary-icon teacher"><i class="fa-solid fa-chalkboard-user"></i></div>
-            <div class="summary-wrapper text-end flex-grow-1">
-                <div class="summary-meta">Teachers</div>
-                <div class="summary-value">{{ number_format($metrics['teachers'] ?? 0) }}</div>
+    @else
+        <div class="col-xl-3 col-sm-6 col-12">
+            <div class="summary-box" data-type="present">
+                <div class="summary-icon present"><i class="fa-solid fa-user-check"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta d-flex justify-content-between align-items-center">
+                        <span class="flex-grow-1 text-start">Present</span>
+                        <span class="badge bg-success" style="font-size:11px;">{{ $attendanceRate ?? 0 }}%</span>
+                    </div>
+                    <div class="summary-value">{{ $summary['present'] }} <small>students</small></div>
+                </div>
             </div>
         </div>
-    </div>
+        <div class="col-xl-3 col-sm-6 col-12">
+            <div class="summary-box" data-type="absent">
+                <div class="summary-icon absent"><i class="fa-solid fa-user-xmark"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta d-flex justify-content-between align-items-center">
+                        <span class="flex-grow-1 text-start">Absent</span>
+                        <span class="badge bg-danger" style="font-size:11px;">{{ $absentRate }}%</span>
+                    </div>
+                    <div class="summary-value">{{ $summary['absent'] }} <small>students</small></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 col-12">
+            <div class="summary-box" data-type="total">
+                <div class="summary-icon total"><i class="fa-solid fa-users"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta">Total Student</div>
+                    <div class="summary-value">{{ number_format($metrics['students'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-sm-6 col-12">
+            <div class="summary-box" data-type="total">
+                <div class="summary-icon teacher"><i class="fa-solid fa-chalkboard-user"></i></div>
+                <div class="summary-wrapper text-end flex-grow-1">
+                    <div class="summary-meta">Teachers</div>
+                    <div class="summary-value">{{ number_format($metrics['teachers'] ?? 0) }}</div>
+                </div>
+            </div>
+        </div>
+    @endif
     @endisset
 </div>
 <!-- Dashboard summary End -->
@@ -86,42 +122,44 @@ Dashboard
             <div class="col-12 mt-2"><small class="text-muted">Showing your classes only.</small></div>
         @endif
     @endisset
-    @isset($summary)
-    <div class="col-lg-8 col-12 mt-3">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <strong>Cash Management — This Month</strong>
-                <div class="btn-group btn-group-sm" role="group" aria-label="Chart type toggle">
-                    <button type="button" class="btn btn-outline-secondary active" id="chartBarBtn">Bar</button>
-                    <button type="button" class="btn btn-outline-secondary" id="chartLineBtn">Line</button>
-                </div>
-            </div>
-            <div class="card-body">
-                <canvas id="cashChart" height="120"></canvas>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-4 col-12 mt-3">
-        <div class="card h-100">
-            <div class="card-body d-flex flex-column justify-content-center">
-                @php $p = $metrics['monthlyProfitLoss'] ?? 0; @endphp
-                <div class="d-flex align-items-center mb-2">
-                    <div class="me-2">
-                        <i class="fa-solid {{ $p>0?'fa-arrow-trend-up text-success':($p<0?'fa-arrow-trend-down text-danger':'fa-minus text-muted') }}" style="font-size:28px;"></i>
-                    </div>
-                    <div>
-                        <div class="text-muted">Month Profit/Loss</div>
-                        <div class="h4 mb-0 {{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0?'-':'' }}BDT {{ number_format(abs($p),2) }}</div>
+    @if(empty($isTeacher))
+        @isset($summary)
+        <div class="col-lg-8 col-12 mt-3">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <strong>Cash Management — This Month</strong>
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Chart type toggle">
+                        <button type="button" class="btn btn-outline-secondary active" id="chartBarBtn">Bar</button>
+                        <button type="button" class="btn btn-outline-secondary" id="chartLineBtn">Line</button>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between text-muted">
-                    <div>Credit<br><strong>BDT {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
-                    <div>Debit<br><strong>BDT {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
+                <div class="card-body">
+                    <canvas id="cashChart" height="120"></canvas>
                 </div>
             </div>
         </div>
-    </div>
-    @endisset
+        <div class="col-lg-4 col-12 mt-3">
+            <div class="card h-100">
+                <div class="card-body d-flex flex-column justify-content-center">
+                    @php $p = $metrics['monthlyProfitLoss'] ?? 0; @endphp
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="me-2">
+                            <i class="fa-solid {{ $p>0?'fa-arrow-trend-up text-success':($p<0?'fa-arrow-trend-down text-danger':'fa-minus text-muted') }}" style="font-size:28px;"></i>
+                        </div>
+                        <div>
+                            <div class="text-muted">Month Profit/Loss</div>
+                            <div class="h4 mb-0 {{ $p>0 ? 'text-success' : ($p<0 ? 'text-danger' : 'text-muted') }}">{{ $p<0?'-':'' }}BDT {{ number_format(abs($p),2) }}</div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted">
+                        <div>Credit<br><strong>BDT {{ number_format($metrics['monthlyProfitIncome'] ?? 0,2) }}</strong></div>
+                        <div>Debit<br><strong>BDT {{ number_format($metrics['monthlyProfitExpense'] ?? 0,2) }}</strong></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endisset
+    @endif
 </div>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
 @if(!empty($metrics['cashChart']))
