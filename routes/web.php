@@ -1,4 +1,12 @@
 <?php
+// Testimonial routes
+Route::get('testimonials/create/{admission}', [App\Http\Controllers\TestimonialController::class, 'create'])->name('testimonials.create');
+Route::post('testimonials/store', [App\Http\Controllers\TestimonialController::class, 'store'])->name('testimonials.store');
+Route::get('testimonials/{id}', [App\Http\Controllers\TestimonialController::class, 'show'])->name('testimonials.show');
+Route::get('testimonials/{id}/print', [App\Http\Controllers\TestimonialController::class, 'print'])->name('testimonials.print');
+Route::get('testimonials/{id}/edit', [App\Http\Controllers\TestimonialController::class, 'edit'])->name('testimonials.edit');
+Route::post('testimonials/update', [App\Http\Controllers\TestimonialController::class, 'update'])->name('testimonials.update');
+// ...existing code...
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BackofficeController;
@@ -35,6 +43,8 @@ use App\Http\Middleware\ValidateSignature;
 use App\Http\Middleware\VerifyCsrfToken;
 use App\Http\Middleware\ModeratorAdmin;
 use App\Http\Middleware\SuperAdmin;
+
+// ...existing code...
 use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
@@ -727,68 +737,68 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('academicPart');
     //Student route declaration
     Route::get('/student/admit',[
-        admissionController::class ,
+        AdmissionController::class ,
         'admitStudent'
     ])->name('admitStudent');
     Route::post('/student/admit/confirm',[
-        admissionController::class ,
+        AdmissionController::class ,
         'confirmAdmit'
     ])->name('confirmAdmit');
     Route::get('/view/student/{stdId}',[
-        admissionController::class,
+        AdmissionController::class,
         'viewAdmission'
     ])->name('viewAdmission');
     Route::get('/student/edit/{stdId}',[
-        admissionController::class ,
+        AdmissionController::class ,
         'editStudent'
     ])->name('editStudent');
 
     Route::post('/student/edit/confirm',[
-        admissionController::class ,
+        AdmissionController::class ,
         'updateAdmit'
     ])->name('updateAdmit');
 
 
     Route::post('/student/photo/update',[
-        admissionController::class ,
+        AdmissionController::class ,
         'stdPhotoUpdate'
     ])->name('stdPhotoUpdate');
 
 
     Route::get('/student/del/avatar/{stdId}',[
-        admissionController::class ,
+        AdmissionController::class ,
         'delStudentPhoto'
     ])->name('delStudentPhoto');
 
     Route::get('/student/del/{stdId}',[
-        admissionController::class ,
+        AdmissionController::class ,
         'delStudent'
     ])->name('delStudent');
 
 
     Route::get('/student/list',[
-        admissionController::class,
+        AdmissionController::class,
         'studentList'
     ])->name('studentList');
 
     Route::get('/student/idCard/{stdId}',[
-        admissionController::class ,
+        AdmissionController::class ,
         'stdIdCard'
     ])->name('stdIdCard');
 
     Route::get('/student/promotion',[
-        admissionController::class ,
+        AdmissionController::class ,
         'studentPromotion'
     ])->name('studentPromotion');
 
 
     Route::post('/student/promotion/getData',[
-        admissionController::class ,
+        AdmissionController::class ,
         'getPromotionData'
     ])->name('getPromotionData');
 
     Route::post('/student/promotion/confirm',[
-        admissionController::class ,
+        AdmissionController::class ,
         'confirmPromotData'
     ])->name('confirmPromotData');
 

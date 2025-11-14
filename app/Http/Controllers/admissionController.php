@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -10,7 +9,7 @@ use App\Models\Department;
 use File;
 
 
-class admissionController extends Controller
+class AdmissionController extends Controller
 {
     public function admitStudent(){
         $classDetails = classManage::all();
