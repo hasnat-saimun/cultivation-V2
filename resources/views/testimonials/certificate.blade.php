@@ -20,14 +20,14 @@ Testimonial Certificate
             .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:40%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in > :not(.wm-logo){position:relative;z-index:2}
             .hdr-logo{position:absolute;left:8px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
-            .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:5mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+            .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:7mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 8mm 5mm 6mm 8mm; }
             @media print{
                 html,body{height:auto !important;overflow:visible !important;background:#fff !important;margin:0 !important}
                 #wrapper,.wrapper,.bg-ash,.dashboard-page-one,.dashboard-content-one{background:#fff !important}
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
-                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:3mm !important; outline:1px solid #e5e7eb}
+                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:5mm !important; outline:1px solid #e5e7eb}
                 .card,.card-body,.card-header,.card-footer{box-shadow:none !important;border:none !important;background:#fff !important}
                 .card-header{padding:4px 0 4px 0 !important}
                 .card-body{padding:6px 10px !important; font-size:15px !important}
@@ -42,18 +42,16 @@ Testimonial Certificate
             }
         </style>
         <div class="card border-success shadow-lg my-4 paper-a4" style="font-family:'Segoe UI', 'Times New Roman', serif;">
-            <div class="card-header bg-white py-1">
-                <div class="d-flex align-items-center" style="gap:10px;">
-                    @if($logo)
-                        <img src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo" style="height:48px;width:48px;object-fit:contain;flex:0 0 48px;">
-                    @endif
-                    <div class="flex-grow-1 text-center">
-                        <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
-                        <div style="font-size:12.5px;line-height:1.2;white-space:normal;">
-                            {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif @if(!empty($email)) | Email: {{ $email }} @endif @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
-                        </div>
-                        <div class="cert-pill">Testimonial Certificate</div>
+            <div class="card-header bg-white py-1 header-block">
+                @if($logo)
+                    <img class="hdr-logo" src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo">
+                @endif
+                <div class="text-center">
+                    <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
+                    <div style="font-size:12.5px;line-height:1.2;white-space:normal;">
+                        {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif @if(!empty($email)) | Email: {{ $email }} @endif @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
                     </div>
+                    <div class="cert-pill">Testimonial Certificate</div>
                 </div>
             </div>
             <div class="card-body px-4 py-3" style="font-size:17px;background:#fff;">
