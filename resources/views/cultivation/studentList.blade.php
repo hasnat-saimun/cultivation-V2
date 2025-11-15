@@ -133,3 +133,33 @@ Student List
                     </div>
                 </div>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script>
+    (function(){
+        function initDT(){
+            if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) { return false; }
+            var $ = jQuery;
+            var $tbl = $('#myTable');
+            if($tbl.length && !$tbl.hasClass('dt-initialized')){
+                $tbl.addClass('dt-initialized').DataTable({
+                    pageLength: 25,
+                    order: [[0,'asc']],
+                    lengthMenu: [10,25,50,100],
+                    language: { search: "Search:", lengthMenu: "Show _MENU_ entries" }
+                });
+            }
+            return true;
+        }
+        // try immediately, then fall back to DOM ready
+        if(!initDT()){
+            document.addEventListener('DOMContentLoaded', initDT);
+        }
+    })();
+}</script>
+@endpush
