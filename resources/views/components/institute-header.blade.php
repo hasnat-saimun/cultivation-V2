@@ -14,14 +14,14 @@
         </div>
     @endif
     <div class="flex-grow-1 text-center text-md-start">
-        <h4 class="mb-0" style="font-weight:700;">{{ $config->instituteName ?? 'Institute Name' }}</h4>
+        <h4 class="mb-0" style="font-weight:700;">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
         <div class="small text-muted">{{ $config->address ?? '' }}</div>
         <div class="small">
             @if(!empty($config?->officeMobile))
-                <span><i class="fa fa-phone"></i> {{ $config->officeMobile }}</span>
+                <span><i class="fa fa-phone"></i> {{ $config->officeMobile ?? '' }}</span>
             @endif
             @if(!empty($config?->officeEmail))
-                <span class="ms-3"><i class="fa fa-envelope-o"></i> {{ $config->officeEmail }}</span>
+                <span class="ms-3"><i class="fa fa-envelope-o"></i> {{ $config->officeEmail ?? '' }}</span>
             @endif
         </div>
     </div>
