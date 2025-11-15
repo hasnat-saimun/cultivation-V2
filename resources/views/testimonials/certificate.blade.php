@@ -17,8 +17,8 @@ Testimonial Certificate
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
-            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.06;width:65%;max-width:700px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
-            .frame-in > *{position:relative;z-index:1}
+            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.04;width:60%;max-width:640px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);mix-blend-mode:multiply;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .frame-in > :not(.wm-logo){position:relative;z-index:2}
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:5mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 5mm; }
             @media print{
