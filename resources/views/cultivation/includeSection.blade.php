@@ -39,6 +39,11 @@
     </script>
 
     <style type="text/css">
+        div.dataTables_wrapper div.dataTables_length select {
+            width: 40px;
+            display: inline-block;
+            height: 25px;
+        }
         textarea.form-control{
             min-height: 120px;
         }
