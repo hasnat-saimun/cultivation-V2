@@ -30,7 +30,7 @@ Testimonial Certificate
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
                 .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:6mm !important; outline:1px solid #e5e7eb}
-                .wm-logo{filter:none !important;-webkit-filter:none !important;opacity:0.09 !important;width:26% !important;max-width:360px !important}
+                .wm-logo{opacity:0.09 !important;width:26% !important;max-width:360px !important;filter:grayscale(100%);}
                 
                 .hdr-logo{height:48px;width:48px;left:8px}
                 .header-block{min-height:86px}
