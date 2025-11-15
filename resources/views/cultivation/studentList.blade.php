@@ -92,14 +92,17 @@ Student List
                                                 }
                                             @endphp
                                             <td>
-                                                @if(!$eligible)
-                                                    <span class="badge bg-secondary text-white">Not Eligible</span>
-                                                @else
+                                                @if($eligible)
                                                     @if($existingT)
-                                                        <span class="badge bg-success text-white">Created</span>
+                                                        <div class="badge bg-success text-white">Created</div>
+                                                        <a href="{{ route('testimonials.show', $existingT->id) }}" title="View Testimonial"><i class="fa-solid fa-certificate mx-2" style="color:#2f6fed;"></i></a>
+                                                        <a href="{{ route('testimonials.print', $existingT->id) }}" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a>
                                                     @else
-                                                        <span class="badge bg-warning text-dark">Not Created</span>
+                                                        <a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a>
                                                     @endif
+                                                @else
+                                                    <div class="badge bg-secondary text-white">Not Eligible</div>
+                                                    <i class="fa-solid fa-circle-info mx-2" title="Testimonial available only for Class Five, Ten & Twelve" style="color:#9aa0a6;"></i>
                                                 @endif
                                             </td>
                                             @php
@@ -119,16 +122,6 @@ Student List
                                                 <a href="{{ route('viewAdmission',['stdId'=>$std->id]) }}" title="View Profile"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                                                 <a href="{{ route('editStudent',['stdId'=>$std->id]) }}" title="Edit Student"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
                                                 <a href="{{ route('delStudent',['stdId'=>$std->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');" title="Delete Student"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
-                                                @if($eligible)
-                                                    @if($existingT)
-                                                        <a href="{{ route('testimonials.show', $existingT->id) }}" title="View Testimonial"><i class="fa-solid fa-certificate mx-2" style="color:#2f6fed;"></i></a>
-                                                        <a href="{{ route('testimonials.print', $existingT->id) }}" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a>
-                                                    @else
-                                                        <a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a>
-                                                    @endif
-                                                @else
-                                                    <i class="fa-solid fa-circle-info mx-2" title="Testimonial available only for Class Five, Ten & Twelve" style="color:#9aa0a6;"></i>
-                                                @endif
                                             </td>
                                         </tr>
                                         @endforeach
