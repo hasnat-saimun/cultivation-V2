@@ -37,27 +37,27 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">SSC/HSC Year</label>
-                            <input type="text" name="ssc_year" class="form-control" value="{{ old('ssc_year', $testimonial->ssc_year ?? '') }}">
+                            <input type="text" name="ssc_year" class="form-control" placeholder="e.g., 2024" value="{{ old('ssc_year', $testimonial->ssc_year ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">SSC/HSC Roll No</label>
-                            <input type="text" name="roll_no" class="form-control" value="{{ old('roll_no', $testimonial->roll_no ?? '') }}">
+                            <input type="text" name="roll_no" class="form-control" placeholder="e.g., 123456" value="{{ old('roll_no', $testimonial->roll_no ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">SSC/HSC Registration No</label>
-                            <input type="text" name="reg_no" class="form-control" value="{{ old('reg_no', $testimonial->reg_no ?? '') }}">
+                            <input type="text" name="reg_no" class="form-control" placeholder="e.g., 2024123456" value="{{ old('reg_no', $testimonial->reg_no ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">GPA</label>
-                            <input type="text" name="gpa" class="form-control" value="{{ old('gpa', $testimonial->gpa ?? '') }}">
+                            <input type="text" name="gpa" class="form-control" placeholder="e.g., 5.00" value="{{ old('gpa', $testimonial->gpa ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Grade</label>
-                            <input type="text" name="grade" class="form-control" value="{{ old('grade', $testimonial->grade ?? '') }}">
+                            <input type="text" name="grade" class="form-control" placeholder="e.g., A+" value="{{ old('grade', $testimonial->grade ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Subject/Department</label>
-                            <input type="text" name="subject" class="form-control" value="{{ old('subject', $testimonial->subject ?? '') }}">
+                            <input type="text" name="subject" class="form-control" placeholder="e.g., Science / Business Studies / Humanities / Vocational" value="{{ old('subject', $testimonial->subject ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Education Board</label>
@@ -77,7 +77,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Composed By</label>
-                            <input type="text" name="composed_by" class="form-control" value="{{ old('composed_by', $testimonial->composed_by ?? '') }}">
+                            <input type="text" name="composed_by" class="form-control" placeholder="e.g., Office Assistant" value="{{ old('composed_by', $testimonial->composed_by ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Composed Date</label>
@@ -85,7 +85,7 @@
                         </div>
                         <div class="col-12 mb-3">
                             <label class="form-label">Remarks</label>
-                            <input type="text" name="remarks" class="form-control" value="{{ old('remarks', $testimonial->remarks ?? '') }}">
+                            <input type="text" name="remarks" class="form-control" placeholder="Optional notes for office use" value="{{ old('remarks', $testimonial->remarks ?? '') }}">
                         </div>
                     </div>
                     <div class="mt-4 text-end">
