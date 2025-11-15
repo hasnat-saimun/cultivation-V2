@@ -98,7 +98,7 @@ Student List
                                                         <div><a href="{{ route('testimonials.show', $existingT->id) }}" title="View Testimonial"><i class="fa-solid fa-certificate mx-2" style="color:#2f6fed;"></i></a>
                                                         <a href="{{ route('testimonials.print', $existingT->id) }}" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a></div>
                                                     @else
-                                                        <div class="badge bg-success text-white">Created</div>
+                                                        <div class="badge bg-warning text-dark">Not Created</div>
                                                         <div><a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a></div>
                                                     @endif
                                                 @else
