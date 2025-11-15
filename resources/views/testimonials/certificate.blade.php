@@ -17,7 +17,7 @@ Testimonial Certificate
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in{border:2px solid #0e56a9;padding:16px 18px 12px 14px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
-            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:37%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-filter:grayscale(100%) opacity(0.08);-webkit-print-color-adjust:exact;print-color-adjust:exact;image-rendering:-webkit-optimize-contrast}
+            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.12;width:37%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-filter:grayscale(100%) opacity(0.12);-webkit-print-color-adjust:exact;print-color-adjust:exact;image-rendering:-webkit-optimize-contrast}
             .frame-in > :not(.wm-logo){position:relative;z-index:2}
             .hdr-logo{position:absolute;left:10px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
             .header-block{position:relative;min-height:90px}
@@ -31,7 +31,7 @@ Testimonial Certificate
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
                 .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:6mm !important; border:1px solid #e5e7eb; outline:none}
-                .wm-logo{opacity:0.18 !important;filter:none !important;-webkit-filter:none !important;image-rendering:auto !important;display:block !important;position:absolute !important}
+                
                 .hdr-logo{height:48px;width:48px;left:8px}
                 .header-block{min-height:86px}
                 .card,.card-body,.card-header,.card-footer{box-shadow:none !important;border:none !important;background:#fff !important}
