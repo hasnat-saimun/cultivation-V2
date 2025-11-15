@@ -2,8 +2,6 @@
   <img src="/docs/images/logo.png" height="90" />
   <h1><strong>Cultivation – The Education Manager</strong></h1>
   <p>The most complete school, college & institute management system.</p>
-  
-  <img src="/docs/images/banner.png" width="90%" />
 </div>
 
 ---
@@ -58,7 +56,7 @@ Includes:
 
 | Dashboard | Admission | Result Manager |
 |----------|-----------|----------------|
-| ![Dashboard](./screenshots/dashboard.png) | ![Admission](./screenshots/admission.png) | ![Result](./screenshots/result.png) |
+| ![Dashboard](/docs/screenshots/dashboard.png) | ![Admission](/docs/screenshots/admission.png) | ![Result](/docs/screenshots/result.png) |
 
 ---
 
