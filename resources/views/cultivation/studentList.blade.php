@@ -88,10 +88,10 @@ Student List
                                             @endphp
                                             <td>
                                                 @if(!$eligible)
-                                                    <span class="badge bg-secondary">Not Eligible</span>
+                                                    <span class="badge bg-secondary text-white">Not Eligible</span>
                                                 @else
                                                     @if($existingT)
-                                                        <span class="badge bg-success">Created</span>
+                                                        <span class="badge bg-success text-white">Created</span>
                                                     @else
                                                         <span class="badge bg-warning text-dark">Not Created</span>
                                                     @endif

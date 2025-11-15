@@ -40,9 +40,8 @@
 
     <style type="text/css">
         div.dataTables_wrapper div.dataTables_length select {
-            width: 40px;
-            display: inline-block;
-            height: 25px;
+            width: 40px !important;
+            height: 25px !important;
         }
         textarea.form-control{
             min-height: 120px;
