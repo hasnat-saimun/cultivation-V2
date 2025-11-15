@@ -65,7 +65,7 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Exam Name</label>
-                            <input type="text" name="exam_name" class="form-control" placeholder="e.g., S.S.C,H.S.C, Vocational" value="{{ old('exam_name', $testimonial->exam_name ?? '') }}">
+                            <input type="text" name="exam_name" class="form-control" placeholder="e.g., S.S.C/H.S.C/Vocational" value="{{ old('exam_name', $testimonial->exam_name ?? '') }}">
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Ref No</label>
