@@ -19,7 +19,8 @@ Testimonial Certificate
             .frame-in{border:2px solid #0e56a9;padding:16px 18px 12px 14px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
             .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:40%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in > :not(.wm-logo){position:relative;z-index:2}
-            .hdr-logo{position:absolute;left:8px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
+            .hdr-logo{position:absolute;left:10px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
+            .header-block{position:relative;min-height:90px}
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:7mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 8mm 5mm 6mm 8mm; }
             @media print{
@@ -27,7 +28,9 @@ Testimonial Certificate
                 #wrapper,.wrapper,.bg-ash,.dashboard-page-one,.dashboard-content-one{background:#fff !important}
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
-                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:5mm !important; outline:1px solid #e5e7eb}
+                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:6mm !important; outline:1px solid #e5e7eb}
+                .hdr-logo{height:48px;width:48px;left:8px}
+                .header-block{min-height:86px}
                 .card,.card-body,.card-header,.card-footer{box-shadow:none !important;border:none !important;background:#fff !important}
                 .card-header{padding:4px 0 4px 0 !important}
                 .card-body{padding:6px 10px !important; font-size:15px !important}
