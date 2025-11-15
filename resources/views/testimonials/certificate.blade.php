@@ -19,39 +19,37 @@ Testimonial Certificate
             .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
             .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.06;width:65%;max-width:700px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in > *{position:relative;z-index:1}
-            .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:6mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
-            @page { size: A4 landscape; margin: 6mm; }
+            .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:5mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
+            @page { size: A4 landscape; margin: 5mm; }
             @media print{
                 html,body{height:auto !important;overflow:visible !important;background:#fff !important;margin:0 !important}
                 #wrapper,.wrapper,.bg-ash,.dashboard-page-one,.dashboard-content-one{background:#fff !important}
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
-                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:4mm !important; outline:1px solid #e5e7eb}
+                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:3mm !important; outline:1px solid #e5e7eb}
                 .card,.card-body,.card-header,.card-footer{box-shadow:none !important;border:none !important;background:#fff !important}
-                .card-header{padding:6px 0 6px 0 !important}
-                .card-body{padding:8px 12px !important; font-size:15px !important}
-                .card-footer{padding:8px 12px !important}
+                .card-header{padding:4px 0 4px 0 !important}
+                .card-body{padding:6px 10px !important; font-size:15px !important}
+                .card-footer{padding:6px 10px !important}
                 .my-4{margin:0 !important}
-                .mt-4{margin-top:8px !important}
+                .mt-4{margin-top:6px !important}
                 .frame-out{padding:6px !important}
-                .frame-in{padding:10px !important}
+                .frame-in{padding:8px !important}
                 .paper-a4 p{margin:6px 0 !important}
                 .paper-a4 h2,.paper-a4 h3,.paper-a4 h4{margin:6px 0 !important}
                 .frame-out{page-break-inside:avoid}
             }
         </style>
         <div class="card border-success shadow-lg my-4 paper-a4" style="font-family:'Segoe UI', 'Times New Roman', serif;">
-            <div class="card-header bg-white py-2">
-                <div class="d-flex align-items-center gap-3">
+            <div class="card-header bg-white py-1">
+                <div class="d-flex align-items-center" style="gap:10px;">
                     @if($logo)
-                        <img src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo" style="height:54px;width:54px;object-fit:contain;margin-right:10px;">
+                        <img src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo" style="height:48px;width:48px;object-fit:contain;flex:0 0 48px;">
                     @endif
                     <div class="flex-grow-1 text-center">
                         <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
-                        <div style="font-size:13px;line-height:1.2;">
-                            {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif
-                            @if(!empty($email)) | Email: {{ $email }} @endif
-                            @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
+                        <div style="font-size:12.5px;line-height:1.2;white-space:normal;">
+                            {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif @if(!empty($email)) | Email: {{ $email }} @endif @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
                         </div>
                         <div class="cert-pill">Testimonial Certificate</div>
                     </div>
@@ -74,7 +72,7 @@ Testimonial Certificate
                     </div>
                 </div>
             </div>
-            <div class="card-footer bg-white border-0 mt-2 px-4 pb-3">
+            <div class="card-footer bg-white border-0 mt-1 px-3 pb-2">
                 <div class="row">
                     <div class="col-md-6">
                         <div>Composed by: <strong>{{ $testimonial->composed_by }}</strong></div>
