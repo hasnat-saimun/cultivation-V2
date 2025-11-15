@@ -17,7 +17,7 @@ Testimonial Certificate
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in{border:2px solid #0e56a9;padding:16px 18px 12px 14px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
-            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:40%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:37%;max-width:460px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in > :not(.wm-logo){position:relative;z-index:2}
             .hdr-logo{position:absolute;left:10px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
             .header-block{position:relative;min-height:90px}
