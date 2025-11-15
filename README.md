@@ -1,9 +1,9 @@
 <div align="center">
-  <img src="/docs/logo.png" height="90" />
+  <img src="/docs/images/logo.png" height="90" />
   <h1><strong>Cultivation – The Education Manager</strong></h1>
   <p>The most complete school, college & institute management system.</p>
   
-  <img src="./assets/banner.png" width="90%" />
+  <img src="/docs/images/banner.png" width="90%" />
 </div>
 
 ---
