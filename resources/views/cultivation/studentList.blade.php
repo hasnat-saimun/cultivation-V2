@@ -40,6 +40,7 @@ Student List
                                             <th>Mobile</th>
                                             <th>ID Card</th>
                                             <th>Testimonial</th>
+                                            <th>TC</th>
                                             <th>Action</th>
                                         </tr>
                                     </thead>
@@ -83,7 +84,11 @@ Student List
                                                 $eligible = false;
                                                 if(!empty($classData) && !empty($classData->className)){
                                                     $cn = strtolower(trim($classData->className));
-                                                    $eligible = ($cn === 'ten' || $cn === 'twelve' || $cn === '10' || $cn === '12' || strpos($cn,'ten') !== false || strpos($cn,'twelve') !== false);
+                                                    $eligible = (
+                                                        $cn === 'five' || $cn === 'ten' || $cn === 'twelve' ||
+                                                        $cn === '5' || $cn === '10' || $cn === '12' ||
+                                                        strpos($cn,'five') !== false || strpos($cn,'ten') !== false || strpos($cn,'twelve') !== false
+                                                    );
                                                 }
                                             @endphp
                                             <td>
@@ -95,6 +100,19 @@ Student List
                                                     @else
                                                         <span class="badge bg-warning text-dark">Not Created</span>
                                                     @endif
+                                                @endif
+                                            </td>
+                                            @php
+                                                $existingTC = \App\Models\TransferCertificate::where('admission_id', $std->id)->latest('id')->first();
+                                            @endphp
+                                            <td>
+                                                @if($existingTC)
+                                                    <span class="badge bg-success text-white">Created</span>
+                                                    <a href="{{ route('tc.show', $existingTC->id) }}" title="View TC"><i class="fa-solid fa-award mx-2" style="color:#2f6fed;"></i></a>
+                                                    <a href="{{ route('tc.print', $existingTC->id) }}" title="Print TC" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a>
+                                                @else
+                                                    <span class="badge bg-warning text-dark">Not Created</span>
+                                                    <a href="{{ route('tc.create', ['admission' => $std->id]) }}" title="Create Transfer Certificate"><i class="fa-solid fa-award mx-2" style="color:#168c6c;"></i></a>
                                                 @endif
                                             </td>
                                             <td>
@@ -109,7 +127,7 @@ Student List
                                                         <a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a>
                                                     @endif
                                                 @else
-                                                    <i class="fa-solid fa-circle-info mx-2" title="Testimonial available only for Class Ten & Twelve" style="color:#9aa0a6;"></i>
+                                                    <i class="fa-solid fa-circle-info mx-2" title="Testimonial available only for Class Five, Ten & Twelve" style="color:#9aa0a6;"></i>
                                                 @endif
                                             </td>
                                         </tr>

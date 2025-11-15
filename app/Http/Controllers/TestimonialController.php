@@ -15,8 +15,8 @@ class TestimonialController extends Controller
         $class = classManage::find($classId);
         if (!$class) return false;
         $name = strtolower(trim((string)$class->className));
-        return $name === 'ten' || $name === 'twelve' || $name === '10' || $name === '12'
-            || strpos($name, 'ten') !== false || strpos($name, 'twelve') !== false;
+        // Eligible strictly for classes: Five, Ten, Twelve (case-insensitive)
+        return in_array($name, ['five','ten','twelve'], true);
     }
     private function generateRefNo(Testimonial $testimonial): string {
         return date('Y') . '-' . str_pad((string)$testimonial->id, 5, '0', STR_PAD_LEFT);
@@ -24,7 +24,7 @@ class TestimonialController extends Controller
     public function create($admissionId) {
         $admission = newAdmission::findOrFail($admissionId);
         if (!$this->isEligibleForTestimonial($admission)) {
-            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Ten and Twelve students.');
+            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Five, Ten and Twelve students.');
         }
         return view('testimonials.create', compact('admission'));
     }
@@ -48,7 +48,7 @@ class TestimonialController extends Controller
         ]);
         $admission = newAdmission::findOrFail($data['admission_id']);
         if (!$this->isEligibleForTestimonial($admission)) {
-            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Ten and Twelve students.');
+            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Five, Ten and Twelve students.');
         }
         $personal = [
             'student_name' => $admission->fullName ?? $admission->sureName ?? $admission->student_name ?? $admission->studentName ?? null,

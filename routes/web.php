@@ -6,6 +6,13 @@ Route::get('testimonials/{id}', [App\Http\Controllers\TestimonialController::cla
 Route::get('testimonials/{id}/print', [App\Http\Controllers\TestimonialController::class, 'print'])->name('testimonials.print');
 Route::get('testimonials/{id}/edit', [App\Http\Controllers\TestimonialController::class, 'edit'])->name('testimonials.edit');
 Route::post('testimonials/update', [App\Http\Controllers\TestimonialController::class, 'update'])->name('testimonials.update');
+// Transfer Certificate (TC) routes
+Route::get('tc/create/{admission}', [App\Http\Controllers\TransferCertificateController::class, 'create'])->name('tc.create');
+Route::post('tc/store', [App\Http\Controllers\TransferCertificateController::class, 'store'])->name('tc.store');
+Route::get('tc/{id}', [App\Http\Controllers\TransferCertificateController::class, 'show'])->name('tc.show');
+Route::get('tc/{id}/print', [App\Http\Controllers\TransferCertificateController::class, 'print'])->name('tc.print');
+Route::get('tc/{id}/edit', [App\Http\Controllers\TransferCertificateController::class, 'edit'])->name('tc.edit');
+Route::post('tc/update', [App\Http\Controllers\TransferCertificateController::class, 'update'])->name('tc.update');
 // ...existing code...
 
 use Illuminate\Support\Facades\Route;

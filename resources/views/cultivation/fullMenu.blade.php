@@ -21,6 +21,10 @@
         <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
     </li>
     @php
+        $certRoutes = ['studentList','testimonials.*','tc.*'];
+        $certOpen = request()->routeIs($certRoutes);
+    @endphp
+    @php
         $attendanceRoutes = ['attendanceIndex','attendanceReport','attendanceMonthly'];
         $attendanceOpen = request()->routeIs($attendanceRoutes);
     @endphp

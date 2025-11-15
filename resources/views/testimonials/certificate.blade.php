@@ -24,7 +24,7 @@ Testimonial Certificate
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:7mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 8mm 5mm 6mm 8mm; }
             @media print{
-                .cert-pill{display:inline-block;background:#042954;color:#fff;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px;border: 1px solid #000;}
+                .cert-pill{display:inline-block;background:#042954 !important;color:#fff !important;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px !important;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px;border: 1px solid #000;}
                 html,body{height:auto !important;overflow:visible !important;background:#fff !important;margin:0 !important}
                 #wrapper,.wrapper,.bg-ash,.dashboard-page-one,.dashboard-content-one{background:#fff !important}
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
@@ -68,8 +68,8 @@ Testimonial Certificate
                         <img class="wm-logo" src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Watermark">
                         @endif
                         <div class="d-flex justify-content-between" style="font-size:16px;">
-                            <div>SL: <span class="line">&nbsp;{{ $testimonial->ref_no ?: 'N/A' }}&nbsp;</span></div>
-                            <div>Date: <span class="line">&nbsp;{{ $testimonial->issue_date ? date('d/m/Y', strtotime($testimonial->issue_date)) : '' }}&nbsp;</span></div>
+                            <div><span class="fw-bold">SL:</span> <span class="line">&nbsp;{{ $testimonial->ref_no ?: 'N/A' }}&nbsp;</span></div>
+                            <div><span class="fw-bold">Date:</span> <span class="line">&nbsp;{{ $testimonial->issue_date ? date('d/m/Y', strtotime($testimonial->issue_date)) : '' }}&nbsp;</span></div>
                         </div>
                         <p class="mt-4" style="line-height:1.6">This is to certify that <strong>{{ $admission->fullName ?? $admission->student_name ?? $admission->studentName ?? $testimonial->student_name }} {{  $admission->sureName ?? "" }}</strong>, son/daughter of <strong>{{ $admission->father ?? $admission->father_name ?? $testimonial->father_name }}</strong> and <strong>{{ $admission->mother ?? $admission->mother_name ?? $testimonial->mother_name }}</strong>, Address <strong>{{ $admission->address ?? ($testimonial->village ? $testimonial->village : '') }}</strong>@if(!empty($testimonial->district)), Dist. <strong>{{ $testimonial->district }}</strong>@endif, passed the <strong>{{ $testimonial->exam_name ?? 'S.S.C./H.S.C' }} </strong>Examination in <strong>{{ $testimonial->ssc_year }}</strong> from this school under the <strong>{{ $testimonial->education_board ?? 'Cumilla' }} </strong> board bearing Roll No. <strong>{{ $testimonial->roll_no }}</strong> and Registration No. <strong>{{ $testimonial->reg_no }}</strong> and obtained Grade Point Average <strong>{{ $testimonial->gpa }}</strong> ({{ $testimonial->grade }}) in <strong>{{ $testimonial->subject }}</strong>.</p>
                         <div class="mb-3">His/Her DOB (in words): <span class="line fw-bold">&nbsp;{{ isset($admission->dob) ? \Carbon\Carbon::parse($admission->dob)->format('jS F, Y') : ($testimonial->dob ? \Carbon\Carbon::parse($testimonial->dob)->format('jS F, Y') : '') }}&nbsp;</span></div>

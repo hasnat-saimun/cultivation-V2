@@ -49,9 +49,17 @@
         <div class="header-inline item-header">
             <div class="header-elements d-print-none">
                 <ul>
-                    <li><a href="{{route('studentList')}}"><i class="fa-solid fa-arrow-left"></i></a></li>
-                    <li><a href="#" onclick="printDiv('userView')"><i class="fas fa-print"></i></a></li>
-                    <li><a href="#"><i class="fas fa-download"></i></a></li>
+                    <li><a href="{{route('studentList')}}" title="Back to Student List"><i class="fa-solid fa-arrow-left"></i></a></li>
+                    <li><a href="#" onclick="printDiv('userView')" title="Print Profile"><i class="fas fa-print"></i></a></li>
+                    @php
+                        $existingTC = \App\Models\TransferCertificate::where('admission_id', $singleData->id)->latest('id')->first();
+                    @endphp
+                    @if($existingTC)
+                        <li><a href="{{ route('tc.show', $existingTC->id) }}" title="View Transfer Certificate"><i class="fa-solid fa-award"></i></a></li>
+                        <li><a href="{{ route('tc.print', $existingTC->id) }}" target="_blank" title="Print Transfer Certificate"><i class="fas fa-print"></i></a></li>
+                    @else
+                        <li><a href="{{ route('tc.create', ['admission' => $singleData->id]) }}" title="Create Transfer Certificate"><i class="fa-solid fa-award"></i></a></li>
+                    @endif
                 </ul>
             </div>
         </div>
