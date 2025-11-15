@@ -64,11 +64,11 @@
                     </div>
                 </div>
                 <!-- Social Media End Here -->
-                <div class="row">
+                <div class="row align-items-center">
                     <div class="col-12 col-md-8">
-                        <div class="copyright">© <a href="#">Cultivation</a>-The Education Management System Software {{ date('Y') }} | All rights reserved.</div>
+                        <div class="copyright">© <a href="#">Cultivation</a>-The Education Management System Software {{ date('Y') }} | All rights reserved. <span class="text-muted ms-2" style="font-size:12px;">v{{ config('app.version') ?? 'dev' }}</span></div>
                     </div>
-                    <div class="col-12 col-md-4 text-right">
+                    <div class="col-12 col-md-4 text-md-end">
                         <div class="copyright"><span class="fw-bold">Developed by:</span> <a href="#">Virtual IT Professional</a></div>
                     </div>
                 </div>

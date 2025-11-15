@@ -16,7 +16,7 @@ class DocsController extends Controller
 
         // Determine last updated timestamp & version
         $updatedAt = $exists ? Carbon::createFromTimestamp(File::lastModified($path)) : Carbon::now();
-        $version = $updatedAt->format('Y.m.d');
+        $version = config('app.version') ?: $updatedAt->format('Y.m.d');
 
         // Server-side markdown conversion with graceful fallback
         $html = $this->convertMarkdown($markdown);
