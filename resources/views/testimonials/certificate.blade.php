@@ -13,10 +13,10 @@ Testimonial Certificate
     </div>
     <div class="col-lg-10">
         <style>
-            .cert-pill{display:inline-block;background:#042954;color:#fff;padding:6px 18px;border-radius:16px;font-weight:700;margin-top:10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .cert-pill{display:inline-block;background:#042954;color:#fff;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px}
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-            .frame-in{border:2px solid #0e56a9;padding:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:6mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 6mm; }
             @media print{
@@ -26,43 +26,50 @@ Testimonial Certificate
                 .dashboard-content-one{margin-left:0 !important}
                 .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:4mm !important; outline:1px solid #e5e7eb}
                 .card,.card-body,.card-header,.card-footer{box-shadow:none !important;border:none !important;background:#fff !important}
-                .card-header{padding:6px 0 8px 0 !important}
-                .card-body{padding:12px 16px !important; font-size:16px !important}
-                .card-footer{padding:10px 16px !important}
+                .card-header{padding:6px 0 6px 0 !important}
+                .card-body{padding:8px 12px !important; font-size:15px !important}
+                .card-footer{padding:8px 12px !important}
                 .my-4{margin:0 !important}
+                .mt-4{margin-top:8px !important}
                 .frame-out{padding:6px !important}
-                .frame-in{padding:12px !important}
+                .frame-in{padding:10px !important}
                 .paper-a4 p{margin:6px 0 !important}
                 .paper-a4 h2,.paper-a4 h3,.paper-a4 h4{margin:6px 0 !important}
                 .frame-out{page-break-inside:avoid}
             }
         </style>
         <div class="card border-success shadow-lg my-4 paper-a4" style="font-family:'Segoe UI', 'Times New Roman', serif;">
-            <div class="card-header bg-white text-center py-4">
-                <div class="d-flex flex-column align-items-center">
+            <div class="card-header bg-white py-2">
+                <div class="d-flex align-items-center gap-3">
                     @if($logo)
-                        <img src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo" style="height:60px;margin-bottom:12px;">
+                        <img src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Logo" style="height:54px;width:54px;object-fit:contain;margin-right:10px;">
                     @endif
-                    <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
-                    <div style="font-size:14px;">{{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif</div>
-                    <div class="cert-pill">Testimonial Certificate</div>
+                    <div class="flex-grow-1 text-center">
+                        <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
+                        <div style="font-size:13px;line-height:1.2;">
+                            {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif
+                            @if(!empty($email)) | Email: {{ $email }} @endif
+                            @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
+                        </div>
+                        <div class="cert-pill">Testimonial Certificate</div>
+                    </div>
                 </div>
             </div>
-            <div class="card-body px-5 py-4" style="font-size:18px;min-height:220px;background:#fff;">
+            <div class="card-body px-4 py-3" style="font-size:17px;background:#fff;">
                 <div class="frame-out">
                     <div class="frame-in">
                         <div class="d-flex justify-content-between" style="font-size:16px;">
                             <div>SL: <span class="line">&nbsp;{{ $testimonial->ref_no ?: 'N/A' }}&nbsp;</span></div>
                             <div>Date: <span class="line">&nbsp;{{ $testimonial->issue_date ? date('d/m/Y', strtotime($testimonial->issue_date)) : '' }}&nbsp;</span></div>
                         </div>
-                        <p class="mt-4" style="line-height:1.8">This is to certify that <strong>{{ $admission->fullName ?? $admission->student_name ?? $admission->studentName ?? $testimonial->student_name }} {{  $admission->sureName ?? "" }}</strong>, son/daughter of <strong>{{ $admission->father ?? $admission->father_name ?? $testimonial->father_name }}</strong> and <strong>{{ $admission->mother ?? $admission->mother_name ?? $testimonial->mother_name }}</strong>, Address <strong>{{ $admission->address ?? ($testimonial->village ? $testimonial->village : '') }}</strong>@if(!empty($testimonial->district)), Dist. <strong>{{ $testimonial->district }}</strong>@endif, passed the <strong>{{ $testimonial->exam_name ?? 'S.S.C./H.S.C' }} </strong>Examination in <strong>{{ $testimonial->ssc_year }}</strong> from this school under the <strong>{{ $testimonial->education_board ?? 'Cumilla' }} </strong> board bearing Roll No. <strong>{{ $testimonial->roll_no }}</strong> and Registration No. <strong>{{ $testimonial->reg_no }}</strong> and obtained Grade Point Average <strong>{{ $testimonial->gpa }}</strong> ({{ $testimonial->grade }}) in <strong>{{ $testimonial->subject }}</strong>.</p>
+                        <p class="mt-4" style="line-height:1.6">This is to certify that <strong>{{ $admission->fullName ?? $admission->student_name ?? $admission->studentName ?? $testimonial->student_name }} {{  $admission->sureName ?? "" }}</strong>, son/daughter of <strong>{{ $admission->father ?? $admission->father_name ?? $testimonial->father_name }}</strong> and <strong>{{ $admission->mother ?? $admission->mother_name ?? $testimonial->mother_name }}</strong>, Address <strong>{{ $admission->address ?? ($testimonial->village ? $testimonial->village : '') }}</strong>@if(!empty($testimonial->district)), Dist. <strong>{{ $testimonial->district }}</strong>@endif, passed the <strong>{{ $testimonial->exam_name ?? 'S.S.C./H.S.C' }} </strong>Examination in <strong>{{ $testimonial->ssc_year }}</strong> from this school under the <strong>{{ $testimonial->education_board ?? 'Cumilla' }} </strong> board bearing Roll No. <strong>{{ $testimonial->roll_no }}</strong> and Registration No. <strong>{{ $testimonial->reg_no }}</strong> and obtained Grade Point Average <strong>{{ $testimonial->gpa }}</strong> ({{ $testimonial->grade }}) in <strong>{{ $testimonial->subject }}</strong>.</p>
                         <div class="mb-3">His/Her DOB (in words): <span class="line">&nbsp;{{ isset($admission->dob) ? \Carbon\Carbon::parse($admission->dob)->format('jS F, Y') : ($testimonial->dob ? \Carbon\Carbon::parse($testimonial->dob)->format('jS F, Y') : '') }}&nbsp;</span></div>
                         <p>To the best of my knowledge he did not take part in any activities subversive of the state or discipline. His conduct and character are good.</p>
                         <p>I wish him every success in life.</p>
                     </div>
                 </div>
             </div>
-            <div class="card-footer bg-white border-0 mt-4 px-5 pb-4">
+            <div class="card-footer bg-white border-0 mt-2 px-4 pb-3">
                 <div class="row">
                     <div class="col-md-6">
                         <div>Composed by: <strong>{{ $testimonial->composed_by }}</strong></div>

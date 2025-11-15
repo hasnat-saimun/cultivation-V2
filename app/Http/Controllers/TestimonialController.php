@@ -79,6 +79,8 @@ class TestimonialController extends Controller
             'establishDate' => $config->establishDate ?? '',
             'headmasterName' => $headmasterName,
             'principalSign' => $config->principalSign ?? null,
+            'email' => $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? null,
+            'mobile' => $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
         ]);
     }
     public function print($id) {
@@ -94,6 +96,8 @@ class TestimonialController extends Controller
             'establishDate' => $config->establishDate ?? '',
             'headmasterName' => $headmasterName,
             'principalSign' => $config->principalSign ?? null,
+            'email' => $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? null,
+            'mobile' => $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
             'autoPrint' => true,
         ]);
     }
