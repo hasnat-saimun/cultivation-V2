@@ -24,13 +24,11 @@ Testimonial Certificate
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:7mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 8mm 5mm 6mm 8mm; }
             @media print{
-                *{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
                 html,body{height:auto !important;overflow:visible !important;background:#fff !important;margin:0 !important}
-                .cert-pill{display:inline-block;background:#042954;color:#fff;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px}
                 #wrapper,.wrapper,.bg-ash,.dashboard-page-one,.dashboard-content-one{background:#fff !important}
                 .sidebar-main,.header-menu-one,.breadcrumbs-area,.footer-wrap-layout1,.d-print-none{display:none !important}
                 .dashboard-content-one{margin-left:0 !important}
-                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:6mm !important; border:1px solid #e5e7eb; outline:none}
+                .paper-a4{width:auto;max-width:100%;margin:0 !important;padding:6mm !important; outline:1px solid #e5e7eb}
                 
                 .hdr-logo{height:48px;width:48px;left:8px}
                 .header-block{min-height:86px}
