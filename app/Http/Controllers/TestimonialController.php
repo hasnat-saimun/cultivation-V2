@@ -19,7 +19,7 @@ class TestimonialController extends Controller
             || strpos($name, 'ten') !== false || strpos($name, 'twelve') !== false;
     }
     private function generateRefNo(Testimonial $testimonial): string {
-        return 'SL-' . date('Y') . '-' . str_pad((string)$testimonial->id, 5, '0', STR_PAD_LEFT);
+        return date('Y') . '-' . str_pad((string)$testimonial->id, 5, '0', STR_PAD_LEFT);
     }
     public function create($admissionId) {
         $admission = newAdmission::findOrFail($admissionId);
@@ -79,8 +79,8 @@ class TestimonialController extends Controller
             'establishDate' => $config->establishDate ?? '',
             'headmasterName' => $headmasterName,
             'principalSign' => $config->principalSign ?? null,
-            'email' => $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? null,
-            'mobile' => $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
+            'email' => $config->officeEmail ?? $config->officeMail ?? $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? $config->principalMail ?? null,
+            'mobile' => $config->officeMobile ?? $config->principalMobile ?? $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
         ]);
     }
     public function print($id) {
@@ -96,8 +96,8 @@ class TestimonialController extends Controller
             'establishDate' => $config->establishDate ?? '',
             'headmasterName' => $headmasterName,
             'principalSign' => $config->principalSign ?? null,
-            'email' => $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? null,
-            'mobile' => $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
+            'email' => $config->officeEmail ?? $config->officeMail ?? $config->email ?? $config->emailAddress ?? $config->instituteEmail ?? $config->principalMail ?? null,
+            'mobile' => $config->officeMobile ?? $config->principalMobile ?? $config->phone ?? $config->mobile ?? $config->contact ?? $config->mobileNumber ?? $config->phoneNumber ?? null,
             'autoPrint' => true,
         ]);
     }
