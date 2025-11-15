@@ -16,7 +16,9 @@ Testimonial Certificate
             .cert-pill{display:inline-block;background:#042954;color:#fff;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px}
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-            .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
+            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.06;width:65%;max-width:700px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .frame-in > *{position:relative;z-index:1}
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:6mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 6mm; }
             @media print{
@@ -58,6 +60,9 @@ Testimonial Certificate
             <div class="card-body px-4 py-3" style="font-size:17px;background:#fff;">
                 <div class="frame-out">
                     <div class="frame-in">
+                        @if($logo)
+                        <img class="wm-logo" src="{{ asset('public/upload/image/cultivation/'.$logo) }}" alt="Watermark">
+                        @endif
                         <div class="d-flex justify-content-between" style="font-size:16px;">
                             <div>SL: <span class="line">&nbsp;{{ $testimonial->ref_no ?: 'N/A' }}&nbsp;</span></div>
                             <div>Date: <span class="line">&nbsp;{{ $testimonial->issue_date ? date('d/m/Y', strtotime($testimonial->issue_date)) : '' }}&nbsp;</span></div>
