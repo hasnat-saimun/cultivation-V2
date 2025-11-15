@@ -52,7 +52,7 @@ Testimonial Certificate
                 <div class="text-center">
                     <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
                     <div style="font-size:12.5px;line-height:1.2;white-space:normal;">
-                        {{ $address }} @if($establishDate) | Estd. {{ $establishDate }} @endif @if(!empty($email)) | Email: {{ $email }} @endif @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif
+                        <div>{{ $address }}</div><div> @if($establishDate) | Estd. {{ $establishDate }} @endif </div><div> @if(!empty($email)) | Email: {{ $email }} @endif </div><div> @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif</div>
                     </div>
                     <div class="cert-pill">Testimonial Certificate</div>
                 </div>
