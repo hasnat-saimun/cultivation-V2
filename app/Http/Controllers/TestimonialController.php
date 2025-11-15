@@ -5,14 +5,27 @@ use Illuminate\Http\Request;
 use App\Models\Testimonial;
 use App\Models\newAdmission;
 use App\Models\ServerConfig;
+use App\Models\classManage;
 
 class TestimonialController extends Controller
 {
+    private function isEligibleForTestimonial($admission): bool {
+        $classId = $admission->className ?? null;
+        if (!$classId) return false;
+        $class = classManage::find($classId);
+        if (!$class) return false;
+        $name = strtolower(trim((string)$class->className));
+        return $name === 'ten' || $name === 'twelve' || $name === '10' || $name === '12'
+            || strpos($name, 'ten') !== false || strpos($name, 'twelve') !== false;
+    }
     private function generateRefNo(Testimonial $testimonial): string {
         return 'SL-' . date('Y') . '-' . str_pad((string)$testimonial->id, 5, '0', STR_PAD_LEFT);
     }
     public function create($admissionId) {
         $admission = newAdmission::findOrFail($admissionId);
+        if (!$this->isEligibleForTestimonial($admission)) {
+            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Ten and Twelve students.');
+        }
         return view('testimonials.create', compact('admission'));
     }
     public function store(Request $request) {
@@ -34,6 +47,9 @@ class TestimonialController extends Controller
             'headmaster_name' => 'nullable',
         ]);
         $admission = newAdmission::findOrFail($data['admission_id']);
+        if (!$this->isEligibleForTestimonial($admission)) {
+            return redirect()->route('studentList')->with('error', 'Testimonial is only allowed for Class Ten and Twelve students.');
+        }
         $personal = [
             'student_name' => $admission->fullName ?? $admission->sureName ?? $admission->student_name ?? $admission->studentName ?? null,
             'father_name' => $admission->fatherName ?? $admission->father_name ?? null,

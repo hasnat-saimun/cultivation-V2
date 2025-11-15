@@ -78,23 +78,38 @@ Student List
                                             @endif
                                             <td>{{ $std->phone }}</td>
                                             <td class="text-center"><a href="{{ route('stdIdCard',['stdId'=>$std->id]) }}"><i class="fa-solid fa-id-card mx-2" style="color:#19761f;"></i></a></td>
-                                            @php $existingT = \App\Models\Testimonial::where('admission_id', $std->id)->latest('id')->first(); @endphp
+                                            @php 
+                                                $existingT = \App\Models\Testimonial::where('admission_id', $std->id)->latest('id')->first();
+                                                $eligible = false;
+                                                if(!empty($classData) && !empty($classData->className)){
+                                                    $cn = strtolower(trim($classData->className));
+                                                    $eligible = ($cn === 'ten' || $cn === 'twelve' || $cn === '10' || $cn === '12' || strpos($cn,'ten') !== false || strpos($cn,'twelve') !== false);
+                                                }
+                                            @endphp
                                             <td>
-                                                @if($existingT)
-                                                    <span class="badge bg-success">Created</span>
+                                                @if(!$eligible)
+                                                    <span class="badge bg-secondary">Not Eligible</span>
                                                 @else
-                                                    <span class="badge bg-secondary">Not Created</span>
+                                                    @if($existingT)
+                                                        <span class="badge bg-success">Created</span>
+                                                    @else
+                                                        <span class="badge bg-warning text-dark">Not Created</span>
+                                                    @endif
                                                 @endif
                                             </td>
                                             <td>
                                                 <a href="{{ route('viewAdmission',['stdId'=>$std->id]) }}" title="View Profile"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                                                 <a href="{{ route('editStudent',['stdId'=>$std->id]) }}" title="Edit Student"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
                                                 <a href="{{ route('delStudent',['stdId'=>$std->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');" title="Delete Student"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
-                                                @if($existingT)
-                                                    <a href="{{ route('testimonials.show', $existingT->id) }}" title="View Testimonial"><i class="fa-solid fa-certificate mx-2" style="color:#2f6fed;"></i></a>
-                                                    <a href="{{ route('testimonials.print', $existingT->id) }}" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a>
+                                                @if($eligible)
+                                                    @if($existingT)
+                                                        <a href="{{ route('testimonials.show', $existingT->id) }}" title="View Testimonial"><i class="fa-solid fa-certificate mx-2" style="color:#2f6fed;"></i></a>
+                                                        <a href="{{ route('testimonials.print', $existingT->id) }}" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print mx-2" style="color:#168c6c;"></i></a>
+                                                    @else
+                                                        <a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a>
+                                                    @endif
                                                 @else
-                                                    <a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" title="Create Testimonial"><i class="fa-solid fa-certificate mx-2" style="color: #168c6c;"></i></a>
+                                                    <i class="fa-solid fa-circle-info mx-2" title="Testimonial available only for Class Ten & Twelve" style="color:#9aa0a6;"></i>
                                                 @endif
                                             </td>
                                         </tr>
