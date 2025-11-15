@@ -135,11 +135,12 @@ Student List
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css">
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
 @endpush
 
 @push('scripts')
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
 <script>
     (function(){
         function initDT(){
@@ -151,7 +152,8 @@ Student List
                     pageLength: 25,
                     order: [[0,'asc']],
                     lengthMenu: [10,25,50,100],
-                    language: { search: "Search:", lengthMenu: "Show _MENU_ entries" }
+                    language: { search: "Search:", lengthMenu: "Show _MENU_ entries" },
+                    responsive: true
                 });
             }
             return true;
@@ -161,5 +163,5 @@ Student List
             document.addEventListener('DOMContentLoaded', initDT);
         }
     })();
-}</script>
+</script>
 @endpush
