@@ -16,9 +16,10 @@ Testimonial Certificate
             .cert-pill{display:inline-block;background:#042954;color:#fff;padding:4px 14px;border-radius:14px;font-weight:700;margin-top:6px;-webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:14px}
             .line{border-bottom:1px dotted #666;display:inline-block;min-width:140px}
             .frame-out{border:6px solid #0e56a9;padding:8px;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-            .frame-in{border:2px solid #0e56a9;padding:16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
-            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.04;width:60%;max-width:640px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);mix-blend-mode:multiply;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+            .frame-in{border:2px solid #0e56a9;padding:12px 10px 10px 16px;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative}
+            .wm-logo{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);opacity:0.08;width:55%;max-width:600px;z-index:0;pointer-events:none;user-select:none;filter:grayscale(100%);-webkit-print-color-adjust:exact;print-color-adjust:exact}
             .frame-in > :not(.wm-logo){position:relative;z-index:2}
+            .hdr-logo{position:absolute;left:8px;top:50%;transform:translateY(-50%);height:52px;width:52px;object-fit:contain}
             .paper-a4{max-width:11.69in;margin:0 auto; outline:1px solid #e5e7eb; background:#fff; padding:5mm; -webkit-print-color-adjust:exact; print-color-adjust:exact}
             @page { size: A4 landscape; margin: 5mm; }
             @media print{
@@ -34,7 +35,7 @@ Testimonial Certificate
                 .my-4{margin:0 !important}
                 .mt-4{margin-top:6px !important}
                 .frame-out{padding:6px !important}
-                .frame-in{padding:8px !important}
+                .frame-in{padding:10px 8px 8px 12px !important}
                 .paper-a4 p{margin:6px 0 !important}
                 .paper-a4 h2,.paper-a4 h3,.paper-a4 h4{margin:6px 0 !important}
                 .frame-out{page-break-inside:avoid}
