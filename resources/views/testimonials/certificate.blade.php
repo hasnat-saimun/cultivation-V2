@@ -42,7 +42,7 @@ Testimonial Certificate
                 .paper-a4 p{margin:6px 0 !important}
                 .paper-a4 h2,.paper-a4 h3,.paper-a4 h4{margin:6px 0 !important}
                 .frame-out{page-break-inside:avoid}
-                .location{font-size:14px;line-height:1.2}
+                .location{font-size:15px!important;line-height:1.2}
             }
         </style>
         <div class="card border-success shadow-lg my-4 paper-a4" style="font-family:'Segoe UI', 'Times New Roman', serif;">
