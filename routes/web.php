@@ -38,6 +38,7 @@ use App\Http\Controllers\tuitionController;
 use App\Http\Controllers\registerController;
 use App\Http\Controllers\schoolUserController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\DocsController;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\cultivationAdmin;
 use App\Http\Middleware\EncryptCookies;
@@ -97,6 +98,8 @@ Route::get('/download-student-template', [StudentController::class, 'downloadStu
 
 
 Route::middleware(['adminGuard'])->group (function(){
+    // Documentation route (internal user guide)
+    Route::get('/user-guide', [DocsController::class, 'userGuide'])->name('userGuide');
     // Attendance (teacher & general access)
     Route::get('/attendance', [AttendanceController::class,'index'])->name('attendanceIndex');
     Route::post('/attendance/fetch', [AttendanceController::class,'fetch'])->name('attendanceFetch');

@@ -109,4 +109,7 @@
     <li class="nav-item">
         <a href="{{ route('serverConfig') }}" class="nav-link {{ request()->routeIs('serverConfig') ? 'active' : '' }}"><i class="fa-solid fa-screwdriver-wrench"></i> <span>Configuration</span></a>
     </li>
+    <li class="nav-item">
+        <a href="{{ route('userGuide') }}" class="nav-link {{ request()->routeIs('userGuide') ? 'active' : '' }}"><i class="fa-regular fa-book"></i> <span>User Guide</span></a>
+    </li>
 </ul>
