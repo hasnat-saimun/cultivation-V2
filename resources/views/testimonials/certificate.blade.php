@@ -42,6 +42,7 @@ Testimonial Certificate
                 .paper-a4 p{margin:6px 0 !important}
                 .paper-a4 h2,.paper-a4 h3,.paper-a4 h4{margin:6px 0 !important}
                 .frame-out{page-break-inside:avoid}
+                .location{font-size:14px;line-height:1.2}
             }
         </style>
         <div class="card border-success shadow-lg my-4 paper-a4" style="font-family:'Segoe UI', 'Times New Roman', serif;">
@@ -52,7 +53,7 @@ Testimonial Certificate
                 <div class="text-center">
                     <h2 class="mb-0" style="font-weight:bold;color:#042954;">{{ $instituteName }}</h2>
                     <div style="font-size:12.5px;line-height:1.2;white-space:normal;">
-                        <h3 class="fw-bold">{{ $address }}</h3><div class="fw-bold"> @if($establishDate) Estd. {{ $establishDate }} @endif </div><div class="fw-bold"> @if(!empty($email)) Email: {{ $email }} @endif </div><div class="fw-bold"> @if(!empty($mobile)) | Mobile: {{ $mobile }} @endif</div>
+                        <div class="fw-bold location">{{ $address }}</div><div class="fw-bold"> @if($establishDate) Estd. {{ $establishDate }} @endif </div><div class="fw-bold"> @if(!empty($email)) Email: {{ $email }} @endif @if(!empty($mobile)), Mobile: {{ $mobile }} @endif</div>
                     </div>
                     <div class="cert-pill">Testimonial Certificate</div>
                 </div>
