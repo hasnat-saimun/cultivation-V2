@@ -118,6 +118,9 @@
             </li>
             @endif
           </ul>
+        @if($cfg && !empty($cfg->logo))
+          <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
+        @endif
         @else
           <p>Sign in to manage admissions, results, and institute settings.</p>
         @endif
