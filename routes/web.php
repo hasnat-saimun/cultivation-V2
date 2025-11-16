@@ -133,6 +133,16 @@ Route::middleware(['adminGuard'])->group (function(){
         'changeAdminPassword'
     ])->name('changeAdminPassword');
 
+    // Admin profile photo
+    Route::post('/admin/avatar/update', [
+        CultivationController::class,
+        'updateAdminPhoto'
+    ])->name('updateAdminPhoto');
+    Route::get('/admin/del/avatar/{id}', [
+        CultivationController::class,
+        'delAdminPhoto'
+    ])->name('delAdminPhoto');
+
     Route::get('/notice/list',[
         NoticeController::class ,
         'noticeList'

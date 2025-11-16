@@ -710,4 +710,67 @@ class CultivationController extends Controller
             return back()->with('error', 'Failed to delete user');
         }
     }
+
+    public function updateAdminPhoto(Request $requ)
+    {
+        $admin = CultivationAdmin::find($requ->adminId);
+        if (!$admin) {
+            return back()->with('error', 'Sorry! No data found');
+        }
+
+        if ($requ->hasFile('avatar')) {
+            $validated = $requ->validate([
+                'avatar' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif|max:5120',
+            ], [
+                'avatar.mimes' => 'Allowed formats: PDF, JPEG, PNG, JPG, GIF, WEBP, AVIF.',
+                'avatar.max'   => 'Each file must be less than 5MB.',
+            ]);
+
+            $file = $requ->file('avatar');
+            $ext = strtolower($file->extension());
+            $allowed = ['jpg','jpeg','png','webp','avif'];
+            if (!in_array($ext, $allowed, true)) { $ext = 'jpg'; }
+            $newName = rand() . date('Ymd') . '.' . $ext;
+
+            $dest = public_path('upload/image/admin');
+            if (!is_dir($dest)) {
+                @mkdir($dest, 0755, true);
+            }
+
+            // Remove old avatar if exists
+            if (!empty($admin->avatar) && File::exists($dest.DIRECTORY_SEPARATOR.$admin->avatar)) {
+                File::delete($dest.DIRECTORY_SEPARATOR.$admin->avatar);
+            }
+            // Resize to square thumbnail and encode with quality
+            try {
+                $image = Image::read($file)->cover(200, 200);
+                $binary = $image->encodeByExtension($ext, quality: 85);
+                file_put_contents($dest.DIRECTORY_SEPARATOR.$newName, (string)$binary);
+            } catch (\Throwable $e) {
+                // Fallback to raw move if processing fails
+                $file->move($dest, $newName);
+            }
+            $admin->avatar = $newName;
+        }
+
+        if ($admin->save()) {
+            return back()->with('success', 'Profile photo updated successfully');
+        }
+        return back()->with('error', 'Failed to update profile photo');
+    }
+
+    public function delAdminPhoto($id)
+    {
+        $admin = CultivationAdmin::find($id);
+        if (!$admin) {
+            return back()->with('error', 'Sorry! No data found');
+        }
+        $dest = public_path('upload/image/admin');
+        if (!empty($admin->avatar) && File::exists($dest.DIRECTORY_SEPARATOR.$admin->avatar)) {
+            File::delete($dest.DIRECTORY_SEPARATOR.$admin->avatar);
+        }
+        $admin->avatar = '';
+        $admin->save();
+        return back()->with('success', 'Profile photo deleted successfully');
+    }
 }

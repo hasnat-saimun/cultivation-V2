@@ -3,6 +3,17 @@
 Configuration
 @endsection
 @section('backIndex')
+@push('styles')
+<style>
+    .section-title { font-weight:600; }
+    .form-hint { font-size:.85rem; color:#6c757d; }
+    .btn-soft { background:#f1f3f5; border-color:#f1f3f5; color:#495057; }
+    .btn-soft:hover { background:#e9ecef; border-color:#e9ecef; }
+    .divider { height:1px; background:#e9ecef; margin: 1rem 0; }
+    .config-header { background:#f8f9fa; border-radius:.5rem; padding: .75rem 1rem; }
+    .preview-thumb { max-width: 160px; border-radius: .25rem; }
+</style>
+@endpush
 @php
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     if(!empty($serverData)):
@@ -66,7 +77,7 @@ Configuration
     <div class="col-md-10 col-12 mx-auto">
         <div class="card">
             <div class="card-header">
-                <i class="fa-duotone fa-toolbox"></i> Configuration
+                <i class="fas fa-toolbox"></i> Configuration
             </div>
             <div class="card-body cultivation">
                 @if(session()->has('success'))
@@ -104,31 +115,53 @@ Configuration
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="insName" class="form-label">Institute Name</label>
-                                <input type="text" name="insName" class="form-control" id="insName" value="{{ $insName }}" placeholder="Enter the name of the institute" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-school"></i></span></div>
+                                    <input type="text" name="insName" class="form-control" id="insName" value="{{ $insName }}" placeholder="Enter the name of the institute" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="insAddress" class="form-label">Address</label>
-                                <input type="text" name="insAddress" class="form-control" id="insAddress" value="{{ $location }}" placeholder="Enter institute address" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span></div>
+                                    <input type="text" name="insAddress" class="form-control" id="insAddress" value="{{ $location }}" placeholder="Enter institute address" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="einNumber" class="form-label">EIN Number</label>
-                                <input type="text" name="einNumber" class="form-control" id="einNumber" value="{{ $einNumber }}" placeholder="Enter institute EIN Number" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-hashtag"></i></span></div>
+                                    <input type="text" name="einNumber" class="form-control" id="einNumber" value="{{ $einNumber }}" placeholder="Enter institute EIN Number" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="officeMobile" class="form-label">Official Mobile</label>
-                                <input type="text" name="officeMobile" class="form-control" id="officeMobile" value="{{ $officeMobile }}" placeholder="Enter office mobile number" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-phone"></i></span></div>
+                                    <input type="text" name="officeMobile" class="form-control" id="officeMobile" value="{{ $officeMobile }}" placeholder="Enter office mobile number" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="establishDate" class="form-label">Establish Date</label>
-                                <input type="text" name="establishDate" class="form-control" id="establishDate" value="{{ $establishDate }}" placeholder="Enter establish date">
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-calendar"></i></span></div>
+                                    <input type="text" name="establishDate" class="form-control" id="establishDate" value="{{ $establishDate }}" placeholder="Enter establish date">
+                                </div>
+                                <div class="form-hint">Format: YYYY-MM-DD or a readable date.</div>
                             </div>
                             <div class="mb-3">
-                                <label for="youtubeChanel" class="form-label">Youtube Chanel</label>
-                                <input type="text" name="youtubeChanel" class="form-control" id="youtubeChanel" value="{{ $youtubeLink }}" placeholder="Enter youtube chanel link">
+                                <label for="youtubeChanel" class="form-label">Youtube Channel</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fab fa-youtube"></i></span></div>
+                                    <input type="text" name="youtubeChanel" class="form-control" id="youtubeChanel" value="{{ $youtubeLink }}" placeholder="Enter YouTube channel link">
+                                </div>
                             </div>
                             <div class="mb-3">
-                                <label for="eduMinName" class="form-label">Education Ministar Name</label>
-                                <input type="text" name="eduMinName" class="form-control" id="eduMinName" value="{{ $eduMinName }}" placeholder="Enter the education ministar name">
+                                <label for="eduMinName" class="form-label">Education Minister Name</label>
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+                                    <input type="text" name="eduMinName" class="form-control" id="eduMinName" value="{{ $eduMinName }}" placeholder="Enter the education minister name">
+                                </div>
                             </div>
                             <!-- <div class="mb-3">
                                 <label for="studentIdPrefix" class="form-label">Student ID Prefix</label>
@@ -150,35 +183,60 @@ Configuration
                         <div class="col-md-6 col-12">
                             <div class="mb-3">
                                 <label for="principalName" class="form-label">Principal Name</label>
-                                <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user-tie"></i></span></div>
+                                    <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="principalDesignation" class="form-label">Principal Designation</label>
-                                <input type="text" name="principalDesignation" class="form-control" id="principalDesignation" value="{{ $principalDesignation }}" placeholder="Enter the current designation of the principal" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-id-badge"></i></span></div>
+                                    <input type="text" name="principalDesignation" class="form-control" id="principalDesignation" value="{{ $principalDesignation }}" placeholder="Enter the current designation of the principal" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="principalMobile" class="form-label">Principal Mobile</label>
-                                <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter principal mobile number" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-phone"></i></span></div>
+                                    <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter principal mobile number" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="principalMail" class="form-label">Principal Email</label>
-                                <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter principal email address" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-envelope"></i></span></div>
+                                    <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter principal email address" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="officeMail" class="form-label">Official Email</label>
-                                <input type="text" name="officeMail" class="form-control" id="officeMail" value="{{ $officeMail }}" placeholder="Enter office email address" >
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-envelope"></i></span></div>
+                                    <input type="text" name="officeMail" class="form-control" id="officeMail" value="{{ $officeMail }}" placeholder="Enter office email address" >
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="facebookPage" class="form-label">Facebook Page</label>
-                                <input type="text" name="facebookPage" class="form-control" id="facebookPage" value="{{ $fbPage }}" placeholder="Enter facebook page link here">
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fab fa-facebook"></i></span></div>
+                                    <input type="text" name="facebookPage" class="form-control" id="facebookPage" value="{{ $fbPage }}" placeholder="Enter facebook page link here">
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="twitterLink" class="form-label">Twitter Profile</label>
-                                <input type="text" name="twitterLink" class="form-control" id="twitterLink" value="{{ $twitterLink }}" placeholder="Enter twitter profile Link">
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="fab fa-twitter"></i></span></div>
+                                    <input type="text" name="twitterLink" class="form-control" id="twitterLink" value="{{ $twitterLink }}" placeholder="Enter twitter profile Link">
+                                </div>
                             </div>
                             <div class="mb-3">
                                 <label for="mapEmbed" class="form-label">Google Map</label>
-                                <input type="text" name="mapEmbed" class="form-control" id="mapEmbed" value="{{ $mapEmbed }}" placeholder="Enter google map embed pb value from iframe">
+                                <div class="input-group">
+                                    <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-map"></i></span></div>
+                                    <input type="text" name="mapEmbed" class="form-control" id="mapEmbed" value="{{ $mapEmbed }}" placeholder="Enter google map embed pb value from iframe">
+                                </div>
+                                <div class="form-hint">Paste the numeric pb value from the embed iframe URL.</div>
                             </div>
                         </div>
                     </div>
@@ -234,7 +292,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25 bg-success" src="{{ asset('public') }}\upload\image\cultivation\{{ $logo }}" alt="{{ $insName }}">
+                                <img class="preview-thumb bg-success" src="{{ asset('public') }}\upload\image\cultivation\{{ $logo }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delLogo',['id'=>$serverId]) }}">Delete</a>
                                 </div>
@@ -252,7 +310,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $favicon }}" alt="{{ $insName }}">
+                                <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $favicon }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delFavicon',['id'=>$serverId]) }}">Delete</a>
                                 </div>
@@ -270,7 +328,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $boardChairmanImg }}" alt="{{ $insName }}">
+                                <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $boardChairmanImg }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delBoardChairmanImg',['id'=>$serverId]) }}">Delete</a>
                                 </div>
@@ -290,7 +348,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $avatar }}" alt="{{ $insName }}">
+                                <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $avatar }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delAvatar',['id'=>$serverId]) }}">Delete</a>
                                 </div>
@@ -308,7 +366,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $principalSign }}" alt="{{ $insName }}">
+                                <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $principalSign }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delSign',['id'=>$serverId]) }}">Delete</a>
                                 </div>
@@ -326,7 +384,7 @@ Configuration
                             </form>
                             @else
                             <div class="pt-1">
-                                <img class="w-25" src="{{ asset('public') }}\upload\image\cultivation\{{ $eduMinImg }}" alt="{{ $insName }}">
+                                <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $eduMinImg }}" alt="{{ $insName }}">
                                 <div>
                                     <a href="{{ route('delEduMinImg',['id'=>$serverId]) }}">Delete</a>
                                 </div>

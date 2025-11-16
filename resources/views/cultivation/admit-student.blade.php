@@ -3,6 +3,34 @@
 New Admission
 @endsection
 @section('backIndex')
+@push('styles')
+<style>
+    .section-title{font-weight:600}
+    .form-hint{font-size:.85rem;color:#6c757d}
+    .preview-avatar{width:120px;height:120px;border-radius:50%;object-fit:cover;display:none}
+    .input-group-text{display:flex;align-items:center;line-height:1;padding:.375rem .75rem}
+    .input-group-text i{min-width:16px;text-align:center}
+    /* Ensure icon addon matches control height and width */
+    .input-group .form-control{height:42px}
+    .input-group .input-group-text{height:42px;min-width:42px;justify-content:center}
+    /* Force proper input-group layout against theme overrides */
+    .new-added-form .input-group{display:flex!important;flex-wrap:nowrap!important;align-items:stretch!important;position:relative!important}
+    .new-added-form .input-group-prepend{display:flex!important;order:0!important;margin-right:0!important;float:none!important;position:relative!important;left:0!important;right:auto!important;top:auto!important;transform:none!important;flex:0 0 auto!important}
+    .new-added-form .input-group-prepend .input-group-text{border-right:0!important;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+    .new-added-form .input-group>.form-control{order:1!important;flex:1 1 auto!important;border-left:0!important;border-top-left-radius:0!important;border-bottom-left-radius:0!important}
+    .new-added-form .input-group-prepend,.new-added-form .input-group-text{right:auto!important;left:auto!important}
+    .new-added-form .input-group-text i{position:static!important;left:auto!important;right:auto!important;top:auto!important;transform:none!important}
+    .new-added-form .input-group .form-control{padding-left:.75rem!important;padding-right:.75rem!important}
+    /* Make Select2 height consistent with inputs */
+    .select2-container--default .select2-selection--single{height:42px!important;border-color:#ced4da}
+    .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px!important}
+    .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px!important}
+    .btn-soft{background:#f1f3f5;border-color:#f1f3f5;color:#495057}
+    .btn-soft:hover{background:#e9ecef;border-color:#e9ecef}
+    .badge-note{background:#eef2f7;color:#495057}
+    .card-header .btn{margin-right:.5rem}
+</style>
+@endpush
 @php
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     if(!empty($serverData)):
@@ -77,28 +105,43 @@ New Admission
                             <form class="new-added-form" action="{{ route('confirmAdmit') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                     <div class="row mb-2">
-                                        <h5 class="fw-semibold">Personal Information</h5>
+                                        <h5 class="section-title">Personal Information</h5>
                                     </div>
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Admission ID</label>
-                                        <input type="text" name="stdId" value="{{ $stdId }}" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-hashtag"></i></span></div>
+                                            <input type="text" name="stdId" value="{{ $stdId }}" placeholder="Example:- {{ $currentYear }}000001" class="form-control" readonly>
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Full Name *</label>
-                                        <input type="text" name="fullName" placeholder="Enter student first name" class="form-control" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+                                            <input type="text" name="fullName" placeholder="Enter student first name" class="form-control" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Sure Name</label>
-                                        <input type="text" name="sureName" placeholder="Enter student last name" class="form-control">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+                                            <input type="text" name="sureName" placeholder="Enter student last name" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Father's Name *</label>
-                                        <input type="text" name="fatherName" placeholder="Enter fathers name" class="form-control" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user-tie"></i></span></div>
+                                            <input type="text" name="fatherName" placeholder="Enter father's name" class="form-control" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Mother's Name *</label>
-                                        <input type="text" name="motherName" placeholder="Enter mothers name" class="form-control" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user"></i></span></div>
+                                            <input type="text" name="motherName" placeholder="Enter mother's name" class="form-control" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Gender *</label>
@@ -111,7 +154,10 @@ New Admission
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Date Of Birth</label>
-                                        <input type="date" name="dob" placeholder="dd/mm/yyyy" class="form-control">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-calendar"></i></span></div>
+                                            <input type="date" name="dob" placeholder="dd/mm/yyyy" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Blood Group *</label>
@@ -140,23 +186,34 @@ New Admission
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>E-Mail</label>
-                                        <input type="email" name="mail" placeholder="Enter student email" class="form-control">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-envelope"></i></span></div>
+                                            <input type="email" name="mail" placeholder="Enter student email" class="form-control">
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Phone</label>
-                                        <input type="number" name="phone" placeholder="Enter gurdian mobile number" class="form-control" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-phone"></i></span></div>
+                                            <input type="tel" name="phone" placeholder="Enter guardian mobile number" class="form-control" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Address</label>
-                                        <input type="address" class="form-control" placeholder="Student full address" name="address">
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span></div>
+                                            <input type="text" class="form-control" placeholder="Student full address" name="address">
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group ">
                                         <label class="text-dark-medium">Avatar (150px X 150px)</label>
-                                        <input type="file" name="avatar" class="form-control-file">
+                                        <input type="file" name="avatar" class="form-control-file" accept="image/*" id="stdAvatar">
+                                        <div class="form-hint">Accepted: JPG/PNG/WEBP/AVIF up to 5MB.</div>
+                                        <div class="mt-2"><img id="stdAvatarPreview" class="preview-avatar" alt="Preview"></div>
                                     </div>
                                 </div>
                                 <div class="row mt-5 mb-2">
-                                    <h5 class="fw-semibold">Academic Information</h5>
+                                    <h5 class="section-title">Academic Information</h5>
                                 </div>
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -217,20 +274,29 @@ New Admission
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label>Roll</label>
-                                        <input type="text" name="rollNumber" placeholder="Enter student class roll" class="form-control" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-list-alt"></i></span></div>
+                                            <input type="text" name="rollNumber" placeholder="Enter student class roll" class="form-control" >
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2 mt-5">
-                                    <h5 class="fw-semibold">Guardian Information</h5>
+                                    <h5 class="section-title">Guardian Information</h5>
                                 </div>
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label for="gurdian">Guardian Name</label>
-                                        <input type="text" class="form-control" placeholder="Enter guardian name" name="gurdian" id="gurdian" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user-shield"></i></span></div>
+                                            <input type="text" class="form-control" placeholder="Enter guardian name" name="gurdian" id="gurdian" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label for="gurdianPhone">Mobile Number</label>
-                                        <input type="number" class="form-control" placeholder="Enter phone number" name="gurdianPhone" id="gurdianPhone" >
+                                        <div class="input-group">
+                                            <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-phone"></i></span></div>
+                                            <input type="tel" class="form-control" placeholder="Enter phone number" name="gurdianPhone" id="gurdianPhone" >
+                                        </div>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
                                         <label for="relationWithStd" >Relation *</label>
@@ -247,8 +313,8 @@ New Admission
                                     </div>
                                     
                                     <div class="col-12 form-group mg-t-8">
-                                        <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Save</button>
-                                        <button type="reset" class="btn-fill-lg bg-blue-dark btn-hover-bluedark">Reset</button>
+                                        <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark"><i class="fas fa-save"></i> Save</button>
+                                        <button type="reset" class="btn-fill-lg bg-blue-dark btn-hover-bluedark"><i class="fas fa-redo-alt"></i> Reset</button>
                                     </div>
                                 </div>
                             </form>
@@ -290,4 +356,23 @@ New Admission
         </div>
     </div>
 </div>
-@endsection
+        @push('scripts')
+        <script>
+            (function(){
+                var input = document.getElementById('stdAvatar');
+                var img = document.getElementById('stdAvatarPreview');
+                if(input && img){
+                    input.addEventListener('change', function(){
+                        var f = this.files && this.files[0];
+                        if(!f){ img.style.display='none'; return; }
+                        var url = URL.createObjectURL(f);
+                        img.src = url; img.style.display='inline-block';
+                    });
+                }
+            })();
+            setTimeout(function(){
+                document.querySelectorAll('.alert').forEach(function(el){ el.classList.add('fade'); el.style.opacity = '0'; setTimeout(function(){ el.remove(); }, 500); });
+            }, 3000);
+        </script>
+        @endpush
+        @endsection

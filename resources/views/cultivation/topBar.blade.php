@@ -46,13 +46,18 @@
                             $userId         =   $cultivationAdmin->adminUser;
                             $adminMobile    =   $cultivationAdmin->adminMobile;
                             $adminType      =   $cultivationAdmin->adminType;
+                            $adminAvatar    =   $cultivationAdmin->avatar ?? '';
                         else:
                             $adminName      =   "Abu Yousuf";
                             $adminEmail     =   "cultivation@virtualitprofessional.com";
                             $userId         =   "Spark Coder";
                             $adminMobile    =   "01678909091";
                             $adminType      =   "Admin";
+                            $adminAvatar    =   '';
                         endif;
+                        $adminAvatarUrl = !empty($adminAvatar)
+                            ? asset('public/upload/image/admin/'.$adminAvatar)
+                            : asset('/public/back-office/').'/img/figure/admin.jpg';
                     @endphp
                     <li class="navbar-item dropdown header-admin">
                         <a class="navbar-nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown"
@@ -62,7 +67,7 @@
                                 <span>{{ $adminType }}</span>
                             </div>
                             <div class="admin-img">
-                                <img src="{{ asset('/public/back-office/') }}/img/figure/admin.jpg" alt="Admin">
+                                <img src="{{ $adminAvatarUrl }}" alt="Admin" style="width:40px;height:40px;object-fit:cover;border-radius:50%;">
                             </div>
                         </a>
                         <div class="dropdown-menu dropdown-menu-right">
