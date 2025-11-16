@@ -86,7 +86,7 @@
     <div class="row g-0 align-items-center">
         <div class="col-lg-5 d-none d-lg-block brand-pane">
         @if($cfg && $cfg->logo)
-          <img src="{{ asset($cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
+          <img src="{{ asset('/public/') }}/upload/image/cultivation/{{ asset($cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
         @else
           <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
         @endif
