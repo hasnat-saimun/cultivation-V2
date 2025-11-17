@@ -150,18 +150,7 @@
               $demoUser = \DB::table('cultivation_admins')->where('userType',3)->first();
             @endphp
             Username: <b>{{ $demoUser->adminUser ?? 'demo' }}</b><br>
-            @php
-              $plainPassword = 'demo123';
-              if($demoUser && !empty($demoUser->loginPassword)) {
-                // If the password looks like a hash, show demo password
-                if(preg_match('/^\$2[aby]\$/', $demoUser->loginPassword)) {
-                  $plainPassword = 'demo123';
-                } else {
-                  $plainPassword = $demoUser->loginPassword;
-                }
-              }
-            @endphp
-            Login Password: <b>{{ $plainPassword }}</b>
+            Login Password: <b>demo1234</b>
           </div>
         @endif
         @if($cultivation->count()>0)

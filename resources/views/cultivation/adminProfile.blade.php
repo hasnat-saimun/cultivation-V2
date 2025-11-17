@@ -136,49 +136,53 @@ Admin Profile
                         </form>
                     </div>
                     <div class="col-md-6 col-12">
-                        <div class="card-title section-title"><i class="fas fa-key"></i> Change Password</div>
-                        <form action="{{ route('changeAdminPassword') }}" method="POST" enctype="multipart/form-data">
-                            @csrf
-                            <input type="hidden" name="adminId" value="{{ $adminId }}">
-                            <div class="mb-3">
-                                <label for="oldPassword" class="form-label">Old Password</label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
-                                    </div>
-                                    <input type="password" autocomplete="current-password" name="oldPassword" class="form-control" id="oldPassword" placeholder="Current password" required>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-soft" data-toggle="password" data-target="#oldPassword"><i class="far fa-eye"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="newPassword" class="form-label">New Password</label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-key"></i></span>
-                                    </div>
-                                    <input type="password"  name="newPassword" class="form-control" id="newPassword" placeholder="At least 8 characters" minlength="8" required>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-soft" data-toggle="password" data-target="#newPassword"><i class="far fa-eye"></i></button>
+                        @if(!$isDemo)
+                            <div class="card-title section-title"><i class="fas fa-key"></i> Change Password</div>
+                            <form action="{{ route('changeAdminPassword') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <input type="hidden" name="adminId" value="{{ $adminId }}">
+                                <div class="mb-3">
+                                    <label for="oldPassword" class="form-label">Old Password</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                                        </div>
+                                        <input type="password" autocomplete="current-password" name="oldPassword" class="form-control" id="oldPassword" placeholder="Current password" required>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-soft" data-toggle="password" data-target="#oldPassword"><i class="far fa-eye"></i></button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="form-hint">Use 8+ characters with a mix of letters and numbers.</div>
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirmPassword" class="form-label">Confirm Password</label>
-                                <div class="input-group">
-                                    <div class="input-group-prepend">
-                                        <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                        </div>
+                                        <input type="password"  name="newPassword" class="form-control" id="newPassword" placeholder="At least 8 characters" minlength="8" required>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-soft" data-toggle="password" data-target="#newPassword"><i class="far fa-eye"></i></button>
+                                        </div>
                                     </div>
-                                    <input type="password"  name="confirmPassword" class="form-control" id="confirmPassword" placeholder="Re-type new password" required>
-                                    <div class="input-group-append">
-                                        <button type="button" class="btn btn-soft" data-toggle="password" data-target="#confirmPassword"><i class="far fa-eye"></i></button>
+                                    <div class="form-hint">Use 8+ characters with a mix of letters and numbers.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm Password</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                        </div>
+                                        <input type="password"  name="confirmPassword" class="form-control" id="confirmPassword" placeholder="Re-type new password" required>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-soft" data-toggle="password" data-target="#confirmPassword"><i class="far fa-eye"></i></button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Change Password</button>
-                        </form>
+                                <button type="submit" class="btn btn-primary">Change Password</button>
+                            </form>
+                        @else
+                            <div class="alert alert-warning mt-4">Password change is disabled in demo mode.</div>
+                        @endif
                     </div>
                 </section>
             </div>
