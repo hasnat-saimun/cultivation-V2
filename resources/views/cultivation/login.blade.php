@@ -150,7 +150,7 @@
               $demoUser = \DB::table('cultivation_admins')->where('userType',3)->first();
             @endphp
             Username: <b>{{ $demoUser->adminUser ?? 'demo' }}</b><br>
-            Password: <b>{{ $demoUser->adminPass ?? 'demo123' }}</b>
+            Login Password: <b>{{ $demoUser->loginPassword ?? 'demo123' }}</b>
           </div>
         @endif
         @if($cultivation->count()>0)
