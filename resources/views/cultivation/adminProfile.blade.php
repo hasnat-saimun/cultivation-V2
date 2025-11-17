@@ -181,7 +181,7 @@ Admin Profile
                                 <button type="submit" class="btn btn-primary">Change Password</button>
                             </form>
                         @else
-                            <div class="alert alert-warning mt-4">Password change is disabled in demo mode.</div>
+                            <div class="p-4 alert-warning mt-4">Password change is disabled in demo mode.</div>
                         @endif
                     </div>
                 </section>
