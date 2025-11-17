@@ -147,7 +147,7 @@
           <div class="alert alert-info mb-3">
             <strong>Demo Credentials</strong><br>
             @php
-              $demoUser = \DB::table('cultivation_admins')->where('adminType','Admin')->first();
+              $demoUser = \DB::table('cultivation_admins')->where('userType',3)->first();
             @endphp
             Username: <b>{{ $demoUser->adminUser ?? 'demo' }}</b><br>
             Password: <b>{{ $demoUser->adminPass ?? 'demo123' }}</b>
