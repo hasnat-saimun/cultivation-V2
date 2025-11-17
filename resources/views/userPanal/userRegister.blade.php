@@ -66,13 +66,16 @@ Register Form
                             <input type="text" name="userMail" class="form-control" id="userMail" placeholder="Enter user email address" required value="{{ isset($user) ? $user->adminMail : '' }}" {{ isset($user) ? 'readonly' : '' }}>
                         </div>
                         <div class="col-6 mb-3">
-                            <label class="form-label">User Type</label>
-                            <select class="form-select" id="userType" onchange="userSelect()" name="userType" required>
-                                <option value="">Select</option>
-                                <option value="1" {{ (isset($user) && $user->userType == 1) ? 'selected' : '' }}>Teacher Admin</option>
-                                <option value="2" {{ (isset($user) && $user->userType == 2) ? 'selected' : '' }}>Cash Admin</option>
-                                <option value="3" {{ (isset($user) && $user->userType == 3) ? 'selected' : '' }}>General Admin</option>
-                            </select>
+                                                        @php $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false; @endphp
+                                                        <label class="form-label">User Type</label>
+                                                        <select class="form-select" id="userType" onchange="userSelect()" name="userType" required>
+                                                                <option value="">Select</option>
+                                                                <option value="1" {{ (isset($user) && $user->userType == 1) ? 'selected' : '' }}>Teacher Admin</option>
+                                                                <option value="2" {{ (isset($user) && $user->userType == 2) ? 'selected' : '' }}>Cash Admin</option>
+                                                                @if(!$isDemo)
+                                                                    <option value="3" {{ (isset($user) && $user->userType == 3) ? 'selected' : '' }}>General Admin</option>
+                                                                @endif
+                                                        </select>
                         </div>
                         <div class="col-6 mb-3">
                             <label for="pass" class="form-label">User Password</label>
