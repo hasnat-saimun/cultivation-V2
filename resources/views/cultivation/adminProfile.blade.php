@@ -52,6 +52,7 @@ Admin Profile
                         {{ session()->get('error') }}
                     </div>
                 @endif
+                @php $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false; @endphp
                 <div class="profile-header p-3 p-md-4 mb-4">
                     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center">
                         @php

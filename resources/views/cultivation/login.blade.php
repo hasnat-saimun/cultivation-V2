@@ -1,3 +1,32 @@
+@php
+  $cfg = \App\Models\ServerConfig::first();
+  $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false;
+  $appVersion = (function(){
+    $candidates = [
+      base_path('RELEASE_NOTES.md'),
+      base_path('RELEASE.md'),
+      base_path('CHANGELOG.md'),
+      base_path('docs/RELEASE_NOTES.md'),
+      base_path('docs/release-notes.md'),
+      base_path('docs/CHANGELOG.md'),
+      base_path('docs/changelog.md'),
+      base_path('version.txt'),
+      base_path('VERSION'),
+    ];
+    foreach($candidates as $p){
+      if(@is_file($p)){
+        $txt = @file_get_contents($p);
+        if($txt === false) continue;
+        if(preg_match('/^##\s*\[?v?(\d+\.\d+\.\d+[^\]\s]*)/mi', $txt, $m)) return $m[1];
+        if(preg_match('/^#\s*Release[s]?\s+v?(\d+\.\d+\.\d+[^\s]*)/mi', $txt, $m)) return $m[1];
+        if(preg_match('/\bv?(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9\.]+)?)\b/', $txt, $m)) return $m[1];
+        $trim = trim($txt);
+        if($trim && strlen($trim) < 40) return $trim; // simple VERSION file
+      }
+    }
+    return config('app.version') ?? app()->version();
+  })();
+@endphp
 <!doctype html>
 <html lang="en">
 <head>
@@ -47,34 +76,7 @@
       .form-header .form-title{font-size:1.35rem}
       .brand-pane,.form-pane{display:flex;flex-direction:column;justify-content:center;}
     </style>
-    @php($cfg = \App\Models\ServerConfig::first())
-    @php(
-      $appVersion = (function(){
-        $candidates = [
-          base_path('RELEASE_NOTES.md'),
-          base_path('RELEASE.md'),
-          base_path('CHANGELOG.md'),
-          base_path('docs/RELEASE_NOTES.md'),
-          base_path('docs/release-notes.md'),
-          base_path('docs/CHANGELOG.md'),
-          base_path('docs/changelog.md'),
-          base_path('version.txt'),
-          base_path('VERSION'),
-        ];
-        foreach($candidates as $p){
-          if(@is_file($p)){
-            $txt = @file_get_contents($p);
-            if($txt === false) continue;
-            if(preg_match('/^##\s*\[?v?(\d+\.\d+\.\d+[^\]\s]*)/mi', $txt, $m)) return $m[1];
-            if(preg_match('/^#\s*Release[s]?\s+v?(\d+\.\d+\.\d+[^\s]*)/mi', $txt, $m)) return $m[1];
-            if(preg_match('/\bv?(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9\.]+)?)\b/', $txt, $m)) return $m[1];
-            $trim = trim($txt);
-            if($trim && strlen($trim) < 40) return $trim; // simple VERSION file
-          }
-        }
-        return config('app.version') ?? app()->version();
-      })()
-    )
+        {{-- ...existing code... --}}
     <link rel="icon" href="{{ $cfg && $cfg->favicon ? asset($cfg->favicon) : asset('public/favicon.ico') }}">
     <meta name="robots" content="noindex">
     <meta name="author" content="cultivationapp.com">
@@ -86,46 +88,45 @@
     <div class="row g-0 align-items-center">
         <div class="col-lg-5 d-none d-lg-block brand-pane">
         @if($cfg && $cfg->logo)
-          <img src="{{ asset('/public/') }}/upload/image/cultivation/{{ $cfg->logo }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
+            <img src="{{ asset('/public/') }}/upload/image/cultivation/{{ $cfg->logo }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
         @else
-          <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
+            <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
         @endif
 
-        @if($cfg && $cfg->instituteName)
-          <h4 class="mt-3 mb-1">{{ $cfg->instituteName }}</h4>
-        @else
-          <h4 class="mt-3 mb-1">Welcome back</h4>
-        @endif
+        <h4 class="mt-3 mb-1">
+            {{ $cfg && $cfg->instituteName ? $cfg->instituteName : 'Welcome back' }}
+        </h4>
 
         @if($cfg && ($cfg->address || $cfg->officeMobile || $cfg->officeEmail))
-          <ul class="list-unstyled small brand-meta">
-            @if($cfg->address)
-            <li>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a5.53 5.53 0 0 0-5.5 5.5C2.5 9.5 8 16 8 16s5.5-6.5 5.5-10.5A5.53 5.53 0 0 0 8 0m0 7.5A2 2 0 1 1 8 3.5a2 2 0 0 1 0 4"/></svg>
-              {{ $cfg->address }}
-            </li>
-            @endif
-            @if($cfg->officeMobile)
-            <li>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a2 2 0 0 1 2 2v1.5a1 1 0 0 1-1 1H9.5a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5H12a1 1 0 0 1 1 1V13a2 2 0 0 1-2 2h-1A8 8 0 0 1 1 7V6a2 2 0 0 1 2-2h1a1 1 0 0 1 1 1v2.5a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V4a1 1 0 0 1 1-1z"/></svg>
-              {{ $cfg->officeMobile }}
-            </li>
-            @endif
-            @if($cfg->officeEmail)
-            <li>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v.217L8 8 0 4.217z"/><path d="M0 4.697V12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.697L8 9.5z"/></svg>
-              {{ $cfg->officeEmail }}
-            </li>
-            @endif
-          </ul>
-        @if($cfg && !empty($cfg->logo))
-          <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
-        @endif
+            <ul class="list-unstyled small brand-meta">
+                @if($cfg->address)
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M8 0a5.53 5.53 0 0 0-5.5 5.5C2.5 9.5 8 16 8 16s5.5-6.5 5.5-10.5A5.53 5.53 0 0 0 8 0m0 7.5A2 2 0 1 1 8 3.5a2 2 0 0 1 0 4"/></svg>
+                    {{ $cfg->address }}
+                </li>
+                @endif
+                @if($cfg->officeMobile)
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1a2 2 0 0 1 2 2v1.5a1 1 0 0 1-1 1H9.5a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5H12a1 1 0 0 1 1 1V13a2 2 0 0 1-2 2h-1A8 8 0 0 1 1 7V6a2 2 0 0 1 2-2h1a1 1 0 0 1 1 1v2.5a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5V4a1 1 0 0 1 1-1z"/></svg>
+                    {{ $cfg->officeMobile }}
+                </li>
+                @endif
+                @if($cfg->officeEmail)
+                <li>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v.217L8 8 0 4.217z"/><path d="M0 4.697V12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4.697L8 9.5z"/></svg>
+                    {{ $cfg->officeEmail }}
+                </li>
+                @endif
+            </ul>
         @else
-          <p>Sign in to manage admissions, results, and institute settings.</p>
+            <p>Sign in to manage admissions, results, and institute settings.</p>
         @endif
         </div>
       <div class="col-lg-7 bg-white form-pane">
+        @php
+          $cfg = isset($cfg) ? $cfg : \App\Models\ServerConfig::first();
+          $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false;
+        @endphp
         <div class="form-header mb-3">
             <div class="accent-bar"></div>
             <h4 class="form-title mb-1">Admin Portal</h4>
@@ -141,6 +142,17 @@
           @endif
         </div>
 
+        @php $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false; @endphp
+        @if($isDemo)
+          <div class="alert alert-info mb-3">
+            <strong>Demo Credentials</strong><br>
+            @php
+              $demoUser = \DB::table('cultivation_admins')->where('adminType','Admin')->first();
+            @endphp
+            Username: <b>{{ $demoUser->adminUser ?? 'demo' }}</b><br>
+            Password: <b>{{ $demoUser->adminPass ?? 'demo123' }}</b>
+          </div>
+        @endif
         @if($cultivation->count()>0)
             <form method="POST" action="{{ route('cultivationLogin') }}" class="needs-validation" novalidate>
                 @csrf
