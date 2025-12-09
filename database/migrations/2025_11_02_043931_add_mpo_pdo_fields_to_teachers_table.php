@@ -8,10 +8,18 @@ class AddMpoPdoFieldsToTeachersTable extends Migration
 {
     public function up()
     {
-        Schema::table('teacher_management', function (Blueprint $table) {
-            $table->string('mpoIndex')->nullable()->after('address');
-            $table->string('pdsId')->nullable()->after('mpoIndex');
-        });
+        // Make migration idempotent: only add columns if they don't already exist
+        if (!Schema::hasColumn('teacher_management', 'mpoIndex')) {
+            Schema::table('teacher_management', function (Blueprint $table) {
+                $table->string('mpoIndex')->nullable()->after('address');
+            });
+        }
+
+        if (!Schema::hasColumn('teacher_management', 'pdsId')) {
+            Schema::table('teacher_management', function (Blueprint $table) {
+                $table->string('pdsId')->nullable()->after('mpoIndex');
+            });
+        }
     }
 
     public function down()
