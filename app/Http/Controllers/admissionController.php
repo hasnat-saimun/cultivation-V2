@@ -6,6 +6,8 @@ use App\Models\newAdmission;
 use App\Models\classManage;
 use App\Models\sectionManage;
 use App\Models\Department;
+use App\Models\Subject;
+use Illuminate\Support\Str;
 use File;
 
 
@@ -82,6 +84,8 @@ class AdmissionController extends Controller
             $data->className        = $requ->className;
             $data->departmentName   = $requ->departmentName;
             $data->sectionName      = $requ->sectionName;
+            // Religious subject selection (single checkbox)
+            $data->religiousSubjectId = $requ->religiousSubjectId ? (int) $requ->religiousSubjectId : null;
             $data->rollNumber       = $requ->rollNumber;
             $data->gurdianName      = $requ->gurdian;
             $data->gurdianMobile    = $requ->gurdianPhone;
@@ -90,6 +94,14 @@ class AdmissionController extends Controller
             $stdId                  = $requ->stdId;
 
             $data->stdId = $stdId;
+
+            // Default Religious Subject for the student's class if none provided
+            if (empty($data->religiousSubjectId)) {
+                $defaultRelSub = self::resolveDefaultReligiousSubject($data->className);
+                if ($defaultRelSub) {
+                    $data->religiousSubjectId = $defaultRelSub->id;
+                }
+            }
 
             if(!empty($requ->avatar)):
                 $validated = $requ->validate([
@@ -153,10 +165,19 @@ class AdmissionController extends Controller
                 $data->className        = $requ->className;
                 $data->departmentName   = $requ->departmentName;
                 $data->sectionName      = $requ->sectionName;
+                $data->religiousSubjectId = $requ->religiousSubjectId ? (int) $requ->religiousSubjectId : null;
                 $data->rollNumber       = $requ->rollNumber;
                 $data->gurdianName      = $requ->gurdian;
                 $data->gurdianMobile    = $requ->gurdianPhone;
                 $data->relationGurdian  = $requ->relationWithStd;
+                
+                // Default Religious Subject for the student's class if none provided on update
+                if (empty($data->religiousSubjectId)) {
+                    $defaultRelSub = self::resolveDefaultReligiousSubject($data->className);
+                    if ($defaultRelSub) {
+                        $data->religiousSubjectId = $defaultRelSub->id;
+                    }
+                }
                 
                 if($data->save()):
                     return back()->with("success",'data update success');
@@ -224,4 +245,30 @@ class AdmissionController extends Controller
      }
 
 
+    // Helper methods for default religious subject resolution
+    private static function resolveDefaultReligiousSubject(?string $className)
+    {
+        // Prefer explicit per-class default mapping
+        if (!empty($className)) {
+            $classRow = \App\Models\classManage::where('className', $className)->first();
+            if ($classRow) {
+                $map = \App\Models\ReligiousSubjectDefault::where('classId', $classRow->id)->first();
+                if ($map) {
+                    $sub = Subject::find($map->subjectId);
+                    if ($sub && ($sub->isReligious ?? false)) return $sub;
+                }
+            }
+        }
+        // Otherwise prefer class-assigned religious subject; fallback to any religious subject
+        $query = Subject::query()->where('isReligious', true);
+        if (!empty($className)) {
+            $query = $query->where(function ($q) use ($className) {
+                $q->where('assign_class', 'like', '%' . $className . '%');
+            });
+        }
+        $subject = $query->orderBy('id')->first();
+        if ($subject) return $subject;
+        return Subject::where('isReligious', true)->orderBy('id')->first();
+    }
 }
+

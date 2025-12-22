@@ -246,6 +246,24 @@ Edit Student
                                         <label>Roll</label>
                                         <input type="text" name="rollNumber" placeholder="Enter student class roll" class="form-control" value="{{ $stdData->rollNumber}}" >
                                     </div>
+                                    <div class="col-12 form-group">
+                                        <label>Religious Subject</label>
+                                        <div class="form-hint">Select the student's religious subject (if applicable).</div>
+                                        <div class="row">
+                                            @php($religiousSubjects = \App\Models\Subject::where('isReligious',1)->orderBy('subjectName')->get())
+                                            @foreach($religiousSubjects as $rs)
+                                                <div class="col-md-3 col-6">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="religiousSubjectId" id="religious_{{ $rs->id }}" value="{{ $rs->id }}" {{ (isset($stdData->religiousSubjectId) && (int)$stdData->religiousSubjectId === (int)$rs->id) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="religious_{{ $rs->id }}">{{ $rs->subjectName }}</label>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                            @if($religiousSubjects->count() === 0)
+                                                <div class="col-12"><span class="text-muted">No religious subjects configured yet.</span></div>
+                                            @endif
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="row mb-2 mt-5">
                                     <h5 class="fw-semibold">Guardian Information</h5>

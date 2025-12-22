@@ -1110,6 +1110,11 @@ Route::middleware(['adminGuard'])->group (function(){
         'allMarksheet'
     ])->name('allMarksheet');
 
+    Route::get('/marksheet/tabulation',[
+        MarksheetController::class ,
+        'tabulationSheet'
+    ])->name('tabulationSheet');
+
     Route::post('/marksheet/generate',[
         MarksheetController::class ,
         'generateMarksheet'
@@ -1268,6 +1273,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'individualResult'
     ])->name('individualResult');
     //MarksheetController end
+
+    //Placements (GPA-based ranking)
+    Route::get('/placements', [\App\Http\Controllers\PlacementController::class, 'index'])
+        ->name('placements.index');
+    Route::post('/placements/recalculate', [\App\Http\Controllers\PlacementController::class, 'recalculate'])
+        ->name('placements.recalculate');
 
     //PlacementCellController str
     Route::get('/job/placement-cell',[

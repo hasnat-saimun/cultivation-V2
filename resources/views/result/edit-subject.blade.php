@@ -75,6 +75,38 @@ Edit Subject
                                             <div class="col-4" id="practicalFiled"></div>
                                         </div>
                                     </div>
+                                    <div class="col-12 form-group">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="isReligious" name="isReligious" value="1" {{ ($item->isReligious ?? 0) ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="isReligious">Mark as Religious Subject</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 form-group" id="defaultRelSixWrap" style="display:none;">
+                                        <div class="form-check">
+                                            @php
+                                                $allClassIds = ($classList ?? collect([]))->pluck('id')->toArray();
+                                                $isDefaultAll = !empty($allClassIds) && empty(array_diff($allClassIds, ($defaultClassIds ?? [])));
+                                            @endphp
+                                            <input class="form-check-input" type="checkbox" id="defaultReligiousForAllClass" name="defaultReligiousForAllClass" value="1" {{ $isDefaultAll ? 'checked' : '' }}>
+                                            <label class="form-check-label" for="defaultReligiousForAllClass">Set as default Religious subject for All Class</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-12 form-group" id="defaultRelAllWrap" style="display:none;">
+                                        <label>Set as default Religious subject for classes</label>
+                                        <div class="row">
+                                            @if(($classList ?? collect([]))->count() > 0)
+                                                @foreach($classList as $class)
+                                                    <div class="col-6">
+                                                        <div class="form-check">
+                                                            @php $checked = in_array($class->id, ($defaultClassIds ?? [])); @endphp
+                                                            <input class="form-check-input" type="checkbox" id="defaultRelClass{{ $class->id }}" name="defaultReligiousClasses[]" value="{{ $class->id }}" {{ $checked ? 'checked' : '' }}>
+                                                            <label class="form-check-label" for="defaultRelClass{{ $class->id }}">{{ $class->className }}</label>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @endif
+                                        </div>
+                                    </div>
                                     <div class="col-12 form-group mg-t-8">
                                         <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Save</button>
                                         <button type="reset" class="btn-fill-lg bg-blue-dark btn-hover-yellow">Reset</button>
@@ -119,6 +151,25 @@ Edit Subject
                                 form.onsubmit = function() {
                                     return validateTotalMarks();
                                 }
+                            }
+                            const isRel = document.getElementById('isReligious');
+                            const wrapSix = document.getElementById('defaultRelSixWrap');
+                            const wrapAll = document.getElementById('defaultRelAllWrap');
+                            const allToggle = document.getElementById('defaultReligiousForAllClass');
+                            if(isRel){
+                                const toggle = ()=> {
+                                    const show = isRel.checked ? 'block' : 'none';
+                                    if(wrapSix) wrapSix.style.display = show;
+                                    if(wrapAll) wrapAll.style.display = show;
+                                };
+                                isRel.addEventListener('change', toggle);
+                                toggle();
+                            }
+                            if(allToggle){
+                                allToggle.addEventListener('change', function(){
+                                    const boxes = document.querySelectorAll("input[name='defaultReligiousClasses[]']");
+                                    boxes.forEach(b => { b.checked = allToggle.checked; });
+                                });
                             }
                         });
                         function mcqMarks(checkbox){

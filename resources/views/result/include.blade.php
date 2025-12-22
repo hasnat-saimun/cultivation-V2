@@ -24,7 +24,7 @@
                     @php
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
-                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet'];
+                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','tabulationSheet'];
                         $classRoutes = ['allClasses','createClass'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
@@ -61,6 +61,9 @@
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marksheet</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('tabulationSheet') }}" class="nav-link {{ request()->routeIs('tabulationSheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Tabulation Sheet</a>
                                     </li>
                                 </ul>
                             </li>

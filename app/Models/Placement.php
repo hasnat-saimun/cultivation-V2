@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Marksheet extends Model
+class Placement extends Model
 {
     use HasFactory;
+
+    protected $table = 'exam_placements';
 
     protected $fillable = [
         'studentId',
@@ -15,12 +17,11 @@ class Marksheet extends Model
         'sessionId',
         'groupId',
         'examId',
-        'subjectId',
-        'subjectMarks',
-        'objectMarks',
-        'practicalMarks',
+        'subjectsCount',
+        'totalGradePoints',
+        'gpa',
         'totalMarks',
-        'laterGrade',
-        'gradePoint',
+        'position',
+        'status',
     ];
 }

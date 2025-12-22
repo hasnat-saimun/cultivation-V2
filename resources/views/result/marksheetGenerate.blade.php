@@ -3,6 +3,37 @@
 Marksheet Generate
 @endsection
 @section('backIndex')
+    <style>
+        @page { size: A4; margin: 12mm; }
+        html, body { background: #fff; }
+        @media print {
+            html, body { background: #fff !important; }
+            #wrapper, .wrapper, .dashboard-page-one, .dashboard-content-one { background: #fff !important; }
+            .d-print-none { display: none !important; }
+            .marksheet .card { box-shadow: none !important; border: none !important; }
+            .marksheet .transcript { border: none !important; }
+            .signature-row { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; width: 100% !important; }
+            .marksheet table.table, .marksheet table.table-bordered { border-collapse: collapse !important; }
+            .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { border: 1px solid #000 !important; }
+        }
+        .marksheet .transcript {
+            background: #fff;
+            padding: 16px;
+            border: 1px solid #e5e7eb;
+        }
+        .marksheet table.table, .marksheet table.table-bordered { font-size: 12px; border-collapse: collapse; }
+        .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #f3f4f6; font-weight: 700; }
+        .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { padding: 6px; border: 1px solid #2d3748; }
+        .marksheet h3 { margin-top: 8px; margin-bottom: 8px; }
+        .signature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; width: 100%; }
+        .signature-box { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 90px; page-break-inside: avoid; }
+        .signature-space { height: 60px; }
+        .signature-line { width: 80%; border-bottom: 1px solid #2d3748; }
+        .signature-role { font-weight: 600; margin-bottom: 6px; }
+        .signature-label { margin-top: 6px; font-size: 11px; color: #4a5568; }
+        
+    </style>
     @php
         if($studentDetails):
             $adminId        = $studentDetails->admitId;
@@ -41,11 +72,28 @@ Marksheet Generate
         endif;
         
         $subtotalMarks = 0;
+        $selectedReligiousId = (int) ($studentDetails->religiousSubjectId ?? 0);
+        $classIdForResolve = (int) ($studentDetails->className ?? 0);
+        $map = \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first();
+        $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : ($map ? (int)$map->subjectId : 0);
+        if($effectiveReligiousId === 0){
+            $fallback = \App\Models\Subject::where('isReligious', true)
+                ->where(function($q) use ($classIdForResolve){ $q->where('assign_class', (string)$classIdForResolve)->orWhere('assign_class','0'); })
+                ->orderBy('id')->first();
+            if($fallback){ $effectiveReligiousId = (int)$fallback->id; }
+        }
         if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()) {
             foreach($studentDetails->marksheet as $ckMark) {
-                $subjectMarks   = $ckMark->subjectMarks ?? 0;
-                $objectMarks    = $ckMark->objectMarks ?? 0;
-                $parcticalMarks = $ckMark->practicalMarks ?? 0;
+                $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+                // Skip other religious subjects; include only effective one (student-selected or class default)
+                if($subjectDetails && ($subjectDetails->isReligious ?? false)){
+                    if($effectiveReligiousId === 0 || (int)$subjectDetails->id !== $effectiveReligiousId){
+                        continue;
+                    }
+                }
+                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
                 $subtotalMarks += ($subjectMarks + $objectMarks + $parcticalMarks);
             }
         }
@@ -54,15 +102,14 @@ Marksheet Generate
                 <div class="row gutters-20 mb-4 marksheet">
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto col-12 mx-auto">
-                        <div class="card-body row">
+                        <div class="card-body row transcript">
+                            @include('components.institute-header')
                             @if($studentDetails)
-                            <div class="card-header bg-light border-bottom-0 col-12">
-                                <div class="item-title text-center">
-                                    <h1 class="mb-2 fw-bold">@if($config)   {{ $config->instituteName }} @else Jahanara Ayub Academy @endif</h1>
+                            <div class="col-12 mb-3">
+                                <div class="text-center">
                                     <h3 class="mb-0 text-uppercase fw-bold">{{ $config->transcript_title ?? 'Academic Transcript' }}</h3>
-                                    <p class="text-left fw-bold">SL No- </p>
+                                    <p class="fw-bold mb-1">{{ $examName }}</p>
                                     <button class="btn btn-warning btn-sm d-print-none" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
-                                    <p class="fw-bold">{{ $examName }} </p>
                                 </div>
                             </div>
                             <table class="col-8 col-md-8 mb-4  ">
@@ -141,6 +188,12 @@ Marksheet Generate
             @foreach($studentDetails->marksheet as $ckMark)
                 @php
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+                    // Skip other religious subjects; include only effective one
+                    if($subjectDetails && ($subjectDetails->isReligious ?? false)){
+                        if($effectiveReligiousId === 0 || (int)$subjectDetails->id !== $effectiveReligiousId){
+                            continue;
+                        }
+                    }
 
                     $fullCQ        = $subjectDetails->CQ ?? 0;
                     $fullMCQ       = $subjectDetails->MCQ ?? 0;
@@ -235,6 +288,7 @@ Marksheet Generate
             @foreach($studentDetails->marksheet as $ckMark)
                 @php
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+                    // Optional table unaffected by religious selection
 
                     if($subjectDetails && $subjectDetails->subjectType=="Optional") {
                         $fullCQ        = $subjectDetails->CQ ?? 0;
@@ -307,6 +361,12 @@ Marksheet Generate
     if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count() > 0) {
         foreach($studentDetails->marksheet as $ckMark) {
             $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
+            // Include only the effective religious subject in final GPA tally
+            if($subjectDetails && ($subjectDetails->isReligious ?? false)){
+                if($effectiveReligiousId === 0 || (int)$subjectDetails->id !== $effectiveReligiousId){
+                    continue;
+                }
+            }
             if($subjectDetails && $subjectDetails->subjectType == "Main") {
                 $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
                 $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
@@ -385,17 +445,26 @@ Marksheet Generate
 </table>
 
                             
-                            <table class="col-3 my-4 mx-auto  table table-bordered text-center">
-                                <tbody>
-                                        <th style="padding-top:6rem">Guardian Signature</th>
-                                </tbody>
-                            </table>
-
-                            <table class="col-3 mx-auto my-4 table table-bordered text-center">
-                                <tbody>
-                                        <th style="padding-top:6rem">Principal Signature</th>
-                                </tbody>
-                            </table>
+                            <div class="signature-row">
+                                <div class="signature-box">
+                                    <div class="signature-role">Guardian</div>
+                                    <div class="signature-space"></div>
+                                    <div class="signature-line"></div>
+                                    <div class="signature-label">Signature</div>
+                                </div>
+                                <div class="signature-box">
+                                    <div class="signature-role">Class Teacher</div>
+                                    <div class="signature-space"></div>
+                                    <div class="signature-line"></div>
+                                    <div class="signature-label">Signature</div>
+                                </div>
+                                <div class="signature-box">
+                                    <div class="signature-role">Principal</div>
+                                    <div class="signature-space"></div>
+                                    <div class="signature-line"></div>
+                                    <div class="signature-label">Signature</div>
+                                </div>
+                            </div>
                             @else
                             <div class="alert alert-info col-12">
                                 Sorry! No data found

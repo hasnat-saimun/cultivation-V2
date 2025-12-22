@@ -9,6 +9,7 @@ use App\Models\GradeList;
 use App\Models\ServerConfig;
 use App\Models\Subject;
 use App\Models\Exam;
+use App\Models\ReligiousSubjectDefault;
 
 class MarksheetController extends Controller
 {
@@ -136,6 +137,7 @@ class MarksheetController extends Controller
     $passResults = [];
     $failResults = [];
     $subjectWise = [];
+    $incompleteResults = [];
         $studentsLoaded = false;
 
         if($examId && $classId){
@@ -147,6 +149,8 @@ class MarksheetController extends Controller
 
             $studentIds = $marksBaseQuery->distinct()->pluck('studentId');
             $students = newAdmission::whereIn('id',$studentIds)->get();
+            // Determine active subjects for this class/session/section/exam from marks present
+            $activeSubjectIds = $marksBaseQuery->distinct()->pluck('subjectId')->map(fn($v) => (int)$v)->all();
             $studentsLoaded = true;
 
             // Pre-cache subject details to reduce queries
@@ -157,6 +161,8 @@ class MarksheetController extends Controller
             $gradeList = GradeList::orderBy('minMark','ASC')->get();
 
             foreach($students as $stu){
+                $selectedReligiousId = $stu->religiousSubjectId ? (int)$stu->religiousSubjectId : 0;
+                $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
                 // Build a fresh query per student to avoid accumulating where clauses
                 $stuMarks = Marksheet::where('examId',$examId)
                     ->where('classId',$classId)
@@ -174,19 +180,43 @@ class MarksheetController extends Controller
                 $subtotalMarks = 0; $hasFail = false;
                 $perSubjectOutput = [];
 
+                $missingMainSubjects = 0;
                 foreach($subjects as $sub){
+                    // Per-student religious subject rule: include only the effective religious subject (student-selected or class default)
+                    if (!empty($sub->isReligious)) {
+                        if ($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId) {
+                            continue;
+                        }
+                    }
+                    // Skip subjects that have no marks across the class filters (inactive)
+                    if (!in_array((int)$sub->id, $activeSubjectIds, true)) { continue; }
                     $markRow = $marksBySubject[$sub->id] ?? null;
                     $cq = ($markRow && is_numeric($markRow->subjectMarks)) ? (float)$markRow->subjectMarks : null;
                     $mcq = ($markRow && is_numeric($markRow->objectMarks)) ? (float)$markRow->objectMarks : null;
                     $pr  = ($markRow && is_numeric($markRow->practicalMarks)) ? (float)$markRow->practicalMarks : null;
+                    $hasAnyMark = ($cq !== null) || ($mcq !== null) || ($pr !== null) || ($markRow && is_numeric($markRow->totalMarks));
 
-                    // If any component missing -> treat as '-'
+                    // Displays
                     $cqDisplay = $cq !== null ? $cq : '-';
                     $mcqDisplay = $mcq !== null ? $mcq : '-';
                     $prDisplay = $pr !== null ? $pr : '-';
 
-                    $total = ($cq !== null ? $cq : 0) + ($mcq !== null ? $mcq : 0) + ($pr !== null ? $pr : 0);
-                    $subtotalMarks += $total;
+                    $total = 0;
+                    if ($hasAnyMark) {
+                        $total = ($cq !== null ? $cq : 0) + ($mcq !== null ? $mcq : 0) + ($pr !== null ? $pr : 0);
+                        $subtotalMarks += $total;
+                    } else {
+                        if ($sub->subjectType === 'Main') {
+                            // Count religious missing only if it's the effective one
+                            if (!empty($sub->isReligious)) {
+                                if ($effectiveReligiousId > 0 && (int)$sub->id === $effectiveReligiousId) {
+                                    $missingMainSubjects++;
+                                }
+                            } else {
+                                $missingMainSubjects++;
+                            }
+                        }
+                    }
 
                     // Component grade percent (only if value & full mark available)
                     $fullCQ = $sub->CQ ?? 0; $fullMCQ = $sub->MCQ ?? 0; $fullPR = $sub->Practical ?? 0;
@@ -195,47 +225,50 @@ class MarksheetController extends Controller
                     $prPercent = ($fullPR > 0 && $pr !== null) ? ($pr / $fullPR) * 100 : null;
 
                     $componentGrades = [];
-                    foreach(['cqPercent'=>$cqPercent,'mcqPercent'=>$mcqPercent,'prPercent'=>$prPercent] as $key=>$val){
-                        if($val === null){
-                            $componentGrades[$key] = '-';
-                        }else{
-                            $row = GradeList::where('minMark','<=',$val)->where('maxMark','>=',$val)->first();
-                            $componentGrades[$key] = $row ? $row->gradeName : '-';
+                    $overallGrade = '-';
+                    $overallPoint = 0;
+                    if ($hasAnyMark) {
+                        foreach(['cqPercent'=>$cqPercent,'mcqPercent'=>$mcqPercent,'prPercent'=>$prPercent] as $key=>$val){
+                            if($val === null){
+                                $componentGrades[$key] = '-';
+                            }else{
+                                $row = GradeList::forScore($val);
+                                $componentGrades[$key] = $row ? $row->gradeName : '-';
+                            }
                         }
-                    }
-
-                    // Overall grade (by total marks, 0-100 scale assumed)
-                    $gradeRow = GradeList::where('minMark','<=',$total)->where('maxMark','>=',$total)->first();
-                    $overallGrade = $gradeRow ? $gradeRow->gradeName : '-';
-                    $overallPoint = $gradeRow ? $gradeRow->gradePoint : 0;
-
-                    // Feature-wise fail override
-                    if($isFeatureWise && (in_array('F',$componentGrades))){
-                        $overallGrade = 'F';
-                        $overallPoint = 0;
-                        $hasFail = true;
-                    }
-                    if($overallGrade === 'F'){ $hasFail = true; }
-
-                    if($sub->subjectType === 'Main'){
-                        $mainGradePoints[] = $overallPoint;
-                    }elseif($sub->subjectType === 'Optional'){
-                        $optionalSubjectFound = true; $optionalPoint = $overallPoint; // Only one optional considered
+                        // Overall grade (by total marks)
+                        $gradeRow = GradeList::forScore($total);
+                        $overallGrade = $gradeRow ? $gradeRow->gradeName : '-';
+                        $overallPoint = $gradeRow ? $gradeRow->gradePoint : 0;
+                        // Feature-wise fail override
+                        if($isFeatureWise && (in_array('F',$componentGrades))){
+                            $overallGrade = 'F';
+                            $overallPoint = 0;
+                            $hasFail = true;
+                        }
+                        if($overallGrade === 'F'){ $hasFail = true; }
+                        if($sub->subjectType === 'Main'){
+                            $mainGradePoints[] = $overallPoint;
+                        }elseif($sub->subjectType === 'Optional'){
+                            $optionalSubjectFound = true; $optionalPoint = $overallPoint; // Only one optional considered
+                        }
                     }
 
                     $rowForSubject = [
                         'id' => $sub->id,
                         'name' => $sub->subjectName,
+                        'type' => $sub->subjectType,
+                        'isReligious' => (int)($sub->isReligious ?? 0),
                         'cq' => $cqDisplay,
                         'mcq' => $mcqDisplay,
                         'practical' => $prDisplay,
-                        'total' => $markRow ? $markRow->totalMarks : ($cq!==null||$mcq!==null||$pr!==null ? $total : '-'),
+                        'total' => $hasAnyMark ? ($markRow && is_numeric($markRow->totalMarks) ? $markRow->totalMarks : $total) : '-',
                         'grade' => $overallGrade,
                         'gradePoint' => $overallPoint > 0 ? number_format($overallPoint,2) : ($overallGrade==='F' ? '0.00' : '-')
                     ];
                     $perSubjectOutput[] = $rowForSubject;
 
-                    // Build subject-wise aggregation
+                    // Build subject-wise aggregation (include all, religious already filtered to effective per student)
                     if(!isset($subjectWise[$sub->id])){
                         $subjectWise[$sub->id] = [
                             'subjectId' => $sub->id,
@@ -263,13 +296,17 @@ class MarksheetController extends Controller
                 // Optional bonus (NCTB rule >2 only excess counts)
                 $optionalBonus = ($optionalSubjectFound && $optionalPoint > 2) ? ($optionalPoint - 2) : 0;
                 $mainCount = count($mainGradePoints);
+                $isIncomplete = $missingMainSubjects > 0;
                 $finalGpa = $mainCount > 0 ? round((array_sum($mainGradePoints) + $optionalBonus)/$mainCount, 2) : 0;
                 $finalLetter = '-';
-                if($hasFail){
+                if($isIncomplete){
+                    $finalLetter = 'Incomplete';
+                    $finalGpa = null;
+                }elseif($hasFail){
                     $finalLetter = 'F';
                     $finalGpa = 0;
                 }elseif($mainCount>0){
-                    $avgRow = GradeList::where('gradePoint','<=',$finalGpa)->orderBy('gradePoint','desc')->first();
+                    $avgRow = GradeList::forGpa($finalGpa);
                     $finalLetter = $avgRow ? $avgRow->gradeName : '-';
                 }
 
@@ -279,9 +316,90 @@ class MarksheetController extends Controller
                     'totalMarks' => $subtotalMarks,
                     'finalGpa' => number_format($finalGpa,2),
                     'finalLetter' => $finalLetter,
-                    'isFail' => $hasFail
+                    'isFail' => $hasFail,
+                    'isIncomplete' => $isIncomplete,
+                    'religiousSubjectIdUsed' => $effectiveReligiousId,
+                    'religiousSubjectUsedName' => ($effectiveReligiousId && isset($subjectCache[$effectiveReligiousId])) ? $subjectCache[$effectiveReligiousId]->subjectName : null,
                 ];
-                if($hasFail){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
+                if($isIncomplete){ $incompleteResults[] = $rowPayload; }
+                elseif($hasFail){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
+            }
+        }
+
+        // Skip subjects that have no data across the class (no rows in subjectWise)
+        // Build active subject id list
+        $activeSubjectIds = [];
+        foreach ($subjectWise as $sid => $payload) {
+            if (!empty($payload['rows'])) { $activeSubjectIds[] = (int) $sid; }
+        }
+        if (!empty($activeSubjectIds)) {
+            // Filter header subjects to only active ones (preserve order)
+            $subjects = $subjects->filter(function($s) use ($activeSubjectIds) {
+                return in_array((int)$s->id, $activeSubjectIds, true);
+            })->values();
+            $orderIds = $subjects->map(fn($s) => (int)$s->id)->all();
+            // Reorder and filter each student's subject cells to align with headers
+            $reorder = function(array $rows) use ($orderIds) {
+                $byId = [];
+                foreach ($rows as $r) { $byId[(int)$r['id']] = $r; }
+                $out = [];
+                foreach ($orderIds as $oid) { if (isset($byId[$oid])) { $out[] = $byId[$oid]; } }
+                return $out;
+            };
+            foreach ($passResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            unset($row);
+            foreach ($failResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            unset($row);
+            foreach ($incompleteResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            unset($row);
+        } else {
+            // If no active subjects found, clear headers to avoid empty grid
+            $subjects = collect([]);
+            foreach ($passResults as &$row) { $row['subjects'] = []; }
+            unset($row);
+            foreach ($failResults as &$row) { $row['subjects'] = []; }
+            unset($row);
+            foreach ($incompleteResults as &$row) { $row['subjects'] = []; }
+            unset($row);
+        }
+
+        // Optional compact mode: per-student, only show subjects with actual marks
+        $compactMode = (bool) $request->get('compact');
+        $passResultsCompact = [];
+        $failResultsCompact = [];
+        $incompleteResultsCompact = [];
+        // Sort results by student roll number ASC before compact mapping
+        $sortByRoll = function(&$arr){
+            usort($arr, function($a,$b){
+                $ra = isset($a['student']->rollNumber) ? (int)$a['student']->rollNumber : 0;
+                $rb = isset($b['student']->rollNumber) ? (int)$b['student']->rollNumber : 0;
+                if($ra === $rb){ return $a['student']->id <=> $b['student']->id; }
+                return $ra <=> $rb;
+            });
+        };
+        $sortByRoll($passResults);
+        $sortByRoll($failResults);
+        $sortByRoll($incompleteResults);
+        if ($compactMode) {
+            $filterHasMarks = function(array $rows) {
+                $out = [];
+                foreach ($rows as $r) {
+                    $hasAny = ($r['cq'] !== '-') || ($r['mcq'] !== '-') || ($r['practical'] !== '-') || ($r['total'] !== '-');
+                    if ($hasAny) { $out[] = $r; }
+                }
+                return $out;
+            };
+            foreach ($passResults as $row) {
+                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
+                $passResultsCompact[] = $row;
+            }
+            foreach ($failResults as $row) {
+                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
+                $failResultsCompact[] = $row;
+            }
+            foreach ($incompleteResults as $row) {
+                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
+                $incompleteResultsCompact[] = $row;
             }
         }
 
@@ -289,6 +407,11 @@ class MarksheetController extends Controller
             'subjects' => $subjects,
             'passResults' => $passResults,
             'failResults' => $failResults,
+            'incompleteResults' => $incompleteResults,
+            'passResultsCompact' => $passResultsCompact,
+            'failResultsCompact' => $failResultsCompact,
+            'incompleteResultsCompact' => $incompleteResultsCompact,
+            'compactMode' => $compactMode,
             'examId' => $examId,
             'classId' => $classId,
             'sessionId' => $sessionId,
@@ -308,6 +431,145 @@ class MarksheetController extends Controller
         return view('result.marksheetGenerate',['studentDetails'=>$student,'examId'=>$requ->examId,'config'=>$config]);
     }
 
+    public function tabulationSheet(Request $request)
+    {
+        $examId    = $request->get('examId');
+        $classId   = $request->get('classId');
+        $sessionId = $request->get('sessionId');
+        $sectionId = $request->get('sectionId');
+
+        // Build tabulation payload (standalone)
+
+        $exam      = $examId ? Exam::find($examId) : null;
+        $subjects  = Subject::orderBy('id','ASC')->get();
+
+        $rows = [];
+        $passResults = []; $failResults = []; $incompleteResults = [];
+        $studentsLoaded = false;
+
+        if($examId && $classId){
+            $marksBaseQuery = Marksheet::where('examId',$examId)->where('classId',$classId);
+            if($sessionId){ $marksBaseQuery->where('sessionId',$sessionId); }
+            if($sectionId){ $marksBaseQuery->where('groupId',$sectionId); }
+            $studentIds = $marksBaseQuery->distinct()->pluck('studentId');
+            $students = newAdmission::whereIn('id',$studentIds)->get();
+            $studentsLoaded = true;
+
+            $subjectWise = [];
+            $gradeList = GradeList::orderBy('minMark','ASC')->get();
+            foreach($students as $stu){
+                $selectedReligiousId = $stu->religiousSubjectId ? (int)$stu->religiousSubjectId : 0;
+                $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
+                $stuMarks = Marksheet::where('examId',$examId)
+                    ->where('classId',$classId)
+                    ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                    ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
+                    ->where('studentId',$stu->id)
+                    ->get();
+                $marksBySubject = [];
+                foreach($stuMarks as $m){ $marksBySubject[$m->subjectId] = $m; }
+
+                $mainGradePoints = []; $optionalPoint = 0; $optionalSubjectFound = false;
+                $subtotalMarks = 0; $hasFail = false; $missingMainSubjects = 0;
+                $perSubjectOutput = [];
+                foreach($subjects as $sub){
+                    if (!empty($sub->isReligious)){
+                        if ($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){ continue; }
+                    }
+                    $markRow = $marksBySubject[$sub->id] ?? null;
+                    $cq = ($markRow && is_numeric($markRow->subjectMarks)) ? (float)$markRow->subjectMarks : null;
+                    $mcq = ($markRow && is_numeric($markRow->objectMarks)) ? (float)$markRow->objectMarks : null;
+                    $pr  = ($markRow && is_numeric($markRow->practicalMarks)) ? (float)$markRow->practicalMarks : null;
+                    $hasAnyMark = ($cq !== null) || ($mcq !== null) || ($pr !== null) || ($markRow && is_numeric($markRow->totalMarks));
+                    $total = 0;
+                    if ($hasAnyMark){ $total = ($cq?:0)+($mcq?:0)+($pr?:0); $subtotalMarks += $total; }
+                    else { if($sub->subjectType==='Main'){ $missingMainSubjects++; } }
+
+                    $fullCQ = $sub->CQ ?? 0; $fullMCQ = $sub->MCQ ?? 0; $fullPR = $sub->Practical ?? 0;
+                    $cqPercent = ($fullCQ>0 && $cq!==null) ? ($cq/$fullCQ)*100 : null;
+                    $mcqPercent = ($fullMCQ>0 && $mcq!==null) ? ($mcq/$fullMCQ)*100 : null;
+                    $prPercent = ($fullPR>0 && $pr!==null) ? ($pr/$fullPR)*100 : null;
+                    $componentGrades = [];
+                    $overallGrade='-'; $overallPoint=0;
+                    if($hasAnyMark){
+                        foreach(['cqPercent'=>$cqPercent,'mcqPercent'=>$mcqPercent,'prPercent'=>$prPercent] as $key=>$val){
+                            if($val===null){ $componentGrades[$key]='-'; }
+                            else { $row=GradeList::forScore($val); $componentGrades[$key]=$row? $row->gradeName:'-'; }
+                        }
+                        $gradeRow = GradeList::forScore($total);
+                        $overallGrade = $gradeRow? $gradeRow->gradeName:'-';
+                        $overallPoint = $gradeRow? $gradeRow->gradePoint:0;
+                        if($exam && $exam->passingSystem==1 && (in_array('F',$componentGrades))){ $overallGrade='F'; $overallPoint=0; $hasFail=true; }
+                        if($overallGrade==='F'){ $hasFail=true; }
+                        if($sub->subjectType==='Main'){ $mainGradePoints[]=$overallPoint; }
+                        elseif($sub->subjectType==='Optional'){ $optionalSubjectFound=true; $optionalPoint=$overallPoint; }
+                    }
+                    $perSubjectOutput[] = [
+                        'id'=>$sub->id,'name'=>$sub->subjectName,'type'=>$sub->subjectType,'isReligious'=>(int)($sub->isReligious??0),
+                        'cq'=>$cq!==null?$cq:'-','mcq'=>$mcq!==null?$mcq:'-','practical'=>$pr!==null?$pr:'-','total'=>$hasAnyMark?($markRow && is_numeric($markRow->totalMarks)?$markRow->totalMarks:$total):'-',
+                        'grade'=>$overallGrade,'gradePoint'=>$overallPoint>0?number_format($overallPoint,2):($overallGrade==='F'?'0.00':'-'),
+                    ];
+                }
+                $optionalBonus = ($optionalSubjectFound && $optionalPoint>2)? ($optionalPoint-2):0;
+                $mainCount = count($mainGradePoints);
+                $isIncomplete = $missingMainSubjects>0;
+                $finalGpa = $mainCount>0? round((array_sum($mainGradePoints)+$optionalBonus)/$mainCount,2):0;
+                $finalLetter = '-';
+                if($isIncomplete){ $finalLetter='Incomplete'; $finalGpa=null; }
+                elseif($hasFail){ $finalLetter='F'; $finalGpa=0; }
+                elseif($mainCount>0){ $avgRow = GradeList::forGpa($finalGpa); $finalLetter = $avgRow? $avgRow->gradeName:'-'; }
+
+                $rows[] = [
+                    'student'=>$stu,
+                    'subjects'=>$perSubjectOutput,
+                    'totalMarks'=>$subtotalMarks,
+                    'finalGpa'=> is_numeric($finalGpa)? number_format($finalGpa,2):'-',
+                    'finalLetter'=>$finalLetter,
+                ];
+            }
+
+            // Determine active subject ids based on any marks present
+            $activeSubjectIds = [];
+            foreach($rows as $r){ foreach($r['subjects'] as $s){ if($s['cq']!=='-'||$s['mcq']!=='-'||$s['practical']!=='-'||$s['total']!=='-'){ $activeSubjectIds[(int)$s['id']]=true; } } }
+            if(!empty($activeSubjectIds)){
+                $subjects = $subjects->filter(function($s) use ($activeSubjectIds){ return isset($activeSubjectIds[(int)$s->id]); })->values();
+                $orderIds = $subjects->map(fn($s)=>(int)$s->id)->all();
+                foreach($rows as &$row){
+                    $byId = []; foreach($row['subjects'] as $s){ $byId[(int)$s['id']]=$s; }
+                    $ordered=[]; foreach($orderIds as $oid){ if(isset($byId[$oid])){ $ordered[]=$byId[$oid]; } }
+                    $row['subjects']=$ordered;
+                }
+                unset($row);
+            }else{
+                $subjects = collect([]); foreach($rows as &$row){ $row['subjects']=[]; } unset($row);
+            }
+            // Sort rows by roll ASC
+            usort($rows, function($a,$b){
+                $ra = isset($a['student']->rollNumber)? (int)$a['student']->rollNumber:0;
+                $rb = isset($b['student']->rollNumber)? (int)$b['student']->rollNumber:0;
+                if($ra===$rb){ return $a['student']->id <=> $b['student']->id; }
+                return $ra <=> $rb;
+            });
+        }
+
+        // Summary
+        $summary = [
+            'total' => count($rows),
+            'exam' => $exam,
+        ];
+
+        return view('result.tabulation', [
+            'subjects' => $subjects,
+            'rows' => $rows,
+            'examId' => $examId,
+            'classId' => $classId,
+            'sessionId' => $sessionId,
+            'sectionId' => $sectionId,
+            'summary' => $summary,
+            'studentsLoaded' => $studentsLoaded,
+        ]);
+    }
+
 
     //front web site str
     public function internalResult(){
@@ -319,4 +581,21 @@ class MarksheetController extends Controller
         return view('frontend.result.individualResult');
     }
     //front web site end
+
+    // Resolve effective religious subject for a class (mapping -> assigned -> any)
+    private function resolveReligiousSubjectForClass(int $classId): int
+    {
+        if ($classId <= 0) return 0;
+        $map = ReligiousSubjectDefault::where('classId', $classId)->first();
+        if ($map) return (int)$map->subjectId;
+        $sub = Subject::where('isReligious', true)
+            ->where(function($q) use ($classId){
+                $q->where('assign_class', (string)$classId)
+                  ->orWhere('assign_class', '0');
+            })
+            ->orderBy('id')->first();
+        if ($sub) return (int)$sub->id;
+        $sub = Subject::where('isReligious', true)->orderBy('id')->first();
+        return $sub ? (int)$sub->id : 0;
+    }
 }

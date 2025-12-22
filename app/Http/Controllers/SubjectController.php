@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\classManage;
 use App\Models\Subject;
+use App\Models\ReligiousSubjectDefault;
 
 class SubjectController extends Controller
 {
@@ -31,8 +32,23 @@ class SubjectController extends Controller
             $subject->CQ            = $requ->cqValue;
             $subject->MCQ           = $requ->mcqValue;
             $subject->Practical     = $requ->practicalValue;
+            $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
+
+            // Map defaults for selected classes (for all classes support)
+            if ($subject->isReligious) {
+                $defaultClasses = array_filter(array_map('intval', (array) $requ->input('defaultReligiousClasses', [])));
+                if ($requ->has('defaultReligiousForAllClass')) {
+                    $defaultClasses = classManage::orderBy('id','ASC')->pluck('id')->toArray();
+                }
+                foreach ($defaultClasses as $classId) {
+                    ReligiousSubjectDefault::updateOrCreate(
+                        ['classId' => $classId],
+                        ['subjectId' => $subject->id]
+                    );
+                }
+            }
             return back()->with('success','Record successfully saved');
         endif;
     }
@@ -44,7 +60,9 @@ class SubjectController extends Controller
     
     public function editSubject($item){
         $itemData = Subject::find($item);
-        return view('result.edit-subject',['item'=>$itemData]);
+        $classList = classManage::orderBy('id','ASC')->get();
+        $defaultClassIds = ReligiousSubjectDefault::where('subjectId', $itemData->id)->pluck('classId')->toArray();
+        return view('result.edit-subject',['item'=>$itemData, 'classList'=>$classList, 'defaultClassIds'=>$defaultClassIds]);
     }
     
 
@@ -60,8 +78,30 @@ class SubjectController extends Controller
             $subject->CQ            = $requ->cqValue;
             $subject->MCQ           = $requ->mcqValue;
             $subject->Practical     = $requ->practicalValue;
+            $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
+
+            // Update defaults mapping for selected classes
+            if ($subject->isReligious) {
+                $selected = array_filter(array_map('intval', (array) $requ->input('defaultReligiousClasses', [])));
+                if ($requ->has('defaultReligiousForAllClass')) {
+                    $selected = classManage::orderBy('id','ASC')->pluck('id')->toArray();
+                }
+                // Add/update selected
+                foreach ($selected as $classId) {
+                    ReligiousSubjectDefault::updateOrCreate(
+                        ['classId' => $classId],
+                        ['subjectId' => $subject->id]
+                    );
+                }
+                // Remove mappings pointing to this subject for classes not selected
+                $existing = ReligiousSubjectDefault::where('subjectId', $subject->id)->pluck('classId')->toArray();
+                $toRemove = array_diff($existing, $selected);
+                if (!empty($toRemove)) {
+                    ReligiousSubjectDefault::where('subjectId', $subject->id)->whereIn('classId', $toRemove)->delete();
+                }
+            }
             return back()->with('success','Record successfully updated');
         else:
             return back()->with('error','No alias found for update');
