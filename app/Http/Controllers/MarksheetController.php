@@ -41,7 +41,7 @@ class MarksheetController extends Controller
             'className'   => (int)$requ->classId,
             'sessName'    => (int)$requ->sessionId,
             'sectionName' => (int)$requ->groupId,
-        ])->orderBy('id','ASC')->get();
+        ])->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
         return view('result.get-marks',[
             'studentList'=>$studentList,
             'groupId'=>$requ->groupId,
