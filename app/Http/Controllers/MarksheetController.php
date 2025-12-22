@@ -36,7 +36,12 @@ class MarksheetController extends Controller
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
         }
-        $studentList = newAdmission::where(['sessName'=>$requ->sessionId,'sectionName'=>$requ->groupId])->get();
+        // Fetch students class-wise along with session and section filters
+        $studentList = newAdmission::where([
+            'className'   => (int)$requ->classId,
+            'sessName'    => (int)$requ->sessionId,
+            'sectionName' => (int)$requ->groupId,
+        ])->orderBy('id','ASC')->get();
         return view('result.get-marks',[
             'studentList'=>$studentList,
             'groupId'=>$requ->groupId,
