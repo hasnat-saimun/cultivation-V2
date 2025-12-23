@@ -1110,11 +1110,6 @@ Route::middleware(['adminGuard'])->group (function(){
         'allMarksheet'
     ])->name('allMarksheet');
 
-    Route::get('/marksheet/tabulation',[
-        MarksheetController::class ,
-        'tabulationSheet'
-    ])->name('tabulationSheet');
-
     Route::post('/marksheet/generate',[
         MarksheetController::class ,
         'generateMarksheet'

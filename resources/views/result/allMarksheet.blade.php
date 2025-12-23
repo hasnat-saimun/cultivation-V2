@@ -4,31 +4,15 @@ All Marksheet
 @endsection
 @section('backIndex')
 <style>
-    @page { size: legal landscape; margin: 5mm; }
+    @page { size: A4; margin: 12mm; }
     html, body { background: #fff; }
     @media print {
         html, body { background: #fff !important; }
-        body { margin: 0 !important; }
-        .main-website, .main-content, .container-fluid { background: #fff !important; width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; }
-        .dashboard-page-one, .dashboard-content-one, #wrapper, .wrapper { width: 100% !important; max-width: none !important; padding: 0 !important; margin: 0 !important; background: #fff !important; }
-        .container-fluid.mb-4 { display: none !important; }
-        .row { margin: 0 !important; }
-        [class^="col"], .col, .col-1, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-10, .col-11, .col-12 { padding: 0 !important; }
-        .table-responsive { overflow: visible !important; }
-        .table { border-collapse: collapse !important; table-layout: fixed !important; font-size: 11px !important; width: 100% !important; }
-        .table thead { display: table-header-group !important; }
-        .table tfoot { display: table-footer-group !important; }
-        tr { page-break-inside: avoid !important; }
-        .table thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; white-space: nowrap !important; }
-        .table th, .table td { border: 1px solid #000 !important; padding: 4px !important; }
-        .table-striped tr { background: transparent !important; }
-        .result-text h4 { margin-bottom: 6px !important; }
-        .dark-border { margin-bottom: 8px !important; }
-        /* Column alignment and widths: Roll, Name */
-        .table th:nth-child(1), .table td:nth-child(1) { width: 26mm !important; }
-        .table th:nth-child(2), .table td:nth-child(2) { text-align: left !important; width: 80mm !important; }
+        .main-website, .main-content, .container-fluid { background: #fff !important; }
+        .table { border-collapse: collapse !important; }
+        .table thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .table th, .table td { border: 1px solid #000 !important; padding: 6px !important; }
     }
-    .main-website, .main-content, .container-fluid { width: 100% !important; max-width: none !important; }
 </style>
 <div class="main-website">
     <div class="main-content">
@@ -103,14 +87,10 @@ All Marksheet
                 <div class="row">
                     <div class="col-12">
                         <div class="result-text text-center mt-2">
-                            @php $headingText = 'Class Result Sheet' . (($exam ?? null) ? (' - ' . $exam->examName) : ''); @endphp
-                            <h4 class="fw-bold">{{ strlen($headingText) > 32 ? 'Horizontali' : $headingText }}</h4>
+                            <h4 class="fw-bold">Class Result Sheet @if($exam) - {{ $exam->examName }} @endif</h4>
                             @if($exam && $exam->passingSystem == 1)
                                 <p class="text-muted mb-0"><small>Feature-wise Passing System Applied</small></p>
                             @endif
-                        </div>
-                        <div class="text-end mt-2 d-print-none">
-                            <button class="btn btn-primary btn-sm" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
                         </div>
                     </div>
                 </div>
@@ -125,43 +105,42 @@ All Marksheet
                 <h5 class="mt-4 fw-bold text-success">Passed Students ({{ count($passResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table">
-                        <thead>
-                            <tr class="table-dark text-dark">
-                                <th rowspan="3"><b>Roll</b></th>
-                                <th rowspan="3"><b>Name</b></th>
-                                <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
-                                <th rowspan="3"><b>Total</b></th>
-                                <th rowspan="3"><b>Grade</b></th>
-                                <th rowspan="3"><b>GPA</b></th>
-                            </tr>
-                            <tr class="table-dark text-dark">
-                                @if(count($subjects) > 0)
-                                    @foreach($subjects as $sub)
-                                        <th colspan="6"><b>{{ $sub->subjectName }}</b></th>
-                                    @endforeach
-                                @else
-                                    <th><b>No subjects</b></th>
-                                @endif
-                            </tr>
-                            <tr class="table-dark text-dark">
-                                @if(count($subjects) > 0)
-                                    @foreach($subjects as $sub)
-                                        <th><b>CQ</b></th>
-                                        <th><b>MCQ</b></th>
-                                        <th><b>P</b></th>
-                                        <th><b>TOTAL</b></th>
-                                        <th><b>GRADE</b></th>
-                                        <th><b>POINT</b></th>
-                                    @endforeach
-                                @else
-                                    <th><b>-</b></th>
-                                @endif
-                            </tr>
-                        </thead>
-                        <tbody>
+                        <tr class="table-dark text-dark">
+                            <th rowspan="3"><b>Roll</b></th>
+                            <th rowspan="3"><b>Student Id</b></th>
+                            <th rowspan="3"><b>Name</b></th>
+                            <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
+                            <th rowspan="3"><b>Total</b></th>
+                            <th rowspan="3"><b>Grade</b></th>
+                            <th rowspan="3"><b>GPA</b></th>
+                        </tr>
+                        <tr class="table-dark text-dark">
+                            @if(count($subjects) > 0)
+                                @foreach($subjects as $sub)
+                                    <th colspan="6"><b>{{ $sub->subjectName }}</b></th>
+                                @endforeach
+                            @else
+                                <th><b>No subjects</b></th>
+                            @endif
+                        </tr>
+                        <tr class="table-dark text-dark">
+                            @if(count($subjects) > 0)
+                                @foreach($subjects as $sub)
+                                    <th><b>CQ</b></th>
+                                    <th><b>MCQ</b></th>
+                                    <th><b>P</b></th>
+                                    <th><b>TOTAL</b></th>
+                                    <th><b>GRADE</b></th>
+                                    <th><b>POINT</b></th>
+                                @endforeach
+                            @else
+                                <th><b>-</b></th>
+                            @endif
+                        </tr>
                         @foreach($passResults as $i=>$res)
                             <tr>
                                 <td>{{ $res['student']->rollNumber }}</td>
+                                <td>{{ $res['student']->stdId }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -176,7 +155,6 @@ All Marksheet
                                 <td>{{ $res['finalGpa'] }}</td>
                             </tr>
                         @endforeach
-                        </tbody>
                     </table>
                 </div>
             @endif
@@ -185,9 +163,9 @@ All Marksheet
                 <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table">
-                        <thead>
                         <tr class="table-dark text-dark">
                             <th rowspan="3"><b>Roll</b></th>
+                            <th rowspan="3"><b>Student Id</b></th>
                             <th rowspan="3"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
                             <th rowspan="3"><b>Total</b></th>
@@ -217,11 +195,10 @@ All Marksheet
                                 <th><b>-</b></th>
                             @endif
                         </tr>
-                        </thead>
-                        <tbody>
                         @foreach($failResults as $i=>$res)
                             <tr class="table-danger">
                                 <td>{{ $res['student']->rollNumber }}</td>
+                                <td>{{ $res['student']->stdId }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -236,7 +213,6 @@ All Marksheet
                                 <td>{{ $res['finalGpa'] }}</td>
                             </tr>
                         @endforeach
-                        </tbody>
                     </table>
                 </div>
             @endif
@@ -245,9 +221,9 @@ All Marksheet
                 <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table">
-                        <thead>
                         <tr class="table-dark text-dark">
                             <th rowspan="3"><b>Roll</b></th>
+                            <th rowspan="3"><b>Student Id</b></th>
                             <th rowspan="3"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
                             <th rowspan="3"><b>Total</b></th>
@@ -277,11 +253,10 @@ All Marksheet
                                 <th><b>-</b></th>
                             @endif
                         </tr>
-                        </thead>
-                        <tbody>
                         @foreach($incompleteResults as $i=>$res)
                             <tr class="table-secondary">
                                 <td>{{ $res['student']->rollNumber }}</td>
+                                <td>{{ $res['student']->stdId }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -296,7 +271,6 @@ All Marksheet
                                 <td>{{ $res['finalGpa'] ?? '-' }}</td>
                             </tr>
                         @endforeach
-                        </tbody>
                     </table>
                 </div>
             @endif
@@ -307,20 +281,19 @@ All Marksheet
                     <h5 class="mt-4 fw-bold text-success">Passed Students ({{ count($passResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
-                            <thead>
-                                <tr class="table-dark text-dark">
-                                    <th><b>Roll</b></th>
-                                    <th><b>Name</b></th>
-                                    <th><b>Subjects (with marks)</b></th>
-                                    <th><b>Total</b></th>
-                                    <th><b>Grade</b></th>
-                                    <th><b>GPA</b></th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            <tr class="table-dark text-dark">
+                                <th><b>Roll</b></th>
+                                <th><b>Student Id</b></th>
+                                <th><b>Name</b></th>
+                                <th><b>Subjects (with marks)</b></th>
+                                <th><b>Total</b></th>
+                                <th><b>Grade</b></th>
+                                <th><b>GPA</b></th>
+                            </tr>
                             @foreach($passResultsCompact as $i=>$res)
                                 <tr>
                                     <td>{{ $res['student']->rollNumber }}</td>
+                                    <td>{{ $res['student']->stdId }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
@@ -341,7 +314,6 @@ All Marksheet
                                     <td>{{ $res['finalGpa'] }}</td>
                                 </tr>
                             @endforeach
-                            </tbody>
                         </table>
                     </div>
                 @endif
@@ -350,20 +322,19 @@ All Marksheet
                     <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
-                            <thead>
-                                <tr class="table-dark text-dark">
-                                    <th><b>Roll</b></th>
-                                    <th><b>Name</b></th>
-                                    <th><b>Subjects (with marks)</b></th>
-                                    <th><b>Total</b></th>
-                                    <th><b>Grade</b></th>
-                                    <th><b>GPA</b></th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            <tr class="table-dark text-dark">
+                                <th><b>Roll</b></th>
+                                <th><b>Student Id</b></th>
+                                <th><b>Name</b></th>
+                                <th><b>Subjects (with marks)</b></th>
+                                <th><b>Total</b></th>
+                                <th><b>Grade</b></th>
+                                <th><b>GPA</b></th>
+                            </tr>
                             @foreach($failResultsCompact as $i=>$res)
                                 <tr class="table-danger">
                                     <td>{{ $res['student']->rollNumber }}</td>
+                                    <td>{{ $res['student']->stdId }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
@@ -384,7 +355,6 @@ All Marksheet
                                     <td>{{ $res['finalGpa'] }}</td>
                                 </tr>
                             @endforeach
-                            </tbody>
                         </table>
                     </div>
                 @endif
@@ -393,20 +363,19 @@ All Marksheet
                     <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
-                            <thead>
-                                <tr class="table-dark text-dark">
-                                    <th><b>Roll</b></th>
-                                    <th><b>Name</b></th>
-                                    <th><b>Subjects (with marks)</b></th>
-                                    <th><b>Total</b></th>
-                                    <th><b>Grade</b></th>
-                                    <th><b>GPA</b></th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                            <tr class="table-dark text-dark">
+                                <th><b>Roll</b></th>
+                                <th><b>Student Id</b></th>
+                                <th><b>Name</b></th>
+                                <th><b>Subjects (with marks)</b></th>
+                                <th><b>Total</b></th>
+                                <th><b>Grade</b></th>
+                                <th><b>GPA</b></th>
+                            </tr>
                             @foreach($incompleteResultsCompact as $i=>$res)
                                 <tr class="table-secondary">
                                     <td>{{ $res['student']->rollNumber }}</td>
+                                    <td>{{ $res['student']->stdId }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
@@ -427,7 +396,6 @@ All Marksheet
                                     <td>{{ $res['finalGpa'] ?? '-' }}</td>
                                 </tr>
                             @endforeach
-                            </tbody>
                         </table>
                     </div>
                 @endif
