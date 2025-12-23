@@ -195,9 +195,13 @@ Marksheet Generate
                         }
                     }
 
-                    $fullCQ        = $subjectDetails->CQ ?? 0;
-                    $fullMCQ       = $subjectDetails->MCQ ?? 0;
-                    $fullPractical = $subjectDetails->Practical ?? 0;
+                    // Safely read full marks only if subject exists
+                    $fullCQ = 0; $fullMCQ = 0; $fullPractical = 0;
+                    if($subjectDetails){
+                        $fullCQ        = $subjectDetails->CQ ?? 0;
+                        $fullMCQ       = $subjectDetails->MCQ ?? 0;
+                        $fullPractical = $subjectDetails->Practical ?? 0;
+                    }
 
                     $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
                     $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
@@ -233,7 +237,7 @@ Marksheet Generate
                     }
                     $gradePointDisplay = ($grade === 'F') ? '0.00' : (is_numeric($gradePoint) ? number_format($gradePoint,2) : '-');
                 @endphp
-                @if($subjectDetails->subjectType=="Main")
+                @if($subjectDetails && $subjectDetails->subjectType=="Main")
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
                     <td>{{ $subjectMarks }}</td>
