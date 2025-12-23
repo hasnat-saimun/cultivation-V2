@@ -91,10 +91,13 @@ Marksheet Generate
                         continue;
                     }
                 }
-                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
-                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
-                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
-                $subtotalMarks += ($subjectMarks + $objectMarks + $parcticalMarks);
+                $hasAny = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
+                if($hasAny){
+                    $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
+                    $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
+                    $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                    $subtotalMarks += ($subjectMarks + $objectMarks + $parcticalMarks);
+                }
             }
         }
     @endphp
@@ -203,13 +206,14 @@ Marksheet Generate
                         $fullPractical = $subjectDetails->Practical ?? 0;
                     }
 
-                    $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
-                    $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
-                    $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
+                    $hasAnyRow = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
+                    $subjectMarks   = $hasAnyRow && is_numeric($ckMark->subjectMarks) ? (float)$ckMark->subjectMarks : null;
+                    $objectMarks    = $hasAnyRow && is_numeric($ckMark->objectMarks) ? (float)$ckMark->objectMarks : null;
+                    $parcticalMarks = $hasAnyRow && is_numeric($ckMark->practicalMarks) ? (float)$ckMark->practicalMarks : null;
 
-                    $cqPercent        = ($fullCQ > 0 && $subjectMarks > 0)   ? ($subjectMarks / $fullCQ) * 100 : null;
-                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks > 0)   ? ($objectMarks / $fullMCQ) * 100 : null;
-                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks > 0) ? ($parcticalMarks / $fullPractical) * 100 : null;
+                    $cqPercent        = ($fullCQ > 0 && $subjectMarks !== null)   ? ($subjectMarks / $fullCQ) * 100 : null;
+                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks !== null)   ? ($objectMarks / $fullMCQ) * 100 : null;
+                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks !== null) ? ($parcticalMarks / $fullPractical) * 100 : null;
 
                     $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
                     $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
@@ -219,12 +223,15 @@ Marksheet Generate
                     $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
                     $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
 
-                    $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
-                    $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                        ->where('maxMark', '>=', $totalMarks)
-                        ->first();
-                    $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                    $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
+                    $totalMarks = null; $grade = '-'; $gradePoint = null;
+                    if($hasAnyRow){
+                        $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
+                        $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                            ->where('maxMark', '>=', $totalMarks)
+                            ->first();
+                        $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                        $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
+                    }
 
                     // Feature Wise F logic and fail propagation
                     if($isFeatureWise && ($cqGrade === 'F' || $mcqGrade === 'F' || $practicalGrade === 'F')) {
@@ -240,13 +247,13 @@ Marksheet Generate
                 @if($subjectDetails && $subjectDetails->subjectType=="Main")
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
-                    <td>{{ $subjectMarks }}</td>
+                    <td>{{ $subjectMarks !== null ? $subjectMarks : '-' }}</td>
                     <td>{{ $cqGrade }}</td>
-                    <td>{{ $objectMarks }}</td>
+                    <td>{{ $objectMarks !== null ? $objectMarks : '-' }}</td>
                     <td>{{ $mcqGrade }}</td>
-                    <td>{{ $parcticalMarks }}</td>
+                    <td>{{ $parcticalMarks !== null ? $parcticalMarks : '-' }}</td>
                     <td>{{ $practicalGrade }}</td>
-                    <td>{{ $totalMarks }}</td>
+                    <td>{{ $totalMarks !== null ? $totalMarks : '-' }}</td>
                     <td>{{ $grade }}</td>
                     <td>{{ $gradePointDisplay }}</td>
                 </tr>
@@ -282,8 +289,8 @@ Marksheet Generate
                 foreach($studentDetails->marksheet as $ckMark) {
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
                     if($subjectDetails && $subjectDetails->subjectType=="Optional") {
-                        $hasOptional = true;
-                        break;
+                        $hasAnyOpt = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
+                        if($hasAnyOpt){ $hasOptional = true; break; }
                     }
                 }
             }
@@ -299,9 +306,10 @@ Marksheet Generate
                         $fullMCQ       = $subjectDetails->MCQ ?? 0;
                         $fullPractical = $subjectDetails->Practical ?? 0;
 
-                        $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : null;
-                        $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : null;
-                        $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : null;
+                        $hasAnyRow = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
+                        $subjectMarks   = $hasAnyRow && is_numeric($ckMark->subjectMarks) ? (float)$ckMark->subjectMarks : null;
+                        $objectMarks    = $hasAnyRow && is_numeric($ckMark->objectMarks) ? (float)$ckMark->objectMarks : null;
+                        $parcticalMarks = $hasAnyRow && is_numeric($ckMark->practicalMarks) ? (float)$ckMark->practicalMarks : null;
 
                         $cqPercent        = ($fullCQ > 0 && $subjectMarks !== null)   ? ($subjectMarks / $fullCQ) * 100 : null;
                         $mcqPercent       = ($fullMCQ > 0 && $objectMarks !== null)   ? ($objectMarks / $fullMCQ) * 100 : null;
@@ -315,12 +323,15 @@ Marksheet Generate
                         $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
                         $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
 
-                        $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
-                        $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                            ->where('maxMark', '>=', $totalMarks)
-                            ->first();
-                        $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                        $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
+                        $totalMarks = null; $grade = '-'; $gradePoint = null;
+                        if($hasAnyRow){
+                            $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
+                            $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
+                                ->where('maxMark', '>=', $totalMarks)
+                                ->first();
+                            $grade      = $gradeRow ? $gradeRow->gradeName : '-';
+                            $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
+                        }
 
                         // Feature Wise F logic and fail propagation
                         if($isFeatureWise && ($cqGrade === 'F' || $mcqGrade === 'F' || $practicalGrade === 'F')) {
@@ -337,13 +348,13 @@ Marksheet Generate
                 @if($subjectDetails && $subjectDetails->subjectType=="Optional")
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
-                    <td>{{ $subjectMarks }}</td>
+                    <td>{{ $subjectMarks !== null ? $subjectMarks : '-' }}</td>
                     <td>{{ $cqGrade }}</td>
-                    <td>{{ $objectMarks }}</td>
+                    <td>{{ $objectMarks !== null ? $objectMarks : '-' }}</td>
                     <td>{{ $mcqGrade }}</td>
-                    <td>{{ $parcticalMarks }}</td>
+                    <td>{{ $parcticalMarks !== null ? $parcticalMarks : '-' }}</td>
                     <td>{{ $practicalGrade }}</td>
-                    <td>{{ $totalMarks }}</td>
+                    <td>{{ $totalMarks !== null ? $totalMarks : '-' }}</td>
                     <td>{{ $grade }}</td>
                     <td>{{ $gradePointDisplay }}</td>
                 </tr>
@@ -371,6 +382,12 @@ Marksheet Generate
                     continue;
                 }
             }
+            // Skip subjects with no marks from GPA and totals
+            $hasAny = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
+            if(!$hasAny){
+                continue;
+            }
+
             if($subjectDetails && $subjectDetails->subjectType == "Main") {
                 $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
                 $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
@@ -396,7 +413,7 @@ Marksheet Generate
                 $mainGradePoints[] = $gradePoint;
             }
             
-            // Optional subject logic
+            // Optional subject logic (only if marks exist)
             if($subjectDetails && $subjectDetails->subjectType == "Optional") {
                 $optionalSubjectFound = true;
                 $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
@@ -409,9 +426,6 @@ Marksheet Generate
                     ->first();
 
                 $optionalPoint = $gradeRow ? $gradeRow->gradePoint : 0;
-            }else {
-                $optionalSubjectFound = false;
-                $optionalPoint = 0; 
             }
         }
     }

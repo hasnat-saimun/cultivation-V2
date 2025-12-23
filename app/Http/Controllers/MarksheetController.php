@@ -71,37 +71,45 @@ class MarksheetController extends Controller
                 $chkData->delete();
             endif;
             $totalMarks = 0;
+            $hasAny = false;
             if(isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== null && $requ->cqMarks[$x] !== '') {
-                $totalMarks += $requ->cqMarks[$x];
+                $totalMarks += (float)$requ->cqMarks[$x];
+                $hasAny = true;
             }
             if(isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== null && $requ->mcqMarks[$x] !== '') {
-                $totalMarks += $requ->mcqMarks[$x];
+                $totalMarks += (float)$requ->mcqMarks[$x];
+                $hasAny = true;
             }
             if(isset($requ->practical[$x]) && $requ->practical[$x] !== null && $requ->practical[$x] !== '') {
-                $totalMarks += $requ->practical[$x];
+                $totalMarks += (float)$requ->practical[$x];
+                $hasAny = true;
             }
+
+            // Skip saving a marksheet row if no marks were entered
+            if(!$hasAny){
+                $x++;
+                continue;
+            }
+
             $grade = GradeList::whereRaw("'$totalMarks' BETWEEN minMark AND maxMark")->first();
-            if(isset($grade) && !empty($grade)):
+            if(isset($grade) && !empty($grade)){
                 $gradePoint = $grade->gradePoint;
                 $laterGrade = $grade->gradeName;
-            else:
+            }else{
                 $gradePoint = 0.00;
                 $laterGrade = 'F';
-            endif;
+            }
             $marks = new Marksheet();
-            
+
             $marks->studentId       = $requ->studentId[$x];
             $marks->classId         = $requ->classId;
             $marks->sessionId       = $requ->sessionId;
             $marks->examId          = $requ->examId;
             $marks->subjectId       = $requ->subjectId;
             $marks->groupId         = $requ->groupId;
-            $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? $requ->cqMarks[$x] : null;
-
-            $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? $requ->mcqMarks[$x] : null;
-
-            $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? $requ->practical[$x] : null;
-            
+            $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? (float)$requ->cqMarks[$x] : null;
+            $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? (float)$requ->mcqMarks[$x] : null;
+            $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? (float)$requ->practical[$x] : null;
             $marks->totalMarks      = $totalMarks;
             $marks->laterGrade      = $laterGrade;
             $marks->gradePoint      = $gradePoint;
@@ -152,6 +160,7 @@ class MarksheetController extends Controller
             // Determine active subjects for this class/session/section/exam from marks present
             $activeSubjectIds = $marksBaseQuery->distinct()->pluck('subjectId')->map(fn($v) => (int)$v)->all();
             $studentsLoaded = true;
+            $maxMarkedSubjects = 0;
 
             // Pre-cache subject details to reduce queries
             $subjectCache = [];
@@ -181,6 +190,7 @@ class MarksheetController extends Controller
                 $perSubjectOutput = [];
 
                 $missingMainSubjects = 0;
+                $markedSubjectsCount = 0;
                 foreach($subjects as $sub){
                     // Per-student religious subject rule: include only the effective religious subject (student-selected or class default)
                     if (!empty($sub->isReligious)) {
@@ -194,7 +204,8 @@ class MarksheetController extends Controller
                     $cq = ($markRow && is_numeric($markRow->subjectMarks)) ? (float)$markRow->subjectMarks : null;
                     $mcq = ($markRow && is_numeric($markRow->objectMarks)) ? (float)$markRow->objectMarks : null;
                     $pr  = ($markRow && is_numeric($markRow->practicalMarks)) ? (float)$markRow->practicalMarks : null;
-                    $hasAnyMark = ($cq !== null) || ($mcq !== null) || ($pr !== null) || ($markRow && is_numeric($markRow->totalMarks));
+                    // Only consider subjects with at least one component mark; ignore total-only rows
+                    $hasAnyMark = ($cq !== null) || ($mcq !== null) || ($pr !== null);
 
                     // Displays
                     $cqDisplay = $cq !== null ? $cq : '-';
@@ -205,17 +216,9 @@ class MarksheetController extends Controller
                     if ($hasAnyMark) {
                         $total = ($cq !== null ? $cq : 0) + ($mcq !== null ? $mcq : 0) + ($pr !== null ? $pr : 0);
                         $subtotalMarks += $total;
+                        $markedSubjectsCount++;
                     } else {
-                        if ($sub->subjectType === 'Main') {
-                            // Count religious missing only if it's the effective one
-                            if (!empty($sub->isReligious)) {
-                                if ($effectiveReligiousId > 0 && (int)$sub->id === $effectiveReligiousId) {
-                                    $missingMainSubjects++;
-                                }
-                            } else {
-                                $missingMainSubjects++;
-                            }
-                        }
+                        // Skip subjects without any marks from calculations (do not mark incomplete)
                     }
 
                     // Component grade percent (only if value & full mark available)
@@ -293,10 +296,16 @@ class MarksheetController extends Controller
                     }
                 }
 
+                // If no subjects have marks at all, skip this student entirely
+                if ($markedSubjectsCount === 0) {
+                    continue;
+                }
+
                 // Optional bonus (NCTB rule >2 only excess counts)
                 $optionalBonus = ($optionalSubjectFound && $optionalPoint > 2) ? ($optionalPoint - 2) : 0;
                 $mainCount = count($mainGradePoints);
-                $isIncomplete = $missingMainSubjects > 0;
+                // Do not mark incomplete when a subject has no entries; skip it from GPA
+                $isIncomplete = false;
                 $finalGpa = $mainCount > 0 ? round((array_sum($mainGradePoints) + $optionalBonus)/$mainCount, 2) : 0;
                 $finalLetter = '-';
                 if($isIncomplete){
@@ -320,10 +329,24 @@ class MarksheetController extends Controller
                     'isIncomplete' => $isIncomplete,
                     'religiousSubjectIdUsed' => $effectiveReligiousId,
                     'religiousSubjectUsedName' => ($effectiveReligiousId && isset($subjectCache[$effectiveReligiousId])) ? $subjectCache[$effectiveReligiousId]->subjectName : null,
+                    'markedSubjectsCount' => $markedSubjectsCount,
                 ];
+                if ($markedSubjectsCount > $maxMarkedSubjects) { $maxMarkedSubjects = $markedSubjectsCount; }
                 if($isIncomplete){ $incompleteResults[] = $rowPayload; }
                 elseif($hasFail){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
             }
+        }
+
+        // Filter to only include students who have marks in the maximum number of subjects
+        if ($studentsLoaded && isset($maxMarkedSubjects) && $maxMarkedSubjects > 0) {
+            $applyMaxFilter = function(array &$arr, int $max){
+                $arr = array_values(array_filter($arr, function($row) use ($max){
+                    return isset($row['markedSubjectsCount']) && ((int)$row['markedSubjectsCount'] === $max);
+                }));
+            };
+            $applyMaxFilter($passResults, $maxMarkedSubjects);
+            $applyMaxFilter($failResults, $maxMarkedSubjects);
+            $applyMaxFilter($incompleteResults, $maxMarkedSubjects);
         }
 
         // Skip subjects that have no data across the class (no rows in subjectWise)
@@ -380,6 +403,36 @@ class MarksheetController extends Controller
         $sortByRoll($passResults);
         $sortByRoll($failResults);
         $sortByRoll($incompleteResults);
+
+        // Merit ranking for passed students: by GPA desc, then total marks desc, then roll asc
+        $rankMap = [];
+        if (!empty($passResults)) {
+            $sortedForMerit = $passResults;
+            usort($sortedForMerit, function($a,$b){
+                $ga = is_numeric($a['finalGpa']) ? (float)$a['finalGpa'] : -1.0;
+                $gb = is_numeric($b['finalGpa']) ? (float)$b['finalGpa'] : -1.0;
+                if ($ga !== $gb) { return $gb <=> $ga; }
+                $ta = is_numeric($a['totalMarks']) ? (float)$a['totalMarks'] : 0.0;
+                $tb = is_numeric($b['totalMarks']) ? (float)$b['totalMarks'] : 0.0;
+                if ($ta !== $tb) { return $tb <=> $ta; }
+                $ra = isset($a['student']->rollNumber) ? (int)$a['student']->rollNumber : 0;
+                $rb = isset($b['student']->rollNumber) ? (int)$b['student']->rollNumber : 0;
+                if ($ra !== $rb) { return $ra <=> $rb; }
+                return $a['student']->id <=> $b['student']->id;
+            });
+            $rank = 1;
+            foreach ($sortedForMerit as $row) {
+                $sid = $row['student']->id;
+                if (!isset($rankMap[$sid])) { $rankMap[$sid] = $rank; }
+                $rank++;
+            }
+            // Attach merit rank to pass results
+            foreach ($passResults as &$row) {
+                $sid = $row['student']->id;
+                $row['meritRank'] = $rankMap[$sid] ?? null;
+            }
+            unset($row);
+        }
         if ($compactMode) {
             $filterHasMarks = function(array $rows) {
                 $out = [];
@@ -391,6 +444,8 @@ class MarksheetController extends Controller
             };
             foreach ($passResults as $row) {
                 $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
+                // keep merit rank if present
+                if (isset($row['meritRank'])) { $row['meritRank'] = $row['meritRank']; }
                 $passResultsCompact[] = $row;
             }
             foreach ($failResults as $row) {

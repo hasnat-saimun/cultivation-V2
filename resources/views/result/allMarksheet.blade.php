@@ -107,7 +107,7 @@ All Marksheet
                     <table class="w-100 table-striped table-bordered text-center table">
                         <tr class="table-dark text-dark">
                             <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Student Id</b></th>
+                            <th rowspan="3"><b>Merit</b></th>
                             <th rowspan="3"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
                             <th rowspan="3"><b>Total</b></th>
@@ -140,7 +140,7 @@ All Marksheet
                         @foreach($passResults as $i=>$res)
                             <tr>
                                 <td>{{ $res['student']->rollNumber }}</td>
-                                <td>{{ $res['student']->stdId }}</td>
+                                <td>{{ $res['meritRank'] ?? '-' }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -165,7 +165,7 @@ All Marksheet
                     <table class="w-100 table-striped table-bordered text-center table">
                         <tr class="table-dark text-dark">
                             <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Student Id</b></th>
+                            <th rowspan="3"><b>Merit</b></th>
                             <th rowspan="3"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
                             <th rowspan="3"><b>Total</b></th>
@@ -198,7 +198,7 @@ All Marksheet
                         @foreach($failResults as $i=>$res)
                             <tr class="table-danger">
                                 <td>{{ $res['student']->rollNumber }}</td>
-                                <td>{{ $res['student']->stdId }}</td>
+                                <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -223,7 +223,7 @@ All Marksheet
                     <table class="w-100 table-striped table-bordered text-center table">
                         <tr class="table-dark text-dark">
                             <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Student Id</b></th>
+                            <th rowspan="3"><b>Merit</b></th>
                             <th rowspan="3"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
                             <th rowspan="3"><b>Total</b></th>
@@ -256,7 +256,7 @@ All Marksheet
                         @foreach($incompleteResults as $i=>$res)
                             <tr class="table-secondary">
                                 <td>{{ $res['student']->rollNumber }}</td>
-                                <td>{{ $res['student']->stdId }}</td>
+                                <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($res['subjects'] as $sres)
                                     <td>{{ $sres['cq'] }}</td>
@@ -283,7 +283,7 @@ All Marksheet
                         <table class="w-100 table-striped table-bordered text-center table">
                             <tr class="table-dark text-dark">
                                 <th><b>Roll</b></th>
-                                <th><b>Student Id</b></th>
+                                <th><b>Merit</b></th>
                                 <th><b>Name</b></th>
                                 <th><b>Subjects (with marks)</b></th>
                                 <th><b>Total</b></th>
@@ -293,7 +293,7 @@ All Marksheet
                             @foreach($passResultsCompact as $i=>$res)
                                 <tr>
                                     <td>{{ $res['student']->rollNumber }}</td>
-                                    <td>{{ $res['student']->stdId }}</td>
+                                    <td>{{ $res['meritRank'] ?? '-' }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
@@ -324,7 +324,7 @@ All Marksheet
                         <table class="w-100 table-striped table-bordered text-center table">
                             <tr class="table-dark text-dark">
                                 <th><b>Roll</b></th>
-                                <th><b>Student Id</b></th>
+                                <th><b>Merit</b></th>
                                 <th><b>Name</b></th>
                                 <th><b>Subjects (with marks)</b></th>
                                 <th><b>Total</b></th>
@@ -334,7 +334,7 @@ All Marksheet
                             @foreach($failResultsCompact as $i=>$res)
                                 <tr class="table-danger">
                                     <td>{{ $res['student']->rollNumber }}</td>
-                                    <td>{{ $res['student']->stdId }}</td>
+                                    <td>-</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
@@ -365,7 +365,7 @@ All Marksheet
                         <table class="w-100 table-striped table-bordered text-center table">
                             <tr class="table-dark text-dark">
                                 <th><b>Roll</b></th>
-                                <th><b>Student Id</b></th>
+                                <th><b>Merit</b></th>
                                 <th><b>Name</b></th>
                                 <th><b>Subjects (with marks)</b></th>
                                 <th><b>Total</b></th>
@@ -375,7 +375,7 @@ All Marksheet
                             @foreach($incompleteResultsCompact as $i=>$res)
                                 <tr class="table-secondary">
                                     <td>{{ $res['student']->rollNumber }}</td>
-                                    <td>{{ $res['student']->stdId }}</td>
+                                    <td>-</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
