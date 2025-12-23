@@ -483,7 +483,45 @@ class MarksheetController extends Controller
         $student = newAdmission::where('stdId', $requ->stdId)
         ->with(['marksheet'])
         ->first();
-        return view('result.marksheetGenerate',['studentDetails'=>$student,'examId'=>$requ->examId,'config'=>$config]);
+
+        // Apply classwise max-subject rule to individual page
+        $maxMarkedSubjects = 0; $studentMarkedSubjects = 0; $hideForMaxRule = false;
+        $examId = $requ->examId;
+        if ($student && $examId) {
+            $classId = $student->className ?? null;
+            $sessionId = $student->sessName ?? null;
+            $sectionId = $student->sectionName ?? null; // aka group/section
+            if ($classId) {
+                $base = Marksheet::where('examId',$examId)->where('classId',$classId);
+                if ($sessionId) { $base = $base->where('sessionId',$sessionId); }
+                if ($sectionId) { $base = $base->where('groupId',$sectionId); }
+                $studentIds = $base->distinct()->pluck('studentId');
+                foreach ($studentIds as $sid) {
+                    $rows = Marksheet::where('examId',$examId)->where('classId',$classId)
+                        ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                        ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
+                        ->where('studentId',$sid)->get();
+                    $cnt = 0;
+                    foreach ($rows as $r) {
+                        if (is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks)) { $cnt++; }
+                    }
+                    if ($cnt > $maxMarkedSubjects) { $maxMarkedSubjects = $cnt; }
+                    if ($sid == $student->id) { $studentMarkedSubjects = $cnt; }
+                }
+                if ($maxMarkedSubjects > 0 && $studentMarkedSubjects < $maxMarkedSubjects) {
+                    $hideForMaxRule = true;
+                }
+            }
+        }
+
+        return view('result.marksheetGenerate',[
+            'studentDetails'=>$student,
+            'examId'=>$examId,
+            'config'=>$config,
+            'maxMarkedSubjects' => $maxMarkedSubjects,
+            'studentMarkedSubjects' => $studentMarkedSubjects,
+            'hideForMaxRule' => $hideForMaxRule,
+        ]);
     }
 
 

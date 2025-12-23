@@ -113,6 +113,11 @@ Marksheet Generate
                                     <h3 class="mb-0 text-uppercase fw-bold">{{ $config->transcript_title ?? 'Academic Transcript' }}</h3>
                                     <p class="fw-bold mb-1">{{ $examName }}</p>
                                     <button class="btn btn-warning btn-sm d-print-none" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+                                    @if(isset($maxMarkedSubjects, $studentMarkedSubjects) && empty($hideForMaxRule) && (int)$maxMarkedSubjects > 0)
+                                        <div class="mt-2 d-print-none">
+                                            <span class="badge bg-info text-dark">Counted subjects: {{ $studentMarkedSubjects }} / {{ $maxMarkedSubjects }}</span>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                             <table class="col-8 col-md-8 mb-4  ">
@@ -165,6 +170,14 @@ Marksheet Generate
                                     @endif
                                 </tbody>
                             </table>
+@if(!empty($hideForMaxRule))
+    <div class="alert alert-warning col-12">
+        Result not available: this student has marks in {{ $studentMarkedSubjects }} subject(s), which is less than the class maximum of {{ $maxMarkedSubjects }} subject(s) for this exam.
+        <div class="mt-2">
+            <a href="{{ url()->previous() }}" class="btn btn-success btn-sm">Go Back</a>
+        </div>
+    </div>
+@else
 @php
     $isFeatureWise = isset($examDetails) && $examDetails->passingSystem == 1;
     $finalLetterGrade = '-';
@@ -461,6 +474,8 @@ Marksheet Generate
         <th>Remark- </th>
     </thead>
 </table>
+
+@endif
 
                             
                             <div class="signature-row">
