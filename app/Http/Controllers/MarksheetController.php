@@ -267,7 +267,10 @@ class MarksheetController extends Controller
                         'practical' => $prDisplay,
                         'total' => $hasAnyMark ? ($markRow && is_numeric($markRow->totalMarks) ? $markRow->totalMarks : $total) : '-',
                         'grade' => $overallGrade,
-                        'gradePoint' => $overallPoint > 0 ? number_format($overallPoint,2) : ($overallGrade==='F' ? '0.00' : '-')
+                        'gradePoint' => $overallPoint > 0 ? number_format($overallPoint,2) : ($overallGrade==='F' ? '0.00' : '-'),
+                        'cqGrade' => $componentGrades['cqPercent'] ?? '-',
+                        'mcqGrade' => $componentGrades['mcqPercent'] ?? '-',
+                        'prGrade' => $componentGrades['prPercent'] ?? '-',
                     ];
                     $perSubjectOutput[] = $rowForSubject;
 
@@ -296,24 +299,35 @@ class MarksheetController extends Controller
                     }
                 }
 
-                // If no subjects have marks at all, skip this student entirely
-                if ($markedSubjectsCount === 0) {
-                    continue;
+                // Pair-subject merge for this student
+                $pairGroups = $this->detectSubjectPairs($subjects);
+                $subjectsPaired = $this->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, $isFeatureWise);
+                // Recompute subtotal, GPA and counts using paired rows
+                $subtotalPaired = 0; $mainGradePointsPaired = []; $optionalPointPaired = 0; $optionalFoundPaired = false; $hasFailPaired = false; $markedPairedCount = 0;
+                foreach($subjectsPaired as $sr){
+                    $hasAny = ($sr['cq'] !== '-') || ($sr['mcq'] !== '-') || ($sr['practical'] !== '-') || ($sr['total'] !== '-');
+                    if($hasAny){ $markedPairedCount++; }
+                    if(is_numeric($sr['total'])){ $subtotalPaired += (float)$sr['total']; }
+                    if(($sr['grade'] ?? '-') === 'F'){ $hasFailPaired = true; }
+                    // parse gradePoint display
+                    $gp = ($sr['grade'] === 'F') ? 0.0 : (is_numeric($sr['gradePoint']) ? (float)$sr['gradePoint'] : null);
+                    if($gp !== null){
+                        if(($sr['type'] ?? 'Main') === 'Main'){ $mainGradePointsPaired[] = $gp; }
+                        else{ $optionalFoundPaired = true; $optionalPointPaired = $gp; }
+                    }
                 }
+                // If no subjects have marks at all, skip this student entirely (paired criterion)
+                if ($markedPairedCount === 0) { continue; }
 
-                // Optional bonus (NCTB rule >2 only excess counts)
-                $optionalBonus = ($optionalSubjectFound && $optionalPoint > 2) ? ($optionalPoint - 2) : 0;
-                $mainCount = count($mainGradePoints);
-                // Do not mark incomplete when a subject has no entries; skip it from GPA
-                $isIncomplete = false;
-                $finalGpa = $mainCount > 0 ? round((array_sum($mainGradePoints) + $optionalBonus)/$mainCount, 2) : 0;
+                $optionalBonus = ($optionalFoundPaired && $optionalPointPaired > 2) ? ($optionalPointPaired - 2) : 0;
+                $mainCount = count($mainGradePointsPaired);
+                $isIncomplete = false; // blank subjects skipped
+                $finalGpa = $mainCount > 0 ? round((array_sum($mainGradePointsPaired) + $optionalBonus)/$mainCount, 2) : 0;
                 $finalLetter = '-';
                 if($isIncomplete){
-                    $finalLetter = 'Incomplete';
-                    $finalGpa = null;
-                }elseif($hasFail){
-                    $finalLetter = 'F';
-                    $finalGpa = 0;
+                    $finalLetter = 'Incomplete'; $finalGpa = null;
+                }elseif($hasFailPaired){
+                    $finalLetter = 'F'; $finalGpa = 0;
                 }elseif($mainCount>0){
                     $avgRow = GradeList::forGpa($finalGpa);
                     $finalLetter = $avgRow ? $avgRow->gradeName : '-';
@@ -321,19 +335,19 @@ class MarksheetController extends Controller
 
                 $rowPayload = [
                     'student' => $stu,
-                    'subjects' => $perSubjectOutput,
-                    'totalMarks' => $subtotalMarks,
+                    'subjects' => $subjectsPaired,
+                    'totalMarks' => $subtotalPaired,
                     'finalGpa' => number_format($finalGpa,2),
                     'finalLetter' => $finalLetter,
-                    'isFail' => $hasFail,
+                    'isFail' => $hasFailPaired,
                     'isIncomplete' => $isIncomplete,
                     'religiousSubjectIdUsed' => $effectiveReligiousId,
                     'religiousSubjectUsedName' => ($effectiveReligiousId && isset($subjectCache[$effectiveReligiousId])) ? $subjectCache[$effectiveReligiousId]->subjectName : null,
-                    'markedSubjectsCount' => $markedSubjectsCount,
+                    'markedSubjectsCount' => $markedPairedCount,
                 ];
-                if ($markedSubjectsCount > $maxMarkedSubjects) { $maxMarkedSubjects = $markedSubjectsCount; }
+                if ($markedPairedCount > $maxMarkedSubjects) { $maxMarkedSubjects = $markedPairedCount; }
                 if($isIncomplete){ $incompleteResults[] = $rowPayload; }
-                elseif($hasFail){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
+                elseif($hasFailPaired){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
             }
         }
 
@@ -356,24 +370,32 @@ class MarksheetController extends Controller
             if (!empty($payload['rows'])) { $activeSubjectIds[] = (int) $sid; }
         }
         if (!empty($activeSubjectIds)) {
-            // Filter header subjects to only active ones (preserve order)
-            $subjects = $subjects->filter(function($s) use ($activeSubjectIds) {
+            // Build paired headers from active subjects
+            $activeSubjects = $subjects->filter(function($s) use ($activeSubjectIds) {
                 return in_array((int)$s->id, $activeSubjectIds, true);
             })->values();
-            $orderIds = $subjects->map(fn($s) => (int)$s->id)->all();
-            // Reorder and filter each student's subject cells to align with headers
-            $reorder = function(array $rows) use ($orderIds) {
-                $byId = [];
-                foreach ($rows as $r) { $byId[(int)$r['id']] = $r; }
+            $pairGroups = $this->detectSubjectPairs($activeSubjects);
+            // Headers: paired names followed by singletons not in pairs
+            $pairedIdsFlat = [];
+            foreach($pairGroups as $pg){ foreach($pg['ids'] as $id){ $pairedIdsFlat[(int)$id] = true; } }
+            $headers = [];
+            foreach($pairGroups as $pg){ $o = (object)['subjectName' => $pg['name'], 'isPaired' => true]; $headers[] = $o; }
+            foreach($activeSubjects as $s){ if(!isset($pairedIdsFlat[(int)$s->id])){ $headers[] = (object)['subjectName' => $s->subjectName, 'isPaired' => false]; } }
+            $subjects = collect($headers);
+            // Reorder rows to follow header names
+            $orderNames = array_map(function($o){ return $o->subjectName; }, $headers);
+            $reorderByName = function(array $rows) use ($orderNames){
+                $byName = [];
+                foreach($rows as $r){ $byName[(string)$r['name']] = $r; }
                 $out = [];
-                foreach ($orderIds as $oid) { if (isset($byId[$oid])) { $out[] = $byId[$oid]; } }
+                foreach($orderNames as $nm){ if(isset($byName[$nm])){ $out[] = $byName[$nm]; } }
                 return $out;
             };
-            foreach ($passResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            foreach ($passResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
             unset($row);
-            foreach ($failResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            foreach ($failResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
             unset($row);
-            foreach ($incompleteResults as &$row) { $row['subjects'] = $reorder($row['subjects']); }
+            foreach ($incompleteResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
             unset($row);
         } else {
             // If no active subjects found, clear headers to avoid empty grid
@@ -496,15 +518,31 @@ class MarksheetController extends Controller
                 if ($sessionId) { $base = $base->where('sessionId',$sessionId); }
                 if ($sectionId) { $base = $base->where('groupId',$sectionId); }
                 $studentIds = $base->distinct()->pluck('studentId');
+                // Cache subjects
+                $subjectCache = Subject::orderBy('id','ASC')->get()->keyBy('id');
                 foreach ($studentIds as $sid) {
                     $rows = Marksheet::where('examId',$examId)->where('classId',$classId)
                         ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
                         ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
                         ->where('studentId',$sid)->get();
-                    $cnt = 0;
-                    foreach ($rows as $r) {
-                        if (is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks)) { $cnt++; }
+                    // Pair-aware counting: group subjects by base alias, include only effective religious subject
+                    $stuRow = newAdmission::find($sid);
+                    $selectedReligiousId = $stuRow && $stuRow->religiousSubjectId ? (int)$stuRow->religiousSubjectId : 0;
+                    $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
+                    $groups = [];
+                    foreach($rows as $r){
+                        $sub = isset($subjectCache[$r->subjectId]) ? $subjectCache[$r->subjectId] : null;
+                        if(!$sub) continue;
+                        if(($sub->isReligious ?? false)){
+                            if($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){ continue; }
+                        }
+                        $base = $this->basePairAlias($sub->alias ?? $sub->subjectName ?? '');
+                        $key = $base ?: ('single_'.(int)$sub->id);
+                        $hasAny = is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks);
+                        if(!isset($groups[$key])){ $groups[$key] = false; }
+                        if($hasAny){ $groups[$key] = true; }
                     }
+                    $cnt = 0; foreach($groups as $k=>$has){ if($has){ $cnt++; } }
                     if ($cnt > $maxMarkedSubjects) { $maxMarkedSubjects = $cnt; }
                     if ($sid == $student->id) { $studentMarkedSubjects = $cnt; }
                 }
@@ -551,5 +589,202 @@ class MarksheetController extends Controller
         if ($sub) return (int)$sub->id;
         $sub = Subject::where('isReligious', true)->orderBy('id')->first();
         return $sub ? (int)$sub->id : 0;
+    }
+
+    /**
+     * Compute a normalized base alias for pairing (e.g., bangla_1st_paper -> bangla).
+     */
+    private function basePairAlias(?string $alias): ?string
+    {
+        if(!$alias) return null;
+        $a = strtolower(trim($alias));
+        // Config-driven mapping (aliases/names)
+        $mapA = config('subject_pairs.aliases', []);
+        $mapN = config('subject_pairs.names', []);
+        if(isset($mapA[$a])){
+            $mapped = strtolower(trim((string)$mapA[$a]));
+            $mapped = str_replace(['-','  '],'_', $mapped);
+            $mapped = preg_replace('/__+/', '_', $mapped);
+            return trim($mapped, '_');
+        }
+        // try original (non-lower) against names map too
+        $orig = trim($alias);
+        if(isset($mapN[$orig])){
+            $mapped = strtolower(trim((string)$mapN[$orig]));
+            $mapped = str_replace(['-','  '],'_', $mapped);
+            $mapped = preg_replace('/__+/', '_', $mapped);
+            return trim($mapped, '_');
+        }
+        // remove common paper tokens
+        $a = str_replace(['-','  '],'_', $a);
+        $a = preg_replace('/(_1st|_first)/','', $a);
+        $a = preg_replace('/(_2nd|_second)/','', $a);
+        $a = preg_replace('/(_paper|_part|_p)$/','', $a);
+        $a = preg_replace('/__+/', '_', $a);
+        return trim($a, '_');
+    }
+
+    /**
+     * Detect subject pairs from active subjects using alias patterns and optional config.
+     * Returns array of groups: [ [ 'base' => 'bangla', 'ids' => [id1,id2], 'name' => 'Bangla' ], ... ]
+     */
+    private function detectSubjectPairs($subjects)
+    {
+        $groups = [];
+        $byBase = [];
+        $mapIds = config('subject_pairs.ids', []);
+        $disp = config('subject_pairs.displayNames', []);
+        foreach($subjects as $s){
+            // id mapping override
+            if(isset($mapIds[$s->id])){
+                $base = $this->basePairAlias((string)$mapIds[$s->id]);
+            } else {
+                $base = $this->basePairAlias($s->alias ?? '') ?: $this->basePairAlias($s->subjectName ?? '');
+            }
+            if(!$base) continue;
+            $byBase[$base] = $byBase[$base] ?? [];
+            $byBase[$base][] = $s;
+        }
+        foreach($byBase as $base => $list){
+            if(count($list) >= 2){
+                // choose display name from first, stripping trailing paper tokens from subjectName
+                $name = $disp[strtolower($base)] ?? $list[0]->subjectName;
+                $name = preg_replace('/\s*(1st|2nd)\s*Paper$/i','', $name);
+                $groups[] = [
+                    'base' => $base,
+                    'ids' => array_map(fn($x)=> (int)$x->id, $list),
+                    'name' => $name
+                ];
+            }
+        }
+        return $groups;
+    }
+
+    /**
+     * Merge per-subject rows into paired rows according to detected groups.
+     * $rowSubjects: array of rows with keys: id, name, type, cq, mcq, practical, total, grade, gradePoint
+     * $subjectCache: map[id] => Subject model
+     */
+    private function mergeSubjectsForRow(array $rowSubjects, array $pairGroups, array $subjectCache, bool $isFeatureWise): array
+    {
+        $used = [];
+        $out = [];
+        $indexById = [];
+        foreach($rowSubjects as $r){ $indexById[(int)$r['id']] = $r; }
+
+        // helper to parse numeric values
+        $num = function($v){ return is_numeric($v) ? (float)$v : 0.0; };
+
+        foreach($pairGroups as $g){
+            $ids = $g['ids'];
+            $rows = [];
+            foreach($ids as $id){ if(isset($indexById[$id])){ $rows[] = $indexById[$id]; $used[$id] = true; } }
+            // Merge even if only one paper is present; skip only if none present
+            if(count($rows) === 0){ continue; }
+            $type = 'Main';
+            foreach($rows as $r){ if(($r['type'] ?? 'Main') === 'Optional') { $type = 'Optional'; break; } }
+            $cq = 0; $mcq = 0; $pr = 0; $total = 0;
+            $anyMark = false; $anyFail = false;
+            $fullCQ = 0; $fullMCQ = 0; $fullPr = 0;
+            foreach($rows as $r){
+                $cq += $num($r['cq']); $mcq += $num($r['mcq']); $pr += $num($r['practical']);
+                $total += $num($r['total']);
+                if(is_numeric($r['cq']) || is_numeric($r['mcq']) || is_numeric($r['practical']) || is_numeric($r['total'])){ $anyMark = true; }
+                // For paired subjects, do not propagate paper-level fail; final fail will be based on combined total only
+                $sub = $subjectCache[(int)$r['id']] ?? null;
+                if($sub){ $fullCQ += (float)($sub->CQ ?? 0); $fullMCQ += (float)($sub->MCQ ?? 0); $fullPr += (float)($sub->Practical ?? 0); }
+            }
+            $grade = '-'; $pointDisplay = '-';
+            if($anyMark){
+                // Component-wise fail under feature-wise
+                $cqPct = ($fullCQ > 0) ? ($cq / $fullCQ) * 100 : null;
+                $mcqPct = ($fullMCQ > 0) ? ($mcq / $fullMCQ) * 100 : null;
+                $prPct = ($fullPr > 0) ? ($pr / $fullPr) * 100 : null;
+                $cGrades = [];
+                foreach(['cqPct'=>$cqPct,'mcqPct'=>$mcqPct,'prPct'=>$prPct] as $k=>$v){
+                    if($v === null){ $cGrades[$k] = '-'; } else { $row = GradeList::forScore($v); $cGrades[$k] = $row ? $row->gradeName : '-'; }
+                }
+                // Passing system for paired subjects: NOT feature-wise. Only combined total determines fail.
+                if(false){ /* placeholder to keep diff simple */ }
+                if($anyFail){
+                    $grade = 'F'; $pointDisplay = '0.00';
+                }else{
+                    $fullSum = $fullCQ + $fullMCQ + $fullPr;
+                    $percent = ($fullSum > 0) ? ($total / $fullSum) * 100 : null;
+                    if($percent !== null){
+                        $gRow = GradeList::forScore($percent);
+                        $grade = $gRow ? $gRow->gradeName : '-';
+                        $pointDisplay = $gRow ? number_format($gRow->gradePoint,2) : '-';
+                    } else {
+                        $grade = '-'; $pointDisplay = '-';
+                    }
+                }
+            }
+            // capture per-paper components for column-based display
+            $paper1 = null; $paper2 = null;
+            if(count($rows) >= 1){
+                $r1 = $rows[0];
+                $paper1 = [
+                    'cq' => $r1['cq'],
+                    'mcq' => $r1['mcq'],
+                    'practical' => $r1['practical'],
+                    'cqGrade' => $r1['cqGrade'] ?? '-',
+                    'mcqGrade' => $r1['mcqGrade'] ?? '-',
+                    'prGrade' => $r1['prGrade'] ?? '-',
+                ];
+            }
+            if(count($rows) >= 2){
+                $r2 = $rows[1];
+                $paper2 = [
+                    'cq' => $r2['cq'],
+                    'mcq' => $r2['mcq'],
+                    'practical' => $r2['practical'],
+                    'cqGrade' => $r2['cqGrade'] ?? '-',
+                    'mcqGrade' => $r2['mcqGrade'] ?? '-',
+                    'prGrade' => $r2['prGrade'] ?? '-',
+                ];
+            }
+            $out[] = [
+                'id' => implode('-', $ids),
+                'name' => $g['name'],
+                'type' => $type,
+                'isReligious' => 0,
+                'paired' => true,
+                'paper1' => $paper1,
+                'paper2' => $paper2,
+                'cq' => $anyMark ? ($cq > 0 ? $cq : '-') : '-',
+                'mcq' => $anyMark ? ($mcq > 0 ? $mcq : '-') : '-',
+                'practical' => $anyMark ? ($pr > 0 ? $pr : '-') : '-',
+                'total' => $anyMark ? ($total > 0 ? $total : '-') : '-',
+                'grade' => $grade,
+                'gradePoint' => $pointDisplay,
+                'cqGrade' => $cGrades['cqPct'] ?? '-',
+                'mcqGrade' => $cGrades['mcqPct'] ?? '-',
+                'prGrade' => $cGrades['prPct'] ?? '-',
+            ];
+        }
+
+        // add non-paired subjects, enrich with component grades
+        foreach($rowSubjects as $r){
+            if(!isset($used[(int)$r['id']])){
+                $sub = $subjectCache[(int)$r['id']] ?? null;
+                $fullCQ = $sub ? (float)($sub->CQ ?? 0) : 0.0;
+                $fullMCQ = $sub ? (float)($sub->MCQ ?? 0) : 0.0;
+                $fullPr = $sub ? (float)($sub->Practical ?? 0) : 0.0;
+                $cqPct = ($fullCQ>0 && is_numeric($r['cq'])) ? ((float)$r['cq'] / $fullCQ) * 100 : null;
+                $mcqPct = ($fullMCQ>0 && is_numeric($r['mcq'])) ? ((float)$r['mcq'] / $fullMCQ) * 100 : null;
+                $prPct = ($fullPr>0 && is_numeric($r['practical'])) ? ((float)$r['practical'] / $fullPr) * 100 : null;
+                $rr = $r;
+                $rr['paired'] = false;
+                $rr['paper1'] = null; $rr['paper2'] = null;
+                $rr['cqGrade'] = $cqPct!==null ? (GradeList::forScore($cqPct)->gradeName ?? '-') : '-';
+                $rr['mcqGrade'] = $mcqPct!==null ? (GradeList::forScore($mcqPct)->gradeName ?? '-') : '-';
+                $rr['prGrade'] = $prPct!==null ? (GradeList::forScore($prPct)->gradeName ?? '-') : '-';
+                $out[] = $rr;
+            }
+        }
+        // preserve order roughly by subject id
+        usort($out, function($a,$b){ return strcmp((string)$a['name'], (string)$b['name']); });
+        return $out;
     }
 }

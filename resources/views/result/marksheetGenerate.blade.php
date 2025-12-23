@@ -4,7 +4,7 @@ Marksheet Generate
 @endsection
 @section('backIndex')
     <style>
-        @page { size: A4; margin: 12mm; }
+        @page { size: A4 landscape; margin: 12mm; }
         html, body { background: #fff; }
         @media print {
             html, body { background: #fff !important; }
@@ -16,6 +16,7 @@ Marksheet Generate
             .marksheet table.table, .marksheet table.table-bordered { border-collapse: collapse !important; }
             .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { border: 1px solid #000 !important; }
+            .result-header-band { background: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #000 !important; }
         }
         .marksheet .transcript {
             background: #fff;
@@ -106,13 +107,13 @@ Marksheet Generate
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto col-12 mx-auto">
                         <div class="card-body row transcript">
-                            @include('components.institute-header')
+                            @include('components.result-header')
                             @if($studentDetails)
                             <div class="col-12 mb-3">
                                 <div class="text-center">
                                     <h3 class="mb-0 text-uppercase fw-bold">{{ $config->transcript_title ?? 'Academic Transcript' }}</h3>
                                     <p class="fw-bold mb-1">{{ $examName }}</p>
-                                    <button class="btn btn-warning btn-sm d-print-none" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+                                    
                                     @if(isset($maxMarkedSubjects, $studentMarkedSubjects) && empty($hideForMaxRule) && (int)$maxMarkedSubjects > 0)
                                         <div class="mt-2 d-print-none">
                                             <span class="badge bg-info text-dark">Counted subjects: {{ $studentMarkedSubjects }} / {{ $maxMarkedSubjects }}</span>
@@ -184,8 +185,208 @@ Marksheet Generate
     $hasFail = false;
 @endphp
 
-<!-- Main Subject Table -->
+<!-- Main Subject Tables (paired vs single) -->
 <h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
+@php
+    // Build paired main subject rows
+    $mainRowsRaw = [];
+    $num = function($v){ return is_numeric($v) ? (float)$v : 0.0; };
+    $baseAlias = function($alias){
+        if(!$alias) return null; 
+        $a = strtolower(trim($alias));
+        $mapA = config('subject_pairs.aliases', []);
+        $mapN = config('subject_pairs.names', []);
+        if(isset($mapA[$a])){
+            $mapped = strtolower(trim((string)$mapA[$a]));
+            $mapped = str_replace(['-','  '],'_', $mapped);
+            $mapped = preg_replace('/__+/', '_', $mapped);
+            return trim($mapped, '_');
+        }
+        $orig = trim($alias);
+        if(isset($mapN[$orig])){
+            $mapped = strtolower(trim((string)$mapN[$orig]));
+            $mapped = str_replace(['-','  '],'_', $mapped);
+            $mapped = preg_replace('/__+/', '_', $mapped);
+            return trim($mapped, '_');
+        }
+        $a = str_replace(['-','  '],'_', $a);
+        $a = preg_replace('/(_1st|_first)/','', $a);
+        $a = preg_replace('/(_2nd|_second)/','', $a);
+        $a = preg_replace('/(_paper|_part|_p)$/','', $a);
+        $a = preg_replace('/__+/', '_', $a);
+        return trim($a, '_');
+    };
+    if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0){
+        foreach($studentDetails->marksheet as $ckMark){
+            $sub = \App\Models\Subject::find($ckMark->subjectId);
+            if(!$sub) continue;
+            // Skip other religious subjects; include only effective one
+            if(($sub->isReligious ?? false)){
+                if($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){ continue; }
+            }
+            if(($sub->subjectType ?? 'Main') !== 'Main') continue;
+            $base = $baseAlias($sub->alias ?? $sub->subjectName);
+            $mainRowsRaw[] = [
+                'id' => (int)$sub->id,
+                'name' => $sub->subjectName,
+                'alias' => $sub->alias,
+                'base' => $base,
+                'fullCQ' => (float)($sub->CQ ?? 0),
+                'fullMCQ' => (float)($sub->MCQ ?? 0),
+                'fullPr' => (float)($sub->Practical ?? 0),
+                'cq' => is_numeric($ckMark->subjectMarks) ? (float)$ckMark->subjectMarks : 0.0,
+                'mcq' => is_numeric($ckMark->objectMarks) ? (float)$ckMark->objectMarks : 0.0,
+                'pr' => is_numeric($ckMark->practicalMarks) ? (float)$ckMark->practicalMarks : 0.0,
+            ];
+        }
+    }
+    // Group by base alias and merge, preserving per-paper components
+    $groups = [];
+    foreach($mainRowsRaw as $r){ $b = $r['base'] ?? null; $key = $b ?: ('single_'.$r['id']); $groups[$key] = $groups[$key] ?? []; $groups[$key][] = $r; }
+    $pairedMain = [];
+    $subtotalMarksPaired = 0;
+    foreach($groups as $key=>$items){
+        $displayName = $items[0]['name'];
+        $displayName = preg_replace('/\s*(1st|2nd)\s*Paper$/i','', $displayName);
+        $fullCQ = 0; $fullMCQ = 0; $fullPr = 0; $cq = 0; $mcq = 0; $pr = 0;
+        foreach($items as $it){ $fullCQ += $it['fullCQ']; $fullMCQ += $it['fullMCQ']; $fullPr += $it['fullPr']; $cq += $it['cq']; $mcq += $it['mcq']; $pr += $it['pr']; }
+        $any = ($cq>0) || ($mcq>0) || ($pr>0);
+        $total = $cq + $mcq + $pr;
+        $grade = '-'; $gpDisp = '-';
+        $cqGrade = '-'; $mcqGrade = '-'; $prGrade = '-';
+        $failFw = false;
+        if($any){
+            // Compute component grades always for display
+            $cqPct = $fullCQ>0 ? ($cq/$fullCQ)*100 : null;
+            $mcqPct = $fullMCQ>0 ? ($mcq/$fullMCQ)*100 : null;
+            $prPct = $fullPr>0 ? ($pr/$fullPr)*100 : null;
+            $cGrades = [];
+            foreach(['cqPct'=>$cqPct,'mcqPct'=>$mcqPct,'prPct'=>$prPct] as $k=>$v){
+                if($v===null){ $cGrades[$k] = '-'; } else { $row = \App\Models\GradeList::forScore($v); $cGrades[$k] = $row ? $row->gradeName : '-'; }
+            }
+            // Paired subjects use total marks passing; ignore feature-wise fail
+            $cqGrade = $cGrades['cqPct'] ?? '-';
+            $mcqGrade = $cGrades['mcqPct'] ?? '-';
+            $prGrade = $cGrades['prPct'] ?? '-';
+            if($failFw){ $grade='F'; $gpDisp='0.00'; }
+            else{ 
+                $fullSum = $fullCQ + $fullMCQ + $fullPr;
+                $percent = $fullSum>0 ? ($total/$fullSum)*100 : null;
+                if($percent!==null){
+                    $gRow = \App\Models\GradeList::forScore($percent);
+                    $grade = $gRow ? $gRow->gradeName : '-';
+                    $gpDisp = $gRow ? number_format($gRow->gradePoint,2) : '-';
+                }
+            }
+            if($total>0){ $subtotalMarksPaired += $total; }
+        }
+        // Per-paper components
+        $paper1 = isset($items[0]) ? [
+            'cq' => ($items[0]['cq']>0 ? $items[0]['cq'] : '-'),
+            'mcq' => ($items[0]['mcq']>0 ? $items[0]['mcq'] : '-'),
+            'pr' => ($items[0]['pr']>0 ? $items[0]['pr'] : '-'),
+            // compute component letters per paper
+            'cqGrade' => ($items[0]['fullCQ']>0 && $items[0]['cq']>0) ? ((\App\Models\GradeList::forScore(($items[0]['cq']/$items[0]['fullCQ'])*100))->gradeName ?? '-') : '-',
+            'mcqGrade' => ($items[0]['fullMCQ']>0 && $items[0]['mcq']>0) ? ((\App\Models\GradeList::forScore(($items[0]['mcq']/$items[0]['fullMCQ'])*100))->gradeName ?? '-') : '-',
+            'prGrade' => ($items[0]['fullPr']>0 && $items[0]['pr']>0) ? ((\App\Models\GradeList::forScore(($items[0]['pr']/$items[0]['fullPr'])*100))->gradeName ?? '-') : '-',
+        ] : null;
+        $paper2 = isset($items[1]) ? [
+            'cq' => ($items[1]['cq']>0 ? $items[1]['cq'] : '-'),
+            'mcq' => ($items[1]['mcq']>0 ? $items[1]['mcq'] : '-'),
+            'pr' => ($items[1]['pr']>0 ? $items[1]['pr'] : '-'),
+            'cqGrade' => ($items[1]['fullCQ']>0 && $items[1]['cq']>0) ? ((\App\Models\GradeList::forScore(($items[1]['cq']/$items[1]['fullCQ'])*100))->gradeName ?? '-') : '-',
+            'mcqGrade' => ($items[1]['fullMCQ']>0 && $items[1]['mcq']>0) ? ((\App\Models\GradeList::forScore(($items[1]['mcq']/$items[1]['fullMCQ'])*100))->gradeName ?? '-') : '-',
+            'prGrade' => ($items[1]['fullPr']>0 && $items[1]['pr']>0) ? ((\App\Models\GradeList::forScore(($items[1]['pr']/$items[1]['fullPr'])*100))->gradeName ?? '-') : '-',
+        ] : null;
+        $pairedMain[] = [
+            'name' => $displayName,
+            'paired' => (count($items) >= 2),
+            'paper1' => $paper1,
+            'paper2' => $paper2,
+            'cq' => $any ? ($cq>0 ? $cq : '-') : '-',
+            'mcq' => $any ? ($mcq>0 ? $mcq : '-') : '-',
+            'pr' => $any ? ($pr>0 ? $pr : '-') : '-',
+            'total' => $any ? ($total>0 ? $total : '-') : '-',
+            'grade' => $grade,
+            'gradePoint' => $gpDisp,
+            'fail' => $failFw || ($grade==='F'),
+            'cqGrade' => $cqGrade,
+            'mcqGrade' => $mcqGrade,
+            'prGrade' => $prGrade,
+            'fullCQ' => $fullCQ,
+            'fullMCQ' => $fullMCQ,
+            'fullPr' => $fullPr,
+        ];
+    }
+    // Override subtotal to use paired sums for consistency
+    $subtotalMarks = $subtotalMarksPaired;
+@endphp
+@php
+    $pairedRows = array_values(array_filter($pairedMain, function($r){ return !empty($r['paired']); }));
+    $singleRows = array_values(array_filter($pairedMain, function($r){ return empty($r['paired']); }));
+@endphp
+
+@if(count($pairedRows) > 0)
+<h5 class="mt-3 fw-bold">Paired Subjects</h5>
+<table class="table table-bordered col-12 text-center">
+    <thead>
+        <th>Subject Name</th>
+        <th>CQ-1</th>
+        <th>MCQ-1</th>
+        <th>P-1</th>
+        <th>CQ-2</th>
+        <th>MCQ-2</th>
+        <th>P-2</th>
+        <th>Total</th>
+        <th>Grade</th>
+        <th>Point</th>
+    </thead>
+    <tbody>
+        @if(count($pairedRows) > 0)
+            @foreach($pairedRows as $row)
+                @php
+                    // We already computed component grades in paired array
+                @endphp
+                <tr>
+                    <td>{{ $row['name'] }}</td>
+                    <td>
+                        {{ $row['paper1']['cq'] ?? '-' }}
+                        @if(isset($row['paper1']['cqGrade']))<div><small class="text-muted">{{ $row['paper1']['cqGrade'] }}</small></div>@endif
+                    </td>
+                    <td>
+                        {{ $row['paper1']['mcq'] ?? '-' }}
+                        @if(isset($row['paper1']['mcqGrade']))<div><small class="text-muted">{{ $row['paper1']['mcqGrade'] }}</small></div>@endif
+                    </td>
+                    <td>
+                        {{ $row['paper1']['pr'] ?? '-' }}
+                        @if(isset($row['paper1']['prGrade']))<div><small class="text-muted">{{ $row['paper1']['prGrade'] }}</small></div>@endif
+                    </td>
+                    <td>
+                        {{ $row['paper2']['cq'] ?? '-' }}
+                        @if(isset($row['paper2']['cqGrade']))<div><small class="text-muted">{{ $row['paper2']['cqGrade'] }}</small></div>@endif
+                    </td>
+                    <td>
+                        {{ $row['paper2']['mcq'] ?? '-' }}
+                        @if(isset($row['paper2']['mcqGrade']))<div><small class="text-muted">{{ $row['paper2']['mcqGrade'] }}</small></div>@endif
+                    </td>
+                    <td>
+                        {{ $row['paper2']['pr'] ?? '-' }}
+                        @if(isset($row['paper2']['prGrade']))<div><small class="text-muted">{{ $row['paper2']['prGrade'] }}</small></div>@endif
+                    </td>
+                    <td>{{ $row['total'] }}</td>
+                    <td>{{ $row['grade'] }}</td>
+                    <td>{{ $row['gradePoint'] }}</td>
+                </tr>
+            @endforeach
+        @else
+            <tr><td colspan="10">No paired subjects</td></tr>
+        @endif
+    </tbody>
+</table>
+@endif
+
+@if(count($singleRows) > 0)
+<h5 class="mt-3 fw-bold">Single Subjects</h5>
 <table class="table table-bordered col-12 text-center">
     <thead>
         <th>Subject Name</th>
@@ -200,85 +401,23 @@ Marksheet Generate
         <th>Point</th>
     </thead>
     <tbody>
-        @if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0)
-            @foreach($studentDetails->marksheet as $ckMark)
-                @php
-                    $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
-                    // Skip other religious subjects; include only effective one
-                    if($subjectDetails && ($subjectDetails->isReligious ?? false)){
-                        if($effectiveReligiousId === 0 || (int)$subjectDetails->id !== $effectiveReligiousId){
-                            continue;
-                        }
-                    }
-
-                    // Safely read full marks only if subject exists
-                    $fullCQ = 0; $fullMCQ = 0; $fullPractical = 0;
-                    if($subjectDetails){
-                        $fullCQ        = $subjectDetails->CQ ?? 0;
-                        $fullMCQ       = $subjectDetails->MCQ ?? 0;
-                        $fullPractical = $subjectDetails->Practical ?? 0;
-                    }
-
-                    $hasAnyRow = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
-                    $subjectMarks   = $hasAnyRow && is_numeric($ckMark->subjectMarks) ? (float)$ckMark->subjectMarks : null;
-                    $objectMarks    = $hasAnyRow && is_numeric($ckMark->objectMarks) ? (float)$ckMark->objectMarks : null;
-                    $parcticalMarks = $hasAnyRow && is_numeric($ckMark->practicalMarks) ? (float)$ckMark->practicalMarks : null;
-
-                    $cqPercent        = ($fullCQ > 0 && $subjectMarks !== null)   ? ($subjectMarks / $fullCQ) * 100 : null;
-                    $mcqPercent       = ($fullMCQ > 0 && $objectMarks !== null)   ? ($objectMarks / $fullMCQ) * 100 : null;
-                    $practicalPercent = ($fullPractical > 0 && $parcticalMarks !== null) ? ($parcticalMarks / $fullPractical) * 100 : null;
-
-                    $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
-                    $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
-                    $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
-
-                    $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
-                    $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
-                    $practicalGrade = $practicalGradeRow ? $practicalGradeRow->gradeName : '-';
-
-                    $totalMarks = null; $grade = '-'; $gradePoint = null;
-                    if($hasAnyRow){
-                        $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
-                        $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                            ->where('maxMark', '>=', $totalMarks)
-                            ->first();
-                        $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                        $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
-                    }
-
-                    // Feature Wise F logic and fail propagation
-                    if($isFeatureWise && ($cqGrade === 'F' || $mcqGrade === 'F' || $practicalGrade === 'F')) {
-                        $grade = 'F';
-                        $gradePoint = 0.00;
-                        $hasFail = true;
-                    }
-                    if($grade === 'F' || (is_numeric($gradePoint) && $gradePoint <= 0)) {
-                        $hasFail = true;
-                    }
-                    $gradePointDisplay = ($grade === 'F') ? '0.00' : (is_numeric($gradePoint) ? number_format($gradePoint,2) : '-');
-                @endphp
-                @if($subjectDetails && $subjectDetails->subjectType=="Main")
-                <tr>
-                    <td>{{ $subjectDetails->subjectName }}</td>
-                    <td>{{ $subjectMarks !== null ? $subjectMarks : '-' }}</td>
-                    <td>{{ $cqGrade }}</td>
-                    <td>{{ $objectMarks !== null ? $objectMarks : '-' }}</td>
-                    <td>{{ $mcqGrade }}</td>
-                    <td>{{ $parcticalMarks !== null ? $parcticalMarks : '-' }}</td>
-                    <td>{{ $practicalGrade }}</td>
-                    <td>{{ $totalMarks !== null ? $totalMarks : '-' }}</td>
-                    <td>{{ $grade }}</td>
-                    <td>{{ $gradePointDisplay }}</td>
-                </tr>
-                @endif
-            @endforeach
-        @else
-        <tr>
-            <td colspan="7">No data found</td>
-        </tr>
-        @endif
+        @foreach($singleRows as $row)
+            <tr>
+                <td>{{ $row['name'] }}</td>
+                <td>{{ $row['cq'] }}</td>
+                <td>{{ $row['cqGrade'] }}</td>
+                <td>{{ $row['mcq'] }}</td>
+                <td>{{ $row['mcqGrade'] }}</td>
+                <td>{{ $row['pr'] }}</td>
+                <td>{{ $row['prGrade'] }}</td>
+                <td>{{ $row['total'] }}</td>
+                <td>{{ $row['grade'] }}</td>
+                <td>{{ $row['gradePoint'] }}</td>
+            </tr>
+        @endforeach
     </tbody>
 </table>
+@endif
 
 <!-- Optional Subject Table -->
 <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
@@ -386,62 +525,34 @@ Marksheet Generate
     $mainGradePoints = [];
     $hasFail = false;
 
+    if(isset($pairedMain) && count($pairedMain) > 0) {
+        foreach($pairedMain as $row) {
+            $hasAny = ($row['cq'] !== '-') || ($row['mcq'] !== '-') || ($row['pr'] !== '-') || ($row['total'] !== '-');
+            if(!$hasAny) { continue; }
+            $gradePoint = ($row['grade'] === 'F') ? 0 : (is_numeric($row['gradePoint']) ? (float)$row['gradePoint'] : 0);
+            if($row['grade'] === 'F'){ $hasFail = true; }
+            $mainGradePoints[] = $gradePoint;
+        }
+    }
+    
+    // Optional subject logic (unchanged)
     if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count() > 0) {
         foreach($studentDetails->marksheet as $ckMark) {
             $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
-            // Include only the effective religious subject in final GPA tally
-            if($subjectDetails && ($subjectDetails->isReligious ?? false)){
-                if($effectiveReligiousId === 0 || (int)$subjectDetails->id !== $effectiveReligiousId){
-                    continue;
-                }
-            }
-            // Skip subjects with no marks from GPA and totals
             $hasAny = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
-            if(!$hasAny){
-                continue;
-            }
-
-            if($subjectDetails && $subjectDetails->subjectType == "Main") {
-                $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
-                $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
-                $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
-                $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
-
-                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                    ->where('maxMark', '>=', $totalMarks)
-                    ->first();
-
-                $grade      = $gradeRow ? $gradeRow->gradeName : '-';
-                $gradePoint = $gradeRow ? $gradeRow->gradePoint : 0;
-                
-                // Feature Wise F logic
-                if($isFeatureWise && ($cqGrade == 'F' || $mcqGrade == 'F' || $practicalGrade == 'F')) {
-                    $grade = 'F';
-                    $hasFail = true;
-                }
-                
-                if($grade == 'F') {
-                    $hasFail = true;
-                }
-                $mainGradePoints[] = $gradePoint;
-            }
-            
-            // Optional subject logic (only if marks exist)
+            if(!$hasAny){ continue; }
             if($subjectDetails && $subjectDetails->subjectType == "Optional") {
                 $optionalSubjectFound = true;
                 $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
                 $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
                 $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
                 $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
-
-                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                    ->where('maxMark', '>=', $totalMarks)
-                    ->first();
-
+                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)->where('maxMark', '>=', $totalMarks)->first();
                 $optionalPoint = $gradeRow ? $gradeRow->gradePoint : 0;
             }
         }
     }
+    
     // NCTB: If optional subject grade point > 2, only the excess over 2 is added to GPA
     $optionalBonus = 0;
     if($optionalSubjectFound && $optionalPoint > 2) {

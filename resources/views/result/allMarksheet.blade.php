@@ -4,7 +4,7 @@ All Marksheet
 @endsection
 @section('backIndex')
 <style>
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4 landscape; margin: 12mm; }
     html, body { background: #fff; }
     @media print {
         html, body { background: #fff !important; }
@@ -12,11 +12,27 @@ All Marksheet
         .table { border-collapse: collapse !important; }
         .table thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .table th, .table td { border: 1px solid #000 !important; padding: 6px !important; }
+        .result-header-band { background: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #000 !important; }
+    }
+    /* Professional fixed layout for subject totals grid */
+    .result-table { table-layout: fixed; width: 100%; }
+    .result-table th, .result-table td { min-width: 88px; }
+    .result-table th:nth-child(1), .result-table td:nth-child(1) { min-width: 60px; }
+    .result-table th:nth-child(2), .result-table td:nth-child(2) { min-width: 60px; }
+    .result-table th:nth-child(3), .result-table td:nth-child(3) { min-width: 160px; }
+    /* Subject header vertical text with smaller font */
+    .result-table thead th.subject-th { min-width: 48px; width: 48px; padding: 6px 2px !important; }
+    .result-table thead th.subject-th .v-text {
+        writing-mode: vertical-rl !important;
+        transform: rotate(180deg) !important; /* keep upright after vertical-rl */
+        font-size: 11px; line-height: 1; letter-spacing: 0.2px;
+        white-space: nowrap;
+        display: inline-block;
     }
 </style>
 <div class="main-website">
     <div class="main-content">
-        @include('components.institute-header')
+        @include('components.result-header')
         <div class="container-fluid mb-4">
             <form method="GET" action="{{ route('allMarksheet') }}" class="row g-2 align-items-end">
                 <div class="col-md-2">
@@ -104,51 +120,40 @@ All Marksheet
             @if(!$compactMode && count($passResults) > 0)
                 <h5 class="mt-4 fw-bold text-success">Passed Students ({{ count($passResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
-                    <table class="w-100 table-striped table-bordered text-center table">
+                    <table class="w-100 table-striped table-bordered text-center table result-table">
                         <tr class="table-dark text-dark">
-                            <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Merit</b></th>
-                            <th rowspan="3"><b>Name</b></th>
-                            <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
-                            <th rowspan="3"><b>Total</b></th>
-                            <th rowspan="3"><b>Grade</b></th>
-                            <th rowspan="3"><b>GPA</b></th>
+                            <th rowspan="2"><b>Roll</b></th>
+                            <th rowspan="2"><b>Merit</b></th>
+                            <th rowspan="2"><b>Name</b></th>
+                            <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
+                            <th rowspan="2"><b>Total</b></th>
+                            <th rowspan="2"><b>Grade</b></th>
+                            <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
                             @if(count($subjects) > 0)
                                 @foreach($subjects as $sub)
-                                    <th colspan="6"><b>{{ $sub->subjectName }}</b></th>
+                                    @php
+                                        $words = preg_split('/\s+/', trim($sub->subjectName));
+                                        $subjectDisplay = (count($words) > 3)
+                                            ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
+                                            : $sub->subjectName;
+                                    @endphp
+                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>
                             @endif
                         </tr>
-                        <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
-                                    <th><b>CQ</b></th>
-                                    <th><b>MCQ</b></th>
-                                    <th><b>P</b></th>
-                                    <th><b>TOTAL</b></th>
-                                    <th><b>GRADE</b></th>
-                                    <th><b>POINT</b></th>
-                                @endforeach
-                            @else
-                                <th><b>-</b></th>
-                            @endif
-                        </tr>
                         @foreach($passResults as $i=>$res)
+                            @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
                             <tr>
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>{{ $res['meritRank'] ?? '-' }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($res['subjects'] as $sres)
-                                    <td>{{ $sres['cq'] }}</td>
-                                    <td>{{ $sres['mcq'] }}</td>
-                                    <td>{{ $sres['practical'] }}</td>
-                                    <td>{{ $sres['total'] }}</td>
-                                    <td>{{ $sres['grade'] }}</td>
-                                    <td>{{ $sres['gradePoint'] }}</td>
+                                @foreach($subjects as $sub)
+                                    @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
+                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -162,51 +167,40 @@ All Marksheet
             @if(!$compactMode && count($failResults) > 0)
                 <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
-                    <table class="w-100 table-striped table-bordered text-center table">
+                    <table class="w-100 table-striped table-bordered text-center table result-table">
                         <tr class="table-dark text-dark">
-                            <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Merit</b></th>
-                            <th rowspan="3"><b>Name</b></th>
-                            <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
-                            <th rowspan="3"><b>Total</b></th>
-                            <th rowspan="3"><b>Grade</b></th>
-                            <th rowspan="3"><b>GPA</b></th>
+                            <th rowspan="2"><b>Roll</b></th>
+                            <th rowspan="2"><b>Merit</b></th>
+                            <th rowspan="2"><b>Name</b></th>
+                            <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
+                            <th rowspan="2"><b>Total</b></th>
+                            <th rowspan="2"><b>Grade</b></th>
+                            <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
                             @if(count($subjects) > 0)
                                 @foreach($subjects as $sub)
-                                    <th colspan="6"><b>{{ $sub->subjectName }}</b></th>
+                                    @php
+                                        $words = preg_split('/\s+/', trim($sub->subjectName));
+                                        $subjectDisplay = (count($words) > 3)
+                                            ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
+                                            : $sub->subjectName;
+                                    @endphp
+                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>
                             @endif
                         </tr>
-                        <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
-                                    <th><b>CQ</b></th>
-                                    <th><b>MCQ</b></th>
-                                    <th><b>P</b></th>
-                                    <th><b>TOTAL</b></th>
-                                    <th><b>GRADE</b></th>
-                                    <th><b>POINT</b></th>
-                                @endforeach
-                            @else
-                                <th><b>-</b></th>
-                            @endif
-                        </tr>
                         @foreach($failResults as $i=>$res)
+                            @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
                             <tr class="table-danger">
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($res['subjects'] as $sres)
-                                    <td>{{ $sres['cq'] }}</td>
-                                    <td>{{ $sres['mcq'] }}</td>
-                                    <td>{{ $sres['practical'] }}</td>
-                                    <td>{{ $sres['total'] }}</td>
-                                    <td>{{ $sres['grade'] }}</td>
-                                    <td>{{ $sres['gradePoint'] }}</td>
+                                @foreach($subjects as $sub)
+                                    @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
+                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -220,51 +214,40 @@ All Marksheet
             @if(!$compactMode && count($incompleteResults) > 0)
                 <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
-                    <table class="w-100 table-striped table-bordered text-center table">
+                    <table class="w-100 table-striped table-bordered text-center table result-table">
                         <tr class="table-dark text-dark">
-                            <th rowspan="3"><b>Roll</b></th>
-                            <th rowspan="3"><b>Merit</b></th>
-                            <th rowspan="3"><b>Name</b></th>
-                            <th colspan="{{ max($subjectCount*6, 1) }}"><b>Subject</b></th>
-                            <th rowspan="3"><b>Total</b></th>
-                            <th rowspan="3"><b>Grade</b></th>
-                            <th rowspan="3"><b>GPA</b></th>
+                            <th rowspan="2"><b>Roll</b></th>
+                            <th rowspan="2"><b>Merit</b></th>
+                            <th rowspan="2"><b>Name</b></th>
+                            <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
+                            <th rowspan="2"><b>Total</b></th>
+                            <th rowspan="2"><b>Grade</b></th>
+                            <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
                             @if(count($subjects) > 0)
                                 @foreach($subjects as $sub)
-                                    <th colspan="6"><b>{{ $sub->subjectName }}</b></th>
+                                    @php
+                                        $words = preg_split('/\s+/', trim($sub->subjectName));
+                                        $subjectDisplay = (count($words) > 3)
+                                            ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
+                                            : $sub->subjectName;
+                                    @endphp
+                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>
                             @endif
                         </tr>
-                        <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
-                                    <th><b>CQ</b></th>
-                                    <th><b>MCQ</b></th>
-                                    <th><b>P</b></th>
-                                    <th><b>TOTAL</b></th>
-                                    <th><b>GRADE</b></th>
-                                    <th><b>POINT</b></th>
-                                @endforeach
-                            @else
-                                <th><b>-</b></th>
-                            @endif
-                        </tr>
                         @foreach($incompleteResults as $i=>$res)
+                            @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
                             <tr class="table-secondary">
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($res['subjects'] as $sres)
-                                    <td>{{ $sres['cq'] }}</td>
-                                    <td>{{ $sres['mcq'] }}</td>
-                                    <td>{{ $sres['practical'] }}</td>
-                                    <td>{{ $sres['total'] }}</td>
-                                    <td>{{ $sres['grade'] }}</td>
-                                    <td>{{ $sres['gradePoint'] }}</td>
+                                @foreach($subjects as $sub)
+                                    @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
+                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -300,8 +283,7 @@ All Marksheet
                                             <ul class="mb-0">
                                                 @foreach($res['subjectsCompact'] as $s)
                                                     <li>
-                                                        <b>{{ $s['name'] }}</b>:
-                                                        CQ {{ $s['cq'] }}, MCQ {{ $s['mcq'] }}, P {{ $s['practical'] }}, TOTAL {{ $s['total'] }}, G {{ $s['grade'] }}, GP {{ $s['gradePoint'] }}
+                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
                                                     </li>
                                                 @endforeach
                                             </ul>
@@ -341,8 +323,7 @@ All Marksheet
                                             <ul class="mb-0">
                                                 @foreach($res['subjectsCompact'] as $s)
                                                     <li>
-                                                        <b>{{ $s['name'] }}</b>:
-                                                        CQ {{ $s['cq'] }}, MCQ {{ $s['mcq'] }}, P {{ $s['practical'] }}, TOTAL {{ $s['total'] }}, G {{ $s['grade'] }}, GP {{ $s['gradePoint'] }}
+                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
                                                     </li>
                                                 @endforeach
                                             </ul>
@@ -382,8 +363,7 @@ All Marksheet
                                             <ul class="mb-0">
                                                 @foreach($res['subjectsCompact'] as $s)
                                                     <li>
-                                                        <b>{{ $s['name'] }}</b>:
-                                                        CQ {{ $s['cq'] }}, MCQ {{ $s['mcq'] }}, P {{ $s['practical'] }}, TOTAL {{ $s['total'] }}, G {{ $s['grade'] }}, GP {{ $s['gradePoint'] }}
+                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
                                                     </li>
                                                 @endforeach
                                             </ul>
