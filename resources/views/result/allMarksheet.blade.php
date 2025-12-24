@@ -257,6 +257,44 @@ All Marksheet
                 <div class="alert alert-warning container">No marks found for the selected filters.</div>
             @endif
 
+            @php
+                // Merit ranking by sum of subject totals (Pass + Fail). Dense rank: equal totals share rank.
+                $meritRankingMap = [];
+                try {
+                    $source = !$compactMode
+                        ? array_merge($passResults ?? [], $failResults ?? [])
+                        : array_merge($passResultsCompact ?? [], $failResultsCompact ?? []);
+                    $rankItems = [];
+                    foreach ($source as $res) {
+                        $key = (string)($res['student']->id ?? $res['student']->stdId ?? '');
+                        if($key === '') { continue; }
+                        $total = null;
+                        if (isset($res['totalMarks']) && is_numeric($res['totalMarks'])) {
+                            $total = (float)$res['totalMarks'];
+                        } else {
+                            $sum = 0; $hasAny = false;
+                            $rows = !$compactMode ? ($res['subjects'] ?? []) : ($res['subjectsCompact'] ?? []);
+                            if (is_array($rows)) {
+                                foreach ($rows as $sr) {
+                                    if (isset($sr['total']) && is_numeric($sr['total'])) { $sum += (float)$sr['total']; $hasAny = true; }
+                                }
+                            }
+                            $total = $hasAny ? (float)$sum : 0.0;
+                        }
+                        $rankItems[] = ['key'=>$key, 'total'=>$total];
+                    }
+                    usort($rankItems, function($a,$b){
+                        if ($a['total'] == $b['total']) return 0;
+                        return ($a['total'] > $b['total']) ? -1 : 1; // desc
+                    });
+                    $rank = 0; $prevTotal = null;
+                    foreach ($rankItems as $it) {
+                        if ($prevTotal === null || $it['total'] != $prevTotal) { $rank++; $prevTotal = $it['total']; }
+                        $meritRankingMap[$it['key']] = $rank;
+                    }
+                } catch (\Throwable $e) { $meritRankingMap = []; }
+            @endphp
+
             @if(!$compactMode && count($passResults) > 0)
                 <h5 class="mt-4 fw-bold text-success">Passed Students ({{ count($passResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
@@ -300,7 +338,8 @@ All Marksheet
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
                                 <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
-                                <td>{{ $res['meritRank'] ?? '-' }}</td>
+                                @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
+                                <td>{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
                             </tr>
                         @endforeach
                     </table>
@@ -396,7 +435,8 @@ All Marksheet
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>
                                     <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
-                                    <td>-</td>
+                                    @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
+                                    <td>{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
                                 </tr>
                             @endforeach
                         </table>
@@ -476,7 +516,8 @@ All Marksheet
                             @foreach($passResultsCompact as $i=>$res)
                                 <tr>
                                     <td>{{ $res['student']->rollNumber }}</td>
-                                    <td>{{ $res['meritRank'] ?? '-' }}</td>
+                                    @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
+                                    <td>{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                     <td class="text-start">
@@ -564,7 +605,8 @@ All Marksheet
                                 @foreach($group as $i=>$res)
                                     <tr class="table-danger">
                                         <td>{{ $res['student']->rollNumber }}</td>
-                                        <td>-</td>
+                                        @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
+                                        <td>{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
                                         <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                         <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                         <td class="text-start">
