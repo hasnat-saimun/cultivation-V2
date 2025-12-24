@@ -260,9 +260,11 @@ All Marksheet
             @endif
 
             @if(!$compactMode && count($failResults) > 0)
-                <div class="d-none d-print-block {{ $hasPassSection ? 'page-break' : '' }}">
+                @if($hasPassSection)
+                <div class="d-none d-print-block page-break">
                     @include('components.result-header')
                 </div>
+                @endif
                 <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
@@ -313,6 +315,12 @@ All Marksheet
             @endif
 
             @if(!$compactMode && count($incompleteResults) > 0)
+                @php $hasPrevIncomplete = $hasPassSection || $hasFailSection; @endphp
+                @if($hasPrevIncomplete)
+                <div class="d-none d-print-block page-break">
+                    @include('components.result-header')
+                </div>
+                @endif
                 <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
@@ -407,9 +415,11 @@ All Marksheet
                 @endif
 
                 @if(count($failResultsCompact) > 0)
-                    <div class="d-none d-print-block {{ $hasPassSection ? 'page-break' : '' }}">
+                    @if($hasPassSection)
+                    <div class="d-none d-print-block page-break">
                         @include('components.result-header')
                     </div>
+                    @endif
                     <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
@@ -452,6 +462,12 @@ All Marksheet
                 @endif
 
                 @if(count($incompleteResultsCompact) > 0)
+                    @php $hasPrevIncomplete = $hasPassSection || $hasFailSection; @endphp
+                    @if($hasPrevIncomplete)
+                    <div class="d-none d-print-block page-break">
+                        @include('components.result-header')
+                    </div>
+                    @endif
                     <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
