@@ -24,7 +24,7 @@
                     @php
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
-                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet'];
+                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','transcripts.bulk'];
                         $classRoutes = ['allClasses','createClass'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
@@ -58,6 +58,9 @@
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('createMarksheet') }}" class="nav-link {{ request()->routeIs('createMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Academic Transcript</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('transcripts.bulk') }}" class="nav-link {{ request()->routeIs('transcripts.bulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk Transcripts</a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Tabulation Sheet</a>
