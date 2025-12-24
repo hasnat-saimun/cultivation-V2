@@ -169,6 +169,53 @@ All Marksheet
         <div class="{{ (!$hasOnlyIncomplete && $hasAnySection) ? 'd-print-block' : 'd-print-none' }}">
             @include('components.result-header')
         </div>
+            @php
+                // Determine if only failed students are present
+                $onlyFailed = $hasFailSection && !$hasPassSection && !$hasIncompleteSection;
+            @endphp
+            @if($onlyFailed)
+                @php
+                    // Build a single-line summary at the very top
+                    $topBuckets = [];
+                    $source = $compactMode ? ($failResultsCompact ?? []) : ($failResults ?? []);
+                    foreach($source as $res){
+                        $subFailCount = 0;
+                        if(isset($res['subjectFails']) && is_numeric($res['subjectFails'])){
+                            $subFailCount = (int) $res['subjectFails'];
+                        } else {
+                            $subRows = $compactMode ? ($res['subjectsCompact'] ?? []) : ($res['subjects'] ?? []);
+                            if(is_array($subRows)){
+                                foreach($subRows as $sr){
+                                    $total = $sr['total'] ?? null;
+                                    $letter = $sr['grade'] ?? null;
+                                    $point  = $sr['gradePoint'] ?? null;
+                                    if($letter === 'F') { $subFailCount++; continue; }
+                                    if(is_numeric($point) && $point <= 0) { $subFailCount++; continue; }
+                                    if(is_numeric($total)){
+                                        $gl = \App\Models\GradeList::where('minMark','<=',$total)->where('maxMark','>=',$total)->first();
+                                        if(($gl?->gradeName) === 'F' || (is_numeric($gl?->gradePoint) && $gl->gradePoint <= 0)){
+                                            $subFailCount++;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        $topBuckets[$subFailCount] = ($topBuckets[$subFailCount] ?? 0) + 1;
+                    }
+                    ksort($topBuckets);
+                @endphp
+                @if(!empty($topBuckets))
+                    <div class="container-fluid">
+                        <div class="mb-2 small fw-bold text-danger">
+                            @php $parts = []; @endphp
+                            @foreach($topBuckets as $fc=>$cnt)
+                                @php $parts[] = $fc.' Subject'.($fc==1?'':'s')." Failed(".$cnt.")"; @endphp
+                            @endforeach
+                            {{ implode(', ', $parts) }}
+                        </div>
+                    </div>
+                @endif
+            @endif
             <div class="result-section">
                 <div class="row">
                     <div class="col-12">
@@ -266,53 +313,95 @@ All Marksheet
                     @include('components.result-header')
                 </div>
                 @endif
-                <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
-                <div class="table-responsive dark-border mb-5">
-                    <table class="w-100 table-striped table-bordered text-center table result-table">
-                        <tr class="table-dark text-dark">
-                            <th rowspan="2" class="sid-col"><b>Student ID</b></th>
-                            <th rowspan="2"><b>Roll</b></th>
-                            <th rowspan="2"><b>Name</b></th>
-                            <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
-                            <th rowspan="2"><b>Total</b></th>
-                            <th rowspan="2"><b>Grade</b></th>
-                            <th rowspan="2"><b>GPA</b></th>
-                            <th rowspan="2"><b>Merit</b></th>
-                        </tr>
-                        <tr class="table-dark text-dark">
-                            @if(count($visibleSubjects) > 0)
-                                @foreach($visibleSubjects as $sub)
-                                    @php
-                                        $words = preg_split('/\s+/', trim($sub->subjectName));
-                                        $subjectDisplay = (count($words) > 3)
-                                            ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
-                                            : $sub->subjectName;
-                                    @endphp
-                                    @php $isDual = (count($words) > 3); @endphp
-                                    <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
-                                @endforeach
-                            @else
-                                <th><b>No subjects</b></th>
-                            @endif
-                        </tr>
-                        @foreach($failResults as $i=>$res)
-                            @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
-                            <tr class="table-danger">
-                                <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
-                                <td>{{ $res['student']->rollNumber }}</td>
-                                <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($visibleSubjects as $sub)
-                                    @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
-                                    <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
-                                @endforeach
-                                <td>{{ $res['totalMarks'] }}</td>
-                                <td>{{ $res['finalLetter'] }}</td>
-                                <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
-                                <td>-</td>
+                @php
+                    // Group failed students by number of failed subjects
+                    $failedGroups = [];
+                    foreach(($failResults ?? []) as $res){
+                        $subFailCount = 0;
+                        if(isset($res['subjectFails']) && is_numeric($res['subjectFails'])){
+                            $subFailCount = (int) $res['subjectFails'];
+                        } elseif(isset($res['subjects']) && is_array($res['subjects'])) {
+                            foreach($res['subjects'] as $sr){
+                                $total = $sr['total'] ?? null;
+                                $letter = $sr['grade'] ?? null;
+                                $point  = $sr['gradePoint'] ?? null;
+                                if($letter === 'F'){
+                                    $subFailCount++;
+                                    continue;
+                                }
+                                if(is_numeric($point) && $point <= 0){
+                                    $subFailCount++;
+                                    continue;
+                                }
+                                if(is_numeric($total)){
+                                    $gl = \App\Models\GradeList::where('minMark','<=',$total)->where('maxMark','>=',$total)->first();
+                                    if(($gl?->gradeName) === 'F' || (is_numeric($gl?->gradePoint) && $gl->gradePoint <= 0)){
+                                        $subFailCount++;
+                                    }
+                                }
+                            }
+                        }
+                        if($subFailCount > 0){
+                            $failedGroups[$subFailCount] = $failedGroups[$subFailCount] ?? [];
+                            $failedGroups[$subFailCount][] = $res;
+                        }
+                    }
+                    ksort($failedGroups);
+                @endphp
+                @foreach($failedGroups as $fc => $group)
+                    @if(!$loop->first)
+                    <div class="d-none d-print-block page-break">
+                        @include('components.result-header')
+                    </div>
+                    @endif
+                    <h5 class="mt-4 fw-bold text-danger">{{ $fc }} Subject{{ $fc==1?'':'s' }} Failed ({{ count($group) }})</h5>
+                    <div class="table-responsive dark-border mb-5">
+                        <table class="w-100 table-striped table-bordered text-center table result-table">
+                            <tr class="table-dark text-dark">
+                                <th rowspan="2" class="sid-col"><b>Student ID</b></th>
+                                <th rowspan="2"><b>Roll</b></th>
+                                <th rowspan="2"><b>Name</b></th>
+                                <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
+                                <th rowspan="2"><b>Total</b></th>
+                                <th rowspan="2"><b>Grade</b></th>
+                                <th rowspan="2"><b>GPA</b></th>
+                                <th rowspan="2"><b>Merit</b></th>
                             </tr>
-                        @endforeach
-                    </table>
-                </div>
+                            <tr class="table-dark text-dark">
+                                @if(count($visibleSubjects) > 0)
+                                    @foreach($visibleSubjects as $sub)
+                                        @php
+                                            $words = preg_split('/\s+/', trim($sub->subjectName));
+                                            $subjectDisplay = (count($words) > 3)
+                                                ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
+                                                : $sub->subjectName;
+                                        @endphp
+                                        @php $isDual = (count($words) > 3); @endphp
+                                        <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
+                                    @endforeach
+                                @else
+                                    <th><b>No subjects</b></th>
+                                @endif
+                            </tr>
+                            @foreach($group as $i=>$res)
+                                @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
+                                <tr class="table-danger">
+                                    <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
+                                    <td>{{ $res['student']->rollNumber }}</td>
+                                    <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
+                                    @foreach($visibleSubjects as $sub)
+                                        @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
+                                        <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                    @endforeach
+                                    <td>{{ $res['totalMarks'] }}</td>
+                                    <td>{{ $res['finalLetter'] }}</td>
+                                    <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
+                                    <td>-</td>
+                                </tr>
+                            @endforeach
+                        </table>
+                    </div>
+                @endforeach
             @endif
 
             @if(!$compactMode && count($incompleteResults) > 0)
@@ -418,45 +507,87 @@ All Marksheet
                         @include('components.result-header')
                     </div>
                     @endif
-                    <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResultsCompact) }})</h5>
-                    <div class="table-responsive dark-border mb-5">
-                        <table class="w-100 table-striped table-bordered text-center table">
-                            <tr class="table-dark text-dark">
-                                <th><b>Roll</b></th>
-                                <th><b>Merit</b></th>
-                                <th><b>Name</b></th>
-                                <th class="sid-col"><b>Student ID</b></th>
-                                <th><b>Subjects (with marks)</b></th>
-                                <th><b>Total</b></th>
-                                <th><b>Grade</b></th>
-                                <th><b>GPA</b></th>
-                            </tr>
-                            @foreach($failResultsCompact as $i=>$res)
-                                <tr class="table-danger">
-                                    <td>{{ $res['student']->rollNumber }}</td>
-                                    <td>-</td>
-                                    <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                    <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
-                                    <td class="text-start">
-                                        @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
-                                            <ul class="mb-0">
-                                                @foreach($res['subjectsCompact'] as $s)
-                                                    <li>
-                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
-                                                    </li>
-                                                @endforeach
-                                            </ul>
-                                        @else
-                                            <span class="text-muted">No subject marks</span>
-                                        @endif
-                                    </td>
-                                    <td>{{ $res['totalMarks'] }}</td>
-                                    <td>{{ $res['finalLetter'] }}</td>
-                                    <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
+                    @php
+                        // Group failed students (compact) by number of failed subjects
+                        $failedGroupsC = [];
+                        foreach(($failResultsCompact ?? []) as $res){
+                            $subFailCount = 0;
+                            if(isset($res['subjectFails']) && is_numeric($res['subjectFails'])){
+                                $subFailCount = (int) $res['subjectFails'];
+                            } elseif(isset($res['subjectsCompact']) && is_array($res['subjectsCompact'])) {
+                                foreach($res['subjectsCompact'] as $sr){
+                                    $total = $sr['total'] ?? null;
+                                    $letter = $sr['grade'] ?? null;
+                                    $point  = $sr['gradePoint'] ?? null;
+                                    if($letter === 'F'){
+                                        $subFailCount++;
+                                        continue;
+                                    }
+                                    if(is_numeric($point) && $point <= 0){
+                                        $subFailCount++;
+                                        continue;
+                                    }
+                                    if(is_numeric($total)){
+                                        $gl = \App\Models\GradeList::where('minMark','<=',$total)->where('maxMark','>=',$total)->first();
+                                        if(($gl?->gradeName) === 'F' || (is_numeric($gl?->gradePoint) && $gl->gradePoint <= 0)){
+                                            $subFailCount++;
+                                        }
+                                    }
+                                }
+                            }
+                            if($subFailCount > 0){
+                                $failedGroupsC[$subFailCount] = $failedGroupsC[$subFailCount] ?? [];
+                                $failedGroupsC[$subFailCount][] = $res;
+                            }
+                        }
+                        ksort($failedGroupsC);
+                    @endphp
+                    @foreach($failedGroupsC as $fc => $group)
+                        @if(!$loop->first)
+                        <div class="d-none d-print-block page-break">
+                            @include('components.result-header')
+                        </div>
+                        @endif
+                        <h5 class="mt-4 fw-bold text-danger">{{ $fc }} Subject{{ $fc==1?'':'s' }} Failed ({{ count($group) }})</h5>
+                        <div class="table-responsive dark-border mb-5">
+                            <table class="w-100 table-striped table-bordered text-center table">
+                                <tr class="table-dark text-dark">
+                                    <th><b>Roll</b></th>
+                                    <th><b>Merit</b></th>
+                                    <th><b>Name</b></th>
+                                    <th class="sid-col"><b>Student ID</b></th>
+                                    <th><b>Subjects (with marks)</b></th>
+                                    <th><b>Total</b></th>
+                                    <th><b>Grade</b></th>
+                                    <th><b>GPA</b></th>
                                 </tr>
-                            @endforeach
-                        </table>
-                    </div>
+                                @foreach($group as $i=>$res)
+                                    <tr class="table-danger">
+                                        <td>{{ $res['student']->rollNumber }}</td>
+                                        <td>-</td>
+                                        <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
+                                        <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
+                                        <td class="text-start">
+                                            @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
+                                                <ul class="mb-0">
+                                                    @foreach($res['subjectsCompact'] as $s)
+                                                        <li>
+                                                            <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            @else
+                                                <span class="text-muted">No subject marks</span>
+                                            @endif
+                                        </td>
+                                        <td>{{ $res['totalMarks'] }}</td>
+                                        <td>{{ $res['finalLetter'] }}</td>
+                                        <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
+                                    </tr>
+                                @endforeach
+                            </table>
+                        </div>
+                    @endforeach
                 @endif
 
                 @if(count($incompleteResultsCompact) > 0)
