@@ -51,16 +51,16 @@
                                 <a href="{{ route('cultivationIndex') }}" class="nav-link {{ request()->routeIs('cultivationIndex') ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Panel</span></a>
                             </li>
                             <li class="nav-item sidebar-nav-item {{ $resultOpen ? 'open' : '' }}" data-group="result-core">
-                                <a href="#" class="nav-link {{ $resultOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Result</span></a>
+                                <a href="#" class="nav-link {{ $resultOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Result Manage</span></a>
                                 <ul class="nav sub-group-menu" style="{{ $resultOpen ? 'display:block;' : '' }}">
                                     <li class="nav-item">
-                                        <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Add Marks</a>
+                                        <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marks Entry</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('createMarksheet') }}" class="nav-link {{ request()->routeIs('createMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marksheet Generate</a>
+                                        <a href="{{ route('createMarksheet') }}" class="nav-link {{ request()->routeIs('createMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Academic Transcript</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marksheet</a>
+                                        <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Tabulation Sheet</a>
                                     </li>
                                 </ul>
                             </li>

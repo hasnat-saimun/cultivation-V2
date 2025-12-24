@@ -34,6 +34,19 @@ All Marksheet
         .table, .result-table { width: 100% !important; }
         /* Force Failed section to start on a new printed page */
         .page-break { break-before: page !important; page-break-before: always !important; }
+        /* Print: Student ID column spacing & readability */
+        .sid-col {
+            font-size: 10px !important;
+            white-space: nowrap !important;
+            padding: 4px 8px !important;
+            text-align: left !important;
+            min-width: 90px !important;
+            width: 90px !important;
+            letter-spacing: 0.1px !important;
+        }
+        /* Print: Subject header spacing & sizing for better readability */
+        .result-table thead th.subject-th { min-width: 54px !important; width: 54px !important; padding: 8px 6px !important; }
+        .result-table thead th.subject-th .v-text { line-height: 1.05 !important; letter-spacing: 0.3px !important; margin: 0 2px !important; }
     }
     /* Professional fixed layout for subject totals grid */
     /* Vertically center all table headers and cells on this page */
@@ -47,6 +60,10 @@ All Marksheet
     .result-table th:nth-child(3), .result-table td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     /* Screen: Compact tables (without .result-table) also use 3rd column for Name */
     table.table:not(.result-table) th:nth-child(3), table.table:not(.result-table) td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+    /* Student ID small font */
+    .sid-col { font-size: 10px !important; min-width: 70px; }
+    /* Slightly tighter margins to accommodate extra column */
+    .table-responsive { margin: 8px 0 !important; }
     /* Subject header vertical text with smaller font */
     .result-table thead th.subject-th { min-width: 48px; width: 48px; padding: 6px 2px !important; }
     .result-table thead th.subject-th .v-text {
@@ -172,13 +189,14 @@ All Marksheet
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
                         <tr class="table-dark text-dark">
+                            <th rowspan="2" class="sid-col"><b>Student ID</b></th>
                             <th rowspan="2"><b>Roll</b></th>
-                            <th rowspan="2"><b>Merit</b></th>
                             <th rowspan="2"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
                             <th rowspan="2"><b>Total</b></th>
                             <th rowspan="2"><b>Grade</b></th>
                             <th rowspan="2"><b>GPA</b></th>
+                            <th rowspan="2"><b>Merit</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
                             @if(count($visibleSubjects) > 0)
@@ -198,8 +216,8 @@ All Marksheet
                         @foreach($passResults as $i=>$res)
                             @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
                             <tr>
+                                <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                 <td>{{ $res['student']->rollNumber }}</td>
-                                <td>{{ $res['meritRank'] ?? '-' }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
@@ -207,7 +225,8 @@ All Marksheet
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
-                                <td>{{ $res['finalGpa'] }}</td>
+                                <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
+                                <td>{{ $res['meritRank'] ?? '-' }}</td>
                             </tr>
                         @endforeach
                     </table>
@@ -222,13 +241,14 @@ All Marksheet
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
                         <tr class="table-dark text-dark">
+                            <th rowspan="2" class="sid-col"><b>Student ID</b></th>
                             <th rowspan="2"><b>Roll</b></th>
-                            <th rowspan="2"><b>Merit</b></th>
                             <th rowspan="2"><b>Name</b></th>
                             <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
                             <th rowspan="2"><b>Total</b></th>
                             <th rowspan="2"><b>Grade</b></th>
                             <th rowspan="2"><b>GPA</b></th>
+                            <th rowspan="2"><b>Merit</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
                             @if(count($visibleSubjects) > 0)
@@ -248,8 +268,8 @@ All Marksheet
                         @foreach($failResults as $i=>$res)
                             @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
                             <tr class="table-danger">
+                                <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                 <td>{{ $res['student']->rollNumber }}</td>
-                                <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
@@ -257,7 +277,8 @@ All Marksheet
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
-                                <td>{{ $res['finalGpa'] }}</td>
+                                <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
+                                <td>-</td>
                             </tr>
                         @endforeach
                     </table>
@@ -272,6 +293,7 @@ All Marksheet
                             <th rowspan="2"><b>Roll</b></th>
                             <th rowspan="2"><b>Merit</b></th>
                             <th rowspan="2"><b>Name</b></th>
+                            <th rowspan="2" class="sid-col"><b>Student ID</b></th>
                             <th colspan="{{ max($subjectCount, 1) }}"><b>Subject Totals</b></th>
                             <th rowspan="2"><b>Total</b></th>
                             <th rowspan="2"><b>Grade</b></th>
@@ -298,13 +320,14 @@ All Marksheet
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
+                                <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
                                     <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
-                                <td>{{ $res['finalGpa'] ?? '-' }}</td>
+                                <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
                             </tr>
                         @endforeach
                     </table>
@@ -321,6 +344,7 @@ All Marksheet
                                 <th><b>Roll</b></th>
                                 <th><b>Merit</b></th>
                                 <th><b>Name</b></th>
+                                <th class="sid-col"><b>Student ID</b></th>
                                 <th><b>Subjects (with marks)</b></th>
                                 <th><b>Total</b></th>
                                 <th><b>Grade</b></th>
@@ -331,6 +355,7 @@ All Marksheet
                                     <td>{{ $res['student']->rollNumber }}</td>
                                     <td>{{ $res['meritRank'] ?? '-' }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
+                                    <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
                                             <ul class="mb-0">
@@ -346,7 +371,7 @@ All Marksheet
                                     </td>
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>
-                                    <td>{{ $res['finalGpa'] }}</td>
+                                    <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
                                 </tr>
                             @endforeach
                         </table>
@@ -364,6 +389,7 @@ All Marksheet
                                 <th><b>Roll</b></th>
                                 <th><b>Merit</b></th>
                                 <th><b>Name</b></th>
+                                <th class="sid-col"><b>Student ID</b></th>
                                 <th><b>Subjects (with marks)</b></th>
                                 <th><b>Total</b></th>
                                 <th><b>Grade</b></th>
@@ -374,6 +400,7 @@ All Marksheet
                                     <td>{{ $res['student']->rollNumber }}</td>
                                     <td>-</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
+                                    <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                     <td class="text-start">
                                         @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
                                             <ul class="mb-0">
@@ -389,7 +416,7 @@ All Marksheet
                                     </td>
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>
-                                    <td>{{ $res['finalGpa'] }}</td>
+                                    <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
                                 </tr>
                             @endforeach
                         </table>
@@ -429,7 +456,7 @@ All Marksheet
                                     </td>
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>
-                                    <td>{{ $res['finalGpa'] ?? '-' }}</td>
+                                    <td>{{ (($res['finalLetter'] ?? '') === 'F') ? '0.00' : (is_numeric($res['finalGpa'] ?? null) ? number_format($res['finalGpa'], 2) : ($res['finalGpa'] ?? '-')) }}</td>
                                 </tr>
                             @endforeach
                         </table>

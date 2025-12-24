@@ -11,6 +11,8 @@ Marksheet Generate
             html, body { background: #fff !important; }
             #wrapper, .wrapper, .dashboard-page-one, .dashboard-content-one { background: #fff !important; }
             .d-print-none { display: none !important; }
+            /* Hide admin page title/nav on print */
+            .breadcrumbs-area, .header-menu-one, .navbar { display: none !important; }
             .marksheet .card { box-shadow: none !important; border: none !important; }
             .marksheet .transcript { border: none !important; }
             .signature-row { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; width: 100% !important; }
@@ -46,13 +48,14 @@ Marksheet Generate
     </style>
     @php
         if($studentDetails):
-            $adminId        = $studentDetails->admitId;
-            $stdName        = $studentDetails->fullName." ".$studentDetails->sureName;
-            $rollNumber     = $studentDetails->rollNumber;
-            $fName          = $studentDetails->father;
-            $mName          = $studentDetails->mother;
-            $sessionDetails = $studentDetails->sessName;
-            $classDetails   = $studentDetails->class;
+            // Map to newAdmission fields
+            $adminId        = $studentDetails->stdId ?? ($studentDetails->id ?? null);
+            $stdName        = ($studentDetails->fullName ?? '')." ".($studentDetails->sureName ?? '');
+            $rollNumber     = $studentDetails->rollNumber ?? '';
+            $fName          = $studentDetails->fatherName ?? ($studentDetails->father ?? '');
+            $mName          = $studentDetails->motherName ?? ($studentDetails->mother ?? '');
+            $sessionDetails = $studentDetails->sessName ?? null;
+            $classDetails   = $studentDetails->className ?? null;
             // Resolve session name robustly (id, object, or string)
             if(!empty($sessionDetails)){
                 if(is_numeric($sessionDetails)){
@@ -64,29 +67,56 @@ Marksheet Generate
                     $sessionName = (string)$sessionDetails;
                 }
             } else { $sessionName = "-"; }
-            // Resolve class name robustly
-            if(!empty($classDetails)){
-                try{
-                    $classIdVal = is_object($classDetails) ? ($classDetails->className ?? null) : (is_numeric($classDetails) ? $classDetails : null);
-                    if(is_numeric($classIdVal)){
-                        $clModel = \App\Models\Classes::find($classIdVal);
-                        $className = $clModel ? ($clModel->className ?? ('Class-'.$clModel->id)) : '-';
-                    } else {
-                        $className = is_string($classDetails) ? $classDetails : '-';
-                    }
-                }catch(\Throwable $e){ $className = '-'; }
-            } else { $className = "-"; }
+            // Resolve class name robustly (support classManage or Classes model)
+            try{
+                $className = '-';
+                // Candidates: explicit className id, class object/id, or string name
+                $classIdCandidates = [];
+                if(isset($studentDetails->className)){
+                    if(is_numeric($studentDetails->className)) $classIdCandidates[] = (int)$studentDetails->className;
+                }
+                if(!empty($classDetails)){
+                    if(is_numeric($classDetails)) $classIdCandidates[] = (int)$classDetails;
+                    elseif(is_object($classDetails) && isset($classDetails->className) && is_numeric($classDetails->className)) $classIdCandidates[] = (int)$classDetails->className;
+                }
+                $clModel = null;
+                foreach($classIdCandidates as $cid){
+                    $clModel = \App\Models\classManage::find($cid);
+                    if(!$clModel) $clModel = \App\Models\Classes::find($cid);
+                    if($clModel) break;
+                }
+                if($clModel){
+                    $className = $clModel->className ?? ('Class-'.$clModel->id);
+                } else {
+                    // Fallback to string if provided
+                    if(is_string($classDetails) && trim($classDetails) !== '') $className = (string)$classDetails;
+                }
+            }catch(\Throwable $e){ $className = '-'; }
             // Resolve section/group name robustly
             $sectionName = "-";
             try{
-                $secId = $studentDetails->sectionId ?? null;
-                if(is_numeric($secId)){
-                    $secModel = \App\Models\sectionManage::find($secId);
-                    $sectionName = $secModel ? ($secModel->section ?? ('Section-'.$secModel->id)) : '-';
-                } elseif(isset($studentDetails->section)) {
-                    $sectionName = is_string($studentDetails->section)
-                        ? $studentDetails->section
-                        : (is_object($studentDetails->section) ? ($studentDetails->section->section ?? '-') : '-');
+                $secCandidates = [];
+                if(isset($studentDetails->sectionId) && is_numeric($studentDetails->sectionId)) $secCandidates[] = (int)$studentDetails->sectionId;
+                if(isset($studentDetails->sectionName) && is_numeric($studentDetails->sectionName)) $secCandidates[] = (int)$studentDetails->sectionName;
+                if(isset($studentDetails->section) && is_numeric($studentDetails->section)) $secCandidates[] = (int)$studentDetails->section;
+                if(empty($secCandidates) && isset($studentDetails->section) && is_object($studentDetails->section)){
+                    $maybeId = $studentDetails->section->id ?? null;
+                    if(is_numeric($maybeId)) $secCandidates[] = (int)$maybeId;
+                }
+                $secModel = null;
+                foreach($secCandidates as $sid){
+                    $secModel = \App\Models\sectionManage::find($sid);
+                    if($secModel) break;
+                }
+                if($secModel){
+                    $sectionName = $secModel->section ?? ('Section-'.$secModel->id);
+                } else {
+                    // Fallback to string if present
+                    if(isset($studentDetails->sectionName) && is_string($studentDetails->sectionName) && trim($studentDetails->sectionName) !== ''){
+                        $sectionName = (string)$studentDetails->sectionName;
+                    } elseif(isset($studentDetails->section) && is_string($studentDetails->section) && trim($studentDetails->section) !== ''){
+                        $sectionName = (string)$studentDetails->section;
+                    }
                 }
             }catch(\Throwable $e){ $sectionName = '-'; }
         else:
@@ -164,6 +194,11 @@ Marksheet Generate
                             </div>
                             <table class="col-8 col-md-8 mb-4">
                                 <tbody>
+                                    <tr>
+                                        <th>Student ID</th>
+                                        <td>:</td>
+                                        <td colspan="4">{{ !empty($adminId) ? $adminId : '-' }}</td>
+                                    </tr>
                                     <tr>
                                         <th>Name</th>
                                         <td>:</td>
@@ -421,7 +456,13 @@ Marksheet Generate
                 <td>{{ $prDisp }}</td>
                 <td>{{ $row['total'] }}</td>
                 <td>{{ $row['grade'] }}</td>
-                <td>{{ $row['gradePoint'] }}</td>
+                <td>
+                    @php
+                        $gpDisplay = ($row['grade'] === 'F') ? '0.00'
+                            : (is_numeric($row['gradePoint']) ? number_format($row['gradePoint'], 2) : ($row['gradePoint'] ?? '-'));
+                    @endphp
+                    {{ $gpDisplay }}
+                </td>
             </tr>
         @empty
             <tr><td colspan="7">No main subjects</td></tr>
@@ -569,6 +610,7 @@ Marksheet Generate
     
     if($hasFail) {
         $finalLetterGrade = 'F';
+        $finalGradePoint = '0.00';
     } elseif(count($mainGradePoints) > 0) {
         // Find letter grade by average point
         $gradeListRow = \App\Models\GradeList::where('gradePoint', '<=', $finalGradePoint)

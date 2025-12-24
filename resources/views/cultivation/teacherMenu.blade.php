@@ -13,7 +13,7 @@
         <a href="#" class="nav-link {{ $marksOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Marks Entry</span></a>
         <ul class="nav sub-group-menu" style="{{ $marksOpen ? 'display:block;' : '' }}">
             <li class="nav-item">
-                <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Add Marks</a>
+                <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marks Entry</a>
             </li>
         </ul>
     </li>
