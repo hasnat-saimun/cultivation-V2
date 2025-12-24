@@ -238,6 +238,11 @@ Marksheet Generate
                                         <td>:</td>
                                         <td>{{ $sectionName }}</td>
                                     </tr>
+                                    <tr>
+                                        <th>Merit Position</th>
+                                        <td>:</td>
+                                        <td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '-' }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                             <table class="col-4 col-md-4 mb-4 table-bordered text-center">

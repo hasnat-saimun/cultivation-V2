@@ -552,6 +552,58 @@ class MarksheetController extends Controller
             }
         }
 
+        // Compute classwise merit position by sum of subject totals, including failed
+        $meritRank = null;
+        try {
+            if ($student && $examId) {
+                $classId = $student->className ?? null;
+                $sessionId = $student->sessName ?? null;
+                $sectionId = $student->sectionName ?? null;
+                if ($classId) {
+                    $base = Marksheet::where('examId',$examId)->where('classId',$classId);
+                    if ($sessionId) { $base = $base->where('sessionId',$sessionId); }
+                    if ($sectionId) { $base = $base->where('groupId',$sectionId); }
+                    $studentIds = $base->distinct()->pluck('studentId');
+                    $subjectCache = Subject::orderBy('id','ASC')->get()->keyBy('id');
+                    $rankItems = [];
+                    foreach ($studentIds as $sid) {
+                        $rows = Marksheet::where('examId',$examId)->where('classId',$classId)
+                            ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                            ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
+                            ->where('studentId',$sid)->get();
+                        $stuRow = newAdmission::find($sid);
+                        $selectedReligiousId = $stuRow && $stuRow->religiousSubjectId ? (int)$stuRow->religiousSubjectId : 0;
+                        $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
+                        $sum = 0.0;
+                        foreach ($rows as $r) {
+                            $sub = isset($subjectCache[$r->subjectId]) ? $subjectCache[$r->subjectId] : null;
+                            if($sub && ($sub->isReligious ?? false)){
+                                if($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){
+                                    continue;
+                                }
+                            }
+                            $hasAny = is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks);
+                            if(!$hasAny) { continue; }
+                            $sum += (is_numeric($r->subjectMarks)?(float)$r->subjectMarks:0) + (is_numeric($r->objectMarks)?(float)$r->objectMarks:0) + (is_numeric($r->practicalMarks)?(float)$r->practicalMarks:0);
+                        }
+                        $rankItems[] = ['sid'=>(int)$sid, 'total'=>$sum];
+                    }
+                    usort($rankItems, function($a,$b){
+                        if ($a['total'] == $b['total']) return 0;
+                        return ($a['total'] > $b['total']) ? -1 : 1; // desc
+                    });
+                    $rank = 0; $prevTotal = null; $map = [];
+                    foreach ($rankItems as $it) {
+                        if ($prevTotal === null || $it['total'] != $prevTotal) { $rank++; $prevTotal = $it['total']; }
+                        $map[$it['sid']] = $rank;
+                    }
+                    $meritRank = $map[$student->id] ?? null;
+                }
+            }
+        } catch (\Throwable $e) {
+            $meritRank = null;
+        }
+
         return view('result.marksheetGenerate',[
             'studentDetails'=>$student,
             'examId'=>$examId,
@@ -559,6 +611,7 @@ class MarksheetController extends Controller
             'maxMarkedSubjects' => $maxMarkedSubjects,
             'studentMarkedSubjects' => $studentMarkedSubjects,
             'hideForMaxRule' => $hideForMaxRule,
+            'meritRank' => $meritRank,
         ]);
     }
 
