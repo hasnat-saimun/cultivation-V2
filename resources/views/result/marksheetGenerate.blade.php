@@ -516,6 +516,8 @@ Marksheet Generate
             $hasOptional = false;
             // Track failed optional subjects
             $failedOptionalNames = [];
+            // Track optional subtotal to include in overall Total Marks
+            $optionalSubtotalSum = 0;
             if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0) {
                 foreach($studentDetails->marksheet as $ckMark) {
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
@@ -562,6 +564,8 @@ Marksheet Generate
                                 ->first();
                             $grade      = $gradeRow ? $gradeRow->gradeName : '-';
                             $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
+                            // accumulate optional total for final Total Marks display
+                            if(is_numeric($totalMarks) && $totalMarks > 0){ $optionalSubtotalSum += (float)$totalMarks; }
                         }
 
                         // Feature Wise F logic and fail propagation
@@ -598,6 +602,10 @@ Marksheet Generate
 </table>
 
 @php
+    // Update overall subtotal to include optional subject totals as requested
+    if(isset($subtotalMarksPaired)){
+        $subtotalMarks = ($subtotalMarksPaired ?: 0) + ($optionalSubtotalSum ?: 0);
+    }
     // Prepare final failed subjects list combining main + optional
     $failedSubjectsAll = array_values(array_unique(array_merge($failedMainNames ?? [], $failedOptionalNames ?? [])));
     $failedCount = count($failedSubjectsAll);
