@@ -25,6 +25,11 @@ Marksheet Generate
             .report-header .hdr-logo { height: 48px !important; }
             .report-header .name { font-size: 18px !important; }
             .report-header .subline, .report-header .contacts { font-size: 11px !important; }
+            /* Failed subjects: compact two-column print list */
+            .failed-subjects { font-size: 11px !important; }
+            .failed-subjects h4 { margin-bottom: 4px !important; }
+            .failed-subjects ul { -webkit-columns: 2 !important; columns: 2 !important; column-gap: 12px !important; list-style-position: inside !important; margin: 4px 0 !important; padding-left: 0 !important; }
+            .failed-subjects li { break-inside: avoid !important; margin: 0 0 3px !important; padding: 0 !important; }
         }
         .marksheet .transcript {
             background: #fff;
@@ -44,6 +49,9 @@ Marksheet Generate
         /* Student info table: tidy labels and values */
         .student-info th { width: 140px; white-space: nowrap; }
         .student-info td { word-break: break-word; overflow-wrap: anywhere; }
+        /* Screen: failed subjects spacing */
+        .failed-subjects h4 { margin-bottom: 6px; }
+        .failed-subjects ul { margin: 6px 0; }
         
     </style>
     @php
@@ -470,6 +478,22 @@ Marksheet Generate
     </tbody>
 </table>
 
+@php
+    // Collect failed main subject names for display
+    $failedMainNames = [];
+    if(isset($pairedMain) && count($pairedMain) > 0){
+        foreach($pairedMain as $row){
+            $hasAny = ($row['total'] !== '-') || ($row['cq'] !== '-') || ($row['mcq'] !== '-') || ($row['pr'] !== '-');
+            if(!$hasAny) { continue; }
+            if(($row['grade'] ?? '-') === 'F' || !empty($row['fail'])){
+                $failedMainNames[] = $row['name'];
+            }
+        }
+    }
+    // Ensure unique names in case of duplicates
+    $failedMainNames = array_values(array_unique($failedMainNames));
+@endphp
+
 <!-- Optional Subject Table -->
 <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
 <table class="table table-bordered col-12 text-center">
@@ -485,6 +509,8 @@ Marksheet Generate
     <tbody>
         @php
             $hasOptional = false;
+            // Track failed optional subjects
+            $failedOptionalNames = [];
             if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0) {
                 foreach($studentDetails->marksheet as $ckMark) {
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
@@ -541,6 +567,7 @@ Marksheet Generate
                         }
                         if($grade === 'F' || (is_numeric($gradePoint) && $gradePoint <= 0)) {
                             $hasFail = true;
+                            $failedOptionalNames[] = $subjectDetails->subjectName;
                         }
                         $gradePointDisplay = ($grade === 'F') ? '0.00' : (is_numeric($gradePoint) ? number_format($gradePoint,2) : '-');
                     }
@@ -564,6 +591,12 @@ Marksheet Generate
         @endif
     </tbody>
 </table>
+
+@php
+    // Prepare final failed subjects list combining main + optional
+    $failedSubjectsAll = array_values(array_unique(array_merge($failedMainNames ?? [], $failedOptionalNames ?? [])));
+    $failedCount = count($failedSubjectsAll);
+@endphp
 @php
     // If feature wise and any subject failed, set final grade and point to F
     $mainSubjects = [];
@@ -632,6 +665,17 @@ Marksheet Generate
     </thead>
 </table>
 
+@if($failedCount > 0)
+<div class="col-12 mb-3 failed-subjects">
+    <h4 class="fw-bold text-danger">Failed Subjects ({{ $failedCount }})</h4>
+    <ul class="mb-0">
+        @foreach($failedSubjectsAll as $fs)
+            <li>{{ $fs }}</li>
+        @endforeach
+    </ul>
+</div>
+@endif
+
 @endif
 
                             
@@ -649,7 +693,7 @@ Marksheet Generate
                                     <div class="signature-label">Signature</div>
                                 </div>
                                 <div class="signature-box">
-                                    <div class="signature-role">Principal</div>
+                                    <div class="signature-role">Principal/Head Master</div>
                                     <div class="signature-space"></div>
                                     <div class="signature-line"></div>
                                     <div class="signature-label">Signature</div>
