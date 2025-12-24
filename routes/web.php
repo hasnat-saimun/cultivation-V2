@@ -1267,6 +1267,17 @@ Route::middleware(['adminGuard'])->group (function(){
         MarksheetController::class,
         'individualResult'
     ])->name('individualResult');
+    
+    // Transcript generation by class/section student list
+    Route::get('/transcripts/bulk', [
+        MarksheetController::class,
+        'transcriptList'
+    ])->name('transcripts.bulk');
+    // Single transcript view (existing generator wired up)
+    Route::get('/marksheet/generate', [
+        MarksheetController::class,
+        'generateMarksheet'
+    ])->name('marksheetGenerate');
     //MarksheetController end
 
     //Placements (GPA-based ranking)

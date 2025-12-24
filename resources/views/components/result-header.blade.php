@@ -42,7 +42,12 @@
     @endphp
     <div class="row g-2 align-items-center">
         <div class="col-12">
-            <h4 class="fw-bold text-center my-3">Tabulation Sheet for @if($exam) - {{ $exam->examName }} @endif</h4>
+            <h4 class="fw-bold text-center my-3">
+                Tabulation Sheet
+                @if(!empty($examNameCtx) && $examNameCtx !== '-')
+                    for - {{ $examNameCtx }}
+                @endif
+            </h4>
             <div class="p-2 border rounded result-header-band" style="background:#f8fafc;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex flex-wrap gap-3 small">

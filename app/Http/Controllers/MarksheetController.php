@@ -574,6 +574,34 @@ class MarksheetController extends Controller
     }
     //front web site end
 
+    // Transcript generation: class/section student list and open per-student transcripts
+    public function transcriptList(Request $request)
+    {
+        $examId    = $request->get('examId');
+        $classId   = $request->get('classId');
+        $sessionId = $request->get('sessionId');
+        $sectionId = $request->get('sectionId');
+
+        $students = collect();
+        $studentsLoaded = false;
+        if ($classId) {
+            $q = newAdmission::query()->where('className', (int)$classId);
+            if ($sessionId) { $q->where('sessName', (int)$sessionId); }
+            if ($sectionId) { $q->where('sectionName', (int)$sectionId); }
+            $students = $q->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
+            $studentsLoaded = true;
+        }
+
+        return view('result.transcriptList', [
+            'examId' => $examId,
+            'classId' => $classId,
+            'sessionId' => $sessionId,
+            'sectionId' => $sectionId,
+            'students' => $students,
+            'studentsLoaded' => $studentsLoaded,
+        ]);
+    }
+
     // Resolve effective religious subject for a class (mapping -> assigned -> any)
     private function resolveReligiousSubjectForClass(int $classId): int
     {
