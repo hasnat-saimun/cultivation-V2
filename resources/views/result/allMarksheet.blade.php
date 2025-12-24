@@ -164,8 +164,9 @@ All Marksheet
             $hasFailSection = !$compactMode ? (count($failResults ?? []) > 0) : (count($failResultsCompact ?? []) > 0);
             $hasIncompleteSection = !$compactMode ? (count($incompleteResults ?? []) > 0) : (count($incompleteResultsCompact ?? []) > 0);
             $hasAnySection = $hasPassSection || $hasFailSection || $hasIncompleteSection;
+            $hasOnlyIncomplete = $hasIncompleteSection && !$hasPassSection && !$hasFailSection;
         @endphp
-        <div class="{{ $hasAnySection ? 'd-print-block' : 'd-print-none' }}">
+        <div class="{{ (!$hasOnlyIncomplete && $hasAnySection) ? 'd-print-block' : 'd-print-none' }}">
             @include('components.result-header')
         </div>
             <div class="result-section">
@@ -315,12 +316,9 @@ All Marksheet
             @endif
 
             @if(!$compactMode && count($incompleteResults) > 0)
-                @php $hasPrevIncomplete = $hasPassSection || $hasFailSection; @endphp
-                @if($hasPrevIncomplete)
                 <div class="d-none d-print-block page-break">
                     @include('components.result-header')
                 </div>
-                @endif
                 <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
@@ -462,12 +460,9 @@ All Marksheet
                 @endif
 
                 @if(count($incompleteResultsCompact) > 0)
-                    @php $hasPrevIncomplete = $hasPassSection || $hasFailSection; @endphp
-                    @if($hasPrevIncomplete)
                     <div class="d-none d-print-block page-break">
                         @include('components.result-header')
                     </div>
-                    @endif
                     <h5 class="mt-4 fw-bold text-secondary">Incomplete Students ({{ count($incompleteResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
