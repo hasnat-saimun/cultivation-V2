@@ -57,6 +57,8 @@ All Marksheet
         /* Print: even tighter for dual-line subject titles */
         .result-table thead th.subject-th.dual { min-width: 65px !important; width: 65px !important; padding: 7px 4px !important; }
         .result-table thead th.subject-th.dual .v-text { font-size: 8.5px !important; line-height: 1.1 !important; letter-spacing: 0.25px !important; }
+        /* Print: ensure subject data cells match header width */
+        .result-table tbody td.subject-td { min-width: 60px !important; width: 60px !important; padding: 6px 4px !important; }
     }
     /* Professional fixed layout for subject totals grid */
     /* Vertically center all table headers and cells on this page */
@@ -86,6 +88,8 @@ All Marksheet
     /* Dual-line subject titles: same sizing for screen & print */
     .result-table thead th.subject-th.dual { min-width: 56px; width: 56px; padding: 7px 4px !important; }
     .result-table thead th.subject-th.dual .v-text { font-size: 8.5px; line-height: 1.1; letter-spacing: 0.25px; }
+    /* Subject data cells: align width with headers (overrides generic min-width) */
+    .result-table tbody td.subject-td { min-width: 60px; width: 60px; padding: 6px 4px; }
 </style>
 <div class="main-website">
     <div class="main-content">
@@ -155,7 +159,15 @@ All Marksheet
         @endif
 
         @if($examId && $classId)
-        @include('components.result-header')
+        @php
+            $hasPassSection = !$compactMode ? (count($passResults ?? []) > 0) : (count($passResultsCompact ?? []) > 0);
+            $hasFailSection = !$compactMode ? (count($failResults ?? []) > 0) : (count($failResultsCompact ?? []) > 0);
+            $hasIncompleteSection = !$compactMode ? (count($incompleteResults ?? []) > 0) : (count($incompleteResultsCompact ?? []) > 0);
+            $hasAnySection = $hasPassSection || $hasFailSection || $hasIncompleteSection;
+        @endphp
+        <div class="{{ $hasAnySection ? 'd-print-block' : 'd-print-none' }}">
+            @include('components.result-header')
+        </div>
             <div class="result-section">
                 <div class="row">
                     <div class="col-12">
@@ -235,7 +247,7 @@ All Marksheet
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
-                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                    <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -248,7 +260,7 @@ All Marksheet
             @endif
 
             @if(!$compactMode && count($failResults) > 0)
-                <div class="d-none d-print-block page-break">
+                <div class="d-none d-print-block {{ $hasPassSection ? 'page-break' : '' }}">
                     @include('components.result-header')
                 </div>
                 <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
@@ -288,7 +300,7 @@ All Marksheet
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
-                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                    <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -339,7 +351,7 @@ All Marksheet
                                 <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                 @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
-                                    <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                    <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
                                 <td>{{ $res['totalMarks'] }}</td>
                                 <td>{{ $res['finalLetter'] }}</td>
@@ -395,7 +407,7 @@ All Marksheet
                 @endif
 
                 @if(count($failResultsCompact) > 0)
-                    <div class="d-none d-print-block page-break">
+                    <div class="d-none d-print-block {{ $hasPassSection ? 'page-break' : '' }}">
                         @include('components.result-header')
                     </div>
                     <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResultsCompact) }})</h5>
