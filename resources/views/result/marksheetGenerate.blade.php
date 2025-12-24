@@ -4,7 +4,8 @@ Marksheet Generate
 @endsection
 @section('backIndex')
     <style>
-        @page { size: A4 landscape; margin: 12mm; }
+        /* Print: A4 portrait for single result */
+        @page { size: A4 portrait; margin: 12mm; }
         html, body { background: #fff; }
         @media print {
             html, body { background: #fff !important; }
@@ -17,6 +18,11 @@ Marksheet Generate
             .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
             .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { border: 1px solid #000 !important; }
             .result-header-band { background: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #000 !important; }
+            /* Compact institute header for single result print */
+            .report-header { gap: 6px !important; margin-bottom: 6px !important; padding-bottom: 4px !important; border-bottom: 1px solid #cbd5e1 !important; }
+            .report-header .hdr-logo { height: 48px !important; }
+            .report-header .name { font-size: 18px !important; }
+            .report-header .subline, .report-header .contacts { font-size: 11px !important; }
         }
         .marksheet .transcript {
             background: #fff;
@@ -33,27 +39,56 @@ Marksheet Generate
         .signature-line { width: 80%; border-bottom: 1px solid #2d3748; }
         .signature-role { font-weight: 600; margin-bottom: 6px; }
         .signature-label { margin-top: 6px; font-size: 11px; color: #4a5568; }
+        /* Student info table: tidy labels and values */
+        .student-info th { width: 140px; white-space: nowrap; }
+        .student-info td { word-break: break-word; overflow-wrap: anywhere; }
         
     </style>
     @php
         if($studentDetails):
             $adminId        = $studentDetails->admitId;
-            echo $stdName        = $studentDetails->fullName." ".$studentDetails->sureName;
+            $stdName        = $studentDetails->fullName." ".$studentDetails->sureName;
             $rollNumber     = $studentDetails->rollNumber;
             $fName          = $studentDetails->father;
             $mName          = $studentDetails->mother;
             $sessionDetails = $studentDetails->sessName;
             $classDetails   = $studentDetails->class;
-            if($sessionDetails):
-                $sessionName    = \App\Models\sessionManage::find($sessionDetails)->session;
-            else:
-                $sessionName    = "-";
-            endif;
-            if($classDetails):
-                $className      = \App\Models\Classes::find($classDetails->className);
-            else:
-                $className    = "-";
-            endif;
+            // Resolve session name robustly (id, object, or string)
+            if(!empty($sessionDetails)){
+                if(is_numeric($sessionDetails)){
+                    $sessModel = \App\Models\sessionManage::find($sessionDetails);
+                    $sessionName = $sessModel ? ($sessModel->session ?? ('Session-'.$sessModel->id)) : '-';
+                } elseif(is_object($sessionDetails)) {
+                    $sessionName = $sessionDetails->session ?? '-';
+                } else {
+                    $sessionName = (string)$sessionDetails;
+                }
+            } else { $sessionName = "-"; }
+            // Resolve class name robustly
+            if(!empty($classDetails)){
+                try{
+                    $classIdVal = is_object($classDetails) ? ($classDetails->className ?? null) : (is_numeric($classDetails) ? $classDetails : null);
+                    if(is_numeric($classIdVal)){
+                        $clModel = \App\Models\Classes::find($classIdVal);
+                        $className = $clModel ? ($clModel->className ?? ('Class-'.$clModel->id)) : '-';
+                    } else {
+                        $className = is_string($classDetails) ? $classDetails : '-';
+                    }
+                }catch(\Throwable $e){ $className = '-'; }
+            } else { $className = "-"; }
+            // Resolve section/group name robustly
+            $sectionName = "-";
+            try{
+                $secId = $studentDetails->sectionId ?? null;
+                if(is_numeric($secId)){
+                    $secModel = \App\Models\sectionManage::find($secId);
+                    $sectionName = $secModel ? ($secModel->section ?? ('Section-'.$secModel->id)) : '-';
+                } elseif(isset($studentDetails->section)) {
+                    $sectionName = is_string($studentDetails->section)
+                        ? $studentDetails->section
+                        : (is_object($studentDetails->section) ? ($studentDetails->section->section ?? '-') : '-');
+                }
+            }catch(\Throwable $e){ $sectionName = '-'; }
         else:
             $adminId        = "";
             $stdName        = "";
@@ -64,6 +99,7 @@ Marksheet Generate
             $classDetails   = "";
             $sessionName    = "";
             $className      = "";
+            $sectionName    = "";
         endif;
         $examDetails    = \App\Models\Exam::find($examId);
         if(isset($examDetails)):
@@ -102,12 +138,17 @@ Marksheet Generate
             }
         }
     @endphp
+                @include('components.institute-header')
+                <div class="container-fluid d-print-none mb-2 text-end">
+                    <button type="button" class="btn btn-warning btn-sm" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4 marksheet">
                     <!-- Admit Form Area Start Here -->
                     <div class="card height-auto col-12 mx-auto">
                         <div class="card-body row transcript">
-                            @include('components.result-header')
                             @if($studentDetails)
                             <div class="col-12 mb-3">
                                 <div class="text-center">
@@ -116,37 +157,43 @@ Marksheet Generate
                                     
                                     @if(isset($maxMarkedSubjects, $studentMarkedSubjects) && empty($hideForMaxRule) && (int)$maxMarkedSubjects > 0)
                                         <div class="mt-2 d-print-none">
-                                            <span class="badge bg-info text-dark">Counted subjects: {{ $studentMarkedSubjects }} / {{ $maxMarkedSubjects }}</span>
+                                            <span class="badge bg-info text-white">Counted subjects: {{ $studentMarkedSubjects }} / {{ $maxMarkedSubjects }}</span>
                                         </div>
                                     @endif
                                 </div>
                             </div>
-                            <table class="col-8 col-md-8 mb-4  ">
+                            <table class="col-8 col-md-8 mb-4">
                                 <tbody>
                                     <tr>
                                         <th>Name</th>
                                         <td>:</td>
-                                        <td>{{ $stdName }}</td>
+                                        <td colspan="4">{{ $stdName }}</td>
                                     </tr>
                                     <tr>
                                         <th>Father Name</th>
                                         <td>:</td>
-                                        <td>{{ $fName }}</td>
+                                        <td colspan="4">{{ $fName }}</td>
                                     </tr>
                                     <tr>
                                         <th>Mother Name</th>
                                         <td>:</td>
-                                        <td>{{ $mName }}</td>
+                                        <td colspan="4">{{ $mName }}</td>
                                     </tr>
                                     <tr>
                                         <th>Roll Number</th>
                                         <td>:</td>
                                         <td>{{ $rollNumber }}</td>
-                                    </tr>
-                                    <tr>
                                         <th>Session</th>
                                         <td>:</td>
                                         <td>{{ $sessionName }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Class</th>
+                                        <td>:</td>
+                                        <td>{{ $className }}</td>
+                                        <th>Section</th>
+                                        <td>:</td>
+                                        <td>{{ $sectionName }}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -326,98 +373,61 @@ Marksheet Generate
     $singleRows = array_values(array_filter($pairedMain, function($r){ return empty($r['paired']); }));
 @endphp
 
-@if(count($pairedRows) > 0)
-<h5 class="mt-3 fw-bold">Paired Subjects</h5>
-<table class="table table-bordered col-12 text-center">
-    <thead>
-        <th>Subject Name</th>
-        <th>CQ-1</th>
-        <th>MCQ-1</th>
-        <th>P-1</th>
-        <th>CQ-2</th>
-        <th>MCQ-2</th>
-        <th>P-2</th>
-        <th>Total</th>
-        <th>Grade</th>
-        <th>Point</th>
-    </thead>
-    <tbody>
-        @if(count($pairedRows) > 0)
-            @foreach($pairedRows as $row)
-                @php
-                    // We already computed component grades in paired array
-                @endphp
-                <tr>
-                    <td>{{ $row['name'] }}</td>
-                    <td>
-                        {{ $row['paper1']['cq'] ?? '-' }}
-                        @if(isset($row['paper1']['cqGrade']))<div><small class="text-muted">{{ $row['paper1']['cqGrade'] }}</small></div>@endif
-                    </td>
-                    <td>
-                        {{ $row['paper1']['mcq'] ?? '-' }}
-                        @if(isset($row['paper1']['mcqGrade']))<div><small class="text-muted">{{ $row['paper1']['mcqGrade'] }}</small></div>@endif
-                    </td>
-                    <td>
-                        {{ $row['paper1']['pr'] ?? '-' }}
-                        @if(isset($row['paper1']['prGrade']))<div><small class="text-muted">{{ $row['paper1']['prGrade'] }}</small></div>@endif
-                    </td>
-                    <td>
-                        {{ $row['paper2']['cq'] ?? '-' }}
-                        @if(isset($row['paper2']['cqGrade']))<div><small class="text-muted">{{ $row['paper2']['cqGrade'] }}</small></div>@endif
-                    </td>
-                    <td>
-                        {{ $row['paper2']['mcq'] ?? '-' }}
-                        @if(isset($row['paper2']['mcqGrade']))<div><small class="text-muted">{{ $row['paper2']['mcqGrade'] }}</small></div>@endif
-                    </td>
-                    <td>
-                        {{ $row['paper2']['pr'] ?? '-' }}
-                        @if(isset($row['paper2']['prGrade']))<div><small class="text-muted">{{ $row['paper2']['prGrade'] }}</small></div>@endif
-                    </td>
-                    <td>{{ $row['total'] }}</td>
-                    <td>{{ $row['grade'] }}</td>
-                    <td>{{ $row['gradePoint'] }}</td>
-                </tr>
-            @endforeach
-        @else
-            <tr><td colspan="10">No paired subjects</td></tr>
-        @endif
-    </tbody>
-</table>
-@endif
-
-@if(count($singleRows) > 0)
-<h5 class="mt-3 fw-bold">Single Subjects</h5>
+@php $allRows = $pairedMain; @endphp
 <table class="table table-bordered col-12 text-center">
     <thead>
         <th>Subject Name</th>
         <th>Theory</th>
-        <th>Grade</th>
-        <th>M.C.Q</th>
-        <th>Grade</th>
+        <th>MCQ</th>
         <th>Practical</th>
-        <th>Grade</th>
         <th>Total</th>
         <th>Grade</th>
         <th>Point</th>
     </thead>
     <tbody>
-        @foreach($singleRows as $row)
+        @forelse($allRows as $row)
+            @php
+                $numVal = function($v){ return is_numeric($v) ? (float)$v : 0.0; };
+                $cqDisp = '-'; $mcqDisp = '-'; $prDisp = '-';
+                if(($row['fullCQ'] ?? 0) > 0){
+                    if(!empty($row['paired'])){
+                        $cq1 = $numVal($row['paper1']['cq'] ?? null); $cq2 = $numVal($row['paper2']['cq'] ?? null);
+                        $cqDisp = '(' . $cq1 . ' + ' . $cq2 . ') = ' . ($cq1 + $cq2);
+                    } else {
+                        $cqDisp = is_numeric($row['cq']) ? $row['cq'] : '-';
+                    }
+                }
+                if(($row['fullMCQ'] ?? 0) > 0){
+                    if(!empty($row['paired'])){
+                        $m1 = $numVal($row['paper1']['mcq'] ?? null); $m2 = $numVal($row['paper2']['mcq'] ?? null);
+                        $mcqDisp = '(' . $m1 . ' + ' . $m2 . ') = ' . ($m1 + $m2);
+                    } else {
+                        $mcqDisp = is_numeric($row['mcq']) ? $row['mcq'] : '-';
+                    }
+                }
+                if(($row['fullPr'] ?? 0) > 0){
+                    if(!empty($row['paired'])){
+                        $p1 = $numVal($row['paper1']['pr'] ?? null); $p2 = $numVal($row['paper2']['pr'] ?? null);
+                        $prDisp = '(' . $p1 . ' + ' . $p2 . ') = ' . ($p1 + $p2);
+                    } else {
+                        $prDisp = is_numeric($row['pr']) ? $row['pr'] : '-';
+                    }
+                }
+            @endphp
             <tr>
                 <td>{{ $row['name'] }}</td>
-                <td>{{ $row['cq'] }}</td>
-                <td>{{ $row['cqGrade'] }}</td>
-                <td>{{ $row['mcq'] }}</td>
-                <td>{{ $row['mcqGrade'] }}</td>
-                <td>{{ $row['pr'] }}</td>
-                <td>{{ $row['prGrade'] }}</td>
+                <td>{{ $cqDisp }}</td>
+                <td>{{ $mcqDisp }}</td>
+                <td>{{ $prDisp }}</td>
                 <td>{{ $row['total'] }}</td>
                 <td>{{ $row['grade'] }}</td>
                 <td>{{ $row['gradePoint'] }}</td>
             </tr>
-        @endforeach
+        @empty
+            <tr><td colspan="7">No main subjects</td></tr>
+        @endforelse
     </tbody>
 </table>
-@endif
 
 <!-- Optional Subject Table -->
 <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
@@ -425,11 +435,8 @@ Marksheet Generate
     <thead>
         <th>Subject Name</th>
         <th>Theory</th>
-        <th>Grade</th>
         <th>M.C.Q</th>
-        <th>Grade</th>
         <th>Practical</th>
-        <th>Grade</th>
         <th>Total</th>
         <th>Grade</th>
         <th>Point</th>
@@ -501,11 +508,8 @@ Marksheet Generate
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
                     <td>{{ $subjectMarks !== null ? $subjectMarks : '-' }}</td>
-                    <td>{{ $cqGrade }}</td>
                     <td>{{ $objectMarks !== null ? $objectMarks : '-' }}</td>
-                    <td>{{ $mcqGrade }}</td>
                     <td>{{ $parcticalMarks !== null ? $parcticalMarks : '-' }}</td>
-                    <td>{{ $practicalGrade }}</td>
                     <td>{{ $totalMarks !== null ? $totalMarks : '-' }}</td>
                     <td>{{ $grade }}</td>
                     <td>{{ $gradePointDisplay }}</td>

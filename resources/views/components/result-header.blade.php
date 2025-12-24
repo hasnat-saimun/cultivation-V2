@@ -42,12 +42,12 @@
     @endphp
     <div class="row g-2 align-items-center">
         <div class="col-12">
+            <h4 class="fw-bold text-center my-3">Tabulation Sheet for @if($exam) - {{ $exam->examName }} @endif</h4>
             <div class="p-2 border rounded result-header-band" style="background:#f8fafc;">
                 <div class="d-flex justify-content-between align-items-center">
                     <div class="d-flex flex-wrap gap-3 small">
-                        <div><strong>Exam:</strong> <span>{{ $examNameCtx }}</span></div>
-                        <div><strong>Class:</strong> <span>{{ $classNameCtx }}</span></div>
-                        <div><strong>Section/Group:</strong> <span>{{ $sectionNameCtx }}</span></div>
+                        <div class="mr-4"><strong>Class:</strong> <span>{{ $classNameCtx }}</span></div>
+                        <div class="mr-4"><strong>Section/Group:</strong> <span>{{ $sectionNameCtx }}</span></div>
                         <div><strong>Session:</strong> <span>{{ $sessionNameCtx }}</span></div>
                     </div>
                     <div class="d-flex align-items-center gap-3">

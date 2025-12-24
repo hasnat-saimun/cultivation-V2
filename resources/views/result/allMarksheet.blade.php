@@ -4,22 +4,49 @@ All Marksheet
 @endsection
 @section('backIndex')
 <style>
-    @page { size: A4 landscape; margin: 12mm; }
+    @page { size: A4 landscape; margin: 5mm; }
     html, body { background: #fff; }
     @media print {
         html, body { background: #fff !important; }
         .main-website, .main-content, .container-fluid { background: #fff !important; }
         .table { border-collapse: collapse !important; }
         .table thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .table th, .table td { border: 1px solid #000 !important; padding: 6px !important; }
+        .table th, .table td { border: 1px solid #000 !important; padding: 6px !important; vertical-align: middle !important; }
+        /* Standardize Name column width for professional print layout */
+        .result-table th:nth-child(3), .result-table td:nth-child(3) { width: 220px !important; max-width: 220px !important; white-space: normal !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
+        /* Compact tables (without .result-table) also use 3rd column for Name */
+        table.table:not(.result-table) th:nth-child(3), table.table:not(.result-table) td:nth-child(3) { width: 220px !important; max-width: 220px !important; white-space: normal !important; word-break: break-word !important; overflow-wrap: anywhere !important; }
         .result-header-band { background: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1px solid #000 !important; }
+        /* Print: show only marks tables at full width */
+        .navbar,
+        .sidebar-main,
+        .breadcrumbs-area,
+        .footer-wrap-layout1,
+        .result-section,
+        .result-text,
+        .alert,
+        form { display: none !important; }
+        /* Keep header container visible and compact for print */
+        .container-fluid { margin: 0 !important; padding: 0 !important; }
+        .result-header-band { display: block !important; }
+        .dashboard-content-one, .main-website, .main-content { margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        .table-responsive { margin: 0 !important; }
+        .table, .result-table { width: 100% !important; }
+        /* Force Failed section to start on a new printed page */
+        .page-break { break-before: page !important; page-break-before: always !important; }
     }
     /* Professional fixed layout for subject totals grid */
+    /* Vertically center all table headers and cells on this page */
+    .table th, .table td { vertical-align: middle !important; }
     .result-table { table-layout: fixed; width: 100%; }
-    .result-table th, .result-table td { min-width: 88px; }
-    .result-table th:nth-child(1), .result-table td:nth-child(1) { min-width: 60px; }
-    .result-table th:nth-child(2), .result-table td:nth-child(2) { min-width: 60px; }
-    .result-table th:nth-child(3), .result-table td:nth-child(3) { min-width: 160px; }
+    .result-table th, .result-table td { min-width: 88px;font-size: 11px;max-height: 250px; }
+    .result-table th:nth-child(1), .result-table td:nth-child(1) { min-width: 60px;font-size: 11px; }
+    .result-table th:nth-child(2), .result-table td:nth-child(2) { min-width: 60px;font-size: 11px; }
+    .result-table th:nth-child(3), .result-table td:nth-child(3) { min-width: 160px; font-size:13px; }
+    /* Screen: Standardize Name column width for professional layout */
+    .result-table th:nth-child(3), .result-table td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
+    /* Screen: Compact tables (without .result-table) also use 3rd column for Name */
+    table.table:not(.result-table) th:nth-child(3), table.table:not(.result-table) td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     /* Subject header vertical text with smaller font */
     .result-table thead th.subject-th { min-width: 48px; width: 48px; padding: 6px 2px !important; }
     .result-table thead th.subject-th .v-text {
@@ -32,7 +59,6 @@ All Marksheet
 </style>
 <div class="main-website">
     <div class="main-content">
-        @include('components.result-header')
         <div class="container-fluid mb-4">
             <form method="GET" action="{{ route('allMarksheet') }}" class="row g-2 align-items-end">
                 <div class="col-md-2">
@@ -99,11 +125,11 @@ All Marksheet
         @endif
 
         @if($examId && $classId)
+        @include('components.result-header')
             <div class="result-section">
                 <div class="row">
                     <div class="col-12">
                         <div class="result-text text-center mt-2">
-                            <h4 class="fw-bold">Class Result Sheet @if($exam) - {{ $exam->examName }} @endif</h4>
                             @if($exam && $exam->passingSystem == 1)
                                 <p class="text-muted mb-0"><small>Feature-wise Passing System Applied</small></p>
                             @endif
@@ -112,7 +138,31 @@ All Marksheet
                 </div>
             </div>
 
-            @php $subjectCount = count($subjects); @endphp
+            @php
+                // Determine which subjects have at least one mark across all students
+                $visibleSubjects = $subjects ?? [];
+                try {
+                    $visibleSubjects = [];
+                    $allResults = array_merge($passResults ?? [], $failResults ?? [], $incompleteResults ?? []);
+                    foreach(($subjects ?? []) as $sub){
+                        $hasData = false;
+                        foreach($allResults as $res){
+                            if(isset($res['subjects']) && is_array($res['subjects'])){
+                                foreach($res['subjects'] as $sr){
+                                    if( ($sr['name'] ?? null) === ($sub->subjectName ?? null) ){
+                                        if(isset($sr['total']) && is_numeric($sr['total'])){ $hasData = true; break 2; }
+                                    }
+                                }
+                            }
+                        }
+                        if($hasData){ $visibleSubjects[] = $sub; }
+                    }
+                } catch (\Throwable $e) {
+                    // Fallback to all subjects if any unexpected structure
+                    $visibleSubjects = $subjects ?? [];
+                }
+                $subjectCount = count($visibleSubjects);
+            @endphp
             @if($studentsLoaded && (count($passResults) + count($failResults)) === 0)
                 <div class="alert alert-warning container">No marks found for the selected filters.</div>
             @endif
@@ -131,8 +181,8 @@ All Marksheet
                             <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
+                            @if(count($visibleSubjects) > 0)
+                                @foreach($visibleSubjects as $sub)
                                     @php
                                         $words = preg_split('/\s+/', trim($sub->subjectName));
                                         $subjectDisplay = (count($words) > 3)
@@ -151,7 +201,7 @@ All Marksheet
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>{{ $res['meritRank'] ?? '-' }}</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($subjects as $sub)
+                                @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
                                     <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
@@ -165,6 +215,9 @@ All Marksheet
             @endif
 
             @if(!$compactMode && count($failResults) > 0)
+                <div class="d-none d-print-block page-break">
+                    @include('components.result-header')
+                </div>
                 <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResults) }})</h5>
                 <div class="table-responsive dark-border mb-5">
                     <table class="w-100 table-striped table-bordered text-center table result-table">
@@ -178,8 +231,8 @@ All Marksheet
                             <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
+                            @if(count($visibleSubjects) > 0)
+                                @foreach($visibleSubjects as $sub)
                                     @php
                                         $words = preg_split('/\s+/', trim($sub->subjectName));
                                         $subjectDisplay = (count($words) > 3)
@@ -198,7 +251,7 @@ All Marksheet
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($subjects as $sub)
+                                @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
                                     <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
@@ -225,8 +278,8 @@ All Marksheet
                             <th rowspan="2"><b>GPA</b></th>
                         </tr>
                         <tr class="table-dark text-dark">
-                            @if(count($subjects) > 0)
-                                @foreach($subjects as $sub)
+                            @if(count($visibleSubjects) > 0)
+                                @foreach($visibleSubjects as $sub)
                                     @php
                                         $words = preg_split('/\s+/', trim($sub->subjectName));
                                         $subjectDisplay = (count($words) > 3)
@@ -245,7 +298,7 @@ All Marksheet
                                 <td>{{ $res['student']->rollNumber }}</td>
                                 <td>-</td>
                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
-                                @foreach($subjects as $sub)
+                                @foreach($visibleSubjects as $sub)
                                     @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
                                     <td>{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                 @endforeach
@@ -301,6 +354,9 @@ All Marksheet
                 @endif
 
                 @if(count($failResultsCompact) > 0)
+                    <div class="d-none d-print-block page-break">
+                        @include('components.result-header')
+                    </div>
                     <h5 class="mt-4 fw-bold text-danger">Failed Students ({{ count($failResultsCompact) }})</h5>
                     <div class="table-responsive dark-border mb-5">
                         <table class="w-100 table-striped table-bordered text-center table">
