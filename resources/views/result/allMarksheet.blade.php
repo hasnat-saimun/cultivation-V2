@@ -4,7 +4,7 @@ All Marksheet
 @endsection
 @section('backIndex')
 <style>
-    @page { size: A4 landscape; margin: 5mm; }
+    @page { size: Letter landscape; margin: 3mm; }
     html, body { background: #fff; }
     @media print {
         html, body { background: #fff !important; }
@@ -45,8 +45,18 @@ All Marksheet
             letter-spacing: 0.1px !important;
         }
         /* Print: Subject header spacing & sizing for better readability */
-        .result-table thead th.subject-th { min-width: 54px !important; width: 54px !important; padding: 8px 6px !important; }
-        .result-table thead th.subject-th .v-text { line-height: 1.05 !important; letter-spacing: 0.3px !important; margin: 0 2px !important; }
+        .result-table thead th.subject-th { min-width: 60px !important; width: 60px !important; padding: 10px 6px !important; }
+        .result-table thead th.subject-th .v-text {
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+            letter-spacing: 0.35px !important;
+            margin: 0 2px !important;
+            text-align: center !important;
+            text-orientation: upright !important;
+        }
+        /* Print: even tighter for dual-line subject titles */
+        .result-table thead th.subject-th.dual { min-width: 65px !important; width: 65px !important; padding: 7px 4px !important; }
+        .result-table thead th.subject-th.dual .v-text { font-size: 8.5px !important; line-height: 1.1 !important; letter-spacing: 0.25px !important; }
     }
     /* Professional fixed layout for subject totals grid */
     /* Vertically center all table headers and cells on this page */
@@ -60,19 +70,22 @@ All Marksheet
     .result-table th:nth-child(3), .result-table td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
     /* Screen: Compact tables (without .result-table) also use 3rd column for Name */
     table.table:not(.result-table) th:nth-child(3), table.table:not(.result-table) td:nth-child(3) { width: 220px; max-width: 220px; white-space: normal; word-break: break-word; overflow-wrap: anywhere; }
-    /* Student ID small font */
-    .sid-col { font-size: 10px !important; min-width: 70px; }
+    /* Student ID column: consistent width for screen & print */
+    .sid-col { font-size: 10px !important; min-width: 90px; width: 90px; }
     /* Slightly tighter margins to accommodate extra column */
     .table-responsive { margin: 8px 0 !important; }
-    /* Subject header vertical text with smaller font */
-    .result-table thead th.subject-th { min-width: 48px; width: 48px; padding: 6px 2px !important; }
+    /* Subject header vertical text: consistent width for screen & print */
+    .result-table thead th.subject-th { min-width: 60px; width: 60px; padding: 10px 6px !important; }
     .result-table thead th.subject-th .v-text {
         writing-mode: vertical-rl !important;
         transform: rotate(180deg) !important; /* keep upright after vertical-rl */
-        font-size: 11px; line-height: 1; letter-spacing: 0.2px;
-        white-space: nowrap;
+        font-size: 10px; line-height: 1.2; letter-spacing: 0.35px; margin: 0 2px;
+        white-space: nowrap; text-align: center; text-orientation: upright;
         display: inline-block;
     }
+    /* Dual-line subject titles: same sizing for screen & print */
+    .result-table thead th.subject-th.dual { min-width: 56px; width: 56px; padding: 7px 4px !important; }
+    .result-table thead th.subject-th.dual .v-text { font-size: 8.5px; line-height: 1.1; letter-spacing: 0.25px; }
 </style>
 <div class="main-website">
     <div class="main-content">
@@ -207,7 +220,8 @@ All Marksheet
                                             ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
                                             : $sub->subjectName;
                                     @endphp
-                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
+                                    @php $isDual = (count($words) > 3); @endphp
+                                    <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>
@@ -259,7 +273,8 @@ All Marksheet
                                             ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
                                             : $sub->subjectName;
                                     @endphp
-                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
+                                    @php $isDual = (count($words) > 3); @endphp
+                                    <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>
@@ -308,7 +323,8 @@ All Marksheet
                                             ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
                                             : $sub->subjectName;
                                     @endphp
-                                    <th colspan="1" class="subject-th"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
+                                    @php $isDual = (count($words) > 3); @endphp
+                                    <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
                                 @endforeach
                             @else
                                 <th><b>No subjects</b></th>

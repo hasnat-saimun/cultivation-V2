@@ -90,7 +90,7 @@
             
             @page {
                 size: A4;
-                margin: 1.5rem;
+                margin: 0.5rem;
             }
             .page-break:last-child {
                 page-break-after: avoid !important;
