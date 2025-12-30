@@ -479,6 +479,32 @@ Route::middleware(['adminGuard'])->group (function(){
         'delSemisterPlanContent'
     ])->name('delSemisterPlanContent');
 
+    // Internal Results management
+    Route::get('/academic/internalResult/',[
+        AcademicController::class ,
+        'internalResultManage'
+    ])->name('internalResultManage');
+
+    Route::post('/academic/internalResult/save',[
+        AcademicController::class ,
+        'saveInternalResult'
+    ])->name('saveInternalResult');
+
+    Route::get('/academic/internalResult/edit/{id}',[
+        AcademicController::class ,
+        'editInternalResult'
+    ])->name('editInternalResult');
+
+    Route::get('/academic/internalResult/del/{id}',[
+        AcademicController::class ,
+        'delInternalResult'
+    ])->name('delInternalResult');
+
+    Route::get('/academic/internalResult/content/delete/{id}',[
+        AcademicController::class ,
+        'delInternalResultContent'
+    ])->name('delInternalResultContent');
+
     Route::get('/placement/jobPlacement/',[
         PlacementCellController::class ,
         'placementCell'

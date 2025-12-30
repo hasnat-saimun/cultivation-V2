@@ -7,6 +7,7 @@ use App\Models\Syllabus;
 use App\Models\SemisterPlan;
 use App\Models\ExamRoutine;
 use App\Models\ClassRoutine;
+use App\Models\InternalResult;
 use File;
 
 class AcademicController extends Controller
@@ -30,6 +31,7 @@ class AcademicController extends Controller
         $item->title            = $requ->title;
         $item->assignClass      = $requ->assignClass;
         $item->assignDepartment = $requ->assignDepartment;
+        $item->assignSection    = $requ->assignSection ? (int)$requ->assignSection : null;
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
             $validated = $requ->validate([
@@ -103,6 +105,7 @@ class AcademicController extends Controller
         $item->title            = $requ->title;
         $item->assignClass      = $requ->assignClass;
         $item->assignDepartment = $requ->assignDepartment;
+        $item->assignSection    = $requ->assignSection ? (int)$requ->assignSection : null;
         $item->assignSession    = $requ->assignSession;
         if(!empty($requ->attachment)):
             $validated = $requ->validate([
@@ -160,6 +163,86 @@ class AcademicController extends Controller
     }
 
     // Semister plan ends here
+
+    // Internal Results starts here
+    public function internalResultManage(){
+        $results = InternalResult::orderBy('id','DESC')->get();
+        return view('academic.internalResult',["resultList"=>$results]);
+    }
+
+    public function saveInternalResult(Request $requ){
+        $requ->validate([
+            'title' => 'required|string|max:255',
+            'assignClass' => 'nullable|integer',
+            'assignDepartment' => 'nullable|integer',
+            'assignSection' => 'nullable|integer|exists:section_manages,id',
+            'assignSession' => 'nullable|integer',
+            'attachment' => 'nullable|mimes:pdf,jpeg,png,jpg,gif,webp,avif|max:2048',
+        ]);
+        if(empty($requ->itemId)){
+            $item = new InternalResult();
+        }else{
+            $item = InternalResult::find($requ->itemId) ?? new InternalResult();
+        }
+
+        $item->title            = $requ->title;
+        $item->assignClass      = $requ->assignClass;
+        $item->assignDepartment = $requ->assignDepartment;
+        $item->assignSection    = $requ->assignSection ? (int)$requ->assignSection : null;
+        $item->assignSession    = $requ->assignSession;
+
+        if(!empty($requ->attachment)){
+            $validated = $requ->validate([
+                'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif|max:2048',
+            ],[
+                'attachment.mimes' => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
+                'attachment.max'   => 'Each file must be less than 2MB.'
+            ]);
+            $attachment = $requ->attachment;
+            $newAttachment = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
+            $attachment->move(public_path('upload/image/cultivation/internalResult'), $newAttachment);
+            $item->attachment = $newAttachment;
+        }
+
+        if($item->save()){
+            return back()->with('success','Item successfully saved');
+        }else{
+            return back()->with('error','Item failed to save');
+        }
+    }
+
+    public function editInternalResult($id){
+        $results = InternalResult::orderBy('id','DESC')->get();
+        return view('academic.internalResult',["itemId"=>$id, "resultList"=>$results]);
+    }
+
+    public function delInternalResult($id){
+        $item = InternalResult::find($id);
+        if(!empty($item)){
+            if(File::exists(public_path('upload/image/cultivation/internalResult/').$item->attachment)){
+                File::delete(public_path('upload/image/cultivation/internalResult/').$item->attachment);
+            }
+            $item->delete();
+            return redirect()->route('internalResultManage')->with('success','Item deleted successfully');
+        }else{
+            return redirect()->route('internalResultManage')->with('error','Item failed to delete');
+        }
+    }
+
+    public function delInternalResultContent($id){
+        $item = InternalResult::find($id);
+        if(!empty($item)){
+            if(File::exists(public_path('upload/image/cultivation/internalResult/').$item->attachment)){
+                File::delete(public_path('upload/image/cultivation/internalResult/').$item->attachment);
+            }
+            $item->attachment = NULL;
+            $item->save();
+            return back()->with('success','Item deleted successfully');
+        }else{
+            return back()->with('success','Item failed to delete');
+        }
+    }
+    // Internal Results ends here
 
     public function classRoutineManage(){
         $classRoutine = ClassRoutine::orderBy('id','DESC')->get();

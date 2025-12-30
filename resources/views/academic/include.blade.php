@@ -26,7 +26,7 @@
                         $sliderActive = request()->routeIs('sliderInfo');
 
                         $instRoutes = ['insInfo','principalSpeech','exPrincipal','managingCommittee'];
-                        $acadRoutes = ['syllabusManage','classRoutineManage','semisterPlanManage','examRoutineManage'];
+                        $acadRoutes = ['syllabusManage','classRoutineManage','semisterPlanManage','examRoutineManage','internalResultManage'];
                         $placementRoutes = ['placementCell','needyStudentPanel'];
                         $noticeRoutes = ['newNotice','noticeList'];
                         $galleryRoutes = ['newPhoto','newVideo'];
@@ -82,6 +82,9 @@
                                 <li class="nav-item">
                                     <a href="{{ route('examRoutineManage') }}" class="nav-link {{ request()->routeIs('examRoutineManage') ? 'active' : '' }}"><i
                                             class="fas fa-angle-right"></i>Exam Routine</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('internalResultManage') }}" class="nav-link {{ request()->routeIs('internalResultManage') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Internal Results</a>
                                 </li>
                             </ul>
                         </li>

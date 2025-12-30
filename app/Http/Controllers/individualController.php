@@ -254,21 +254,30 @@ class individualController extends Controller
 
     //update section 
     public function updateSection(Request $requ){
-        $chkData = sectionManage::where(['section'=>$requ->section])->get();
+        $itemId = $requ->itemId;
+        $sectionName = trim($requ->section ?? '');
 
-        if($chkData->isEmpty() && $chkData->count()>0):
+        if (empty($itemId) || $sectionName === '') {
+            return back()->with('error','Invalid input');
+        }
+
+        $updateData = sectionManage::find($itemId);
+        if (empty($updateData)) {
+            return back()->with('error','Sorry! No data found');
+        }
+
+        $duplicateExists = sectionManage::where('section', $sectionName)
+            ->where('id','!=',$itemId)
+            ->exists();
+        if ($duplicateExists) {
             return back()->with('error','Data entry failed');
-        else:
-            $updateData =  sectionManage::find($requ->itemId);
-            $updateData ->section = $requ->section;
+        }
 
-            if($updateData->save()):
-                return back()->with("success",'update successfully');
-            else:
-                return back()->with("error",'Data update failed');
-            endif;
-        endif;
-    
+        $updateData->section = $sectionName;
+        if ($updateData->save()) {
+            return back()->with('success','update successfully');
+        }
+        return back()->with('error','Data update failed');
     }
 
     //delelte section
