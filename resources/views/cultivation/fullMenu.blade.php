@@ -15,7 +15,14 @@
         <a href="{{route('academicPart') }}" class="nav-link {{ request()->routeIs('academicPart') ? 'active' : '' }}"><i class="fa-solid fa-building-columns"></i> <span>Academic Panel</span></a>
     </li>
     <li class="nav-item">
-        <a href="{{ route('resultPart') }}" class="nav-link {{ request()->routeIs('resultPart') ? 'active' : '' }}"><i class="fa-sharp fa-thin fa-square-poll-horizontal"></i> <span>Results Management</span></a>
+        <a href="{{ route('resultPart') }}" class="nav-link {{ request()->routeIs('resultPart') ? 'active' : '' }}">
+            <i class="fa-sharp fa-thin fa-square-poll-horizontal"></i> <span>Results Management</span>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a href="{{ route('resultArchive') }}" class="nav-link {{ request()->routeIs('resultArchive') ? 'active' : '' }}">
+            <i class="fa fa-archive"></i> <span>Result Archive</span>
+        </a>
     </li>
     <li class="nav-item">
         <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>

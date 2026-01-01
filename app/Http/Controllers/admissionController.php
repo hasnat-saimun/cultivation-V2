@@ -38,22 +38,87 @@ class AdmissionController extends Controller
         
         $studentId = $requ->checkbox;
         $totalData = count($studentId);
-        // return $studentId;
         $x = 0;
+        $skippedRolls = [];
         while($x<$totalData){
             $update = newAdmission::where(['stdId'=>$requ->studentId[$x]])->first();
-
-            $update->className         = $requ->promotId;
-            $update->rollNumber         = $requ->rollNum[$x];
-            $update->save(); 
+            if ($update) {
+                // Check for duplicate record in new class/session/section/roll (new roll if provided, otherwise current roll)
+                $newRoll = !empty($requ->rollNum[$x]) ? $requ->rollNum[$x] : $update->rollNumber;
+                $duplicate = newAdmission::where([
+                    'className'   => $requ->promotId,
+                    'sessName'    => $update->sessName,
+                    'sectionName' => $update->sectionName,
+                    'rollNumber'  => $newRoll,
+                ])->where('id', '!=', $update->id)->first();
+                if ($duplicate) {
+                    $skippedRolls[] = $newRoll;
+                    $x++;
+                    continue;
+                }
+                // Archive current result before promotion
+                $marks = \App\Models\Marksheet::where('studentId', $update->id)->get();
+                if ($marks->count() > 0) {
+                    // ...existing code for archiving marks...
+                    $subjects = [];
+                    $totalMarks = 0;
+                    $totalGpa = 0;
+                    $subjectCount = 0;
+                    foreach ($marks as $mark) {
+                        $subject = optional(\App\Models\Subject::find($mark->subjectId));
+                        $subjectName = $subject->subjectName ?? ('Subject-'.$mark->subjectId);
+                        $marksObtained = $mark->totalMarks ?? 0;
+                        $grade = $mark->laterGrade ?? 'N/A';
+                        $gpa = $mark->gradePoint ?? 0;
+                        $subjects[] = [
+                            'name' => $subjectName,
+                            'marks' => $marksObtained,
+                            'grade' => $grade,
+                            'gpa' => $gpa,
+                        ];
+                        $totalMarks += $marksObtained;
+                        $totalGpa += $gpa;
+                        $subjectCount++;
+                    }
+                    $gpa = $subjectCount > 0 ? round($totalGpa / $subjectCount, 2) : 0;
+                    $result = $gpa >= 1 ? 'Pass' : 'Fail';
+                    $resultData = [
+                        'subjects' => $subjects,
+                        'total_marks' => $totalMarks,
+                        'gpa' => $gpa,
+                        'result' => $result,
+                    ];
+                    // Try to get examId from marks if available
+                    $examId = $marks->first()->examId ?? null;
+                    $archiveData = [
+                        'student_id' => $update->id,
+                        'old_class' => $update->className,
+                        'old_roll' => $update->rollNumber,
+                        'old_session' => $update->sessName,
+                        'old_section' => $update->sectionName,
+                        'exam_id' => $examId,
+                        'result_data' => $resultData,
+                    ];
+                    \App\Models\ResultArchive::create($archiveData);
+                    // Optionally, delete old marks if you want to clear them after archiving
+                    // \App\Models\Marksheet::where('studentId', $update->id)->delete();
+                }
+                $update->className = $requ->promotId;
+                $update->rollNumber = $requ->rollNum[$x];
+                $update->save();
+            }
             $x++;
         }
-        // return $x;
-        if($x>=$totalData):
-            return redirect(route('studentPromotion'))->with('success','Student profile promoted successfull');
-        else:
+        if($x>=$totalData){
+            if(count($skippedRolls) > 0){
+                $msg = 'Student profile promoted successfully. Skipped roll(s) due to duplicate: ' . implode(', ', $skippedRolls);
+                return redirect(route('studentPromotion'))->with('error', $msg);
+            } else {
+                return redirect(route('studentPromotion'))->with('success','Student profile promoted successfully');
+            }
+        }else{
             return redirect(route('studentPromotion'))->with('error','Student profile promoted failed');
-        endif;
+        }
     }
 
     public function getPromotionData(Request $requ){

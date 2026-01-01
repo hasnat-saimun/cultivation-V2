@@ -1,4 +1,9 @@
 <?php
+use App\Http\Controllers\ResultArchiveController;
+// Result Archive
+Route::get('/result-archive', [ResultArchiveController::class, 'index'])->name('resultArchive');
+Route::get('/result-archive/transcript/{id}', [ResultArchiveController::class, 'transcript'])->name('resultArchive.transcript');
+
 // Testimonial routes
 Route::get('testimonials/create/{admission}', [App\Http\Controllers\TestimonialController::class, 'create'])->name('testimonials.create');
 Route::post('testimonials/store', [App\Http\Controllers\TestimonialController::class, 'store'])->name('testimonials.store');
@@ -98,6 +103,8 @@ Route::get('/download-student-template', [StudentController::class, 'downloadStu
 
 
 Route::middleware(['adminGuard'])->group (function(){
+        // Result Archive
+        Route::get('/result-archive', [\App\Http\Controllers\ResultArchiveController::class, 'index'])->name('resultArchive');
     // Documentation route (internal user guide)
     Route::get('/user-guide', [DocsController::class, 'userGuide'])->name('userGuide');
     // Attendance (teacher & general access)
