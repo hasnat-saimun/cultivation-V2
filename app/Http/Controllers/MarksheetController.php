@@ -179,7 +179,12 @@ class MarksheetController extends Controller
 
             // Pre-cache subject details to reduce queries
             $subjectCache = [];
-            foreach($subjects as $s){ $subjectCache[$s->id] = $s; }
+            $subjectNameToId = [];
+            foreach($subjects as $s){
+                $subjectCache[$s->id] = $s;
+                $nm = is_string($s->subjectName) ? trim($s->subjectName) : (string)$s->subjectName;
+                if($nm !== ''){ $subjectNameToId[$nm] = (int)$s->id; }
+            }
 
             // Grade list caching for 0-100 mapping
             $gradeList = GradeList::orderBy('minMark','ASC')->get();
@@ -188,9 +193,27 @@ class MarksheetController extends Controller
                 $perSubjectOutput = [];
                 $selectedReligiousId = $stu->religiousSubjectId ? (int)$stu->religiousSubjectId : 0;
                 $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
-                // If student is in archived, use archived marks
-                if (isset($archivedStudents[$stu->id])) {
-                    $stuMarks = collect($archivedStudents[$stu->id])->map(function($m){ return (object)$m; });
+                // If student is in archived, use archived marks (transform archived shape)
+                if (isset($archivedStudents[$stu->id]) && is_array($archivedStudents[$stu->id])) {
+                    $arch = $archivedStudents[$stu->id];
+                    $rows = isset($arch['subjects']) && is_array($arch['subjects']) ? $arch['subjects'] : [];
+                    $stuMarks = collect($rows)->map(function($r) use ($subjectNameToId){
+                        $name = isset($r['name']) ? trim((string)$r['name']) : '';
+                        $sid = ($name !== '' && isset($subjectNameToId[$name])) ? (int)$subjectNameToId[$name] : null;
+                        if(!$sid){ return null; }
+                        $total = isset($r['marks']) && is_numeric($r['marks']) ? (float)$r['marks'] : 0.0;
+                        $gp = isset($r['gpa']) && is_numeric($r['gpa']) ? (float)$r['gpa'] : null;
+                        $grade = $r['grade'] ?? null;
+                        return (object)[
+                            'subjectId' => $sid,
+                            'subjectMarks' => null,
+                            'objectMarks' => null,
+                            'practicalMarks' => null,
+                            'totalMarks' => $total,
+                            'laterGrade' => $grade,
+                            'gradePoint' => $gp,
+                        ];
+                    })->filter()->values();
                 } else {
                     $stuMarks = Marksheet::where('examId',$examId)
                         ->where('classId',$classId)
@@ -201,7 +224,10 @@ class MarksheetController extends Controller
                 }
                 $marksBySubject = [];
                 foreach($stuMarks as $m){
-                    $marksBySubject[$m->subjectId] = $m; // last wins if duplicates
+                    // Guard against malformed archived rows
+                    if(isset($m->subjectId)){
+                        $marksBySubject[$m->subjectId] = $m; // last wins if duplicates
+                    }
                 }
                 // ...existing code...
                 // The following block should be inside a loop over subjects, e.g.:
@@ -476,6 +502,23 @@ class MarksheetController extends Controller
                 'exam' => $exam,
             ]);
         }
+        // Default response when required filters are not provided
+        return view('result.allMarksheet', [
+            'subjects' => collect([]),
+            'passResults' => [],
+            'failResults' => [],
+            'incompleteResults' => [],
+            'passResultsCompact' => [],
+            'failResultsCompact' => [],
+            'incompleteResultsCompact' => [],
+            'compactMode' => (bool) $request->get('compact'),
+            'examId' => $examId,
+            'classId' => $classId,
+            'sessionId' => $sessionId,
+            'sectionId' => $sectionId,
+            'studentsLoaded' => false,
+            'exam' => $exam,
+        ]);
     }
 
     public function generateMarksheet(Request $requ){
