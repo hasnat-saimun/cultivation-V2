@@ -80,25 +80,34 @@
                 // Only attach click if there's a submenu
                 if(link && sub){
                     link.addEventListener('click', function(e){
-                        e.preventDefault();
-                        const isOpen = li.classList.contains('open');
-                        
-                        // Close all others
-                        groups.forEach(other=>{
-                            other.classList.remove('open');
-                            const otherSub = other.querySelector('ul.sub-group-menu');
-                            if(otherSub) otherSub.style.display='none';
-                            const otherLink = other.querySelector(':scope > a.nav-link');
-                            if(otherLink) otherLink.classList.remove('active');
-                        });
-                        
-                        // Toggle current
-                        if(!isOpen){
-                            li.classList.add('open');
-                            sub.style.display='block';
-                            link.classList.add('active');
+                        if(this.getAttribute('href')==='#'){
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            const isOpen = li.classList.contains('open');
+                            
+                            // Close all others
+                            groups.forEach(other=>{
+                                other.classList.remove('open');
+                                const otherSub = other.querySelector('ul.sub-group-menu');
+                                if(otherSub) otherSub.classList.remove('menu-open');
+                                const otherLink = other.querySelector(':scope > a.nav-link');
+                                if(otherLink) otherLink.classList.remove('active');
+                            });
+                            
+                            // Toggle current
+                            if(!isOpen){
+                                li.classList.add('open');
+                                sub.classList.add('menu-open');
+                                link.classList.add('active');
+                            } else {
+                                li.classList.remove('open');
+                                sub.classList.remove('menu-open');
+                                link.classList.remove('active');
+                            }
                         }
-                    });
+                    }, true);
                 }
             });
         });

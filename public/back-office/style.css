@@ -2166,6 +2166,9 @@ ul {
 .sidebar-menu-one .sidebar-menu-content .nav-sidebar-menu > .nav-item .sub-group-menu.sub-group-active {
   display: block;
 }
+.sidebar-menu-one .sidebar-menu-content .nav-sidebar-menu > .nav-item .sub-group-menu.menu-open {
+  display: block;
+}
 .sidebar-menu-one .sidebar-menu-content .nav-sidebar-menu .sidebar-nav-item > .nav-link:after {
   content: "\f107";
   font-family: Flaticon;

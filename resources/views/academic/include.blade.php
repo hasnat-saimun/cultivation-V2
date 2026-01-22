@@ -46,7 +46,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $instOpen ? 'open' : '' }}" data-group="academic-institute">
                             <a href="#" class="nav-link {{ $instOpen ? 'active' : '' }}"><i class="fa-regular fa-building-flag"></i> <span>Institute Info</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $instOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $instOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('insInfo') }}" class="nav-link {{ request()->routeIs('insInfo') ? 'active' : '' }}"><i
                                             class="fas fa-angle-right"></i>About Institue</a>
@@ -67,7 +67,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $acadOpen ? 'open' : '' }}" data-group="academic-info">
                             <a href="#" class="nav-link {{ $acadOpen ? 'active' : '' }}"><i class="fa-regular fa-book-open"></i> <span>Academic Info</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $acadOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $acadOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('syllabusManage') }}" class="nav-link {{ request()->routeIs('syllabusManage') ? 'active' : '' }}"><i
                                             class="fas fa-angle-right"></i>Syllabus</a>
@@ -90,7 +90,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $placementOpen ? 'open' : '' }}" data-group="academic-placement">
                             <a href="#" class="nav-link {{ $placementOpen ? 'active' : '' }}"><i class="fa-thin fa-database"></i>  <span>Placement Cell</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $placementOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $placementOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('placementCell') }}" class="nav-link {{ request()->routeIs('placementCell') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Job Placement</a>
                                 </li>
@@ -101,7 +101,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $noticeOpen ? 'open' : '' }}" data-group="academic-notice">
                             <a href="#" class="nav-link {{ $noticeOpen ? 'active' : '' }}"><i class="fa-sharp fa-solid fa-list-check"></i>  <span>Notice</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $noticeOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $noticeOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('newNotice') }}" class="nav-link {{ request()->routeIs('newNotice') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>New Notice</a>
                                 </li>
@@ -112,7 +112,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $galleryOpen ? 'open' : '' }}" data-group="academic-gallery">
                             <a href="#" class="nav-link {{ $galleryOpen ? 'active' : '' }}"><i class="fa-brands fa-envira"></i>  <span>Gallery</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $galleryOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $galleryOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('newPhoto') }}" class="nav-link {{ request()->routeIs('newPhoto') ? 'active' : '' }}"><i
                                             class="fas fa-angle-right"></i>Photos</a>
@@ -125,76 +125,50 @@
                     </ul>
                 </div>
                 <script>
-                    // Robust sidebar group toggle: immediate first-click response, prevents text selection flicker, keyboard accessible.
-                    document.addEventListener('DOMContentLoaded', function () {
-                        const storageKey = 'academicSidebarOpenGroups';
-                        let saved; try { saved = JSON.parse(localStorage.getItem(storageKey) || '[]'); } catch(_) { saved = []; }
-                        const groupItems = Array.from(document.querySelectorAll('.sidebar-menu-content .sidebar-nav-item[data-group]'));
-
-                        function persist(groups){
-                            try { localStorage.setItem(storageKey, JSON.stringify(groups)); } catch(_) { /* ignore */ }
-                        }
-
-                        groupItems.forEach(li => {
-                            const group = li.getAttribute('data-group');
-                            const link = li.querySelector(':scope > a.nav-link');
-                            const submenu = li.querySelector(':scope > ul.sub-group-menu');
-                            if(!link || !submenu) return; // skip non-group
-
-                            // Ensure link is focusable for accessibility
-                            link.setAttribute('role','button');
-                            link.setAttribute('tabindex','0');
-
-                            const serverOpen = li.classList.contains('open') || (submenu && submenu.style.display === 'block');
-                            const shouldOpen = serverOpen || saved.includes(group);
-                            if (shouldOpen) {
-                                li.classList.add('open');
-                                submenu.style.display = 'block';
-                                link.classList.add('active');
-                            } else {
-                                submenu.style.display = 'none';
-                            }
-
-                            function toggle(e){
-                                if(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-                                const nowOpen = !li.classList.contains('open');
-
-                                // If opening this group, collapse all others (accordion behavior)
-                                if(nowOpen){
-                                    groupItems.forEach(other => {
-                                        if(other === li) return;
-                                        other.classList.remove('open','active');
-                                        const otherLink = other.querySelector(':scope > a.nav-link');
-                                        const otherSub = other.querySelector(':scope > ul.sub-group-menu');
-                                        if(otherLink) otherLink.classList.remove('active');
-                                        if(otherSub){
-                                            otherSub.style.display = 'none';
-                                            otherSub.classList.remove('menu-open');
+                    $(document).ready(function() {
+                        // Clear old corrupted localStorage
+                        localStorage.removeItem('academicSidebarOpenGroups');
+                        
+                        // Academic sidebar menu toggle - Simple and clean
+                        const groups = document.querySelectorAll('li.sidebar-nav-item[data-group]');
+                        
+                        groups.forEach((menuItem)=>{
+                            const link = menuItem.querySelector(':scope > a.nav-link');
+                            const submenu = menuItem.querySelector('ul.sub-group-menu');
+                            
+                            if(link && submenu) {
+                                link.addEventListener('click', function(e){
+                                    if(this.getAttribute('href')==='#'){
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        e.stopImmediatePropagation();
+                                        
+                                        const isOpen = menuItem.classList.contains('open');
+                                        
+                                        // Close all other menus
+                                        groups.forEach(otherItem=>{
+                                            if(otherItem !== menuItem && otherItem.classList.contains('open')){
+                                                otherItem.classList.remove('open');
+                                                const otherSub = otherItem.querySelector('ul.sub-group-menu');
+                                                if(otherSub) otherSub.classList.remove('menu-open');
+                                                const otherLink = otherItem.querySelector(':scope > a.nav-link');
+                                                if(otherLink) otherLink.classList.remove('active');
+                                            }
+                                        });
+                                        
+                                        // Toggle current menu
+                                        if(isOpen){
+                                            menuItem.classList.remove('open');
+                                            submenu.classList.remove('menu-open');
+                                            link.classList.remove('active');
+                                        } else {
+                                            menuItem.classList.add('open');
+                                            submenu.classList.add('menu-open');
+                                            link.classList.add('active');
                                         }
-                                    });
-                                }
-
-                                li.classList.toggle('open', nowOpen);
-                                submenu.style.display = nowOpen ? 'block' : 'none';
-                                link.classList.toggle('active', nowOpen);
-                                li.classList.toggle('active', nowOpen);
-                                submenu.classList.toggle('menu-open', nowOpen);
-
-                                // Persistence: only keep this group if open (single open policy)
-                                saved = nowOpen ? [group] : [];
-                                persist(saved);
+                                    }
+                                }, true);
                             }
-
-                            // Capture phase to preempt theme's jQuery delegated handler
-                            link.addEventListener('click', function(e){ toggle(e); }, true);
-                            // Support Enter/Space key
-                            link.addEventListener('keydown', function(ev){
-                                if(ev.key === 'Enter' || ev.key === ' '){
-                                    ev.preventDefault();
-                                    // synthesize a click-like toggle with propagation stop
-                                    toggle(ev);
-                                }
-                            });
                         });
                     });
                 </script>

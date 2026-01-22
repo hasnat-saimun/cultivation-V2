@@ -43,7 +43,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $studentFeesOpen ? 'open' : '' }}">
                             <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-regular fa-building-flag"></i> <span>Student Fees</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $studentFeesOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $studentFeesOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>
                                 </li>
@@ -57,7 +57,7 @@
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $cashOpen ? 'open' : '' }}">
                             <a href="#" class="nav-link {{ $cashOpen ? 'active' : '' }}"><i class="fa-regular fa-book-open"></i> <span>Cash Calculas</span></a>
-                            <ul class="nav sub-group-menu" style="{{ $cashOpen ? 'display:block;' : '' }}">
+                            <ul class="nav sub-group-menu{{ $cashOpen ? ' menu-open' : '' }}">
                                 <li class="nav-item">
                                     <a href="{{ route('cashCalculasView') }}" class="nav-link {{ request()->routeIs('cashCalculasView') ? 'active' : '' }}"><i  class="fas fa-angle-right"></i>Debit/Credit</a>
                                 </li>
@@ -106,6 +106,48 @@
         $(document).ready(function() {
             $(".alert").fadeTo(2000, 500).slideUp(500, function() {
                 $(".alert").slideUp(500);
+            });
+            
+            // Account sidebar menu toggle - Simple and clean
+            const groups = document.querySelectorAll('li.sidebar-nav-item');
+            
+            groups.forEach((menuItem)=>{
+                const link = menuItem.querySelector(':scope > a.nav-link');
+                const submenu = menuItem.querySelector('ul.sub-group-menu');
+                
+                if(link && submenu) {
+                    link.addEventListener('click', function(e){
+                        if(this.getAttribute('href')==='#'){
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            const isOpen = menuItem.classList.contains('open');
+                            
+                            // Close all other menus
+                            groups.forEach(otherItem=>{
+                                if(otherItem !== menuItem && otherItem.classList.contains('open')){
+                                    otherItem.classList.remove('open');
+                                    const otherSub = otherItem.querySelector('ul.sub-group-menu');
+                                    if(otherSub) otherSub.classList.remove('menu-open');
+                                    const otherLink = otherItem.querySelector(':scope > a.nav-link');
+                                    if(otherLink) otherLink.classList.remove('active');
+                                }
+                            });
+                            
+                            // Toggle current menu
+                            if(isOpen){
+                                menuItem.classList.remove('open');
+                                submenu.classList.remove('menu-open');
+                                link.classList.remove('active');
+                            } else {
+                                menuItem.classList.add('open');
+                                submenu.classList.add('menu-open');
+                                link.classList.add('active');
+                            }
+                        }
+                    }, true);
+                }
             });
         });
     </script>
