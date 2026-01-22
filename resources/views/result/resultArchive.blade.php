@@ -43,10 +43,10 @@ Result Archive
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Class</label>
-                    <select name="classId" class="form-control">
+                    <select name="className" class="form-control">
                         <option value="">All</option>
                         @foreach($classNames as $id => $name)
-                            <option value="{{ $id }}" {{ request('classId') == $id ? 'selected' : '' }}>{{ $name }}</option>
+                            <option value="{{ $id }}" {{ request('className') == $id ? 'selected' : '' }}>{{ $name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -75,7 +75,7 @@ Result Archive
                 <div class="col-md-1">
                     <button class="btn btn-success w-100">Filter</button>
                 </div>
-                @if(request()->hasAny(['classId','sessionId','sectionId','roll']))
+                @if(request()->hasAny(['className','sessionId','sectionId','roll','exam_id','archive_year']))
                 <div class="col-md-1">
                     <a href="{{ route('resultArchive') }}" class="btn btn-warning w-100">Reset</a>
                 </div>

@@ -9,7 +9,10 @@ All Staffs
                         <div class="card card-default">
                             <div class="card-header bg-light">
                                 <h3>All Staff</h3>
-                                <a href="{{ route('addStaff') }}" class="btn btn-success">Add Profile</a>
+                                <div class="d-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary" data-toggle="modal" data-target="#bulkUploadModal">Bulk Upload</button>
+                                    <a href="{{ route('addStaff') }}" class="btn btn-success">Add Profile</a>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -69,4 +72,55 @@ All Staffs
                         </div>
                     </div>
                 </div>
+
+                <!-- Bulk Upload Modal -->
+                <div class="modal fade" id="bulkUploadModal" tabindex="-1" aria-labelledby="bulkUploadLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="bulkUploadLabel">Staff Bulk Upload</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                            </div>
+                            <form id="bulkUploadForm" method="post" action="{{ route('staffBulkUploadStore') }}" enctype="multipart/form-data">
+                                @csrf
+                                <div class="modal-body">
+                                    <div id="uploadMessage"></div>
+                                    <p class="text-muted mb-3">Upload a CSV to add/update staff. Existing rows are matched by the field you choose.</p>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Match existing by</label>
+                                            <select name="match_by" class="form-control" required>
+                                                <option value="">Select field</option>
+                                                <option value="staffId">Staff ID</option>
+                                                <option value="email">Email</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">CSV File</label>
+                                            <input type="file" name="csv_file" class="form-control" accept=".csv,text/csv" required>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <a class="btn btn-outline-secondary btn-sm" href="{{ route('staffBulkSample') }}">Download sample CSV</a>
+                                    </div>
+                                    <hr>
+                                    <small class="text-muted">Supported columns: staffId, firstName, lastName, email, joinDate, mobile, designation, gender, dob, fathersName, mothersName, blGroup, religion, address, rank</small>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Upload &amp; Process</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
 @endsection
+
+@push('scripts')
+<script>
+    document.getElementById('bulkUploadForm')?.addEventListener('submit', function(e) {
+        const msgDiv = document.getElementById('uploadMessage');
+        msgDiv.innerHTML = '<div class="alert alert-info">Processing...</div>';
+    });
+</script>
+@endpush

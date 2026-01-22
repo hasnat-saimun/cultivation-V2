@@ -5,6 +5,7 @@ use Illuminate\Http\Request;
 use App\Models\newAdmission;
 use App\Models\classManage;
 use App\Models\sectionManage;
+use App\Models\sessionManage;
 use App\Models\Department;
 use App\Models\Subject;
 use Illuminate\Support\Str;
@@ -28,6 +29,82 @@ class AdmissionController extends Controller
     public function studentList(){
         $stdData = newAdmission::all();
         return view('cultivation.studentList',['studentData'=>$stdData]);
+    }
+
+    public function bulkPhotoForm(Request $request)
+    {
+        $classDetails = classManage::all();
+        $sessionDetails = sessionManage::all();
+        $sectionDetails = sectionManage::all();
+
+        $filters = [
+            'classId' => $request->get('classId'),
+            'sessionId' => $request->get('sessionId'),
+            'sectionId' => $request->get('sectionId'),
+        ];
+
+        $students = collect();
+        if ($filters['classId'] && $filters['sessionId'] && $filters['sectionId']) {
+            $students = newAdmission::where([
+                'className' => $filters['classId'],
+                'sessName' => $filters['sessionId'],
+                'sectionName' => $filters['sectionId'],
+            ])->orderBy('rollNumber')->get();
+        }
+
+        return view('cultivation.student-photo-bulk', compact('classDetails', 'sessionDetails', 'sectionDetails', 'students', 'filters'));
+    }
+
+    public function bulkPhotoUpload(Request $request)
+    {
+        $request->validate([
+            'classId' => 'required|integer',
+            'sessionId' => 'required|integer',
+            'sectionId' => 'required|integer',
+            'student_ids' => 'array',
+            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:2048',
+        ]);
+
+        $studentIds = $request->input('student_ids', []);
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($studentIds as $sid) {
+            $fileKey = "photos.$sid";
+            if (!$request->hasFile($fileKey)) {
+                $skipped++;
+                continue;
+            }
+
+            $student = newAdmission::find($sid);
+            if (!$student) {
+                $skipped++;
+                continue;
+            }
+
+            $photo = $request->file($fileKey);
+            $newAvatar = Str::random(12) . '_' . time() . '.' . $photo->getClientOriginalExtension();
+            $photo->move(public_path('upload/image/student/'), $newAvatar);
+
+            if (!empty($student->avatar) && File::exists(public_path('upload/image/student/' . $student->avatar))) {
+                File::delete(public_path('upload/image/student/' . $student->avatar));
+            }
+
+            $student->avatar = $newAvatar;
+            $student->save();
+            $updated++;
+        }
+
+        $message = "Updated $updated photo(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped $skipped without files.";
+        }
+
+        return redirect()->route('studentPhotoBulk', [
+            'classId' => $request->classId,
+            'sessionId' => $request->sessionId,
+            'sectionId' => $request->sectionId,
+        ])->with('success', $message);
     }
 
     public function studentPromotion(){
@@ -56,52 +133,75 @@ class AdmissionController extends Controller
                     $x++;
                     continue;
                 }
-                // Archive current result before promotion
+                // Archive current result before promotion with proper pair subject handling
                 $marks = \App\Models\Marksheet::where('studentId', $update->id)->get();
                 if ($marks->count() > 0) {
-                    // ...existing code for archiving marks...
-                    $subjects = [];
-                    $totalMarks = 0;
-                    $totalGpa = 0;
-                    $subjectCount = 0;
+                    // Get all subjects and detect pairs
+                    $subjectIds = $marks->pluck('subjectId')->unique();
+                    $allSubjects = \App\Models\Subject::whereIn('id', $subjectIds)->get();
+            
+                    // Import MarksheetController methods (detectSubjectPairs, mergeSubjectsForRow)
+                    $marksheetCtrl = app(\App\Http\Controllers\MarksheetController::class);
+            
+                    // Build per-subject output
+                    $perSubjectOutput = [];
+                    $subjectCache = [];
                     foreach ($marks as $mark) {
                         $subject = optional(\App\Models\Subject::find($mark->subjectId));
                         $subjectName = $subject->subjectName ?? ('Subject-'.$mark->subjectId);
-                        $marksObtained = $mark->totalMarks ?? 0;
-                        $grade = $mark->laterGrade ?? 'N/A';
-                        $gpa = $mark->gradePoint ?? 0;
-                        $subjects[] = [
+                        if($subject) { $subjectCache[$subject->id] = $subject; }
+                
+                        $perSubjectOutput[] = [
+                            'id' => $mark->subjectId,
                             'name' => $subjectName,
-                            'marks' => $marksObtained,
-                            'grade' => $grade,
-                            'gpa' => $gpa,
+                            'cq' => $mark->subjectMarks ?? 0,
+                            'mcq' => $mark->objectMarks ?? 0,
+                            'practical' => $mark->practicalMarks ?? 0,
+                            'total' => $mark->totalMarks ?? 0,
+                            'grade' => $mark->laterGrade ?? 'N/A',
+                            'gradePoint' => $mark->gradePoint ?? 0,
+                            'type' => $subject->subjectType ?? 'Main',
+                            'cqGrade' => '-',
+                            'mcqGrade' => '-',
+                            'prGrade' => '-',
                         ];
-                        $totalMarks += $marksObtained;
-                        $totalGpa += $gpa;
-                        $subjectCount++;
                     }
-                    $gpa = $subjectCount > 0 ? round($totalGpa / $subjectCount, 2) : 0;
-                    $result = $gpa >= 1 ? 'Pass' : 'Fail';
+            
+                    // Detect and merge pair subjects
+                    $pairGroups = $marksheetCtrl->detectSubjectPairs($allSubjects);
+                    $mergedSubjects = $marksheetCtrl->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, false);
+            
+                    // Calculate final GPA and result from merged subjects
+                    $totalMarks = 0;
+                    $mainGradePoints = [];
+                    $hasFailure = false;
+            
+                    foreach ($mergedSubjects as $subj) {
+                        if(is_numeric($subj['total'])){ $totalMarks += (float)$subj['total']; }
+                        if(($subj['grade'] ?? '-') === 'F'){ $hasFailure = true; }
+                        $gp = ($subj['grade'] === 'F') ? 0.0 : (is_numeric($subj['gradePoint']) ? (float)$subj['gradePoint'] : null);
+                        if($gp !== null && ($subj['type'] ?? 'Main') === 'Main'){ $mainGradePoints[] = $gp; }
+                    }
+            
+                    $finalGpa = count($mainGradePoints) > 0 ? round(array_sum($mainGradePoints) / count($mainGradePoints), 2) : 0;
+                    $finalResult = $hasFailure ? 'Fail' : 'Pass';
+            
                     $resultData = [
-                        'subjects' => $subjects,
+                        'subjects' => $mergedSubjects,
                         'total_marks' => $totalMarks,
-                        'gpa' => $gpa,
-                        'result' => $result,
+                        'gpa' => $finalGpa,
+                        'result' => $finalResult,
                     ];
-                    // Try to get examId from marks if available
-                    $examId = $marks->first()->examId ?? null;
+            
                     $archiveData = [
                         'student_id' => $update->id,
                         'old_class' => $update->className,
                         'old_roll' => $update->rollNumber,
                         'old_session' => $update->sessName,
                         'old_section' => $update->sectionName,
-                        'exam_id' => $examId,
                         'result_data' => $resultData,
                     ];
                     \App\Models\ResultArchive::create($archiveData);
-                    // Optionally, delete old marks if you want to clear them after archiving
-                    // \App\Models\Marksheet::where('studentId', $update->id)->delete();
                 }
                 $update->className = $requ->promotId;
                 $update->rollNumber = $requ->rollNum[$x];

@@ -1,12 +1,64 @@
 @php
-    // Main and optional subject tables, failed subjects, GPA, remarks, etc. for archive transcript
-    $mainSubjects = $transcriptData['main_subjects'] ?? [];
-    $optionalSubjects = $transcriptData['optional_subjects'] ?? [];
-    $failedSubjects = $transcriptData['failed_subjects'] ?? [];
+    // Use stored merged subjects from archive (same shape as live transcript)
+    $subjectsRaw = $transcriptData['subjects'] ?? [];
     $totalMarks = $transcriptData['total_marks'] ?? '-';
-    $finalLetterGrade = $transcriptData['final_letter_grade'] ?? '-';
+    $finalLetterGrade = $transcriptData['final_letter_grade'] ?? ($transcriptData['result_letter'] ?? ($transcriptData['result'] ?? '-'));
     $finalGradePoint = $transcriptData['gpa'] ?? '-';
     $remark = $transcriptData['result'] ?? '-';
+
+    $mainSubjects = [];
+    $optionalSubjects = [];
+    $failedSubjects = [];
+
+    $fmtComponent = function($p1, $p2){
+        $v1 = is_numeric($p1) ? (float)$p1 : null;
+        $v2 = is_numeric($p2) ? (float)$p2 : null;
+        if($v1 !== null && $v2 !== null){ return '(' . $v1 . ' + ' . $v2 . ') = ' . ($v1 + $v2); }
+        if($v1 !== null){ return $v1; }
+        if($v2 !== null){ return $v2; }
+        return '-';
+    };
+
+    foreach($subjectsRaw as $row){
+        $isOptional = ($row['type'] ?? 'Main') === 'Optional';
+        if($isOptional){ $target =& $optionalSubjects; } else { $target =& $mainSubjects; }
+
+        $isPaired = !empty($row['paired']) && isset($row['paper1']) && isset($row['paper2']);
+
+        if($isPaired){
+            $p1 = $row['paper1'];
+            $p2 = $row['paper2'];
+            $theory     = $fmtComponent($p1['cq'] ?? null, $p2['cq'] ?? null);
+            $mcq        = $fmtComponent($p1['mcq'] ?? null, $p2['mcq'] ?? null);
+            $practical  = $fmtComponent($p1['practical'] ?? null, $p2['practical'] ?? null);
+            $totalVal1  = is_numeric($p1['total'] ?? null) ? (float)$p1['total'] : null;
+            $totalVal2  = is_numeric($p2['total'] ?? null) ? (float)$p2['total'] : null;
+            $totalDisp  = ($totalVal1 !== null && $totalVal2 !== null) ? '(' . $totalVal1 . ' + ' . $totalVal2 . ') = ' . ($totalVal1 + $totalVal2) : ($row['total'] ?? '-');
+            $grade      = $row['grade'] ?? '-';
+            $point      = isset($row['gradePoint']) && is_numeric($row['gradePoint']) ? number_format($row['gradePoint'],2) : ($grade === 'F' ? '0.00' : '-');
+        } else {
+            $theory     = $row['cq'] ?? ($row['theory'] ?? '-');
+            $mcq        = $row['mcq'] ?? '-';
+            $practical  = $row['practical'] ?? '-';
+            $totalDisp  = $row['total'] ?? ($row['marks'] ?? '-');
+            $grade      = $row['grade'] ?? '-';
+            $point      = isset($row['gradePoint']) && is_numeric($row['gradePoint']) ? number_format($row['gradePoint'],2) : ($grade === 'F' ? '0.00' : '-');
+        }
+
+        $target[] = [
+            'name' => $row['name'] ?? '-',
+            'theory' => $theory,
+            'mcq' => $mcq,
+            'practical' => $practical,
+            'total' => $totalDisp,
+            'grade' => $grade,
+            'point' => $point,
+        ];
+
+        if(($row['grade'] ?? '-') === 'F' && !empty($row['name'])){
+            $failedSubjects[] = $row['name'];
+        }
+    }
 @endphp
 
 <h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
@@ -29,7 +81,7 @@
                 <td>{{ $row['practical'] ?? '-' }}</td>
                 <td>{{ $row['total'] ?? '-' }}</td>
                 <td>{{ $row['grade'] ?? '-' }}</td>
-                <td>{{ isset($row['point']) ? number_format($row['point'],2) : '-' }}</td>
+                <td>{{ $row['point'] ?? '-' }}</td>
             </tr>
         @empty
             <tr><td colspan="7">No main subjects</td></tr>
@@ -57,7 +109,7 @@
                 <td>{{ $row['practical'] ?? '-' }}</td>
                 <td>{{ $row['total'] ?? '-' }}</td>
                 <td>{{ $row['grade'] ?? '-' }}</td>
-                <td>{{ isset($row['point']) ? number_format($row['point'],2) : '-' }}</td>
+                <td>{{ $row['point'] ?? '-' }}</td>
             </tr>
         @empty
             <tr><td colspan="7">No optional subjects</td></tr>

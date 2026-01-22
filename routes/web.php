@@ -817,6 +817,16 @@ Route::middleware(['adminGuard'])->group (function(){
         'stdPhotoUpdate'
     ])->name('stdPhotoUpdate');
 
+    Route::get('/student/photo/bulk', [
+        AdmissionController::class,
+        'bulkPhotoForm'
+    ])->name('studentPhotoBulk');
+
+    Route::post('/student/photo/bulk', [
+        AdmissionController::class,
+        'bulkPhotoUpload'
+    ])->name('studentPhotoBulkUpload');
+
 
     Route::get('/student/del/avatar/{stdId}',[
         AdmissionController::class ,
@@ -898,6 +908,21 @@ Route::middleware(['adminGuard'])->group (function(){
         'teacherList'
     ])->name('teacherList');
 
+    Route::get('/teacher/bulk-upload',[
+        TeacherController::class,
+        'bulkUploadForm'
+    ])->name('teacherBulkUpload');
+
+    Route::post('/teacher/bulk-upload',[
+        TeacherController::class,
+        'bulkUploadStore'
+    ])->name('teacherBulkUploadStore');
+
+    Route::get('/teacher/bulk-sample',[
+        TeacherController::class,
+        'downloadSample'
+    ])->name('teacherBulkSample');
+
     //Teacher route declaration
 
     Route::get('/staff/admit',[
@@ -933,6 +958,21 @@ Route::middleware(['adminGuard'])->group (function(){
         StaffController::class,
         'updateStaffPhoto'
     ])->name('updateStaffPhoto');
+
+    Route::get('/staff/bulk-upload',[
+        StaffController::class,
+        'bulkUploadForm'
+    ])->name('staffBulkUpload');
+
+    Route::post('/staff/bulk-upload',[
+        StaffController::class,
+        'bulkUploadStore'
+    ])->name('staffBulkUploadStore');
+
+    Route::get('/staff/bulk-sample',[
+        StaffController::class,
+        'downloadSample'
+    ])->name('staffBulkSample');
 
     Route::get('/staff/list',[
         StaffController::class ,

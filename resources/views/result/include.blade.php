@@ -195,7 +195,7 @@
                         li.classList.add('open');
                         const sub = li.querySelector('ul.sub-group-menu');
                         if(sub) sub.style.display = 'block';
-                        const a = li.querySelector('> a.nav-link');
+                        const a = li.querySelector(':scope > a.nav-link');
                         if(a) a.classList.add('active');
                     }
                 });
@@ -203,7 +203,7 @@
             const groups = document.querySelectorAll('li.sidebar-nav-item');
             groups.forEach((li, idx)=>{
                 if(!li.dataset.group) li.dataset.group = 'rg'+idx;
-                const a = li.querySelector('> a.nav-link');
+                const a = li.querySelector(':scope > a.nav-link');
                 if(a){
                     a.addEventListener('click', function(e){
                         if(this.getAttribute('href')==='#'){

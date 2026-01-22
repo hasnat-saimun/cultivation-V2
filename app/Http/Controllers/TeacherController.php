@@ -64,6 +64,160 @@ class TeacherController extends Controller
         $profileData = TeacherManagement::all();
         return view('cultivation.teacherList',['profileData'=>$profileData]);
     }
+
+    public function bulkUploadForm()
+    {
+        $matchOptions = ['teacherId' => 'Teacher ID', 'email' => 'Email'];
+        $allowedColumns = [
+            'teacherId', 'firstName', 'lastName', 'fathersName', 'mothersName', 'gender', 'dob', 'designation',
+            'blGroup', 'religion', 'email', 'joinDate', 'mobile', 'address', 'mpoIndex', 'pdsId', 'rank'
+        ];
+        return view('cultivation.teacher-bulk-upload', compact('matchOptions', 'allowedColumns'));
+    }
+
+    public function bulkUploadStore(Request $request)
+    {
+        $request->validate([
+            'match_by' => 'required|in:teacherId,email',
+            'csv_file' => 'required|file|mimes:csv,txt|max:10240',
+        ]);
+
+        $file = $request->file('csv_file');
+        $handle = fopen($file->getRealPath(), 'r');
+        if (!$handle) {
+            return back()->with('error', 'Unable to read the uploaded file.');
+        }
+
+        $header = fgetcsv($handle);
+        if (!$header) {
+            return back()->with('error', 'CSV appears to be empty or has no header row.');
+        }
+
+        $map = $this->teacherColumnMap();
+        $created = 0;
+        $updated = 0;
+        $skipped = 0;
+        $matchBy = $request->match_by;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $mapped = $this->mapCsvRow($header, $row, $map);
+
+            // Skip completely empty rows
+            if ($this->isRowEmpty($mapped)) {
+                continue;
+            }
+
+            $matchValue = $mapped[$matchBy] ?? '';
+            if ($matchValue === '') {
+                $skipped++;
+                continue;
+            }
+
+            $profile = TeacherManagement::where($matchBy, $matchValue)->first();
+
+            if ($profile) {
+                foreach ($mapped as $key => $val) {
+                    if ($val !== '') {
+                        $profile->$key = $val;
+                    }
+                }
+                $profile->save();
+                $updated++;
+            } else {
+                // Require teacherId and firstName to create a new record
+                if (($mapped['teacherId'] ?? '') === '' || ($mapped['firstName'] ?? '') === '') {
+                    $skipped++;
+                    continue;
+                }
+
+                $profile = new TeacherManagement();
+                foreach ($mapped as $key => $val) {
+                    if ($val !== '') {
+                        $profile->$key = $val;
+                    }
+                }
+                $profile->save();
+                $created++;
+            }
+        }
+
+        fclose($handle);
+
+        $message = "Bulk upload complete. Updated: $updated, Created: $created, Skipped: $skipped.";
+        return redirect()->route('teacherBulkUpload')->with('success', $message);
+    }
+
+    public function downloadSample()
+    {
+        $path = public_path('samples/teacher_bulk_sample.csv');
+        if (!file_exists($path)) {
+            return back()->with('error', 'Sample file missing.');
+        }
+        return response()->download($path, 'teacher_bulk_sample.csv');
+    }
+
+    private function teacherColumnMap(): array
+    {
+        return [
+            'teacherid'      => 'teacherId',
+            'teacher_id'     => 'teacherId',
+            'id'             => 'teacherId',
+            'firstname'      => 'firstName',
+            'first_name'     => 'firstName',
+            'lastname'       => 'lastName',
+            'last_name'      => 'lastName',
+            'fathersname'    => 'fathersName',
+            'fathername'     => 'fathersName',
+            'father'         => 'fathersName',
+            'mothersname'    => 'mothersName',
+            'mothername'     => 'mothersName',
+            'mother'         => 'mothersName',
+            'gender'         => 'gender',
+            'dob'            => 'dob',
+            'designation'    => 'designation',
+            'blgroup'        => 'blGroup',
+            'bloodgroup'     => 'blGroup',
+            'religion'       => 'religion',
+            'email'          => 'email',
+            'mail'           => 'email',
+            'join'           => 'joinDate',
+            'joindate'       => 'joinDate',
+            'join_date'      => 'joinDate',
+            'mobile'         => 'mobile',
+            'phone'          => 'mobile',
+            'contact'        => 'mobile',
+            'address'        => 'address',
+            'mpo'            => 'mpoIndex',
+            'mpoindex'       => 'mpoIndex',
+            'pds'            => 'pdsId',
+            'pdsid'          => 'pdsId',
+            'rank'           => 'rank',
+        ];
+    }
+
+    private function mapCsvRow(array $header, array $row, array $map): array
+    {
+        $mapped = [];
+        foreach ($header as $idx => $col) {
+            $norm = strtolower(trim((string) $col));
+            $norm = str_replace([' ', '-'], '_', $norm);
+            if (!isset($map[$norm])) {
+                continue;
+            }
+            $mapped[$map[$norm]] = trim((string) ($row[$idx] ?? ''));
+        }
+        return $mapped;
+    }
+
+    private function isRowEmpty(array $row): bool
+    {
+        foreach ($row as $val) {
+            if (trim((string) $val) !== '') {
+                return false;
+            }
+        }
+        return true;
+    }
     
     public function viewTeacher($id){
         $singleData= TeacherManagement::find($id);
