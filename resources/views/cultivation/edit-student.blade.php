@@ -3,13 +3,39 @@
 Edit Student
 @endsection
 @section('backIndex')
+@push('styles')
+<style>
+    .form-card{border:0;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(23,43,77,.12);background:#fff}
+    .form-card .card-header{background:linear-gradient(120deg,#1f3047,#233958);color:#fff;border:0;padding:1.25rem 1.5rem}
+    .form-card .card-body{padding:1.5rem}
+    .form-card h5{color:#fff;margin:0;font-weight:700}
+    .text-white-70{color:rgba(255,255,255,.72)!important}
+    .form-label-required::after{content:"*";color:#ff6b6b;margin-left:4px}
+    .new-added-form .form-group label{font-weight:600;color:#233958}
+    .new-added-form .form-control,.new-added-form select,.new-added-form .select2-container--default .select2-selection--single{border-radius:10px}
+    .new-added-form .select2-container--default .select2-selection--single{height:42px!important;border-color:#ced4da}
+    .new-added-form .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px!important}
+    .new-added-form .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px!important}
+    .avatar-upload{border:1px dashed #cdd5e5;border-radius:12px;padding:18px;text-align:center;background:#f9fbff}
+    .avatar-upload input[type=file]{display:inline-block;margin-top:10px}
+    .btn-soft-light{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.18)}
+    .btn-soft-light:hover{background:rgba(255,255,255,.18);color:#fff}
+    .header-actions,.gap-2{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+</style>
+@endpush
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
                     <!-- Admit Form Area Start Here -->
-                    <div class="card height-auto">
-                            <div class="card-header bg-light">
-                                <a href="{{route('studentList')}}" class="btn btn-success">Student List</a>
+                    <div class="card form-card height-auto">
+                        <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-1">Edit Student Profile</h5>
+                                <small class="text-white-70">Adjust admission, guardian, and academic details.</small>
                             </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{route('studentList')}}" class="btn btn-soft-light btn-sm"><i class="fas fa-list mr-1"></i>Student List</a>
+                            </div>
+                        </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-12">

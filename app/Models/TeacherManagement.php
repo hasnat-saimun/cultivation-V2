@@ -16,6 +16,7 @@ class TeacherManagement extends Model
         'gender',
         'dob',
         'designation',
+        'designation_id',
         'blGroup',
         'religion',
         'email',
@@ -23,9 +24,14 @@ class TeacherManagement extends Model
         'mobile',
         'address',
         'mpoIndex',
-        'pdoId',
+        'pdsId',
         'avatar',
         'rank'
     ];
     use HasFactory;
+
+    public function designationModel()
+    {
+        return $this->belongsTo(Designation::class, 'designation_id');
+    }
 }

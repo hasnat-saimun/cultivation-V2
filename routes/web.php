@@ -24,6 +24,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BackofficeController;
 use App\Http\Controllers\AcademicController;
 use App\Http\Controllers\CultivationController;
+use App\Http\Controllers\DesignationController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\FrontController;
 use App\Http\Controllers\GalleryController;
@@ -384,6 +385,17 @@ Route::middleware(['adminGuard'])->group (function(){
         'delManagingCommittee'
     ])->name('delManagingCommittee');
 
+    // Governing body bulk photo upload
+    Route::get('/governing-body/bulk-photo-upload',[
+        InstituteController::class ,
+        'bulkPhotoUploadForm'
+    ])->name('governingBodyBulkPhotoUpload');
+
+    Route::post('/governing-body/bulk-photo-upload',[
+        InstituteController::class ,
+        'bulkPhotoUploadStore'
+    ])->name('governingBodyBulkPhotoUploadStore');
+
     // institute info ends here
 
     Route::get('/academic/syllabus/',[
@@ -568,6 +580,47 @@ Route::middleware(['adminGuard'])->group (function(){
         'delNeedyStdPanel'
     ])->name('delNeedyStdPanel');
     //academic info ends here
+
+    // Designation Management
+    Route::get('/designations', [
+        DesignationController::class,
+        'index'
+    ])->name('designationsIndex');
+
+    Route::get('/designations/create', [
+        DesignationController::class,
+        'create'
+    ])->name('designationsCreate');
+
+    Route::post('/designations/store', [
+        DesignationController::class,
+        'store'
+    ])->name('designationsStore');
+
+    Route::get('/designations/{id}/edit', [
+        DesignationController::class,
+        'edit'
+    ])->name('designationsEdit');
+
+    Route::post('/designations/{id}/update', [
+        DesignationController::class,
+        'update'
+    ])->name('designationsUpdate');
+
+    Route::get('/designations/{id}/delete', [
+        DesignationController::class,
+        'delete'
+    ])->name('designationsDelete');
+
+    Route::post('/designations/reorder', [
+        DesignationController::class,
+        'reorder'
+    ])->name('designationsReorder');
+
+    Route::get('/designations/{id}/toggle', [
+        DesignationController::class,
+        'toggleActive'
+    ])->name('designationsToggle');
 
     //
     Route::get('/configuration',[
@@ -838,11 +891,20 @@ Route::middleware(['adminGuard'])->group (function(){
         'delStudent'
     ])->name('delStudent');
 
+    Route::post('/student/bulk-delete',[
+        AdmissionController::class ,
+        'studentBulkDelete'
+    ])->name('studentBulkDelete');
+
 
     Route::get('/student/list',[
         AdmissionController::class,
         'studentList'
     ])->name('studentList');
+    Route::get('/student/export/pdf',[
+        AdmissionController::class,
+        'exportStudentPDF'
+    ])->name('student.export.pdf');
 
     Route::get('/student/idCard/{stdId}',[
         AdmissionController::class ,
@@ -908,6 +970,21 @@ Route::middleware(['adminGuard'])->group (function(){
         'teacherList'
     ])->name('teacherList');
 
+    Route::get('/teacher/bulk-update',[
+        TeacherController::class,
+        'bulkUpdateForm'
+    ])->name('teacherBulkUpdate');
+
+    Route::post('/teacher/bulk-update',[
+        TeacherController::class,
+        'bulkUpdateStore'
+    ])->name('teacherBulkUpdateStore');
+
+    Route::get('/teacher/export/pdf',[
+        TeacherController::class,
+        'exportPDF'
+    ])->name('teacher.export.pdf');
+
     Route::get('/teacher/bulk-upload',[
         TeacherController::class,
         'bulkUploadForm'
@@ -922,6 +999,26 @@ Route::middleware(['adminGuard'])->group (function(){
         TeacherController::class,
         'downloadSample'
     ])->name('teacherBulkSample');
+
+    Route::get('/teacher/template',[
+        TeacherController::class,
+        'downloadTemplate'
+    ])->name('teacherTemplate');
+
+    Route::get('/teacher/bulk-photo-upload',[
+        TeacherController::class,
+        'bulkPhotoUploadForm'
+    ])->name('teacherBulkPhotoUpload');
+
+    Route::post('/teacher/bulk-photo-upload',[
+        TeacherController::class,
+        'bulkPhotoUploadStore'
+    ])->name('teacherBulkPhotoUploadStore');
+
+    Route::post('/teacher/bulk-delete',[
+        TeacherController::class,
+        'teacherBulkDelete'
+    ])->name('teacherBulkDelete');
 
     //Teacher route declaration
 
@@ -974,10 +1071,45 @@ Route::middleware(['adminGuard'])->group (function(){
         'downloadSample'
     ])->name('staffBulkSample');
 
+    Route::get('/staff/template',[
+        StaffController::class,
+        'downloadTemplate'
+    ])->name('staffBulkTemplate');
+
+    Route::get('/staff/bulk-photo-upload',[
+        StaffController::class,
+        'bulkPhotoUploadForm'
+    ])->name('staffBulkPhotoUpload');
+
+    Route::post('/staff/bulk-photo-upload',[
+        StaffController::class,
+        'bulkPhotoUploadStore'
+    ])->name('staffBulkPhotoUploadStore');
+
+    Route::post('/staff/bulk-delete',[
+        StaffController::class,
+        'staffBulkDelete'
+    ])->name('staffBulkDelete');
+
     Route::get('/staff/list',[
         StaffController::class ,
         'staffList'
     ])->name('staffList');
+
+    Route::get('/staff/bulk-update',[
+        StaffController::class,
+        'bulkUpdateForm'
+    ])->name('staffBulkUpdate');
+
+    Route::post('/staff/bulk-update',[
+        StaffController::class,
+        'bulkUpdateStore'
+    ])->name('staffBulkUpdateStore');
+
+    Route::get('/staff/export/pdf',[
+        StaffController::class,
+        'exportPDF'
+    ])->name('staff.export.pdf');
 
 
     //Classes route declaration
@@ -1452,6 +1584,22 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class,
         'userRegList'
     ])->name('userRegList');
+
+    // API endpoints for bulk photo uploads
+    Route::get('/api/teachers/list', [
+        TeacherController::class,
+        'getTeachersList'
+    ])->name('api.teachers.list');
+
+    Route::get('/api/staff/list', [
+        StaffController::class,
+        'getStaffList'
+    ])->name('api.staff.list');
+
+    Route::get('/api/governing-body/list', [
+        InstituteController::class,
+        'getGoverningBodyList'
+    ])->name('api.governing-body.list');
 
     //web font end
 

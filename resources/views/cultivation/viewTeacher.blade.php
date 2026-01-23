@@ -71,16 +71,8 @@
                         <h3 class="mt-2">{{$singleData->firstName}}</h3>
                     </div>
                     <div class="card-body">
-                        <p class="mb-0"><strong class="pr-1">Staff ID:</strong>{{$singleData->teacherId}}</p>
-                        <p class="mb-0"><strong class="pr-1">Designation:</strong>@if($singleData->designation==1)
-                                                Principal
-                                                @elseif($singleData->designation==2)
-                                                Vice Principal
-                                                @elseif($singleData->designation==3)
-                                                Teacher
-                                                @else
-                                                Staff
-                                                @endif</p>
+                        <p class="mb-0"><strong class="pr-1">Teacher ID:</strong>{{$singleData->teacherId}}</p>
+                        <p class="mb-0"><strong class="pr-1">Designation:</strong>{{ $singleData->designationModel->name ?? $singleData->designation ?? 'N/A' }}</p>
                         <p class="mb-0"><strong class="pr-1">Mobile:</strong> {{$singleData->mobile}}</p>
                         <p class="mb-0"><strong class="pr-1">E-mail:</strong>{{$singleData->email}}
                        </p>

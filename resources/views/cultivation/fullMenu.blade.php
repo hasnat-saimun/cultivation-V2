@@ -51,7 +51,7 @@
     </li>
     {{-- ...rest of the full menu... --}}
     @php
-        $admissionRoutes = ['admitStudent','studentList','studentPromotion'];
+        $admissionRoutes = ['admitStudent','studentList','studentPromotion','studentPhotoBulk'];
         $admissionOpen = request()->routeIs($admissionRoutes);
     @endphp
     <li class="nav-item sidebar-nav-item {{ $admissionOpen ? 'open' : '' }}" data-group="admin-admission">
@@ -66,10 +66,13 @@
             <li class="nav-item">
                 <a href="{{ route('studentPromotion') }}" class="nav-link {{ request()->routeIs('studentPromotion') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Manage Promotion</a>
             </li>
+            <li class="nav-item">
+                <a href="{{ route('studentPhotoBulk') }}" class="nav-link {{ request()->routeIs('studentPhotoBulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk Photo Upload</a>
+            </li>
         </ul>
     </li>
     @php
-        $teacherRoutes = ['teacherList','addTeacher'];
+        $teacherRoutes = ['teacherList','addTeacher','teacherBulkPhotoUpload','teacherBulkUpdate'];
         $teacherOpen = request()->routeIs($teacherRoutes);
     @endphp
     <li class="nav-item sidebar-nav-item {{ $teacherOpen ? 'open' : '' }}" data-group="admin-teachers">
@@ -81,10 +84,16 @@
             <li class="nav-item">
                 <a href="{{ route('addTeacher') }}" class="nav-link {{ request()->routeIs('addTeacher') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> New Profile</a>
             </li>
+            <li class="nav-item">
+                <a href="{{ route('teacherBulkPhotoUpload') }}" class="nav-link {{ request()->routeIs('teacherBulkPhotoUpload') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Bulk Photo Upload</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('teacherBulkUpdate') }}" class="nav-link {{ request()->routeIs('teacherBulkUpdate') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Bulk Details Update</a>
+            </li>
         </ul>
     </li>
     @php
-        $staffRoutes = ['staffList','addStaff'];
+        $staffRoutes = ['staffList','addStaff','staffBulkPhotoUpload','staffBulkUpdate'];
         $staffOpen = request()->routeIs($staffRoutes);
     @endphp
     <li class="nav-item sidebar-nav-item {{ $staffOpen ? 'open' : '' }}" data-group="admin-staffs">
@@ -95,6 +104,27 @@
             </li>
             <li class="nav-item">
                 <a href="{{ route('addStaff') }}" class="nav-link {{ request()->routeIs('addStaff') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> New Profile</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('staffBulkPhotoUpload') }}" class="nav-link {{ request()->routeIs('staffBulkPhotoUpload') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Bulk Photo Upload</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('staffBulkUpdate') }}" class="nav-link {{ request()->routeIs('staffBulkUpdate') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Bulk Details Update</a>
+            </li>
+        </ul>
+    </li>
+    @php
+        $governingBodyRoutes = ['managingCommittee','governingBodyBulkPhotoUpload'];
+        $governingBodyOpen = request()->routeIs($governingBodyRoutes);
+    @endphp
+    <li class="nav-item sidebar-nav-item {{ $governingBodyOpen ? 'open' : '' }}" data-group="admin-governing-body">
+        <a href="#" class="nav-link {{ $governingBodyOpen ? 'active' : '' }}"><i class="fa-solid fa-users"></i> <span>Governing Body</span></a>
+        <ul class="nav sub-group-menu{{ $governingBodyOpen ? ' menu-open' : '' }}">
+            <li class="nav-item">
+                <a href="{{ route('managingCommittee') }}" class="nav-link {{ request()->routeIs('managingCommittee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Members List</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('governingBodyBulkPhotoUpload') }}" class="nav-link {{ request()->routeIs('governingBodyBulkPhotoUpload') ? 'active' : '' }}"><i class="fas fa-angle-right"></i> Bulk Photo Upload</a>
             </li>
         </ul>
     </li>
@@ -115,6 +145,9 @@
     </li>
     <li class="nav-item">
         <a href="{{ route('serverConfig') }}" class="nav-link {{ request()->routeIs('serverConfig') ? 'active' : '' }}"><i class="fa-solid fa-screwdriver-wrench"></i> <span>Configuration</span></a>
+    </li>
+    <li class="nav-item">
+        <a href="{{ route('designationsIndex') }}" class="nav-link {{ request()->routeIs('designationsIndex','designationsCreate','designationsEdit') ? 'active' : '' }}"><i class="fa-solid fa-list"></i> <span>Designations</span></a>
     </li>
     <li class="nav-item">
         <a href="{{ route('userGuide') }}" class="nav-link {{ request()->routeIs('userGuide') ? 'active' : '' }}"><i class="fa-regular fa-book"></i> <span>User Guide</span></a>

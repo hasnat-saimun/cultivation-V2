@@ -72,7 +72,7 @@
                     </div>
                     <div class="card-body">
                         <p class="mb-0"><strong class="pr-1">Name: </strong>{{$singleData->fullName}}</p>
-                        <p class="mb-0"><strong class="pr-1">Designation:</strong>{{$singleData->designation}}</p>
+                        <p class="mb-0"><strong class="pr-1">Designation:</strong>{{ $singleData->designationModel->name ?? $singleData->designation ?? 'N/A' }}</p>
                         <p class="mb-0"><strong class="pr-1">Mobile:</strong> {{$singleData->mobile}}</p>
                         <p class="mb-0"><strong class="pr-1">E-mail:</strong>{{$singleData->email}}
                        </p>

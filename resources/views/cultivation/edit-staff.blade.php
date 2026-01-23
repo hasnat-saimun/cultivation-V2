@@ -3,13 +3,42 @@
 Edit Profile
 @endsection
 @section('backIndex')
+@push('styles')
+<style>
+    .form-card{border:0;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(23,43,77,.12);background:#fff}
+    .form-card .card-header{background:linear-gradient(120deg,#1f3047,#233958);color:#fff;border:0;padding:1.25rem 1.5rem}
+    .form-card .card-body{padding:1.5rem}
+    .form-card h5{color:#fff;margin:0;font-weight:700}
+    .form-card small{color:rgba(255,255,255,.7)}
+    .form-divider{font-weight:700;color:#1f3047;margin:14px 0 10px;display:flex;align-items:center;gap:.5rem}
+    .form-divider .badge{background:#e6edff;color:#1f3047;font-weight:600;letter-spacing:.2px}
+    .form-label-required::after{content:"*";color:#ff6b6b;margin-left:4px}
+    .control-help{font-size:.9rem;color:#6c757d}
+    .new-added-form .form-group label{font-weight:600;color:#233958}
+    .new-added-form .form-control,.new-added-form select,.new-added-form .select2-container--default .select2-selection--single{border-radius:10px}
+    .new-added-form .select2-container--default .select2-selection--single{height:42px!important;border-color:#ced4da}
+    .new-added-form .select2-container--default .select2-selection--single .select2-selection__rendered{line-height:42px!important}
+    .new-added-form .select2-container--default .select2-selection--single .select2-selection__arrow{height:42px!important}
+    .avatar-upload{border:1px dashed #cdd5e5;border-radius:12px;padding:18px;text-align:center;background:#f9fbff}
+    .avatar-upload input[type=file]{display:inline-block;margin-top:10px}
+    .btn-soft-light{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.18)}
+    .btn-soft-light:hover{background:rgba(255,255,255,.18);color:#fff}
+    .header-actions,.gap-2{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
+</style>
+@endpush
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
                     <!-- Admit Form Area Start Here -->
-                    <div class="card height-auto">
-                            <div class="card-header bg-light">
-                                <a href="{{route('staffList')}}" class="btn btn-success">Staff List</a>
+                    <div class="card form-card height-auto">
+                        <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                            <div>
+                                <h5 class="mb-1">Edit Staff Profile</h5>
+                                <small>Update personal details, designation, and contact information.</small>
                             </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <a href="{{route('staffList')}}" class="btn btn-soft-light btn-sm"><i class="fas fa-list mr-1"></i>Staff List</a>
+                            </div>
+                        </div>
                         <div class="card-body">
                             <div class="row">
                                 <div class="col-12">
@@ -25,24 +54,7 @@ Edit Profile
                                     @endif
                                 </div>
                             </div>
-                            <div class="heading-layout1">
-                                <div class="item-title">
-                                    <h3>Edit Profile</h3>
-                                </div>
-                                <div class="dropdown">
-                                    <a class="dropdown-toggle" href="#" role="button" data-toggle="dropdown"
-                                        aria-expanded="false">...</a>
-
-                                    <div class="dropdown-menu dropdown-menu-right">
-                                        <a class="dropdown-item" href="#"><i
-                                                class="fas fa-times text-orange-red"></i>Close</a>
-                                        <a class="dropdown-item" href="#"><i
-                                                class="fas fa-cogs text-dark-pastel-green"></i>Edit</a>
-                                        <a class="dropdown-item" href="#"><i
-                                                class="fas fa-redo-alt text-orange-peel"></i>Refresh</a>
-                                    </div>
-                                </div>
-                            </div>
+                            <div class="form-divider"><span class="badge">Identity</span>Basic information</div>
                             @if(!empty($profileData))
                             <form action="{{ route('updateStaffPhoto') }}" class="form" enctype="multipart/form-data" method="POST">
                     @csrf
@@ -50,12 +62,17 @@ Edit Profile
                     <div class="row">
                         <div class="col-xl-3 col-lg-6 col-12 form-group mg-t-30">
                             @if(!empty($profileData->avatar))
-                            <div><img class="w-75" src="{{ asset('/public/upload/image/staff/') }}/{{$profileData->avatar}}" alt="$profileData->firstName" /><br /></div>
-                            <a href="{{route('delStaffPhoto',['profileId'=>$profileData->id])}}" class="mt-3 w-75 btn btn-danger btn-lg">Remove</a>
+                            <div class="avatar-upload">
+                                <div><img class="w-75" src="{{ asset('/public/upload/image/staff/') }}/{{$profileData->avatar}}" alt="$profileData->firstName" /><br /></div>
+                                <a href="{{route('delStaffPhoto',['profileId'=>$profileData->id])}}" class="mt-3 w-75 btn btn-danger btn-lg">Remove</a>
+                            </div>
                             @else
-                            <label class="text-dark-medium">Avatar (150px X 150px)</label>
-                            <input type="file" name="avatar" class="form-control-file" />
-                            <div class="mt-4"><input type="submit" value="Update" class="btn btn-primary" /></div>
+                            <div class="avatar-upload">
+                                <label class="text-dark-medium d-block mb-2">Avatar (150px X 150px)</label>
+                                <p class="control-help mb-2">Square image, JPG/PNG up to 1MB.</p>
+                                <input type="file" name="avatar" class="form-control-file" />
+                                <div class="mt-4"><input type="submit" value="Update" class="btn btn-primary" /></div>
+                            </div>
                             @endif
                         </div>
                     </div>
@@ -65,27 +82,27 @@ Edit Profile
                                 <input type="hidden" value="{{ $profileData->id }}" name="staffId">
                                 <div class="row">
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Staff ID</label>
+                                        <label class="form-label-required">Staff ID</label>
                                         <input type="text" value="{{ $profileData->staffId }}" class="form-control" required readonly>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Full Name *</label>
+                                        <label class="form-label-required">Full Name</label>
                                         <input type="text" name="firstName" placeholder="Enter first name" class="form-control" value="{{ $profileData->firstName }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Sure Name *</label>
+                                        <label class="form-label-required">Sure Name</label>
                                         <input type="text" name="lastName" placeholder="Enter last name" class="form-control" value="{{ $profileData->lastName }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Father's Name *</label>
+                                        <label class="form-label-required">Father's Name</label>
                                         <input type="text" name="fathersName" placeholder="Enter fathers name" class="form-control" value="{{ $profileData->fathersName }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Mother's Name *</label>
+                                        <label class="form-label-required">Mother's Name</label>
                                         <input type="text" name="mothersName" placeholder="Enter mothers name" class="form-control" value="{{ $profileData->mothersName }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Gender *</label>
+                                        <label class="form-label-required">Gender</label>
                                         <select class="select2" name="gender" required>
                                             <option value="1" {{ $profileData->gender == 1 ? 'selected' : '' }}>Male</option>
                                             <option value="2" {{ $profileData->gender == 2 ? 'selected' : '' }}>Female</option>
@@ -93,32 +110,17 @@ Edit Profile
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Date Of Birth *</label>
+                                        <label class="form-label-required">Date Of Birth</label>
                                         <input type="date" name="dob" placeholder="dd/mm/yyyy" class="form-control" value="{{ $profileData->dob }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Designation *</label>
+                                        <label class="form-label-required">Designation</label>
                                         <select class="select2" name="designation" required>
-                                            <option value="1" {{ $profileData->designation == 1 ? 'selected' : '' }}>Administrative Officer</option>
-                                            <option value="2" {{ $profileData->designation == 2 ? 'selected' : '' }}>Office Assistant-cum-Computer Operator</option>
-                                            <option value="3" {{ $profileData->designation == 3 ? 'selected' : '' }}>Accounts Assistant</option>
-                                            <option value="4" {{ $profileData->designation == 4 ? 'selected' : '' }}>Office Assistant</option>
-                                            <option value="5" {{ $profileData->designation == 5 ? 'selected' : '' }}>Registrar</option>
-                                            <option value="6" {{ $profileData->designation == 6 ? 'selected' : '' }}>Librarian</option>
-                                            <option value="7" {{ $profileData->designation == 7 ? 'selected' : '' }}>Assistant Librarian</option>
-                                            <option value="7" {{ $profileData->designation == 7 ? 'selected' : '' }}>IT Officer / System Admin / ICT Technician</option>
-                                            <option value="8" {{ $profileData->designation == 8 ? 'selected' : '' }}>Data Entry Operator</option>
-                                            <option value="9" {{ $profileData->designation == 9 ? 'selected' : '' }}>Lab Assistant / Lab Attendant</option>
-                                            <option value="10" {{ $profileData->designation == 10 ? 'selected' : '' }}>Sports Instructor / Coach</option>
-                                            <option value="11" {{ $profileData->designation == 11 ? 'selected' : '' }}>Music Teacher / Art Teacher</option>
-                                            <option value="12" {{ $profileData->designation == 12 ? 'selected' : '' }}>Hostel Superintendent / Hostel Warden</option>
-                                            <option value="13" {{ $profileData->designation == 13 ? 'selected' : '' }}>Office Peon / Office Assistant</option>
-                                            <option value="14" {{ $profileData->designation == 14 ? 'selected' : '' }}>MLSS</option>
-                                            <option value="15" {{ $profileData->designation == 15 ? 'selected' : '' }}>Security Guard</option>
-                                            <option value="16" {{ $profileData->designation == 16 ? 'selected' : '' }}>Gatekeeper</option>
-                                            <option value="17" {{ $profileData->designation == 17 ? 'selected' : '' }}>Gardener</option>
-                                            <option value="18" {{ $profileData->designation == 18 ? 'selected' : '' }}>Cleaner / Ayah</option>
-                                            <option value="19" {{ $profileData->designation == 19 ? 'selected' : '' }}>Driver</option>
+                                            @if(isset($designations) && $designations->count() > 0)
+                                                @foreach($designations as $desig)
+                                                    <option value="{{ $desig->id }}" {{ $profileData->designation_id == $desig->id ? 'selected' : '' }}>{{ $desig->name }}</option>
+                                                @endforeach
+                                            @endif
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
@@ -126,7 +128,7 @@ Edit Profile
                                         <input type="date" name="joinDate" placeholder="mm/dd/yyyy" class="form-control" value="{{ $profileData->joinDate }}" required>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Blood Group *</label>
+                                        <label class="form-label-required">Blood Group</label>
                                         <select class="select2" name="blGroup">
                                             <option value="1" {{ $profileData->blGroup == 1 ? 'selected' : '' }}>A+</option>
                                             <option value="2" {{ $profileData->blGroup == 2 ? 'selected' : '' }}>A-</option>
@@ -139,7 +141,7 @@ Edit Profile
                                         </select>
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Religion *</label>
+                                        <label class="form-label-required">Religion</label>
                                         <select class="select2" name="religion" required>
                                             <option value="1" {{ $profileData->religion == 1 ? 'selected' : '' }}>Islam</option>
                                             <option value="2" {{ $profileData->religion == 2 ? 'selected' : '' }}>Hindu</option>
@@ -161,7 +163,7 @@ Edit Profile
                                         <input type="text" class="form-control" placeholder="Teacher full address" name="address" value="{{ $profileData->address }}">
                                     </div>
                                     <div class="col-xl-3 col-lg-6 col-12 form-group">
-                                        <label>Ranking *</label>
+                                        <label class="form-label-required">Ranking</label>
                                         <select class="select2" name="rank">
                                             <option value="1" {{ $profileData->rank == 1 ? 'selected' : '' }}>1</option>
                                             <option value="2" {{ $profileData->rank == 2 ? 'selected' : '' }}>2</option>

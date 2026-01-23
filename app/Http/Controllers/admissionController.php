@@ -31,6 +31,16 @@ class AdmissionController extends Controller
         return view('cultivation.studentList',['studentData'=>$stdData]);
     }
 
+    /**
+     * Export student list as PDF
+     */
+    public function exportStudentPDF()
+    {
+        $students = newAdmission::orderBy('id')->get();
+        $pdf = \PDF::loadView('exports.student-list-pdf', ['students' => $students]);
+        return $pdf->download('student-list-' . date('Y-m-d') . '.pdf');
+    }
+
     public function bulkPhotoForm(Request $request)
     {
         $classDetails = classManage::all();
@@ -409,6 +419,27 @@ class AdmissionController extends Controller
     
      }
 
+    public function studentBulkDelete(Request $request)
+    {
+        try {
+            $ids = json_decode($request->input('ids'), true);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return back()->with('error', 'No records selected');
+            }
+
+            $deleted = newAdmission::whereIn('id', $ids)->delete();
+
+            if ($deleted > 0) {
+                return back()->with('success', "Successfully deleted $deleted student(s)");
+            } else {
+                return back()->with('error', 'No records found to delete');
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Delete failed: ' . $e->getMessage());
+        }
+    }
+
 
     // Helper methods for default religious subject resolution
     private static function resolveDefaultReligiousSubject(?string $className)
@@ -434,6 +465,16 @@ class AdmissionController extends Controller
         $subject = $query->orderBy('id')->first();
         if ($subject) return $subject;
         return Subject::where('isReligious', true)->orderBy('id')->first();
+    }
+
+    /**
+     * Export student list as PDF
+     */
+    public function exportPDF()
+    {
+        $students = newAdmission::orderBy('stdName')->get();
+        $pdf = \PDF::loadView('exports.student-list-pdf', ['students' => $students]);
+        return $pdf->download('student-list-' . date('Y-m-d') . '.pdf');
     }
 }
 

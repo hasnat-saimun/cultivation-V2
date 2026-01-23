@@ -90,23 +90,13 @@ Governing Body
                         <label for="designation">Designation</label>
                         <select name="designation" class="form-select">
                             @if(!empty($explId))
-                            <option value="{{ $exDesig }}">{{ $exDesig }}</option>
+                            <option value="{{ $committee->designation_id ?? '' }}">{{ $committee->designation ?? $exDesig ?? '' }}</option>
                             @endif
-                            <option value="President">President</option>
-                            <option value="Chairman">Chairman</option>
-                            <option value="Vice President">Vice President</option>
-                            <option value="Vice Chairman">Vice Chairman</option>
-                            <option value="President Trust">President Trust</option>
-                            <option value="Acting Principal">Acting Principal</option>
-                            <option value="General Secretary">General Secretary</option>
-                            <option value="Member Secretary">Member Secretary</option>
-                            <option value="Treasurer">Treasurer</option>
-                            <option value="Parent Member">Parent Member</option>
-                            <option value="Teacher Member">Teacher Member</option>
-                            <option value="General Member">General Member</option>
-                            <option value="Member Educationiost">Member Educationiost</option>
-                            <option value="Legal Advisor">Legal Advisor</option>
-                            <option value="Trustee">Trustee</option>
+                            @if(isset($designations) && $designations->count() > 0)
+                                @foreach($designations as $desig)
+                                    <option value="{{ $desig->id }}">{{ $desig->name }}</option>
+                                @endforeach
+                            @endif
                         </select>
                     </div>
                     <div class="mb-3">

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\TeacherManagement;
+use App\Models\Designation;
+use App\Imports\TeachersImport;
+use Maatwebsite\Excel\Facades\Excel;
 use File;
 
 class TeacherController extends Controller
@@ -12,7 +15,8 @@ class TeacherController extends Controller
     
     public function addTeacher(){
         $chk = TeacherManagement::orderBy('id','DESC')->first();
-        return view('cultivation.add-teacher',['chk'=>$chk]);
+        $designations = Designation::teacherDesignations();
+        return view('cultivation.add-teacher',['chk'=>$chk, 'designations'=>$designations]);
     }
     public function confirmTeacher(Request $requ){
         $chk = TeacherManagement::where(['email'=>$requ->email])->orWhere(['teacherId'=>$requ->teacherId])->get();
@@ -43,7 +47,8 @@ class TeacherController extends Controller
             $teacherProfile->mothersName = $requ->mothersName;
             $teacherProfile->gender = $requ->gender;
             $teacherProfile->dob = $requ->dob;
-            $teacherProfile->designation = $requ->designation;
+            $teacherProfile->designation_id = $requ->designation;
+            $teacherProfile->designation = $this->getDesignationName($requ->designation);
             $teacherProfile->blGroup = $requ->blGroup;
             $teacherProfile->religion = $requ->religion;
             $teacherProfile->email = $requ->email;
@@ -67,156 +72,140 @@ class TeacherController extends Controller
 
     public function bulkUploadForm()
     {
-        $matchOptions = ['teacherId' => 'Teacher ID', 'email' => 'Email'];
-        $allowedColumns = [
-            'teacherId', 'firstName', 'lastName', 'fathersName', 'mothersName', 'gender', 'dob', 'designation',
-            'blGroup', 'religion', 'email', 'joinDate', 'mobile', 'address', 'mpoIndex', 'pdsId', 'rank'
-        ];
-        return view('cultivation.teacher-bulk-upload', compact('matchOptions', 'allowedColumns'));
+        return view('cultivation.teacher-bulk-upload');
     }
 
     public function bulkUploadStore(Request $request)
     {
         $request->validate([
-            'match_by' => 'required|in:teacherId,email',
-            'csv_file' => 'required|file|mimes:csv,txt|max:10240',
+            'csv_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240',
         ]);
 
-        $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
-        if (!$handle) {
-            return back()->with('error', 'Unable to read the uploaded file.');
+        try {
+            $file = $request->file('csv_file');
+            $import = new TeachersImport();
+            Excel::import($import, $file);
+
+            $created = $import->getCreated();
+            $updated = $import->getUpdated();
+            $message = "Import completed! Created: {$created}, Updated: {$updated}";
+
+            return redirect()->route('teacherBulkUpload')->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
         }
-
-        $header = fgetcsv($handle);
-        if (!$header) {
-            return back()->with('error', 'CSV appears to be empty or has no header row.');
-        }
-
-        $map = $this->teacherColumnMap();
-        $created = 0;
-        $updated = 0;
-        $skipped = 0;
-        $matchBy = $request->match_by;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            $mapped = $this->mapCsvRow($header, $row, $map);
-
-            // Skip completely empty rows
-            if ($this->isRowEmpty($mapped)) {
-                continue;
-            }
-
-            $matchValue = $mapped[$matchBy] ?? '';
-            if ($matchValue === '') {
-                $skipped++;
-                continue;
-            }
-
-            $profile = TeacherManagement::where($matchBy, $matchValue)->first();
-
-            if ($profile) {
-                foreach ($mapped as $key => $val) {
-                    if ($val !== '') {
-                        $profile->$key = $val;
-                    }
-                }
-                $profile->save();
-                $updated++;
-            } else {
-                // Require teacherId and firstName to create a new record
-                if (($mapped['teacherId'] ?? '') === '' || ($mapped['firstName'] ?? '') === '') {
-                    $skipped++;
-                    continue;
-                }
-
-                $profile = new TeacherManagement();
-                foreach ($mapped as $key => $val) {
-                    if ($val !== '') {
-                        $profile->$key = $val;
-                    }
-                }
-                $profile->save();
-                $created++;
-            }
-        }
-
-        fclose($handle);
-
-        $message = "Bulk upload complete. Updated: $updated, Created: $created, Skipped: $skipped.";
-        return redirect()->route('teacherBulkUpload')->with('success', $message);
     }
 
     public function downloadSample()
     {
-        $path = public_path('samples/teacher_bulk_sample.csv');
-        if (!file_exists($path)) {
-            return back()->with('error', 'Sample file missing.');
-        }
-        return response()->download($path, 'teacher_bulk_sample.csv');
-    }
-
-    private function teacherColumnMap(): array
-    {
-        return [
-            'teacherid'      => 'teacherId',
-            'teacher_id'     => 'teacherId',
-            'id'             => 'teacherId',
-            'firstname'      => 'firstName',
-            'first_name'     => 'firstName',
-            'lastname'       => 'lastName',
-            'last_name'      => 'lastName',
-            'fathersname'    => 'fathersName',
-            'fathername'     => 'fathersName',
-            'father'         => 'fathersName',
-            'mothersname'    => 'mothersName',
-            'mothername'     => 'mothersName',
-            'mother'         => 'mothersName',
-            'gender'         => 'gender',
-            'dob'            => 'dob',
-            'designation'    => 'designation',
-            'blgroup'        => 'blGroup',
-            'bloodgroup'     => 'blGroup',
-            'religion'       => 'religion',
-            'email'          => 'email',
-            'mail'           => 'email',
-            'join'           => 'joinDate',
-            'joindate'       => 'joinDate',
-            'join_date'      => 'joinDate',
-            'mobile'         => 'mobile',
-            'phone'          => 'mobile',
-            'contact'        => 'mobile',
-            'address'        => 'address',
-            'mpo'            => 'mpoIndex',
-            'mpoindex'       => 'mpoIndex',
-            'pds'            => 'pdsId',
-            'pdsid'          => 'pdsId',
-            'rank'           => 'rank',
+        $headers = [
+            'teacher_id',
+            'first_name',
+            'last_name',
+            'fathers_name',
+            'mothers_name',
+            'gender',
+            'dob',
+            'designation',
+            'blood_group',
+            'religion',
+            'email',
+            'join_date',
+            'mobile',
+            'address',
+            'mpo_index',
+            'pds_id',
+            'rank'
         ];
+
+        $sampleData = [
+            [
+                'T202400001',
+                'John',
+                'Doe',
+                'Mr. Father Doe',
+                'Mrs. Mother Doe',
+                'Male',
+                '1985-06-15',
+                'Senior Teacher',
+                'O+',
+                'Islam',
+                'john.doe@school.com',
+                '2020-01-15',
+                '01712345678',
+                '123 Main Street, City',
+                'MPO123',
+                'PDS456',
+                '1'
+            ],
+            [
+                'T202400002',
+                'Jane',
+                'Smith',
+                'Mr. Father Smith',
+                'Mrs. Mother Smith',
+                'Female',
+                '1990-03-22',
+                'Assistant Teacher',
+                'A+',
+                'Hindu',
+                'jane.smith@school.com',
+                '2021-06-01',
+                '01798765432',
+                '456 Park Avenue, City',
+                'MPO789',
+                'PDS012',
+                '2'
+            ],
+        ];
+
+        $callback = function() use ($headers, $sampleData) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            foreach ($sampleData as $row) {
+                fputcsv($file, $row);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="teacher_bulk_sample.csv"',
+        ]);
     }
 
-    private function mapCsvRow(array $header, array $row, array $map): array
+    public function downloadTemplate()
     {
-        $mapped = [];
-        foreach ($header as $idx => $col) {
-            $norm = strtolower(trim((string) $col));
-            $norm = str_replace([' ', '-'], '_', $norm);
-            if (!isset($map[$norm])) {
-                continue;
-            }
-            $mapped[$map[$norm]] = trim((string) ($row[$idx] ?? ''));
-        }
-        return $mapped;
-    }
+        $headers = [
+            'teacher_id',
+            'first_name',
+            'last_name',
+            'fathers_name',
+            'mothers_name',
+            'gender',
+            'dob',
+            'designation',
+            'blood_group',
+            'religion',
+            'email',
+            'join_date',
+            'mobile',
+            'address',
+            'mpo_index',
+            'pds_id',
+            'rank'
+        ];
 
-    private function isRowEmpty(array $row): bool
-    {
-        foreach ($row as $val) {
-            if (trim((string) $val) !== '') {
-                return false;
-            }
-        }
-        return true;
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="teacher_template.csv"',
+        ]);
     }
     
     public function viewTeacher($id){
@@ -225,7 +214,8 @@ class TeacherController extends Controller
     }
     public function editTeacher($id){
         $profileData = TeacherManagement::find($id);
-        return view('cultivation.edit-teacher',['profileData'=>$profileData]);
+        $designations = Designation::teacherDesignations();
+        return view('cultivation.edit-teacher',['profileData'=>$profileData, 'designations'=>$designations]);
     }
 
     public function updateTeacher(Request $requ){
@@ -239,7 +229,8 @@ class TeacherController extends Controller
             $teacherProfile->mothersName = $requ->mothersName;
             $teacherProfile->gender = $requ->gender;
             $teacherProfile->dob = $requ->dob;
-            $teacherProfile->designation = $requ->designation;
+            $teacherProfile->designation_id = $requ->designation;
+            $teacherProfile->designation = $this->getDesignationName($requ->designation);
             $teacherProfile->blGroup = $requ->blGroup;
             $teacherProfile->religion = $requ->religion;
             $teacherProfile->email = $requ->email;
@@ -308,5 +299,180 @@ class TeacherController extends Controller
         else:
             return back()->with('error','Data update failed');
         endif;
+    }
+
+    public function teacherBulkDelete(Request $request)
+    {
+        try {
+            $ids = json_decode($request->input('ids'), true);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return back()->with('error', 'No records selected');
+            }
+
+            $deleted = TeacherManagement::whereIn('id', $ids)->delete();
+
+            if ($deleted > 0) {
+                return back()->with('success', "Successfully deleted $deleted teacher(s)");
+            } else {
+                return back()->with('error', 'No records found to delete');
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Delete failed: ' . $e->getMessage());
+        }
+    }
+
+    private function getDesignationName($designationId)
+    {
+        if (!$designationId) {
+            return null;
+        }
+        $designation = Designation::find($designationId);
+        return $designation ? $designation->name : null;
+    }
+
+    public function bulkPhotoUploadForm()
+    {
+        $teachers = TeacherManagement::select('id', 'teacherId', 'firstName', 'lastName', 'avatar')
+            ->orderBy('firstName')
+            ->get();
+        
+        return view('cultivation.teacher-bulk-photo-upload', compact('teachers'));
+    }
+
+    public function bulkPhotoUploadStore(Request $request)
+    {
+        $request->validate([
+            'teacher_ids' => 'array',
+            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:5120',
+        ]);
+
+        $teacherIds = $request->input('teacher_ids', []);
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($teacherIds as $tid) {
+            $fileKey = "photos.$tid";
+            if (!$request->hasFile($fileKey)) {
+                $skipped++;
+                continue;
+            }
+
+            $teacher = TeacherManagement::find($tid);
+            if (!$teacher) {
+                $skipped++;
+                continue;
+            }
+
+            $photo = $request->file($fileKey);
+            $newAvatar = rand() . date('Ymd') . '.' . $photo->getClientOriginalExtension();
+            $photo->move(public_path('upload/image/teacher/'), $newAvatar);
+
+            if (!empty($teacher->avatar) && File::exists(public_path('upload/image/teacher/' . $teacher->avatar))) {
+                File::delete(public_path('upload/image/teacher/' . $teacher->avatar));
+            }
+
+            $teacher->avatar = $newAvatar;
+            $teacher->save();
+            $updated++;
+        }
+
+        $message = "Updated $updated photo(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped $skipped without files.";
+        }
+
+        return redirect()->route('teacherBulkPhotoUpload')->with('success', $message);
+    }
+
+    /**
+     * Get list of teachers as JSON for API
+     */
+    public function getTeachersList()
+    {
+        $teachers = TeacherManagement::select('id', 'firstName', 'lastName')
+            ->orderBy('firstName')
+            ->get()
+            ->map(function ($teacher) {
+                return [
+                    'id' => $teacher->id,
+                    'teacher_id' => $teacher->id,
+                    // Keep snake_case keys for API compatibility, read camelCase fields
+                    'first_name' => $teacher->firstName,
+                    'last_name' => $teacher->lastName,
+                    'full_name' => $teacher->firstName . ' ' . $teacher->lastName
+                ];
+            });
+
+        return response()->json($teachers);
+    }
+
+    /**
+     * Export teacher list as PDF
+     */
+    public function exportPDF()
+    {
+        $teachers = TeacherManagement::orderBy('firstName')->get();
+        $pdf = \PDF::loadView('exports.teacher-list-pdf', ['teachers' => $teachers]);
+        return $pdf->download('teacher-list-' . date('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Show bulk update form for teachers
+     */
+    public function bulkUpdateForm()
+    {
+        $teachers = TeacherManagement::select('id', 'teacherId', 'firstName', 'lastName', 'designation', 'designation_id', 'email', 'mobile', 'address', 'gender', 'dob', 'joinDate')
+            ->orderBy('firstName')->get();
+        $designations = Designation::teacherDesignations();
+        return view('cultivation.teacher-bulk-update', compact('teachers', 'designations'));
+    }
+
+    /**
+     * Store bulk updates for teachers (per-row editing)
+     */
+    public function bulkUpdateStore(Request $request)
+    {
+        $request->validate([
+            'teachers' => 'required|array',
+            'teachers.*.id' => 'required|exists:teacher_management,id',
+            'teachers.*.firstName' => 'nullable|string|max:255',
+            'teachers.*.lastName' => 'nullable|string|max:255',
+            'teachers.*.designation' => 'nullable|integer|exists:designations,id',
+            'teachers.*.email' => 'nullable|email|max:255',
+            'teachers.*.mobile' => 'nullable|string|max:20',
+            'teachers.*.address' => 'nullable|string',
+            'teachers.*.gender' => 'nullable|in:Male,Female,Others',
+            'teachers.*.dob' => 'nullable|date',
+            'teachers.*.joinDate' => 'nullable|date',
+        ]);
+
+        $updated = 0;
+        foreach ($request->input('teachers', []) as $teacherData) {
+            if (!empty($teacherData['id'])) {
+                $teacher = TeacherManagement::find($teacherData['id']);
+                if ($teacher) {
+                    $teacher->firstName = $teacherData['firstName'] ?? $teacher->firstName;
+                    $teacher->lastName = $teacherData['lastName'] ?? $teacher->lastName;
+                    $teacher->email = $teacherData['email'] ?? $teacher->email;
+                    $teacher->mobile = $teacherData['mobile'] ?? $teacher->mobile;
+                    $teacher->address = $teacherData['address'] ?? $teacher->address;
+                    $teacher->gender = $teacherData['gender'] ?? $teacher->gender;
+                    $teacher->dob = $teacherData['dob'] ?? $teacher->dob;
+                    $teacher->joinDate = $teacherData['joinDate'] ?? $teacher->joinDate;
+                    
+                    // Handle designation exactly like single profile update
+                    if (!empty($teacherData['designation'])) {
+                        $teacher->designation_id = $teacherData['designation'];
+                        $teacher->designation = $this->getDesignationName($teacherData['designation']);
+                    }
+                    
+                    $teacher->save();
+                    $updated++;
+                }
+            }
+        }
+
+        return redirect()->route('teacherBulkUpdate')->with('success', "Successfully updated {$updated} teacher(s)");
     }
 }

@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\StaffManagement;
+use App\Models\Designation;
+use App\Imports\StaffImport;
+use Maatwebsite\Excel\Facades\Excel;
 use File;
 
 class StaffController extends Controller
@@ -11,7 +14,8 @@ class StaffController extends Controller
     
     public function addStaff(){
         $chk = StaffManagement::orderBy('id','DESC')->first();
-        return view('cultivation.add-staff',['chk'=>$chk]);
+        $designations = Designation::staffDesignations();
+        return view('cultivation.add-staff',['chk'=>$chk, 'designations'=>$designations]);
     }
     public function confirmStaff(Request $requ){
         $chk = StaffManagement::where(['email'=>$requ->staffMail])->orWhere(['staffId'=>$requ->staffId])->get();
@@ -48,7 +52,8 @@ class StaffController extends Controller
             $staffProfile->email         = $requ->staffMail;
             $staffProfile->mobile        = $requ->mobile;
             $staffProfile->blGroup       = $requ->blGroup;
-            $staffProfile->designation   = $requ->designation;
+
+            $staffProfile->designation   = $this->getDesignationName($requ->designation);
             $staffProfile->religion      = $requ->religion;
             $staffProfile->rank           = $requ->rank;
             $staffProfile->staffId        = $requ->staffId;
@@ -67,8 +72,8 @@ class StaffController extends Controller
     {
         $matchOptions = ['staffId' => 'Staff ID', 'email' => 'Email'];
         $allowedColumns = [
-            'staffId', 'firstName', 'lastName', 'fathersName', 'mothersName', 'gender', 'dob', 'designation',
-            'blGroup', 'religion', 'email', 'joinDate', 'mobile', 'address', 'rank'
+            'staff_id', 'first_name', 'last_name', 'fathers_name', 'mothers_name', 'gender', 'dob', 'designation',
+            'blood_group', 'religion', 'email', 'join_date', 'mobile', 'address', 'rank'
         ];
         return view('cultivation.staff-bulk-upload', compact('matchOptions', 'allowedColumns'));
     }
@@ -76,70 +81,22 @@ class StaffController extends Controller
     public function bulkUploadStore(Request $request)
     {
         $request->validate([
-            'match_by' => 'required|in:staffId,email',
-            'csv_file' => 'required|file|mimes:csv,txt|max:10240',
+            'csv_file' => 'required|file|mimes:csv,txt,xlsx,xls|max:10240',
         ]);
 
-        $file = $request->file('csv_file');
-        $handle = fopen($file->getRealPath(), 'r');
-        if (!$handle) {
-            return back()->with('error', 'Unable to read the uploaded file.');
+        try {
+            $file = $request->file('csv_file');
+            $import = new StaffImport();
+            Excel::import($import, $file);
+
+            $created = $import->getCreated();
+            $updated = $import->getUpdated();
+            $message = "Import completed! Created: {$created}, Updated: {$updated}";
+
+            return redirect()->route('staffBulkUpload')->with('success', $message);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Import failed: ' . $e->getMessage());
         }
-
-        $header = fgetcsv($handle);
-        if (!$header) {
-            return back()->with('error', 'CSV appears to be empty or has no header row.');
-        }
-
-        $map = $this->staffColumnMap();
-        $created = 0;
-        $updated = 0;
-        $skipped = 0;
-        $matchBy = $request->match_by;
-
-        while (($row = fgetcsv($handle)) !== false) {
-            $mapped = $this->mapCsvRow($header, $row, $map);
-
-            if ($this->isRowEmpty($mapped)) {
-                continue;
-            }
-
-            $matchValue = $mapped[$matchBy] ?? '';
-            if ($matchValue === '') {
-                $skipped++;
-                continue;
-            }
-
-            $profile = StaffManagement::where($matchBy, $matchValue)->first();
-
-            if ($profile) {
-                foreach ($mapped as $key => $val) {
-                    if ($val !== '') {
-                        $profile->$key = $val;
-                    }
-                }
-                $profile->save();
-                $updated++;
-            } else {
-                if (($mapped['staffId'] ?? '') === '' || ($mapped['firstName'] ?? '') === '') {
-                    $skipped++;
-                    continue;
-                }
-                $profile = new StaffManagement();
-                foreach ($mapped as $key => $val) {
-                    if ($val !== '') {
-                        $profile->$key = $val;
-                    }
-                }
-                $profile->save();
-                $created++;
-            }
-        }
-
-        fclose($handle);
-
-        $message = "Bulk upload complete. Updated: $updated, Created: $created, Skipped: $skipped.";
-        return redirect()->route('staffBulkUpload')->with('success', $message);
     }
 
     public function downloadSample()
@@ -151,64 +108,39 @@ class StaffController extends Controller
         return response()->download($path, 'staff_bulk_sample.csv');
     }
 
-    private function staffColumnMap(): array
+    public function downloadTemplate()
     {
-        return [
-            'staffid'       => 'staffId',
-            'staff_id'      => 'staffId',
-            'id'            => 'staffId',
-            'firstname'     => 'firstName',
-            'first_name'    => 'firstName',
-            'lastname'      => 'lastName',
-            'last_name'     => 'lastName',
-            'fathersname'   => 'fathersName',
-            'fathername'    => 'fathersName',
-            'father'        => 'fathersName',
-            'mothersname'   => 'mothersName',
-            'mothername'    => 'mothersName',
-            'mother'        => 'mothersName',
-            'gender'        => 'gender',
-            'dob'           => 'dob',
-            'designation'   => 'designation',
-            'blgroup'       => 'blGroup',
-            'bloodgroup'    => 'blGroup',
-            'religion'      => 'religion',
-            'email'         => 'email',
-            'mail'          => 'email',
-            'join'          => 'joinDate',
-            'joindate'      => 'joinDate',
-            'join_date'     => 'joinDate',
-            'mobile'        => 'mobile',
-            'phone'         => 'mobile',
-            'contact'       => 'mobile',
-            'address'       => 'address',
-            'rank'          => 'rank',
+        $headers = [
+            'staff_id',
+            'first_name',
+            'last_name',
+            'fathers_name',
+            'mothers_name',
+            'gender',
+            'dob',
+            'designation',
+            'blood_group',
+            'religion',
+            'email',
+            'join_date',
+            'mobile',
+            'address',
+            'rank'
         ];
+
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="staff_template.csv"',
+        ]);
     }
 
-    private function mapCsvRow(array $header, array $row, array $map): array
-    {
-        $mapped = [];
-        foreach ($header as $idx => $col) {
-            $norm = strtolower(trim((string) $col));
-            $norm = str_replace([' ', '-'], '_', $norm);
-            if (!isset($map[$norm])) {
-                continue;
-            }
-            $mapped[$map[$norm]] = trim((string) ($row[$idx] ?? ''));
-        }
-        return $mapped;
-    }
-
-    private function isRowEmpty(array $row): bool
-    {
-        foreach ($row as $val) {
-            if (trim((string) $val) !== '') {
-                return false;
-            }
-        }
-        return true;
-    }
+    // Legacy CSV helpers removed; using StaffImport via Excel now.
     
     
     public function viewStaff($id){
@@ -217,7 +149,8 @@ class StaffController extends Controller
     }
     public function editStaff($id){
         $profileData = StaffManagement::find($id);
-        return view('cultivation.edit-staff',['profileData'=>$profileData]);
+        $designations = Designation::staffDesignations();
+        return view('cultivation.edit-staff',['profileData'=>$profileData, 'designations'=>$designations]);
     }
 
     public function updateStaff(Request $requ){
@@ -237,7 +170,9 @@ class StaffController extends Controller
             $staffProfile->email         = $requ->staffMail;
             $staffProfile->mobile        = $requ->mobile;
             $staffProfile->blGroup       = $requ->blGroup;
-            $staffProfile->designation   = $requ->designation;
+            $staffProfile->designation_id = $requ->designation;
+            $staffProfile->designation_id = $requ->designation;
+            $staffProfile->designation   = $this->getDesignationName($requ->designation);
             $staffProfile->religion      = $requ->religion;
             $staffProfile->rank      = $requ->rank;
             $staffProfile->staffId     = $requ->staffId;
@@ -315,5 +250,180 @@ class StaffController extends Controller
         else:
             return back()->with('error','Data update failed');
         endif;
+    }
+
+    public function staffBulkDelete(Request $request)
+    {
+        try {
+            $ids = json_decode($request->input('ids'), true);
+            
+            if (!is_array($ids) || empty($ids)) {
+                return back()->with('error', 'No records selected');
+            }
+
+            $deleted = StaffManagement::whereIn('id', $ids)->delete();
+
+            if ($deleted > 0) {
+                return back()->with('success', "Successfully deleted $deleted staff member(s)");
+            } else {
+                return back()->with('error', 'No records found to delete');
+            }
+        } catch (\Exception $e) {
+            return back()->with('error', 'Delete failed: ' . $e->getMessage());
+        }
+    }
+
+    private function getDesignationName($designationId)
+    {
+        if (!$designationId) {
+            return null;
+        }
+        $designation = Designation::find($designationId);
+        return $designation ? $designation->name : null;
+    }
+
+    public function bulkPhotoUploadForm()
+    {
+        $staff = StaffManagement::select('id', 'staffId', 'firstName', 'lastName', 'avatar')
+            ->orderBy('firstName')
+            ->get();
+        
+        return view('cultivation.staff-bulk-photo-upload', compact('staff'));
+    }
+
+    public function bulkPhotoUploadStore(Request $request)
+    {
+        $request->validate([
+            'staff_ids' => 'array',
+            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:5120',
+        ]);
+
+        $staffIds = $request->input('staff_ids', []);
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($staffIds as $sid) {
+            $fileKey = "photos.$sid";
+            if (!$request->hasFile($fileKey)) {
+                $skipped++;
+                continue;
+            }
+
+            $member = StaffManagement::find($sid);
+            if (!$member) {
+                $skipped++;
+                continue;
+            }
+
+            $photo = $request->file($fileKey);
+            $newAvatar = rand() . date('Ymd') . '.' . $photo->getClientOriginalExtension();
+            $photo->move(public_path('upload/image/staff/'), $newAvatar);
+
+            if (!empty($member->avatar) && File::exists(public_path('upload/image/staff/' . $member->avatar))) {
+                File::delete(public_path('upload/image/staff/' . $member->avatar));
+            }
+
+            $member->avatar = $newAvatar;
+            $member->save();
+            $updated++;
+        }
+
+        $message = "Updated $updated photo(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped $skipped without files.";
+        }
+
+        return redirect()->route('staffBulkPhotoUpload')->with('success', $message);
+    }
+
+    /**
+     * Get list of staff as JSON for API
+     */
+    public function getStaffList()
+    {
+        $staff = StaffManagement::select('id', 'firstName', 'lastName')
+            ->orderBy('firstName')
+            ->get()
+            ->map(function ($member) {
+                return [
+                    'id' => $member->id,
+                    'staff_id' => $member->id,
+                    // Keep snake_case keys for API compatibility, read camelCase fields
+                    'first_name' => $member->firstName,
+                    'last_name' => $member->lastName,
+                    'full_name' => $member->firstName . ' ' . $member->lastName
+                ];
+            });
+
+        return response()->json($staff);
+    }
+
+    /**
+     * Export staff list as PDF
+     */
+    public function exportPDF()
+    {
+        $staff = StaffManagement::orderBy('firstName')->get();
+        $pdf = \PDF::loadView('exports.staff-list-pdf', ['staff' => $staff]);
+        return $pdf->download('staff-list-' . date('Y-m-d') . '.pdf');
+    }
+
+    /**
+     * Show bulk update form for staff
+     */
+    public function bulkUpdateForm()
+    {
+        $staff = StaffManagement::select('id', 'staffId', 'firstName', 'lastName', 'designation', 'designation_id', 'email', 'mobile', 'address', 'gender', 'dob', 'joinDate')
+            ->orderBy('firstName')->get();
+        $designations = Designation::staffDesignations();
+        return view('cultivation.staff-bulk-update', compact('staff', 'designations'));
+    }
+
+    /**
+     * Store bulk updates for staff (per-row editing)
+     */
+    public function bulkUpdateStore(Request $request)
+    {
+        $request->validate([
+            'staff' => 'required|array',
+            'staff.*.id' => 'required|exists:staff_management,id',
+            'staff.*.firstName' => 'nullable|string|max:255',
+            'staff.*.lastName' => 'nullable|string|max:255',
+            'staff.*.designation' => 'nullable|integer|exists:designations,id',
+            'staff.*.email' => 'nullable|email|max:255',
+            'staff.*.mobile' => 'nullable|string|max:20',
+            'staff.*.address' => 'nullable|string',
+            'staff.*.gender' => 'nullable|in:Male,Female,Others',
+            'staff.*.dob' => 'nullable|date',
+            'staff.*.joinDate' => 'nullable|date',
+        ]);
+
+        $updated = 0;
+        foreach ($request->input('staff', []) as $staffData) {
+            if (!empty($staffData['id'])) {
+                $member = StaffManagement::find($staffData['id']);
+                if ($member) {
+                    $member->firstName = $staffData['firstName'] ?? $member->firstName;
+                    $member->lastName = $staffData['lastName'] ?? $member->lastName;
+                    $member->email = $staffData['email'] ?? $member->email;
+                    $member->mobile = $staffData['mobile'] ?? $member->mobile;
+                    $member->address = $staffData['address'] ?? $member->address;
+                    $member->gender = $staffData['gender'] ?? $member->gender;
+                    $member->dob = $staffData['dob'] ?? $member->dob;
+                    $member->joinDate = $staffData['joinDate'] ?? $member->joinDate;
+                    
+                    // Handle designation exactly like single profile update
+                    if (!empty($staffData['designation'])) {
+                        $member->designation_id = $staffData['designation'];
+                        $member->designation = $this->getDesignationName($staffData['designation']);
+                    }
+                    
+                    $member->save();
+                    $updated++;
+                }
+            }
+        }
+
+        return redirect()->route('staffBulkUpdate')->with('success', "Successfully updated {$updated} staff member(s)");
     }
 }

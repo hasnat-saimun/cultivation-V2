@@ -29,6 +29,15 @@ New Admission
     .btn-soft:hover{background:#e9ecef;border-color:#e9ecef}
     .badge-note{background:#eef2f7;color:#495057}
     .card-header .btn{margin-right:.5rem}
+    .form-card{border:0;border-radius:14px;overflow:hidden;box-shadow:0 14px 34px rgba(23,43,77,.12);background:#fff}
+    .form-card .card-header{background:linear-gradient(120deg,#1f3047,#233958);color:#fff;border:0;padding:1.25rem 1.5rem}
+    .form-card .card-body{padding:1.5rem}
+    .form-card h5{color:#fff;margin:0;font-weight:700}
+    .text-white-70{color:rgba(255,255,255,.72)!important}
+    .form-label-required::after{content:"*";color:#ff6b6b;margin-left:4px}
+    .btn-soft-light{background:rgba(255,255,255,.12);color:#fff;border-color:rgba(255,255,255,.18)}
+    .btn-soft-light:hover{background:rgba(255,255,255,.18);color:#fff}
+    .btn-cluster{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem}
 </style>
 @endpush
 @php
@@ -58,16 +67,19 @@ New Admission
 @endphp
                 <!-- Dashboard summery Start Here -->
                 <div class="row gutters-20 mb-4">
-                    <div class="item-title">
-                        <h3>Add New Students</h3>
-                    </div>
                     <!-- Admit Form Area Start Here -->
-                        <div class="card height-auto">
-                            <div class="card-header bg-light">
-                                <a href="{{route('studentList')}}" class="btn btn-success">Student List</a>
-                                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#bulkUploadModal">
-                                    Bulk Upload Students
-                                </button>
+                        <div class="card form-card height-auto w-100">
+                            <div class="card-header d-flex flex-wrap align-items-center justify-content-between">
+                                <div>
+                                    <h5 class="mb-1">Add New Students</h5>
+                                    <small class="text-white-70">Capture admission, guardian, and academic details.</small>
+                                </div>
+                                <div class="btn-cluster">
+                                    <a href="{{route('studentList')}}" class="btn btn-soft-light btn-sm"><i class="fas fa-list mr-1"></i>Student List</a>
+                                    <button type="button" class="btn btn-outline-light btn-sm" data-toggle="modal" data-target="#bulkUploadModal">
+                                        <i class="fas fa-upload mr-1"></i>Bulk Upload Students
+                                    </button>
+                                </div>
                             </div>
                         <div class="card-body">
                             <div class="row">

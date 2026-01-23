@@ -439,11 +439,13 @@ class InstituteController extends Controller
 
     //committee
     public function editManagingCommittee($id){
-        return view('academic.managingCommittee',['commId'=>$id]);
+        $designations = \App\Models\Designation::committeeDesignations();
+        return view('academic.managingCommittee',['commId'=>$id, 'designations'=>$designations]);
     }
 
     public function managingCommittee(){
-        return view('academic.managingCommittee');
+        $designations = \App\Models\Designation::committeeDesignations();
+        return view('academic.managingCommittee', compact('designations'));
     }
 
     public function viewManagingCommittee($id){
@@ -463,7 +465,8 @@ class InstituteController extends Controller
         $committee->email           = $requ->emailAddress;
         $committee->qualification   = $requ->qualification;
         $committee->jobDetails      = $requ->jobDetails;
-        $committee->designation     = $requ->designation;
+        $committee->designation_id  = $requ->designation;
+        $committee->designation     = $this->getDesignationName($requ->designation);
         $committee->address         = $requ->address;
         $committee->validYear       = $requ->validYear;
         $committee->status          = "Active";
@@ -570,5 +573,80 @@ class InstituteController extends Controller
     public function comitteePage(){
         $syllabus  =   ManagingComittee::all();
         return view('frontend.institute.comittee',['Datakey'=>$syllabus]);
+    }
+
+    private function getDesignationName($designationId)
+    {
+        if (!$designationId) {
+            return null;
+        }
+        $designation = \App\Models\Designation::find($designationId);
+        return $designation ? $designation->name : null;
+    }
+
+    public function bulkPhotoUploadForm()
+    {
+        $members = ManagingComittee::select('id', 'full_name', 'designation', 'avatar')
+            ->orderBy('full_name')
+            ->get();
+        
+        return view('cultivation.governing-body-bulk-photo-upload', compact('members'));
+    }
+
+    public function bulkPhotoUploadStore(Request $request)
+    {
+        $request->validate([
+            'member_ids' => 'array',
+            'photos.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp,avif|max:5120',
+        ]);
+
+        $memberIds = $request->input('member_ids', []);
+        $updated = 0;
+        $skipped = 0;
+
+        foreach ($memberIds as $mid) {
+            $fileKey = "photos.$mid";
+            if (!$request->hasFile($fileKey)) {
+                $skipped++;
+                continue;
+            }
+
+            $member = ManagingComittee::find($mid);
+            if (!$member) {
+                $skipped++;
+                continue;
+            }
+
+            $photo = $request->file($fileKey);
+            $newAvatar = rand() . date('Ymd') . '.' . $photo->getClientOriginalExtension();
+            $photo->move(public_path('upload/image/cultivation/'), $newAvatar);
+
+            if (!empty($member->avatar) && File::exists(public_path('upload/image/cultivation/' . $member->avatar))) {
+                File::delete(public_path('upload/image/cultivation/' . $member->avatar));
+            }
+
+            $member->avatar = $newAvatar;
+            $member->save();
+            $updated++;
+        }
+
+        $message = "Updated $updated photo(s).";
+        if ($skipped > 0) {
+            $message .= " Skipped $skipped without files.";
+        }
+
+        return redirect()->route('governingBodyBulkPhotoUpload')->with('success', $message);
+    }
+
+    /**
+     * Get list of governing body members as JSON for API
+     */
+    public function getGoverningBodyList()
+    {
+        $members = ManagingComittee::select('id', 'full_name', 'designation')
+            ->orderBy('full_name')
+            ->get();
+
+        return response()->json($members);
     }
 }
