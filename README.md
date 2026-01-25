@@ -52,22 +52,78 @@ Includes:
 
 ## 🖼 Screenshot Preview
 
-> 📌 *Replace these PNG files inside `/screenshots` folder*
+> 📌 Place screenshots inside `/docs/images/screenshots/`.
 
 | Dashboard | Admission | Result Manager |
 |----------|-----------|----------------|
-| ![Dashboard](/docs/screenshots/dashboard.png) | ![Admission](/docs/screenshots/admission.png) | ![Result](/docs/screenshots/result.png) |
+| ![Dashboard](/docs/images/screenshots/dashboard.png) | ![Admission](/docs/images/screenshots/admission.png) | ![Result](/docs/images/screenshots/result.png) |
 
 ---
 
 ## 🛠 Installation
 
+### Requirements
+- PHP 8.x (XAMPP recommended on Windows)
+- Composer
+- MySQL/MariaDB
+- Node.js 18+ (for asset build via Vite)
+
+### Clone & Backend Setup
 ```bash
 git clone https://github.com/hasnat-saimun/cultivation-V2.git
 cd cultivation-V2
 composer install
+```
+
+Copy environment file:
+- PowerShell (Windows):
+```powershell
+Copy-Item .env.example .env
+```
+- macOS/Linux:
+```bash
 cp .env.example .env
+```
+
+Configure DB in `.env` and then:
+```bash
 php artisan key:generate
-php artisan migrate --seed
+php artisan migrate
+php artisan storage:link
+```
+
+### Frontend (Vite)
+```bash
 npm install
+npm run build   # production build
+# or during development
 npm run dev
+```
+
+### Run
+- Laravel dev server:
+```bash
+php artisan serve
+```
+- XAMPP/Apache: point DocumentRoot to `public/` or visit `http://localhost/cultivation-V2/public` if placed under `htdocs`.
+
+---
+
+## 🔗 Helpful Links
+- User Guide (in-app): `/user-guide`
+- Result Archive: `/result-archive`
+- Bulk Student ID Cards: `/student/idcards/bulk`
+
+---
+
+## 🧩 Modules Overview
+- Admission, Academics, Exam & Result, Attendance, Accounts
+- Staff/Teacher management with bulk upload & photo tools
+- Institute CMS: sliders, galleries, principal speech, committees
+- Placement Cell & Needy Student panels
+
+---
+
+## 📝 Notes
+- Screenshots should be kept under `docs/images/screenshots/`.
+- For logo/signature used on certificates: upload via server configuration screens; files are stored under `public/upload/image/cultivation/`.

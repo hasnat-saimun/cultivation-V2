@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Models\ServerConfig;
 
 class DocsController extends Controller
 {
@@ -27,6 +28,33 @@ class DocsController extends Controller
             'title' => 'User Guide',
             'version' => $version,
             'updatedAt' => $updatedAt->format('Y-m-d H:i')
+        ]);
+    }
+
+    public function brochure()
+    {
+        // Serve a minimal brochure view without app sidebar/layout
+        $version = config('app.version') ?: trim(@file_get_contents(base_path('VERSION')));
+        $config = ServerConfig::query()->latest('id')->first();
+        $brandColor = config('app.brand_primary') ?: '#0f62fe';
+        return view('docs.brochure', [
+            'title' => 'Client Offer',
+            'version' => $version,
+            'config' => $config,
+            'brandColor' => $brandColor,
+        ]);
+    }
+
+    public function brochurePrint()
+    {
+        $version = config('app.version') ?: trim(@file_get_contents(base_path('VERSION')));
+        $config = ServerConfig::query()->latest('id')->first();
+        $brandColor = config('app.brand_primary') ?: '#0f62fe';
+        return view('docs.brochure-print', [
+            'title' => 'Client Offer (Print)',
+            'version' => $version,
+            'config' => $config,
+            'brandColor' => $brandColor,
         ]);
     }
 

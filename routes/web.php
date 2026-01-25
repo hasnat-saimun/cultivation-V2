@@ -79,6 +79,10 @@ Route::get('/',[
     'adminLogin'
 ])->name('adminLogin');
 
+// Public brochure pages (no login required)
+Route::get('/brochure', [DocsController::class, 'brochure'])->name('brochure');
+Route::get('/brochure/print', [DocsController::class, 'brochurePrint'])->name('brochure.print');
+
 Route::post('/login/confirm',[
     FrontController::class ,
     'cultivationLogin'
@@ -905,6 +909,12 @@ Route::middleware(['adminGuard'])->group (function(){
         AdmissionController::class,
         'exportStudentPDF'
     ])->name('student.export.pdf');
+
+    // Bulk Student ID Cards (professional format)
+    Route::get('/student/idcards/bulk', [
+        AdmissionController::class,
+        'bulkIdCards'
+    ])->name('student.idcards.bulk');
 
     Route::get('/student/idCard/{stdId}',[
         AdmissionController::class ,

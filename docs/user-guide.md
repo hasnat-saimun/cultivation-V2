@@ -1,6 +1,6 @@
 # Cultivation V2 — User Guide
 
-Welcome! This guide will help you install, set up, and use the core features of the Cultivation V2 School Management modules, including creating and printing Testimonial Certificates.
+Welcome! This guide helps end users quickly use the core features of Cultivation V2 modules, including creating and printing Testimonial Certificates.
 
 ---
 
@@ -17,45 +17,7 @@ Welcome! This guide will help you install, set up, and use the core features of 
 
 ---
 
-## 1) System Requirements
-- Windows 10/11
-- XAMPP (PHP 8.x, Apache, MySQL/MariaDB)
-- Composer (PHP dependency manager)
-- Node.js 18+ (for asset build; optional if assets already built)
-- Browser: Microsoft Edge or Google Chrome (for best print results)
-
----
-
-## 2) Installation (Local with XAMPP)
-1. Place the project in your XAMPP `htdocs` folder:
-   - Example: `C:\xampp\htdocs\cultivation-V2`
-2. Create a database (e.g., `cultivation_v2`) in phpMyAdmin.
-3. Copy env file:
-   - Duplicate `.env.example` → `.env`
-4. Update `.env` with your DB settings:
-   - `DB_DATABASE=cultivation_v2`
-   - `DB_USERNAME=root`
-   - `DB_PASSWORD=` (leave empty if default)
-5. Install dependencies (run in project folder):
-   - `composer install`
-6. Generate app key:
-   - `php artisan key:generate`
-7. Run migrations and seed (if available):
-   - `php artisan migrate`
-8. Link storage (for image access):
-   - `php artisan storage:link`
-9. Build front-end assets (if needed):
-   - `npm install`
-   - `npm run build` (or `npm run dev` during development)
-10. Start Apache and MySQL in XAMPP.
-11. Visit in browser:
-   - `http://localhost/cultivation-V2/public`
-
-> Note: If your environment serves from the project root via a virtual host, point the DocumentRoot to `public/`.
-
----
-
-## 3) First-Time Setup
+# Institute Settings (Admin)
 Before using certificates, set the institute details so headers print correctly:
 - Institute Name
 - Address
@@ -73,16 +35,13 @@ Logo and signature image path used by the system:
 Example:
 ![Institute Settings](docs/images/institute-settings.png)
 
----
-
-## 4) Users and Login
+## Users and Login
 - Open the application URL (see Installation step 11).
 - Login with your provided username/password.
 - If you don’t have credentials, contact your administrator.
 
 ---
-
-## 5) Student List and Testimonials
+## Student List and Testimonials
 You can create Testimonial Certificates directly from the student list.
 
 - Open the Student List page.
@@ -108,9 +67,19 @@ Screens & Key Areas:
    - Date pickers: Issue Date & Composed Date.
    - Composed By & Remarks for internal notes.
 
----
+## Bulk Student ID Cards
+Generate printable ID cards for an entire class/section.
 
-## 6) Creating a Testimonial
+- Navigate: Bulk ID Cards page (`/student/idcards/bulk`).
+- Filter: Choose Session, Class, Section and optional Department.
+- Preview: The page renders professional-format ID cards for all matched students.
+- Print: Use browser print with Background graphics ON for color accuracy.
+
+Tips:
+- If a student photo is missing, upload via the Student profile or bulk photo upload form.
+- Logo and institute details are taken from Server/Institute Configuration.
+
+## Creating a Testimonial
 1. From Student List, click Create (for eligible students).
 2. The form shows student details (read-only) and fields to complete:
    - Exam Name
@@ -124,9 +93,7 @@ Screens & Key Areas:
 Placeholders:
 - All fields include hints/placeholders. Only enter the requested SSC/HSC exam info; personal data comes from the admission record.
 
----
-
-## 7) Printing the Certificate
+## Printing the Certificate
 1. Open an existing testimonial and click Print.
 2. The certificate shows:
    - Header with logo, institute name, address, Estd., email, and mobile
@@ -155,20 +122,19 @@ Certificate & Print:
    - Ensure: Paper A4, Orientation Landscape (if needed), Margins Default/Minimal, Background graphics enabled.
    - Preview: Confirms watermark faint and certificate fits single page.
 
----
+## Result Archive
+Browse historical results and generate transcripts.
 
-## 8) Reference/SL Number
+- Navigate: `/result-archive`
+- Actions: View transcript per student; bulk transcript list at `/transcripts/bulk`.
+
+## Reference/SL Number
 - The system auto-generates a Reference/SL number when you create a testimonial.
 - If data was imported from an older system and some references are missing, an admin can backfill.
 
-Backfill command (Admin/IT):
-```
-php artisan testimonials:backfill-ref
-```
-
 ---
 
-## 9) Importing Students (Optional)
+## Importing Students (Optional)
 If your role includes data import:
 - Export the student template (if available) or obtain it from admin.
 - Fill the template with student data.
@@ -176,9 +142,7 @@ If your role includes data import:
 
 > If you don’t see Import/Export options, your account may not have permission.
 
----
-
-## 10) Tips for Best Print Quality
+## Tips for Best Print Quality
 - Use Microsoft Edge or Google Chrome.
 - Enable Background graphics in the print dialog.
 - Avoid dark mode extensions while printing.
@@ -187,9 +151,7 @@ If your role includes data import:
 Visual reference:
 ![Print Settings](docs/images/print-settings.png)
 
----
-
-## 11) Troubleshooting
+## Troubleshooting
 - Watermark not visible in print:
   - Ensure Background graphics is enabled (for colored elements). The watermark itself is an image and should print, but some filters can affect it. Try a hard refresh (Ctrl+F5) and print again.
   - Use Edge/Chrome latest version.
@@ -203,28 +165,24 @@ Visual reference:
 Watermark visibility example (subtle, centered within the frame):
 ![Testimonial Certificate Layout](docs/images/certificate-view.png)
 
----
-
-## 12) Roles and Permissions
+## Roles and Permissions
 - Operators: Create/Edit/Print testimonials for eligible students.
 - Admins: Manage institute settings, images (logo/signature), and backfill operations.
 
 If you need additional features or roles, contact your administrator.
 
----
-
-## 13) Support
+## Support
 - Internal admin or IT first point of contact.
 - Provide screenshot, student name, and steps to reproduce any issue.
 
----
-
-## 14) Change Log (Highlights)
+## Change Log (Highlights)
 - Testimonial from Student List
 - Auto SL/Reference generation + backfill command
 - Class eligibility (Ten/Twelve)
 - Print-optimized layout with watermark
 - DataTables search enabled and styled
+- Bulk Student ID Cards page with professional layout
+- Result Archive and bulk transcript listing
 
 ---
 

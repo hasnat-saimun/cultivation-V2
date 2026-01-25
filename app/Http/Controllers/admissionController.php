@@ -14,6 +14,86 @@ use File;
 
 class AdmissionController extends Controller
 {
+    /**
+     * Bulk Student ID Cards (filters + professional card data)
+     */
+    public function bulkIdCards(Request $request)
+    {
+        $classDetails = classManage::all();
+        $sessionDetails = sessionManage::all();
+        $sectionDetails = sectionManage::all();
+        $departmentDetails = \App\Models\Department::all();
+
+        $filters = [
+            'classId' => $request->get('classId'),
+            'sessionId' => $request->get('sessionId'),
+            'sectionId' => $request->get('sectionId'),
+            'departmentId' => $request->get('departmentId'),
+        ];
+
+        $q = newAdmission::query();
+        if (!empty($filters['classId'])) { $q->where('className', (int)$filters['classId']); }
+        if (!empty($filters['sessionId'])) { $q->where('sessName', (int)$filters['sessionId']); }
+        if (!empty($filters['sectionId'])) { $q->where('sectionName', (int)$filters['sectionId']); }
+        if (!empty($filters['departmentId'])) { $q->where('departmentName', (int)$filters['departmentId']); }
+        $students = (!empty($filters['classId']) || !empty($filters['sessionId']) || !empty($filters['sectionId']) || !empty($filters['departmentId']))
+            ? $q->orderBy('rollNumber')->get()
+            : collect();
+
+        // Branding from ServerConfig (first row)
+        $server = \App\Models\ServerConfig::orderBy('id')->first();
+        $branding = [
+            'name' => $server->instituteName ?? 'Institute',
+            'address' => $server->address ?? '',
+            'email' => $server->officeEmail ?? '',
+            'phone' => $server->officeMobile ?? '',
+            'logoUrl' => !empty($server->logo) ? asset('/public/upload/image/cultivation/'.$server->logo) : null,
+            'principalSignUrl' => !empty($server->principalSign) ? asset('/public/upload/image/cultivation/'.$server->principalSign) : null,
+        ];
+
+        // Preload lookup maps
+        $classMap = $classDetails->keyBy('id');
+        $sessionMap = $sessionDetails->keyBy('id');
+        $sectionMap = $sectionDetails->keyBy('id');
+        $deptMap = $departmentDetails->keyBy('id');
+
+        // Build per-student card payloads
+        $cardData = [];
+        foreach ($students as $s) {
+            $className = optional($classMap->get((int)$s->className))->className ?? '-';
+            $sectionName = optional($sectionMap->get((int)$s->sectionName))->section ?? '-';
+            $deptName = optional($deptMap->get((int)$s->departmentName))->departmentName ?? '-';
+            $sessionText = optional($sessionMap->get((int)$s->sessName))->session ?? '-';
+
+            // Compute validity date: 30-June of the last year in session string if parseable
+            $validDate = null;
+            if ($sessionText && preg_match('/(\d{4})\s*[-–]\s*(\d{4})/', $sessionText, $m)) {
+                $endYear = (int)$m[2];
+                $validDate = date('d-m-Y', strtotime(($endYear+1).'-06-30'));
+            }
+            if (!$validDate) { $validDate = date('d-m-Y', strtotime('+1 year')); }
+
+            $photoUrl = !empty($s->avatar)
+                ? asset('/public/upload/image/student/'.$s->avatar)
+                : asset('/public/back-office/img/avatar.jpeg');
+
+            $cardData[$s->id] = [
+                'studentId' => $s->stdId,
+                'name' => trim(($s->fullName ?? '').' '.($s->sureName ?? '')),
+                'roll' => $s->rollNumber,
+                'class' => $className,
+                'section' => $sectionName,
+                'department' => $deptName,
+                'sessionText' => $sessionText,
+                'validity' => $validDate,
+                'photoUrl' => $photoUrl,
+            ];
+        }
+
+        return view('cultivation.student-id-bulk', compact(
+            'classDetails','sessionDetails','sectionDetails','departmentDetails','filters','students','cardData','branding'
+        ));
+    }
     public function admitStudent(){
         $classDetails = classManage::all();
         $sectionDetails= sectionManage::all();
@@ -307,8 +387,54 @@ class AdmissionController extends Controller
 
 
     public function stdIdCard($id){
-        $stdData = newAdmission::find($id);
-        return view('cultivation.stdIdCard',['std'=>$stdData]);
+        $std = newAdmission::find($id);
+        if (!$std) { return back()->with('error','Student not found'); }
+
+        // Build branding
+        $server = \App\Models\ServerConfig::orderBy('id')->first();
+        $branding = [
+            'name' => $server->instituteName ?? 'Institute',
+            'address' => $server->address ?? '',
+            'email' => $server->officeEmail ?? '',
+            'phone' => $server->officeMobile ?? '',
+            'logoUrl' => !empty($server->logo) ? asset('/public/upload/image/cultivation/'.$server->logo) : null,
+            'principalSignUrl' => !empty($server->principalSign) ? asset('/public/upload/image/cultivation/'.$server->principalSign) : null,
+        ];
+
+        // Lookups
+        $class = \App\Models\classManage::find((int)$std->className);
+        $section = \App\Models\sectionManage::find((int)$std->sectionName);
+        $session = \App\Models\sessionManage::find((int)$std->sessName);
+        $dept = \App\Models\Department::find((int)$std->departmentName);
+        $className = optional($class)->className ?? '-';
+        $sectionName = optional($section)->section ?? '-';
+        $deptName = optional($dept)->departmentName ?? '-';
+        $sessionText = optional($session)->session ?? '-';
+
+        $validDate = null;
+        if ($sessionText && preg_match('/(\d{4})\s*[-–]\s*(\d{4})/', $sessionText, $m)) {
+            $endYear = (int)$m[2];
+            $validDate = date('d-m-Y', strtotime(($endYear+1).'-06-30'));
+        }
+        if (!$validDate) { $validDate = date('d-m-Y', strtotime('+1 year')); }
+
+        $photoUrl = !empty($std->avatar)
+            ? asset('/public/upload/image/student/'.$std->avatar)
+            : asset('/public/back-office/img/avatar.jpeg');
+
+        $card = [
+            'studentId' => $std->stdId,
+            'name' => trim(($std->fullName ?? '').' '.($std->sureName ?? '')),
+            'roll' => $std->rollNumber,
+            'class' => $className,
+            'section' => $sectionName,
+            'department' => $deptName,
+            'sessionText' => $sessionText,
+            'validity' => $validDate,
+            'photoUrl' => $photoUrl,
+        ];
+
+        return view('cultivation.stdIdCard', compact('std','branding','card'));
     }
 
     public function editStudent($id){

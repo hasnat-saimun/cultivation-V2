@@ -15,6 +15,8 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
     'version' => env('APP_VERSION'),
+    // Brand primary color used in brochure and marketing views
+    'brand_primary' => env('APP_BRAND_PRIMARY', '#0f62fe'),
 
     /*
     |--------------------------------------------------------------------------
