@@ -97,40 +97,28 @@
                                             </div>
                                             <button class="btn btn-success btn-lg mb-4 d-print-none mt-4" onclick="printDiv('idCardOne')">Print</button>
                                         </div>
-                                    @extends('cultivation.include')
-                                    @section('backTitle')
-                                    {{ $card['name'] }} ID Card
-                                    @endsection
-                                    @section('backIndex')
-                                    <div class="row gutters-20 mt-4">
-                                        <div class="col-12">
-                                            <div class="card card-default shadow-sm">
-                                                <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                                    <h3 class="mb-0"><i class="fa-solid fa-id-card"></i> Student ID Card</h3>
-                                                    <div class="d-flex gap-2 align-items-center">
-                                                        <button type="button" class="btn btn-success btn-sm" onclick="printCards()"><i class="fa-solid fa-print"></i> Print</button>
-                                                        @php $fmt = request()->get('format','landscape'); $qsL = ['format'=>'landscape']; $qsP = ['format'=>'portrait']; @endphp
-                                                        <div class="btn-group" role="group" aria-label="Format">
-                                                            <a href="{{ route('stdIdCard', ['stdId'=>$std->id] + $qsL) }}" class="btn btn-outline-light btn-sm {{ $fmt==='landscape' ? 'active' : '' }}">Landscape</a>
-                                                            <a href="{{ route('stdIdCard', ['stdId'=>$std->id] + $qsP) }}" class="btn btn-outline-light btn-sm {{ $fmt==='portrait' ? 'active' : '' }}">Portrait</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div id="printArea">
-                                                        @if(request()->get('format','landscape') === 'portrait')
-                                                            @include('cultivation.partials.student-id-card-portrait', ['card' => $card, 'branding' => $branding])
-                                                        @else
-                                                            @include('cultivation.partials.student-id-card', ['card' => $card, 'branding' => $branding])
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    }</div>
-                                    @endsection
+                                    </div>
+                                </div>
+                            </div>
+                        @else
+                            <div class="alert alert-info">Sorry! No data found</div>
+                            <div class="mb-4"> <a href="{{ route('studentList') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
+                        @endif
+                        <script type="text/javascript">
+                            function printDiv(e){
+                                var printContents = document.getElementById(e).innerHTML;
+                                var originalContents = document.body.innerHTML;
+                                document.body.innerHTML = printContents;
+                                window.print();
+                                document.body.innerHTML = originalContents;
+                            }
+                        </script>
+                    </div>
+                </div>
+            </div>
+@endsection
 
-                                    @push('styles')
+@push('styles')
                                     <style>
                                     :root { --id-primary:#0f172a; --id-accent:#2563eb; --id-muted:#6b7280; --id-border:#e5e7eb; --id-bg:#f8fafc; --card-w:85.60mm; --card-h:53.98mm; }
                                     .bg-gradient-info { background: linear-gradient(135deg,#17a2b8 0%,#138496 100%); }
