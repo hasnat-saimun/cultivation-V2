@@ -27,7 +27,7 @@ Get Promotional Student Data
         <form method="POST" class="card-body form form-group" action="{{ route('confirmPromotData') }}">
                 <div class="row">
                     <div class="col-12"><h1>Manage the promotion of student from the list</h1></div>
-                    <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ $sectionName }}</div>
+                    <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ isset($type) && $type==='classwise' ? 'All Sections' : $sectionName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Current Class:</b>  {{ $className }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Session:</b> {{ $session_name }}</div>
                     <div class="col-12 form-group">
@@ -40,6 +40,20 @@ Get Promotional Student Data
                             @if(!empty($classes))
                                 @foreach($classes as $cls)
                                 <option value="{{ $cls->id }}">{{ $cls->className }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-12 form-group">
+                        <label>Promoted Section</label>
+                        <select class="select2" name="promotSection">
+                            <option value="">Keep current / Select new</option>
+                            @php
+                                $sections = \App\Models\sectionManage::orderBy('id','DESC')->get();
+                            @endphp
+                            @if(!empty($sections))
+                                @foreach($sections as $sec)
+                                <option value="{{ $sec->id }}">{{ $sec->section }}</option>
                                 @endforeach
                             @endif
                         </select>
@@ -65,6 +79,7 @@ Get Promotional Student Data
                         <input type="hidden" name="sessionId" value="{{ $sessionId }}">
                         <input type="hidden" name="classId" value="{{ $classId }}">
                         <input type="hidden" name="groupId" value="{{ $groupId }}">
+                        <input type="hidden" name="type" value="{{ $type ?? 'sectionwise' }}">
                         @foreach($studentList as $std)
                         <input type="hidden" name="studentId[]" value="{{ $std->stdId }}">
                         <tr>

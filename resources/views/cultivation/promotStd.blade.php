@@ -31,8 +31,15 @@ Student Promotion
                                 @csrf
                                 <div class="row">
                                     <div class="col-12 form-group">
+                                        <label>Type</label>
+                                        <select class="select2" name="type" id="promotType">
+                                            <option value="sectionwise">Sectionwise</option>
+                                            <option value="classwise">Classwise</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-12 form-group">
                                         <label>Class *</label>
-                                        <select class="select2" name="classId" required>
+                                        <select class="select2" name="classId">
                                             <option value="">Select *</option>
                                             @php
                                                 $classes = \App\Models\classManage::orderBy('id','DESC')->get();
@@ -46,7 +53,7 @@ Student Promotion
                                     </div>
                                     <div class="col-12 form-group">
                                         <label>Session *</label>
-                                        <select class="select2" name="sessionId" required>
+                                        <select class="select2" name="sessionId">
                                             <option value="">Select *</option>
                                             @php
                                                 $sessions = \App\Models\sessionManage::orderBy('id','DESC')->get();
@@ -60,7 +67,7 @@ Student Promotion
                                     </div>
                                     <div class="col-12 form-group">
                                         <label>Section/Group *</label>
-                                        <select class="select2" name="groupId" required>
+                                        <select class="select2" name="groupId" id="groupSelect">
                                             <option value="">Select *</option>
                                             @php
                                                 $department = \App\Models\sectionManage::orderBy('id','DESC')->get();
@@ -76,6 +83,27 @@ Student Promotion
                                         <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</button>
                                     </div>
                                 </div>
+                            </form>
+
+                            <script>
+                                // Use jQuery to handle Select2 changes and visibility
+                                $(function(){
+                                    function toggleGroup(){
+                                        var val = $('#promotType').val();
+                                        if(val === 'sectionwise'){
+                                            $('#groupSelect').prop('required', true).closest('.form-group').show();
+                                        } else {
+                                            $('#groupSelect').prop('required', false).closest('.form-group').hide();
+                                            // clear selection when hidden
+                                            $('#groupSelect').val('').trigger('change');
+                                        }
+                                    }
+                                    // initialize visibility on load
+                                    toggleGroup();
+                                    // bind change with select2 support
+                                    $('#promotType').on('change', toggleGroup);
+                                });
+                            </script>
                             </form>
                         </div>
                     </div>

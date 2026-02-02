@@ -210,12 +210,14 @@ class AdmissionController extends Controller
         while($x<$totalData){
             $update = newAdmission::where(['stdId'=>$requ->studentId[$x]])->first();
             if ($update) {
-                // Check for duplicate record in new class/session/section/roll (new roll if provided, otherwise current roll)
+                // Determine target values for class/section/roll (new roll if provided, otherwise current roll)
                 $newRoll = !empty($requ->rollNum[$x]) ? $requ->rollNum[$x] : $update->rollNumber;
+                // If a promoted section is provided use it, otherwise keep current section for duplicate check
+                $targetSection = $requ->filled('promotSection') ? $requ->promotSection : $update->sectionName;
                 $duplicate = newAdmission::where([
                     'className'   => $requ->promotId,
                     'sessName'    => $update->sessName,
-                    'sectionName' => $update->sectionName,
+                    'sectionName' => $targetSection,
                     'rollNumber'  => $newRoll,
                 ])->where('id', '!=', $update->id)->first();
                 if ($duplicate) {
@@ -293,8 +295,12 @@ class AdmissionController extends Controller
                     ];
                     \App\Models\ResultArchive::create($archiveData);
                 }
+                // Apply promotion: class, optionally section, and new roll
                 $update->className = $requ->promotId;
-                $update->rollNumber = $requ->rollNum[$x];
+                if ($requ->filled('promotSection')) {
+                    $update->sectionName = $requ->promotSection;
+                }
+                $update->rollNumber = $newRoll;
                 $update->save();
             }
             $x++;
@@ -312,8 +318,31 @@ class AdmissionController extends Controller
     }
 
     public function getPromotionData(Request $requ){
-        $studentList = newAdmission::where(['sessName'=>$requ->sessionId,'sectionName'=>$requ->groupId,'className'=>$requ->classId])->get();
-        return view('cultivation.promotData',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId]);
+        $type = $requ->input('type','sectionwise');
+
+        // Build query dynamically from provided filters. Fields are optional.
+        $q = newAdmission::query();
+        if ($requ->filled('sessionId')) {
+            $q->where('sessName', $requ->sessionId);
+        }
+        if ($requ->filled('classId')) {
+            $q->where('className', $requ->classId);
+        }
+        if ($requ->filled('groupId') && $type !== 'classwise') {
+            // only apply group filter when not doing classwise promotion
+            $q->where('sectionName', $requ->groupId);
+        }
+
+        $studentList = $q->get();
+        $groupId = $requ->filled('groupId') ? $requ->groupId : null;
+
+        return view('cultivation.promotData',[
+            'studentList'=>$studentList,
+            'groupId'=>$groupId,
+            'classId'=>$requ->classId ?? null,
+            'sessionId'=>$requ->sessionId ?? null,
+            'type' => $type,
+        ]);
     }
     
     
