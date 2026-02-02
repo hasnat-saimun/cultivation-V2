@@ -128,14 +128,14 @@ Student List
                                                 <input type="checkbox" class="row-checkbox form-check-input" value="{{ $std->id }}">
                                             </td>
                                             <td>{{ $std->stdId }}</td>
-                                            <td>{{ $std->fullName." ".$std->sureName }}</td>
-                                            @if(!empty($sessionData))
-                                            <td>{{$sessionData->session}}</td>
+                                            @if(!empty($std->rollNumber))
+                                            <td>{{ $std->rollNumber }}</td>
                                             @else
                                             <td>-</td>
                                             @endif
-                                            @if(!empty($std->rollNumber))
-                                            <td>{{ $std->rollNumber }}</td>
+                                            <td>{{ $std->fullName." ".$std->sureName }}</td>
+                                            @if(!empty($sessionData))
+                                            <td>{{$sessionData->session}}</td>
                                             @else
                                             <td>-</td>
                                             @endif
