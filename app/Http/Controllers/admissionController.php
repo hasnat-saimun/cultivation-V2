@@ -173,7 +173,10 @@ class AdmissionController extends Controller
             });
         }
 
-        $stdData = $q->orderBy('id','desc')->get();
+        // Order by numeric roll ascending, then by full name
+        $stdData = $q->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+                ->orderBy('fullName','asc')
+                ->get();
         return view('cultivation.studentList',['studentData'=>$stdData]);
     }
 
