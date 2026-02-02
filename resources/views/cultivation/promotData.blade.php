@@ -91,7 +91,18 @@ Get Promotional Student Data
                             <td width="9%">
                                 <input type="rollNum" class="form-control" id="rollNum" name="rollNum[]"/>
                             </td>
-                            <td>{{ $std->fullName.' '.$std->sureName }}</td>
+                            <td>
+                                {{ $std->fullName.' '.$std->sureName }}
+                                <div class="mt-2">
+                                    @php $lastArchive = \App\Models\ResultArchive::where('student_id',$std->id)->orderBy('created_at','desc')->first(); @endphp
+                                    @if($lastArchive)
+                                    <form method="POST" action="{{ route('promotion.revert', ['stdId'=>$std->id]) }}" style="display:inline" onsubmit="return confirm('Revert this student to previous class/section?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-sm btn-warning">Revert</button>
+                                    </form>
+                                    @endif
+                                </div>
+                            </td>
                         </tr>
                         @endforeach
                         <div class="mb-4"><input type="submit" value="Save" class="btn btn-success"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>

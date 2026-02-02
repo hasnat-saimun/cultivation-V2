@@ -29,6 +29,60 @@ Student List
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     </div>
                                 @endif
+                                <div class="mb-3">
+                                    <form method="GET" class="row g-2 align-items-end">
+                                        @php
+                                            $classes = \App\Models\classManage::orderBy('id')->get();
+                                            $sessions = \App\Models\sessionManage::orderBy('id')->get();
+                                            $sections = \App\Models\sectionManage::orderBy('id')->get();
+                                            $departments = \App\Models\Department::orderBy('id')->get();
+                                        @endphp
+                                        <div class="col-auto">
+                                            <label class="form-label">Class</label>
+                                            <select name="classId" class="form-control">
+                                                <option value="">All</option>
+                                                @foreach($classes as $c)
+                                                <option value="{{ $c->id }}" {{ request()->get('classId') == $c->id ? 'selected' : '' }}>{{ $c->className }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <label class="form-label">Session</label>
+                                            <select name="sessionId" class="form-control">
+                                                <option value="">All</option>
+                                                @foreach($sessions as $s)
+                                                <option value="{{ $s->id }}" {{ request()->get('sessionId') == $s->id ? 'selected' : '' }}>{{ $s->session }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <label class="form-label">Section</label>
+                                            <select name="sectionId" class="form-control">
+                                                <option value="">All</option>
+                                                @foreach($sections as $sec)
+                                                <option value="{{ $sec->id }}" {{ request()->get('sectionId') == $sec->id ? 'selected' : '' }}>{{ $sec->section }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <label class="form-label">Department</label>
+                                            <select name="departmentId" class="form-control">
+                                                <option value="">All</option>
+                                                @foreach($departments as $d)
+                                                <option value="{{ $d->id }}" {{ request()->get('departmentId') == $d->id ? 'selected' : '' }}>{{ $d->departmentName }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-auto">
+                                            <label class="form-label">Search</label>
+                                            <input name="search" type="text" class="form-control" value="{{ request()->get('search') }}" placeholder="Name / Student ID / Phone">
+                                        </div>
+                                        <div class="col-auto">
+                                            <button type="submit" class="btn btn-primary">Filter</button>
+                                            <a href="{{ route('studentList') }}" class="btn btn-light">Reset</a>
+                                        </div>
+                                    </form>
+                                </div>
                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                     <button type="button" class="btn btn-danger" id="bulkDeleteBtn" style="display:none;">
                                         <i class="fa-solid fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
@@ -46,6 +100,7 @@ Student List
                                                 <input type="checkbox" id="selectAll" class="form-check-input">
                                             </th>
                                             <th>Student ID</th>
+                                            <th>Roll</th>
                                             <th>Name</th>
                                             <th>Session</th>
                                             <th>Class</th>
@@ -76,6 +131,11 @@ Student List
                                             <td>{{ $std->fullName." ".$std->sureName }}</td>
                                             @if(!empty($sessionData))
                                             <td>{{$sessionData->session}}</td>
+                                            @else
+                                            <td>-</td>
+                                            @endif
+                                            @if(!empty($std->rollNumber))
+                                            <td>{{ $std->rollNumber }}</td>
                                             @else
                                             <td>-</td>
                                             @endif

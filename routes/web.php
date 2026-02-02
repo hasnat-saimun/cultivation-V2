@@ -185,6 +185,9 @@ Route::middleware(['adminGuard'])->group (function(){
         'delNotice'
     ])->name('delNotice');
 
+    // Promotion revert (restore previous class/section/roll from archive)
+    Route::post('/promotion/revert/{stdId}', [\App\Http\Controllers\admissionController::class, 'revertPromotion'])->name('promotion.revert');
+
     Route::get('/notice/preview/{id}',[
         NoticeController::class ,
         'prevNotice'

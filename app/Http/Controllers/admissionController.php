@@ -94,6 +94,48 @@ class AdmissionController extends Controller
             'classDetails','sessionDetails','sectionDetails','departmentDetails','filters','students','cardData','branding'
         ));
     }
+
+    /**
+     * Revert a student's promotion using the latest ResultArchive entry.
+     * Restores old_class, old_section, old_roll and old_session if available.
+     */
+    public function revertPromotion(Request $request, $stdId)
+    {
+        $student = newAdmission::find($stdId);
+        if (!$student) {
+            return back()->with('error', 'Student not found');
+        }
+
+        $archive = \App\Models\ResultArchive::where('student_id', $student->id)->orderBy('created_at', 'desc')->first();
+        if (!$archive) {
+            return back()->with('error', 'No archive found to revert');
+        }
+
+        // Prepare values from archive (use as-is if present)
+        $oldClass = $archive->old_class;
+        $oldSection = $archive->old_section;
+        $oldRoll = $archive->old_roll;
+        $oldSession = $archive->old_session;
+
+        // Update student record
+        try {
+            $student->className = $oldClass;
+            if (!empty($oldSection)) {
+                $student->sectionName = $oldSection;
+            }
+            if (!empty($oldRoll)) {
+                $student->rollNumber = $oldRoll;
+            }
+            if (!empty($oldSession)) {
+                $student->sessName = $oldSession;
+            }
+            $student->save();
+        } catch (\Exception $e) {
+            return back()->with('error', 'Revert failed: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Student reverted to previous class/section/roll successfully');
+    }
     public function admitStudent(){
         $classDetails = classManage::all();
         $sectionDetails= sectionManage::all();
@@ -106,8 +148,32 @@ class AdmissionController extends Controller
     //     return view('cultivation.admit-student',['classDetails'=>$classDetails,'sectionDatails'=>$sectionDetails]);
     // }
 
-    public function studentList(){
-        $stdData = newAdmission::all();
+    public function studentList(Request $request){
+        // Build query with optional filters from GET params
+        $q = newAdmission::query();
+        if ($request->filled('classId')) {
+            $q->where('className', $request->get('classId'));
+        }
+        if ($request->filled('sessionId')) {
+            $q->where('sessName', $request->get('sessionId'));
+        }
+        if ($request->filled('sectionId')) {
+            $q->where('sectionName', $request->get('sectionId'));
+        }
+        if ($request->filled('departmentId')) {
+            $q->where('departmentName', $request->get('departmentId'));
+        }
+        if ($request->filled('search')) {
+            $s = $request->get('search');
+            $q->where(function($w) use ($s){
+                $w->where('fullName','like','%'.$s.'%')
+                  ->orWhere('sureName','like','%'.$s.'%')
+                  ->orWhere('stdId','like','%'.$s.'%')
+                  ->orWhere('phone','like','%'.$s.'%');
+            });
+        }
+
+        $stdData = $q->orderBy('id','desc')->get();
         return view('cultivation.studentList',['studentData'=>$stdData]);
     }
 
