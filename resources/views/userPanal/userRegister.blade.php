@@ -37,15 +37,17 @@ Register Form
                     @if(isset($user))
                         <input type="hidden" name="userId" value="{{ $user->id }}">
                     @endif
-                    @php
+                        @php
                         $showAccessBox = false;
                         $assignedClasses = [];
                         $assignedSubjects = [];
+                        $assignedSections = [];
                         if(isset($user) && $user->userType == 1) {
                             $showAccessBox = true;
                             // Use pivot-based accessors; no reliance on legacy string columns
                             $assignedClasses = $user->access_class_array ?? [];
                             $assignedSubjects = $user->access_subject_array ?? [];
+                            $assignedSections = $user->access_section_array ?? [];
                         }
                     @endphp
                     <div class="row">
@@ -91,32 +93,151 @@ Register Form
                         </div>
                         @endif
                     </div>
-                        <div id="accessBox" class="row p-4 {{ (old('userType') == 1 || (isset($user) && $user->userType == 1)) ? '' : 'd-none' }}">
-                            <div class="col-6 mb-3">
-                                <label class="form-label">Assign Class</label>
-                                @if($classList->count() > 0)
-                                    @foreach($classList as $cls)
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="{{ $cls->id }}" id="cls{{ $cls->id }}" name="className[]" {{ (in_array($cls->id, old('className', $assignedClasses))) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="cls{{ $cls->id }}">
-                                            {{ $cls->className }}
-                                            </label>
+                        <div id="accessBox" class="row p-3 {{ (old('userType') == 1 || (isset($user) && $user->userType == 1)) ? '' : 'd-none' }}">
+                            <div class="col-lg-6 col-12 mb-3">
+                                <div class="card shadow-sm">
+                                    <div class="card-body p-3">
+                                        <h6 class="mb-2">Assign (Marks Entry)</h6>
+                                        <p class="small text-muted mb-2">Assign classes, sections and subjects a teacher may enter marks for.</p>
+                                        <div class="mb-2">
+                                            <select id="assign_class_select" class="form-select">
+                                                <option value="">Select class</option>
+                                                @foreach($classList as $cls)
+                                                    <option value="{{ $cls->id }}">{{ $cls->className }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
-                                    @endforeach 
-                                @endif
+                                        <div class="mb-2">
+                                            <select id="assign_section_select" class="form-select mt-2 d-none">
+                                                <option value="">Select section</option>
+                                                <option value="all">All Sections</option>
+                                                <option value="none">No Section (show all class data)</option>
+                                                @if(isset($sectionList))
+                                                    @foreach($sectionList as $sec)
+                                                        <option value="{{ $sec->id }}" data-section-name="{{ $sec->section }}">{{ $sec->section }}</option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <select id="assign_subject_select" class="form-select mt-2 d-none">
+                                                <option value="">Select subject</option>
+                                                @if($subjectList)
+                                                    @foreach($subjectList as $sub)
+                                                        <option value="{{ $sub->id }}" data-assign-class="{{ $sub->assign_class ?? '' }}">{{ $sub->subjectName }} ({{ $sub->subjectType }})</option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
+                                            <button type="button" id="assign_btn" class="btn btn-success btn-sm d-none">Assign</button>
+                                        </div>
+
+                                        <div class="table-responsive">
+                                            <table class="table table-sm table-striped mt-2" id="assign_table">
+                                                <thead>
+                                                    <tr><th>Class</th><th>Section</th><th>Subject</th><th></th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @php
+                                                        // Prefer to render composite assignments (class+section+subject) stored in teacher_class_subjects
+                                                        $rows = [];
+                                                        if(isset($user) && $user->userType == 1){
+                                                            $comps = \App\Models\TeacherClassSubject::where('teacher_id', $user->id)->get();
+                                                            foreach($comps as $c){
+                                                                $rows[] = ['cid'=>$c->class_id,'sid'=>($c->section_id === null ? null : $c->section_id),'subid'=>($c->subject_id === null ? null : $c->subject_id)];
+                                                            }
+                                                            // If no composite rows exist, fall back to legacy arrays
+                                                            if(empty($rows)){
+                                                                foreach($assignedSubjects as $subid) {
+                                                                    $subModel = optional(collect($subjectList)->firstWhere('id', $subid));
+                                                                    $cid = $subModel && $subModel->assign_class ? $subModel->assign_class : ($assignedClasses[0] ?? null);
+                                                                    $sid = $assignedSections[0] ?? null;
+                                                                    if(!$cid) continue;
+                                                                    $rows[] = ['cid'=>$cid,'sid'=>$sid,'subid'=>$subid];
+                                                                }
+                                                                foreach($assignedClasses as $cid) {
+                                                                    $found = false;
+                                                                    foreach($rows as $r) { if($r['cid'] == $cid) { $found = true; break; } }
+                                                                    if(!$found) {
+                                                                        $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'subid'=>null];
+                                                                    }
+                                                                }
+                                                            }
+                                                        } else {
+                                                            // Non-teacher or new user - use previously computed arrays
+                                                            foreach($assignedSubjects as $subid) {
+                                                                $subModel = optional(collect($subjectList)->firstWhere('id', $subid));
+                                                                $cid = $subModel && $subModel->assign_class ? $subModel->assign_class : ($assignedClasses[0] ?? null);
+                                                                $sid = $assignedSections[0] ?? null;
+                                                                if(!$cid) continue;
+                                                                $rows[] = ['cid'=>$cid,'sid'=>$sid,'subid'=>$subid];
+                                                            }
+                                                            foreach($assignedClasses as $cid) {
+                                                                $found = false;
+                                                                foreach($rows as $r) { if($r['cid'] == $cid) { $found = true; break; } }
+                                                                if(!$found) {
+                                                                    $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'subid'=>null];
+                                                                }
+                                                            }
+                                                        }
+                                                    @endphp
+                                                    @foreach($rows as $r)
+                                                        @php
+                                                            $cid = $r['cid'];
+                                                            $sid = $r['sid'];
+                                                            $subid = $r['subid'];
+                                                            $clsText = optional(collect($classList)->firstWhere('id', $cid))->className ?? ('Class #'.$cid);
+                                                            $secText = $sid ? ( ($sid==='all') ? 'All Sections' : ( ($sid==='none') ? 'No Section (show all class data)' : (optional(collect($sectionList)->firstWhere('id',$sid))->section ?? ('Section #'.$sid)) ) ) : '';
+                                                            $subText = $subid ? (optional(collect($subjectList)->firstWhere('id',$subid))->subjectName ?? ('Subject #'.$subid)) : '';
+                                                            $key = $cid.'-'.($sid ?? '').'-'.($subid ?? '');
+                                                        @endphp
+                                                        <tr data-key="{{ $key }}">
+                                                            <td>{{ $clsText }}</td>
+                                                            <td>{{ $secText }}</td>
+                                                            <td>{{ $subText }}</td>
+                                                            <td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>
+                                                            <input type="hidden" name="className[]" value="{{ $cid }}">
+                                                            <input type="hidden" name="section[]" value="{{ $sid }}">
+                                                            <input type="hidden" name="subject[]" value="{{ $subid }}">
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <!-- Legacy assign UI removed; interactive Assign panel is used -->
+                                    </div>
+                                </div>
                             </div>
-                            <div id="subjectBox" class="col-6 mb-3">
-                                @if($subjectList)
-                                    <label class="form-label">Assign Subject</label>
-                                    @foreach($subjectList as $sub)
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="{{ $sub->id }}" id="sub{{ $sub->id }}" name="subject[]" {{ (in_array($sub->id, old('subject', $assignedSubjects))) ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="sub{{ $sub->id }}">
-                                            {{ $sub->subjectName }} ( {{ $sub->subjectType }} )
-                                            </label>
+                            <div class="col-lg-6 col-12 mb-3">
+                                <div class="card shadow-sm">
+                                    <div class="card-body p-3">
+                                        <h6 class="mb-2">Primary Class / Section (Attendance)</h6>
+                                        <p class="small text-muted mb-2">Primary class/section is used by a class-teacher when taking daily attendance.</p>
+                                        <div class="mb-3">
+                                            <label class="form-label">Primary Class</label>
+                                            <select name="primaryClass" class="form-select">
+                                                <option value="">-- None --</option>
+                                                @foreach($classList as $cls)
+                                                    <option value="{{ $cls->id }}" {{ (old('primaryClass') == $cls->id || (isset($user) && $user->primary_class_id == $cls->id)) ? 'selected' : '' }}>{{ $cls->className }}</option>
+                                                @endforeach
+                                            </select>
                                         </div>
-                                    @endforeach
-                                @endif
+                                        <div class="mb-3">
+                                            <label class="form-label">Primary Section</label>
+                                            <select name="primarySection" class="form-select">
+                                                <option value="">-- None --</option>
+                                                @if(isset($sectionList))
+                                                    @foreach($sectionList as $sec)
+                                                        <option value="{{ $sec->id }}" {{ (old('primarySection') == $sec->id || (isset($user) && $user->primary_section_id == $sec->id)) ? 'selected' : '' }}>{{ $sec->section }}</option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                        </div>
+                                        <div class="small text-muted">Selecting a primary class does not grant marks-entry rights — use the Assign panel for that.</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     <button type="submit" class="mt-4 btn btn-primary btn-lg">Save</button>
@@ -152,5 +273,115 @@ Register Form
             document.getElementById("subjectBox").classList.add = "d-none";
         }
     }
+
+    // Assignment panel logic
+    document.addEventListener('DOMContentLoaded', function(){
+        const classSelect = document.getElementById('assign_class_select');
+        const sectionSelect = document.getElementById('assign_section_select');
+        const subjectSelect = document.getElementById('assign_subject_select');
+        const assignBtn = document.getElementById('assign_btn');
+        const assignTableBody = document.querySelector('#assign_table tbody');
+
+        // helper to show/hide
+        function show(el){ el.classList.remove('d-none'); }
+        function hide(el){ el.classList.add('d-none'); }
+
+        classSelect && classSelect.addEventListener('change', function(){
+            if(this.value){
+                show(sectionSelect);
+                // reset section and subject
+                sectionSelect.value = '';
+                subjectSelect.value = '';
+                hide(subjectSelect);
+                hide(assignBtn);
+            } else {
+                hide(sectionSelect);
+                hide(subjectSelect);
+                hide(assignBtn);
+            }
+        });
+
+        sectionSelect && sectionSelect.addEventListener('change', function(){
+            const cls = classSelect.value;
+            if(this.value && cls){
+                // populate subjectSelect options based on data-assign-class (match cls or '0' or empty)
+                for(const opt of subjectSelect.options){
+                    if(!opt.value) continue;
+                    const map = (opt.dataset.assignClass || '').toString();
+                    const allowed = map === '' || map === '0' || map.split(',').map(s=>s.trim()).includes(cls.toString());
+                    opt.style.display = allowed ? '' : 'none';
+                }
+                subjectSelect.value = '';
+                show(subjectSelect);
+                hide(assignBtn);
+            } else {
+                hide(subjectSelect);
+                hide(assignBtn);
+            }
+        });
+
+        subjectSelect && subjectSelect.addEventListener('change', function(){
+            if(this.value) show(assignBtn); else hide(assignBtn);
+        });
+
+        // store assignments to prevent duplicates
+        const assignments = new Set();
+
+        // Initialize assignments set from any existing rows rendered on the server
+        document.querySelectorAll('#assign_table tbody tr').forEach(function(tr){
+            const cls = tr.querySelector('input[name="className[]"]')?.value || '';
+            const sec = tr.querySelector('input[name="section[]"]')?.value || '';
+            const sub = tr.querySelector('input[name="subject[]"]')?.value || '';
+            if(cls) assignments.add([cls,sec,sub].join('-'));
+        });
+
+        // Delegate remove button clicks so server-rendered rows are removable too
+        assignTableBody && assignTableBody.addEventListener('click', function(e){
+            const btn = e.target.closest && e.target.closest('.remove-assign');
+            if(!btn) return;
+            const tr = btn.closest('tr');
+            if(!tr) return;
+            // determine the assignment key from hidden inputs inside the row
+            const cls = tr.querySelector('input[name="className[]"]')?.value || '';
+            const sec = tr.querySelector('input[name="section[]"]')?.value || '';
+            const sub = tr.querySelector('input[name="subject[]"]')?.value || '';
+            const key = [cls,sec,sub].join('-');
+            if(assignments.has(key)) assignments.delete(key);
+            tr.remove();
+        });
+
+        assignBtn && assignBtn.addEventListener('click', function(){
+            const clsId = classSelect.value; const secId = sectionSelect.value; const subId = subjectSelect.value;
+            if(!clsId || !secId || !subId) return showGlobalFlash('Please select class, section and subject.','danger');
+            const key = [clsId,secId,subId].join('-');
+            if(assignments.has(key)) return showGlobalFlash('This assignment already added','warning');
+            assignments.add(key);
+            const clsText = classSelect.options[classSelect.selectedIndex].text;
+            let secText = sectionSelect.options[sectionSelect.selectedIndex].text;
+            if(secId === 'all') secText = 'All Sections';
+            if(secId === 'none') secText = 'No Section (show all class data)';
+            const subText = subjectSelect.options[subjectSelect.selectedIndex].text;
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${clsText}</td><td>${secText}</td><td>${subText}</td><td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>`;
+            assignTableBody.appendChild(tr);
+
+            // hidden inputs for controller sync
+            const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; tr.appendChild(hiddenCls);
+            const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; tr.appendChild(hiddenSec);
+            const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; tr.appendChild(hiddenSub);
+
+            // remove handler
+            tr.querySelector('.remove-assign').addEventListener('click', function(){
+                assignments.delete(key);
+                tr.remove();
+            });
+
+            // reset selects for next assignment
+            sectionSelect.value=''; subjectSelect.value=''; hide(subjectSelect); hide(assignBtn);
+        });
+
+        // Existing assignments are rendered server-side in the table; no JS prepopulate needed.
+    });
 </script>
 @endsection

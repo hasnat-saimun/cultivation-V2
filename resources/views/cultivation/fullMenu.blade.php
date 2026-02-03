@@ -19,11 +19,17 @@
             <i class="fa-sharp fa-thin fa-square-poll-horizontal"></i> <span>Results Management</span>
         </a>
     </li>
+    @php
+        $adminId = session('cultivationAdmin');
+        $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+    @endphp
+    @if($currentUser && $currentUser->isGeneral())
     <li class="nav-item">
         <a href="{{ route('resultArchive') }}" class="nav-link {{ request()->routeIs('resultArchive') ? 'active' : '' }}">
             <i class="fa fa-archive"></i> <span>Result Archive</span>
         </a>
     </li>
+    @endif
     <li class="nav-item">
         <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
     </li>

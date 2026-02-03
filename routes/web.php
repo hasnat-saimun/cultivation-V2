@@ -1591,6 +1591,14 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class,
         'saveUser'
     ])->name('saveUser');
+
+    // AJAX: fetch allowed subjects for teacher per class/section
+    Route::post('/api/teacher/subjects', [
+        CultivationController::class,
+        'teacherSubjects'
+    ])->name('api.teacher.subjects');
+
+// Debug routes removed
         
 
     Route::get('/admin/list',[

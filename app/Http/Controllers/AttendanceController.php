@@ -18,10 +18,27 @@ class AttendanceController extends Controller
     $adminId = session('cultivationAdmin');
     $user = $adminId ? CultivationAdmin::find($adminId) : null;
         $isTeacher = $user && $user->isTeacher();
-        $classes = $isTeacher
-            ? classManage::whereIn('id', $user->access_class_array)->get()
-            : classManage::orderBy('id','ASC')->get();
+        // If teacher has a primary class (class teacher), restrict attendance classes to that one.
+        if ($isTeacher && !empty($user->primary_class_id)) {
+            $classes = classManage::where('id', (int)$user->primary_class_id)->get();
+        } else {
+            $classes = $isTeacher
+                ? classManage::whereIn('id', $user->access_class_array)->get()
+                : classManage::orderBy('id','ASC')->get();
+        }
+        // Sections: if class-teacher has a primary section, restrict to that section; otherwise fall back to assigned sections
         $sections = sectionManage::orderBy('id','ASC')->get();
+        if ($isTeacher) {
+            if (!empty($user->primary_section_id)) {
+                $sections = sectionManage::where('id', (int)$user->primary_section_id)->get();
+            } else {
+                $secArr = $user->access_section_array ?? [];
+                if (!empty($secArr)) {
+                    $sections = sectionManage::whereIn('id', $secArr)->orderBy('id','ASC')->get();
+                }
+            }
+        }
+        // (sections already configured above)
         $sessions = sessionManage::orderBy('id','ASC')->get();
         return view('attendance.index', compact('classes','sections','sessions','isTeacher'));
     }
@@ -36,9 +53,20 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
-        if($user && $user->isTeacher()){
-            if(!in_array((int)$requ->classId, $user->access_class_array)){
+        $isTeacher = $user && $user->isTeacher();
+        if($isTeacher){
+            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
                 return back()->with('error','Unauthorized class');
+            }
+            // If teacher has a primary_section set, enforce it; otherwise enforce assigned sections
+            if($requ->sectionId){
+                if(!empty($user->primary_section_id) && ((int)$requ->sectionId !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$requ->sectionId, $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
             }
         }
         $query = newAdmission::query();
@@ -93,8 +121,19 @@ class AttendanceController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
         if(!$user){ return redirect()->route('adminLogin'); }
-        if($user->isTeacher() && !in_array((int)$requ->classId, $user->access_class_array)){
-            return back()->with('error','Unauthorized class');
+        if($user->isTeacher()){
+            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+                return back()->with('error','Unauthorized class');
+            }
+            if($requ->sectionId){
+                if(!empty($user->primary_section_id) && ((int)$requ->sectionId !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$requ->sectionId, $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
+            }
         }
 
         $date = $requ->date;
@@ -153,8 +192,17 @@ class AttendanceController extends Controller
                 return view('attendance.report', compact('classes','sections','sessions','filters','records'))
                     ->with('error','Attendance table not migrated yet.');
             }
-            if($isTeacher && !in_array((int)$filters['classId'], $user->access_class_array)){
+            if($isTeacher && !in_array((int)$filters['classId'], $user->access_class_array) && (empty($user->primary_class_id) || (int)$filters['classId'] !== (int)$user->primary_class_id)){
                 return back()->with('error','Unauthorized class');
+            }
+            if($isTeacher && $filters['sectionId']){
+                if(!empty($user->primary_section_id) && ((int)$filters['sectionId'] !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$filters['sectionId'], $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
             }
             // Eager load all related models for name rendering
             $q = Attendance::query()->with(['student','class','section','session','teacher']);
@@ -191,8 +239,19 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
-        if($user && $user->isTeacher() && !in_array((int)$requ->classId, $user->access_class_array)){
-            return back()->with('error','Unauthorized class');
+        if($user && $user->isTeacher()){
+            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+                return back()->with('error','Unauthorized class');
+            }
+            if($requ->sectionId){
+                if(!empty($user->primary_section_id) && ((int)$requ->sectionId !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$requ->sectionId, $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
+            }
         }
         if(!Schema::hasTable('attendances')){
             return back()->with('error','Attendance table not migrated yet.');
@@ -245,8 +304,19 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
-        if($user && $user->isTeacher() && !in_array((int)$requ->classId, $user->access_class_array)){
-            return back()->with('error','Unauthorized class');
+        if($user && $user->isTeacher()){
+            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+                return back()->with('error','Unauthorized class');
+            }
+            if($requ->sectionId){
+                if(!empty($user->primary_section_id) && ((int)$requ->sectionId !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$requ->sectionId, $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
+            }
         }
         if(!Schema::hasTable('attendances')){
             return back()->with('error','Attendance table not migrated yet.');
@@ -337,8 +407,17 @@ class AttendanceController extends Controller
                 return view('attendance.monthly', compact('classes','sections','sessions','filters','daysInMonth','matrix','students'))
                     ->with('error','Attendance table not migrated yet.');
             }
-            if($isTeacher && !in_array((int)$classId, $user->access_class_array)){
+            if($isTeacher && !in_array((int)$classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$classId !== (int)$user->primary_class_id)){
                 return back()->with('error','Unauthorized class');
+            }
+            if($isTeacher && $sectionId){
+                if(!empty($user->primary_section_id) && ((int)$sectionId !== (int)$user->primary_section_id)){
+                    return back()->with('error','Unauthorized section');
+                }
+                $allowedSections = $user->access_section_array ?? [];
+                if(empty($user->primary_section_id) && !empty($allowedSections) && !in_array((int)$sectionId, $allowedSections)){
+                    return back()->with('error','Unauthorized section');
+                }
             }
             $studQ = newAdmission::query()->where('className',(int)$classId);
             if($sessionId){ $studQ->where('sessName',(int)$sessionId); }

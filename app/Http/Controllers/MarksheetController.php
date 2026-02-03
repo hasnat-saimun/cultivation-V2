@@ -18,6 +18,8 @@ class MarksheetController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         $isTeacher = $user && $user->isTeacher();
+        // For general teachers (marks entry) allow multiple classes; class-teacher can still have primary class but
+        // marks entry should use assigned classes array.
         $classIds = $isTeacher ? $user->access_class_array : [];
         $subjectIds = $isTeacher ? $user->access_subject_array : [];
         return view('result.add-marks', [
@@ -31,9 +33,8 @@ class MarksheetController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         if($user && $user->isTeacher()){
-            $allowedClasses = $user->access_class_array;
-            $allowedSubjects = $user->access_subject_array;
-            if(!in_array($requ->classId, $allowedClasses) || !in_array($requ->subjectId, $allowedSubjects)){
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $requ->groupId ?? null);
+            if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
         }
@@ -58,16 +59,24 @@ class MarksheetController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         if($user && $user->isTeacher()){
-            if(!in_array($requ->classId, $user->access_class_array) || !in_array($requ->subjectId, $user->access_subject_array)){
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $requ->groupId ?? null);
+            if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
             }
         }
         $studentId = $requ->studentId;
         $totalData = count($studentId);
         $x = 0;
+        $skipped = 0;
         while($x<$totalData){
             $chkData = Marksheet::where(['sessionId'=>$requ->sessionId,'classId'=>$requ->classId,'groupId'=>$requ->groupId,'studentId'=>$requ->studentId[$x],'examId'=>$requ->examId,'subjectId'=>$requ->subjectId])->first();
             if(isset($chkData) && !empty($chkData)):
+                // If existing marks are entered by another teacher, do not overwrite
+                if($user && $user->isTeacher() && (int)$chkData->teacher_id !== (int)$user->id){
+                    $skipped++;
+                    $x++;
+                    continue;
+                }
                 $chkData->delete();
             endif;
             $totalMarks = 0;
@@ -113,6 +122,7 @@ class MarksheetController extends Controller
             $marks->totalMarks      = $totalMarks;
             $marks->laterGrade      = $laterGrade;
             $marks->gradePoint      = $gradePoint;
+            $marks->teacher_id      = $user ? (int)$user->id : null;
             $marks->save();
 
             $x++;

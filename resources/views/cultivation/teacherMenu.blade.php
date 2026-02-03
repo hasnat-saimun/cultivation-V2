@@ -11,9 +11,15 @@
         <a href="{{ route('cultivationIndex') }}" class="nav-link {{ request()->routeIs('cultivationIndex') ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Admin</span></a>
     </li>
     <li class="nav-item">
+        @php
+            $adminId = session('cultivationAdmin');
+            $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        @endphp
+        @if($currentUser && $currentUser->isGeneral())
         <a href="{{ route('resultArchive') }}" class="nav-link {{ request()->routeIs('resultArchive') ? 'active' : '' }}">
             <i class="fa fa-archive"></i><span>Result Archive</span>
         </a>
+        @endif
     </li>
     <li class="nav-item sidebar-nav-item {{ $marksOpen ? 'open' : '' }}" data-group="teacher-marks">
         <a href="#" class="nav-link {{ $marksOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Marks Entry</span></a>

@@ -55,6 +55,9 @@
                 </div>
             </div>
             <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>Note:</strong> Attendance should be taken for the Primary Class/Section assigned to a class-teacher. Other assignments (Admin Assign) are used for Marks Entry only.
+                </div>
                 <form method="POST" action="{{ route('attendanceStore') }}">
                     @csrf
                     <input type="hidden" name="date" value="{{ $date }}">

@@ -16,6 +16,7 @@ class Marksheet extends Model
         'groupId',
         'examId',
         'subjectId',
+        'teacher_id',
         'subjectMarks',
         'objectMarks',
         'practicalMarks',

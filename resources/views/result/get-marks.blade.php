@@ -45,6 +45,9 @@ Get Mark
                     <div class="col-6 col-md-4 mb-2"><b>Subject:</b> {{ $subjectName }}</div>
                 </div>
                 @csrf
+                <div class="alert alert-info mt-2">
+                    <strong>Note:</strong> Marks entry is restricted to classes/sections/subjects assigned to the teacher via Admin Assign. The Primary Class/Section setting is used only for Attendance.
+                </div>
                 <table class="table table-bordered">
                 @php
                     // Get available features for the subject
@@ -88,6 +91,9 @@ Get Mark
                             $subjectMarks = $marksData ? $marksData->subjectMarks : "";
                             $objectMarks = $marksData ? $marksData->objectMarks : "";
                             $practicalMarks = $marksData ? $marksData->practicalMarks : "";
+                            $currentUserId = session('cultivationAdmin');
+                            $readonlyByOther = ($marksData && $marksData->teacher_id && $marksData->teacher_id != $currentUserId);
+                            $enteredBy = ($marksData && $marksData->teacher_id) ? optional(\App\Models\CultivationAdmin::find($marksData->teacher_id))->adminName : null;
                         @endphp
                         <input type="hidden" name="studentId[]" value="{{ $std->id }}">
                         <tr>
@@ -95,19 +101,49 @@ Get Mark
                             <td>{{ $std->rollNumber }}</td>
                             <td>{{ $std->fullName.' '.$std->sureName }}</td>
                             @if($showCQ)
-                                <td><input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks"></td>
+                                <td>
+                                    <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    @if($readonlyByOther)
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    @endif
+                                </td>
                             @endif
                             @if($showMCQ)
-                                <td><input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks"></td>
+                                <td>
+                                    <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    @if($readonlyByOther)
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    @endif
+                                </td>
                             @endif
                             @if($showPractical)
-                                <td><input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks"></td>
+                                <td>
+                                    <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    @if($readonlyByOther)
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    @endif
+                                </td>
                             @endif
                             
                             @if($showAll)
-                            <td><input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks"></td>
-                            <td><input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks"></td>
-                            <td><input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks"></td>
+                            <td>
+                                <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                @if($readonlyByOther)
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                @if($readonlyByOther)
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                @endif
+                            </td>
+                            <td>
+                                <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                @if($readonlyByOther)
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                @endif
+                            </td>
                             @endif
                         </tr>
                         @endforeach

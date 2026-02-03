@@ -52,6 +52,7 @@
                 </div>
                 <!-- Breadcubs Area End Here -->
                 @yield('backIndex')
+                @include('partials.flash-modal')
                 <!-- Footer Area Start Here -->
                 <footer class="footer-wrap-layout1 d-print-none">
                     @include('cultivation.footer')
@@ -111,6 +112,21 @@
                 }
             });
         });
+    </script>
+    <!-- Compatibility shim: map Bootstrap 5 data attributes to Bootstrap 4 equivalents -->
+    <script>
+        (function(){
+            document.addEventListener('DOMContentLoaded', function(){
+                try{
+                    document.querySelectorAll('[data-bs-dismiss]').forEach(function(el){
+                        if(!el.hasAttribute('data-dismiss')) el.setAttribute('data-dismiss', el.getAttribute('data-bs-dismiss'));
+                    });
+                    document.querySelectorAll('[data-bs-toggle]').forEach(function(el){
+                        if(!el.hasAttribute('data-toggle')) el.setAttribute('data-toggle', el.getAttribute('data-bs-toggle'));
+                    });
+                }catch(e){ console.warn('BS attr shim failed', e); }
+            });
+        })();
     </script>
     <!-- Plugins js -->
     <script src="{{ asset('/public/back-office/') }}/js/plugins.js"></script>
