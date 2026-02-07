@@ -42,11 +42,10 @@
 
                         $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
                         $userType = $loginUser['userType'] ?? null;
-                        	// Debug: show current session and user type when app.debug is enabled
-                        	@if(config('app.debug'))
-                        		<div class="alert alert-info mt-2 mb-2">Debug: cultivationAdmin={{ session('cultivationAdmin') }} | userType={{ $userType }}</div>
-                        	@endif
                     @endphp
+                    @if(config('app.debug'))
+                        <div class="alert alert-info mt-2 mb-2">Debug: cultivationAdmin={{ session('cultivationAdmin') }} | userType={{ $userType }}</div>
+                    @endif
                     <ul class="nav nav-sidebar-menu sidebar-toggle-view">
                         @if($userType == 1)
                             @include('cultivation.teacherMenu')
