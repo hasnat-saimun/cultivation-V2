@@ -152,6 +152,11 @@
     <li class="nav-item">
         <a href="{{ route('serverConfig') }}" class="nav-link {{ request()->routeIs('serverConfig') ? 'active' : '' }}"><i class="fa-solid fa-screwdriver-wrench"></i> <span>Configuration</span></a>
     </li>
+    @if($currentUser && $currentUser->isGeneral())
+    <li class="nav-item">
+        <a href="{{ route('sms.settings') }}" class="nav-link {{ request()->routeIs('sms.settings') ? 'active' : '' }}"><i class="fa-solid fa-envelope"></i> <span>SMS Settings</span></a>
+    </li>
+    @endif
     <li class="nav-item">
         <a href="{{ route('designationsIndex') }}" class="nav-link {{ request()->routeIs('designationsIndex','designationsCreate','designationsEdit') ? 'active' : '' }}"><i class="fa-solid fa-list"></i> <span>Designations</span></a>
     </li>

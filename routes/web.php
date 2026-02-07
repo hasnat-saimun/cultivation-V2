@@ -312,6 +312,26 @@ Route::middleware(['adminGuard'])->group (function(){
         'insInfo'
     ])->name('insInfo');
 
+    // SMS settings (super admin)
+    Route::get('/sms/settings', [\App\Http\Controllers\SmsSettingsController::class, 'edit'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.settings');
+    Route::post('/sms/settings/save', [\App\Http\Controllers\SmsSettingsController::class, 'save'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.settings.save');
+    Route::post('/sms/settings/toggle', [\App\Http\Controllers\SmsSettingsController::class, 'toggleEnabled'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.settings.toggle');
+    Route::get('/sms/settings/status', [\App\Http\Controllers\SmsSettingsController::class, 'status'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.settings.status');
+    Route::post('/sms/settings/test', [\App\Http\Controllers\SmsSettingsController::class, 'test'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.settings.test');
+    Route::get('/sms/alpha-rate', [\App\Http\Controllers\SmsSettingsController::class, 'alphaRate'])
+        ->middleware(\App\Http\Middleware\Roles::class.':3')
+        ->name('sms.alphaRate');
+
     Route::get('/institute/info/img/del/{id}',[
         InstituteController::class ,
         'delHeroImg'

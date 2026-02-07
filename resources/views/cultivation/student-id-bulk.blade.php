@@ -79,7 +79,7 @@ Bulk Student ID Cards
                             <div class="badge bg-success text-wrap">Loaded {{ $students->count() }} student{{ $students->count() > 1 ? 's' : '' }}</div>
                             <button type="button" class="btn btn-success btn-sm" onclick="printCards()"><i class="fa-solid fa-print"></i> Print All</button>
                         </div>
-                        <div id="printArea" class="id-card-grid">
+                        <div id="printArea" class="id-card-grid {{ $fmt === 'portrait' ? 'print-portrait' : '' }}">
                             @foreach($students as $student)
                                 @php $card = $cardData[$student->id] ?? null; @endphp
                                 @if($card)
@@ -109,9 +109,13 @@ Bulk Student ID Cards
     --id-muted: #6b7280;
     --id-border: #e5e7eb;
     --id-bg: #f8fafc;
-    /* ISO/IEC 7810 ID-1 (CR80) physical size (exact) */
-    --card-w: 85.60mm;
-    --card-h: 53.98mm;
+    --card-w-land: 85.60mm;
+    --card-h-land: 53.98mm;
+    --card-w-port: 53.98mm;
+    --card-h-port: 85.60mm;
+    --ratio-land: 1.586;
+    --ratio-port: 0.631;
+    --face-gap: 8px;
 }
 
 .bg-gradient-info {
@@ -119,16 +123,27 @@ Bulk Student ID Cards
 }
 
 .id-card-grid {
+    --card-w: var(--card-w-land);
+    --card-h: var(--card-h-land);
+    --shell-w: var(--card-w);
+    --shell-h: calc(var(--card-h) * 2 + var(--face-gap));
     display: grid;
-    grid-template-columns: repeat(2, minmax(320px, 1fr));
+    grid-template-columns: repeat(2, var(--shell-w));
     gap: 24px;
     align-items: start;
+    justify-content: center;
+}
+
+.id-card-grid.print-portrait {
+    --card-w: var(--card-w-port);
+    --card-h: var(--card-h-port);
 }
 
 /* Responsive: single column on narrow screens */
 @media (max-width: 768px) {
     .id-card-grid {
         grid-template-columns: 1fr;
+        --shell-w: min(100%, var(--shell-w));
         gap: 16px;
     }
 }
@@ -160,231 +175,361 @@ Bulk Student ID Cards
 }
 
 .id-card-shell {
-    max-width: 440px;
+    width: var(--shell-w);
+    height: var(--shell-h);
     margin: 0 auto;
     color: var(--id-primary);
     font-family: 'Segoe UI', Tahoma, sans-serif;
+    display: flex;
+    flex-direction: column;
+    gap: var(--face-gap);
 }
 
 .id-face {
+    width: var(--card-w);
+    height: var(--card-h);
+    margin: 0 auto;
     background: #ffffff;
-    border: 1px solid var(--id-border);
-    border-radius: 16px;
+    border: 1px solid #d7dbe2;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.12);
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    padding: 16px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }
 
-.id-face.back {
-    margin-top: 12px;
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+/* New ID card design (portrait + landscape) */
+.id-front-top {
+    background: linear-gradient(135deg, #0a4aa6 0%, #0b6bd6 55%, #0a3f8a 100%);
+    color: #ffffff;
+    padding: 8px 10px 10px;
+    position: relative;
 }
 
-.id-header {
-    margin: -16px -16px 0 -16px;
-    padding: 14px 16px;
-    background: linear-gradient(115deg, var(--id-primary) 0%, var(--id-accent) 100%);
-    color: #fff;
+.id-front-top::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 3px;
+    background: #e11d48;
+}
+
+.id-top-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: space-between;
+    gap: 8px;
 }
 
-.logo-wrap {
-    height: 58px;
-    width: 58px;
-    background: rgba(255, 255, 255, 0.12);
-    border-radius: 14px;
+.id-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.id-logo {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 }
 
-.logo-img {
-    max-height: 50px;
+.id-logo img {
+    max-height: 30px;
     width: auto;
-    object-fit: contain;
 }
 
 .logo-fallback {
+    font-weight: 800;
+    font-size: 0.85rem;
+    color: #ffffff;
+}
+
+.id-school-name {
+    font-weight: 800;
+    font-size: 0.9rem;
+    line-height: 1.1;
+}
+
+.id-school-tag {
+    font-size: 0.7rem;
+    opacity: 0.85;
+}
+
+.id-card-label {
     font-weight: 700;
-    font-size: 22px;
-}
-
-.ins-meta {
-    flex: 1;
-    min-width: 0;
-}
-
-.ins-name {
-    font-weight: 700;
-    font-size: 1.05rem;
-    line-height: 1.2;
-}
-
-.ins-sub {
-    font-size: 0.82rem;
-    color: rgba(255, 255, 255, 0.85);
-    line-height: 1.3;
-}
-
-.badge-chip {
-    background: rgba(255, 255, 255, 0.15);
-    color: #fff;
-    padding: 8px 12px;
-    border-radius: 999px;
-    font-weight: 700;
-    letter-spacing: 0.5px;
+    font-size: 0.68rem;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
-    font-size: 0.78rem;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 8px;
+    border-radius: 999px;
 }
 
-.id-body {
+.id-front-body {
     display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 14px;
+    gap: 10px;
+    padding: 10px;
+}
+
+.id-front-body.landscape {
+    grid-template-columns: 74px 1fr 66px;
     align-items: center;
 }
 
-.photo-box {
-    height: 140px;
-    border-radius: 14px;
-    overflow: hidden;
-    border: 1px solid var(--id-border);
-    background: var(--id-bg);
+.id-front-body.portrait {
+    grid-template-columns: 1fr;
 }
 
-.photo {
+.id-front-body.portrait .id-info {
+    text-align: center;
+}
+
+.id-photo-wrap {
+    width: 68px;
+    height: 78px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #b0c8f0;
+    background: #f1f5f9;
+}
+
+.id-photo-wrap.portrait {
+    width: 78px;
+    height: 92px;
+    margin: 0 auto;
+}
+
+.id-photo-wrap img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.info .student-name {
+.id-info {
+    font-size: 0.72rem;
+    color: #111827;
+}
+
+.id-info .id-name {
     font-weight: 800;
-    font-size: 1.1rem;
+    font-size: 0.86rem;
+    margin-bottom: 4px;
 }
 
-.info .meta {
-    color: var(--id-muted);
-    font-size: 0.9rem;
-    margin-bottom: 6px;
+.id-info .id-row {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 2px 0;
+    gap: 6px;
 }
 
-.info .meta.muted {
+.id-info .id-row span {
+    font-weight: 700;
+}
+
+.id-portrait-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px 10px;
+    margin-top: 6px;
+    font-size: 0.72rem;
+}
+
+.id-portrait-grid div {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 2px 0;
+}
+
+.id-portrait-qr {
+    display: flex;
+    justify-content: center;
     margin-top: 6px;
 }
 
-.pill-row {
+.id-qr {
+    width: 62px;
+    height: 62px;
+    border: 2px solid #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.id-qr img {
+    width: 100%;
+    height: 100%;
+}
+
+.id-front-footer {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.72rem;
+    padding: 6px 10px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.id-front-footer span {
+    font-weight: 700;
+}
+
+.id-back-top {
+    background: #0f172a;
+    height: 14px;
+}
+
+.id-back-body {
+    padding: 8px 10px 10px;
+    display: grid;
+    gap: 10px;
+}
+
+.id-back-body.landscape {
+    grid-template-columns: 1fr 120px;
+    align-items: start;
+}
+
+.id-back-title {
+    font-weight: 800;
+    font-size: 0.82rem;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.id-back-list {
+    font-size: 0.72rem;
+    color: #374151;
+    padding-left: 16px;
+    margin: 0;
+}
+
+.id-back-note {
+    font-size: 0.7rem;
+    color: #1f2937;
+    margin-top: 6px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 6px;
+}
+
+.id-sign {
+    text-align: center;
+    font-size: 0.7rem;
+    color: #6b7280;
+    margin-top: 6px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 4px;
+}
+
+.id-barcode-box {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 6px;
+    text-align: center;
+}
+
+.id-barcode {
+    height: 26px;
+    background: repeating-linear-gradient(
+        90deg,
+        #111827 0,
+        #111827 2px,
+        #ffffff 2px,
+        #ffffff 4px
+    );
     margin-bottom: 6px;
 }
 
-.pill {
-    background: var(--id-bg);
-    border: 1px solid var(--id-border);
-    border-radius: 999px;
+.id-card-no {
+    font-size: 0.72rem;
+    color: #111827;
+}
+
+.id-back-footer-bar {
+    background: #0f172a;
+    color: #ffffff;
+    font-size: 0.7rem;
     padding: 6px 10px;
-    font-size: 0.82rem;
-    color: var(--id-primary);
-}
-
-.id-footer {
     display: flex;
     justify-content: space-between;
-    gap: 10px;
-    border-top: 1px dashed var(--id-border);
-    padding-top: 10px;
+    gap: 6px;
 }
 
-.foot-col .label {
-    font-size: 0.75rem;
-    color: var(--id-muted);
-    letter-spacing: 0.3px;
-}
-
-.foot-col .value {
+.id-back-footer-bar span {
     font-weight: 700;
-    font-size: 0.95rem;
-}
-
-.back-title {
-    font-weight: 700;
-    font-size: 1rem;
-    color: var(--id-primary);
-}
-
-.back-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 10px;
-}
-
-.back-grid .label {
-    font-size: 0.8rem;
-    color: var(--id-muted);
-}
-
-.back-grid .value {
-    font-weight: 700;
-    font-size: 0.95rem;
-}
-
-.id-signatures {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    margin-top: 10px;
-}
-
-.sig-line {
-    flex: 1;
-    text-align: center;
-    border-top: 1px solid var(--id-border);
-    padding-top: 8px;
-    font-size: 0.85rem;
-    color: var(--id-muted);
-}
-
-.id-back-footer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    font-size: 0.8rem;
-    color: var(--id-muted);
-    border-top: 1px dashed var(--id-border);
-    padding-top: 8px;
 }
 
 @media print {
+    :root {
+        --page-w: 210mm;
+        --page-h: 297mm;
+        --page-m: 8mm;
+        --grid-gap: 6mm;
+        --face-gap: 4mm;
+    }
     body { background: #fff; }
-    .card, .btn, .alert, form, .card-header { display: none !important; }
-    /* Standard ID card physical layout: 2 per row */
+    body * { visibility: hidden !important; }
+    #printArea, #printArea * { visibility: visible !important; }
+    #printArea { position: absolute; left: 0; top: 0; }
     #printArea {
         display: grid !important;
-        grid-template-columns: repeat(2, var(--card-w)) !important;
-        gap: 10mm !important;
-        justify-content: start !important;
+        gap: var(--grid-gap) !important;
+        justify-content: center !important;
+        align-content: start !important;
+        width: var(--page-w) !important;
+        height: var(--page-h) !important;
+        padding: var(--page-m) !important;
+        box-sizing: border-box !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+        --shell-w: calc((var(--page-w) - (var(--page-m) * 2) - var(--grid-gap)) / 2);
+        --shell-h: calc((var(--page-h) - (var(--page-m) * 2) - var(--grid-gap)) / 2);
+        grid-template-columns: repeat(2, var(--shell-w)) !important;
+        grid-auto-rows: var(--shell-h) !important;
+    }
+    #printArea.print-portrait {
+        --card-ratio: var(--ratio-port);
+    }
+    #printArea:not(.print-portrait) {
+        --card-ratio: var(--ratio-land);
+    }
+    #printArea {
+        --card-w: min(var(--shell-w), calc((var(--shell-h) - var(--face-gap)) / 2 * var(--card-ratio)));
+        --card-h: calc(var(--card-w) / var(--card-ratio));
     }
     .id-card-shell {
-        width: var(--card-w) !important;
+        width: var(--shell-w) !important;
+        height: var(--shell-h) !important;
+        max-width: none !important;
         page-break-inside: avoid;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        gap: var(--face-gap);
     }
     .id-face {
         width: var(--card-w) !important;
         height: var(--card-h) !important;
-        border-radius: 3.18mm !important; /* ~1/8" corner radius typical for ID-1 */
+        border-radius: 3.18mm !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        box-shadow: none;
+    }
+    #printArea .id-card-shell:nth-child(4n) {
+        page-break-after: always;
     }
     @page {
-        size: A4;
-        margin: 10mm;
+        size: A4 portrait;
+        margin: 0;
     }
 }
 </style>
@@ -395,10 +540,7 @@ Bulk Student ID Cards
     function printCards() {
         const printArea = document.getElementById('printArea');
         if (!printArea) return;
-        const original = document.body.innerHTML;
-        document.body.innerHTML = printArea.innerHTML;
         window.print();
-        document.body.innerHTML = original;
     }
 </script>
 @endpush

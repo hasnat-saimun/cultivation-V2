@@ -9,6 +9,8 @@ use App\Models\newAdmission;
 use App\Models\classManage;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
+use App\Jobs\SendSmsJob;
+use App\Models\SmsSetting;
 use Illuminate\Support\Facades\Schema;
 
 class AttendanceController extends Controller
@@ -160,6 +162,58 @@ class AttendanceController extends Controller
                 ]
             );
             if($model->wasRecentlyCreated){ $created++; } else { $updated++; }
+            // Dispatch SMS job based on configuration and status (read DB overrides first)
+            try {
+                $student = newAdmission::find((int)$sid);
+                if ($student) {
+                    $phone = $student->gurdianPhone ?: $student->phone ?: null;
+                    if ($phone) {
+                        // load sms settings/config once
+                        static $smsSettings = null;
+                        static $serverSmsConfig = null;
+                        if ($smsSettings === null) {
+                            try { $smsSettings = SmsSetting::pluck('value','key')->toArray(); } catch (\Exception $e) { $smsSettings = []; }
+                        }
+                        if ($serverSmsConfig === null) {
+                            try { $serverSmsConfig = \App\Models\ServerConfig::orderBy('id','DESC')->first(); } catch (\Exception $e) { $serverSmsConfig = null; }
+                        }
+
+                        $statusKey = strtolower($st) === 'present' ? 'present' : 'absent';
+
+                        // Global SMS enable/disable from configuration
+                        $smsEnabled = true;
+                        if ($serverSmsConfig && $serverSmsConfig->sm_on_off !== null && $serverSmsConfig->sm_on_off !== '') {
+                            $smsEnabled = filter_var($serverSmsConfig->sm_on_off, FILTER_VALIDATE_BOOLEAN);
+                        }
+                        if (!$smsEnabled) {
+                            continue;
+                        }
+
+                        // SMS type override from configuration
+                        $smsType = $serverSmsConfig ? ($serverSmsConfig->sms_type ?? null) : null;
+                        $validSmsTypes = ['present_only','absent_only','both'];
+                        if (in_array($smsType, $validSmsTypes, true)) {
+                            if ($smsType === 'present_only' && $statusKey !== 'present') { continue; }
+                            if ($smsType === 'absent_only' && $statusKey !== 'absent') { continue; }
+                        } else {
+                            $sendOnKey = $statusKey === 'present' ? 'sms_on_present' : 'sms_on_absent';
+                            $sendOn = isset($smsSettings[$sendOnKey]) ? filter_var($smsSettings[$sendOnKey], FILTER_VALIDATE_BOOLEAN) : config('sms.' . $sendOnKey, false);
+                            if (!$sendOn) { continue; }
+                        }
+
+                        $templateKey = $statusKey === 'present' ? 'sms_message_present' : 'sms_message_absent';
+                        $configTemplate = $serverSmsConfig ? ($serverSmsConfig->{$statusKey === 'present' ? 'sms_body_present' : 'sms_body_absent'} ?? null) : null;
+                        $template = $configTemplate !== null && $configTemplate !== ''
+                            ? $configTemplate
+                            : ($smsSettings[$templateKey] ?? config('sms.' . $templateKey, ''));
+                        // replace placeholders: {student}, {date}, {status}
+                        $message = str_replace(['{student}','{date}','{status}'], [($student->fullName ?? ''), $date, $st], $template);
+                        SendSmsJob::dispatch($phone, $message, $model->id);
+                    }
+                }
+            } catch (\Exception $e) {
+                // Do not interrupt attendance save if SMS fails; failures will be logged by the job/service
+            }
         }
         $msg = "Attendance saved. Created: {$created}, Updated: {$updated}";
         return redirect()->route('attendanceIndex')->with('success',$msg);

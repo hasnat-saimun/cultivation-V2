@@ -219,6 +219,10 @@ class CultivationController extends Controller
             $server = ServerConfig::find($requ->serverId);
         endif;
 
+        $allowedSmsTypes = ['present_only','absent_only','both'];
+        $smsTypeRaw = strtolower(trim((string)$requ->sms_type));
+        $smsType = in_array($smsTypeRaw, $allowedSmsTypes, true) ? $smsTypeRaw : 'both';
+
         $server->instituteName      = $requ->insName;
         $server->address            = $requ->insAddress;
         $server->principalName      = $requ->principalName;
@@ -238,6 +242,9 @@ class CultivationController extends Controller
         $server->eduMinName         = $requ->eduMinName;
         $server->boardChairmanName  = $requ->boardChairmanName;
         $server->mapEmbed           = $requ->mapEmbed;
+        $server->sms_type           = $smsType;
+        $server->sms_body_present   = $requ->sms_body_present;
+        $server->sms_body_absent    = $requ->sms_body_absent;
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;

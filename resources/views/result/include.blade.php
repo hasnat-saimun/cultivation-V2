@@ -42,6 +42,10 @@
 
                         $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
                         $userType = $loginUser['userType'] ?? null;
+                        	// Debug: show current session and user type when app.debug is enabled
+                        	@if(config('app.debug'))
+                        		<div class="alert alert-info mt-2 mb-2">Debug: cultivationAdmin={{ session('cultivationAdmin') }} | userType={{ $userType }}</div>
+                        	@endif
                     @endphp
                     <ul class="nav nav-sidebar-menu sidebar-toggle-view">
                         @if($userType == 1)
@@ -149,6 +153,9 @@
                                         <a href="{{ route('createGrade') }}" class="nav-link"><i class="fas fa-angle-right"></i>New G.P</a>
                                     </li>
                                 </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a href="{{ route('sms.settings') }}" class="nav-link {{ request()->routeIs('sms.settings') ? 'active' : '' }}"><i class="flaticon-envelope"></i><span>SMS Settings</span></a>
                             </li>
                         @endif
                     </ul>
