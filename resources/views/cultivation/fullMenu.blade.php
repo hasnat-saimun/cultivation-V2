@@ -57,7 +57,7 @@
     </li>
     {{-- ...rest of the full menu... --}}
     @php
-        $admissionRoutes = ['admitStudent','studentList','studentPromotion','studentPhotoBulk'];
+        $admissionRoutes = ['admitStudent','studentList','studentPromotion','studentPhotoBulk','student.idcards.bulk'];
         $admissionOpen = request()->routeIs($admissionRoutes);
     @endphp
     <li class="nav-item sidebar-nav-item {{ $admissionOpen ? 'open' : '' }}" data-group="admin-admission">
@@ -74,6 +74,9 @@
             </li>
             <li class="nav-item">
                 <a href="{{ route('studentPhotoBulk') }}" class="nav-link {{ request()->routeIs('studentPhotoBulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk Photo Upload</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('student.idcards.bulk') }}" class="nav-link {{ request()->routeIs('student.idcards.bulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk ID Cards</a>
             </li>
         </ul>
     </li>
