@@ -42,6 +42,8 @@
 
                         $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
                         $userType = $loginUser['userType'] ?? null;
+                        $demoHosts = ['demoadmin.cultivationapp.com', 'www.demoadmin.cultivationppa.com'];
+                        $isDemoHost = in_array(request()->getHost(), $demoHosts, true);
                     @endphp
                     @if(config('app.debug'))
                         <div class="alert alert-info mt-2 mb-2">Debug: cultivationAdmin={{ session('cultivationAdmin') }} | userType={{ $userType }}</div>
@@ -153,9 +155,11 @@
                                     </li>
                                 </ul>
                             </li>
-                            <li class="nav-item">
-                                <a href="{{ route('sms.settings') }}" class="nav-link {{ request()->routeIs('sms.settings') ? 'active' : '' }}"><i class="flaticon-envelope"></i><span>SMS Settings</span></a>
-                            </li>
+                            @if(!$isDemoHost)
+                                <li class="nav-item">
+                                    <a href="{{ route('sms.settings') }}" class="nav-link {{ request()->routeIs('sms.settings') ? 'active' : '' }}"><i class="flaticon-envelope"></i><span>SMS Settings</span></a>
+                                </li>
+                            @endif
                         @endif
                     </ul>
                 </div>

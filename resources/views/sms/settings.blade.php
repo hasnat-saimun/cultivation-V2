@@ -2,6 +2,13 @@
 
 @section('backTitle') SMS Settings @endsection
 @section('backIndex')
+@php
+    $demoHosts = ['demoadmin.cultivationapp.com', 'www.demoadmin.cultivationppa.com'];
+    $isDemoHost = in_array(request()->getHost(), $demoHosts, true);
+@endphp
+@if($isDemoHost)
+    <div class="alert alert-warning">SMS Settings are disabled on the demo environment.</div>
+@else
 <div class="row gutters-20 mb-4">
     <div class="col-md-10 col-12 mx-auto">
         <div class="card">
@@ -544,4 +551,5 @@
 </script>
 @endpush
 
+@endif
 @endsection
