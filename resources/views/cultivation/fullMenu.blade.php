@@ -170,7 +170,16 @@
     <li class="nav-item">
         <a href="{{ route('designationsIndex') }}" class="nav-link {{ request()->routeIs('designationsIndex','designationsCreate','designationsEdit') ? 'active' : '' }}"><i class="fa-solid fa-list"></i> <span>Designations</span></a>
     </li>
-    <li class="nav-item">
-        <a href="{{ route('userGuide') }}" class="nav-link {{ request()->routeIs('userGuide') ? 'active' : '' }}"><i class="fa-regular fa-book"></i> <span>User Guide</span></a>
+    @php
+        $guideRoutes = ['userGuide.generalAdmin'];
+        $guideOpen = request()->routeIs($guideRoutes);
+    @endphp
+    <li class="nav-item sidebar-nav-item {{ $guideOpen ? 'open' : '' }}" data-group="admin-guides">
+        <a href="#" class="nav-link {{ $guideOpen ? 'active' : '' }}"><i class="fa-regular fa-book"></i> <span>User Guides</span></a>
+        <ul class="nav sub-group-menu{{ $guideOpen ? ' menu-open' : '' }}">
+            <li class="nav-item">
+                <a href="{{ route('userGuide.generalAdmin') }}" class="nav-link {{ request()->routeIs('userGuide.generalAdmin') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>General Admin</a>
+            </li>
+        </ul>
     </li>
 </ul>

@@ -112,6 +112,9 @@ Route::middleware(['adminGuard'])->group (function(){
         Route::get('/result-archive', [\App\Http\Controllers\ResultArchiveController::class, 'index'])->name('resultArchive');
     // Documentation route (internal user guide)
     Route::get('/user-guide', [DocsController::class, 'userGuide'])->name('userGuide');
+    Route::get('/user-guide/general-admin', [DocsController::class, 'userGuideGeneralAdmin'])->name('userGuide.generalAdmin');
+    Route::get('/user-guide/teacher-admin', [DocsController::class, 'userGuideTeacherAdmin'])->name('userGuide.teacherAdmin');
+    Route::get('/user-guide/cash-admin', [DocsController::class, 'userGuideCashAdmin'])->name('userGuide.cashAdmin');
     // Attendance (teacher & general access)
     Route::get('/attendance', [AttendanceController::class,'index'])->name('attendanceIndex');
     Route::post('/attendance/fetch', [AttendanceController::class,'fetch'])->name('attendanceFetch');

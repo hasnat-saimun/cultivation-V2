@@ -43,7 +43,10 @@
 .toc a {text-decoration:none; font-size:13px;}
 @media print {
     .sidebar-main,.header-menu-one,.breadcrumbs-area,.d-print-none,#print-guide {display:none!important;}
-    body {background:#fff!important;}
+    .toc {display:none!important;}
+    #guide-search, #search-count {display:none!important;}
+    html, body {background:#ffffff!important;}
+    .wrapper, .dashboard-page-one, .card, .card-body, #guide-wrapper, #guide-content {background:#ffffff!important;}
     .card {box-shadow:none!important; border:none!important;}
     .card-header {border-bottom:1px solid #e2e8f0;}
 }

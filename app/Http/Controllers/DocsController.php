@@ -11,24 +11,22 @@ class DocsController extends Controller
 {
     public function userGuide()
     {
-        $path = base_path('docs/user-guide.md');
-        $exists = File::exists($path);
-        $markdown = $exists ? File::get($path) : '# User Guide\nFile not found.';
+        return $this->renderGuide(base_path('docs/user-guide.md'), 'User Guide');
+    }
 
-        // Determine last updated timestamp & version
-        $updatedAt = $exists ? Carbon::createFromTimestamp(File::lastModified($path)) : Carbon::now();
-        $version = config('app.version') ?: $updatedAt->format('Y.m.d');
+    public function userGuideGeneralAdmin()
+    {
+        return $this->renderGuide(base_path('docs/user-guide-general-admin.md'), 'User Guide - General Admin');
+    }
 
-        // Server-side markdown conversion with graceful fallback
-        $html = $this->convertMarkdown($markdown);
+    public function userGuideTeacherAdmin()
+    {
+        return $this->renderGuide(base_path('docs/user-guide-teacher-admin.md'), 'User Guide - Teacher Admin');
+    }
 
-        return view('docs.user-guide', [
-            'html' => $html,
-            'raw' => $markdown,
-            'title' => 'User Guide',
-            'version' => $version,
-            'updatedAt' => $updatedAt->format('Y-m-d H:i')
-        ]);
+    public function userGuideCashAdmin()
+    {
+        return $this->renderGuide(base_path('docs/user-guide-cash-admin.md'), 'User Guide - Cash Admin');
     }
 
     public function brochure()
@@ -80,5 +78,26 @@ class DocsController extends Controller
         $escaped = preg_replace('/`([^`]+)`/', '<code>$1</code>', $escaped);
         $paragraphs = collect(preg_split('/\n\n+/', $escaped))->map(fn($p) => Str::startsWith($p, '<h') ? $p : '<p>'.$p.'</p>')->implode("\n");
         return $paragraphs;
+    }
+
+    protected function renderGuide(string $path, string $title)
+    {
+        $exists = File::exists($path);
+        $markdown = $exists ? File::get($path) : "# {$title}\nFile not found.";
+
+        // Determine last updated timestamp & version
+        $updatedAt = $exists ? Carbon::createFromTimestamp(File::lastModified($path)) : Carbon::now();
+        $version = config('app.version') ?: $updatedAt->format('Y.m.d');
+
+        // Server-side markdown conversion with graceful fallback
+        $html = $this->convertMarkdown($markdown);
+
+        return view('docs.user-guide', [
+            'html' => $html,
+            'raw' => $markdown,
+            'title' => $title,
+            'version' => $version,
+            'updatedAt' => $updatedAt->format('Y-m-d H:i')
+        ]);
     }
 }
