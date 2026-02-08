@@ -1,8 +1,19 @@
 @php
-    $qrText = ($branding['name'] ?? 'Institute') . ' | ID:' . $card['studentId'];
+    $qrPayload = [
+        'student_id' => $card['studentId'] ?? '',
+        'name' => $card['name'] ?? '',
+        'institute' => $branding['name'] ?? 'Institute',
+        'guardian_name' => $card['guardianName'] ?? '',
+        'guardian_mobile' => $card['guardianPhone'] ?? '',
+        'guardian_relation' => $card['guardianRelation'] ?? '',
+        'class' => $card['class'] ?? '',
+        'section' => $card['section'] ?? '',
+        'roll' => $card['roll'] ?? '',
+    ];
+    $qrText = json_encode($qrPayload, JSON_UNESCAPED_SLASHES);
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' . urlencode($qrText);
     $phone = $branding['phone'] ?? 'N/A';
-    $website = $branding['website'] ?? ($branding['email'] ?? 'cultivation.com');
+    $website = $branding['website'] ?? 'cultivationapp.com';
 @endphp
 
 <div class="id-card-shell">
@@ -22,57 +33,51 @@
                         <div class="id-school-tag">{{ $branding['tagline'] ?? 'Excellence in Education' }}</div>
                     </div>
                 </div>
-                <div class="id-card-label">Student ID Card</div>
             </div>
         </div>
         <div class="id-front-body portrait">
+            <div class="id-card-label">Student ID Card</div>
             <div class="id-photo-wrap portrait">
                 <img src="{{ $card['photoUrl'] }}" alt="{{ $card['studentId'] }}">
             </div>
             <div class="id-info">
                 <div class="id-name">{{ $card['name'] }}</div>
+                <div class="id-number">ID {{ $card['studentId'] }}</div>
                 <div class="id-portrait-grid">
                     <div>Class <span>{{ $card['class'] }}</span></div>
                     <div>Roll <span>{{ $card['roll'] }}</span></div>
                     <div>Section <span>{{ $card['section'] }}</span></div>
-                    <div>ID <span>{{ $card['studentId'] }}</span></div>
-                    <div>Session <span>{{ $card['sessionText'] }}</span></div>
-                    <div>Valid <span>{{ $card['validity'] }}</span></div>
-                </div>
-            </div>
-            <div class="id-portrait-qr">
-                <div class="id-qr">
-                    <img src="{{ $qrUrl }}" alt="QR">
                 </div>
             </div>
         </div>
         <div class="id-front-footer">
-            <div>VALID: <span>{{ $card['validity'] }}</span></div>
-            <div>{{ $phone }}</div>
+            <div>Web: {{ $website }}</div>
         </div>
     </div>
 
     <div class="id-face id-back">
         <div class="id-back-top"></div>
         <div class="id-back-body">
-            <div>
+            <div class="id-back-left">
                 <div class="id-back-title">Instructions:</div>
                 <ol class="id-back-list">
                     <li>This card is property of the institution.</li>
                     <li>If found, please return to the office.</li>
-                    <li>Misuse may result in disciplinary action.</li>
                 </ol>
-                <div class="id-back-note"><strong>Note:</strong> Carry this ID during campus hours.</div>
-                <div class="id-sign">Authorized Signature</div>
+                <div class="id-back-note">VALID: <span>{{ $card['validity'] }}</span></div>
+                <div class="id-guardian-box">
+                    <div class="id-back-title">Guardian Details:</div>
+                    <div class="id-guardian-row">Name <span>{{ $card['guardianName'] ?? '-' }}</span></div>
+                    <div class="id-guardian-row">Mobile <span>{{ $card['guardianPhone'] ?? '-' }}</span></div></div>
             </div>
-            <div class="id-barcode-box">
-                <div class="id-barcode"></div>
+            <div class="id-barcode-box id-back-qr">
+                <img class="id-back-qr-img" src="{{ $qrUrl }}" alt="QR">
                 <div class="id-card-no">Card No {{ $card['studentId'] }}</div>
+                <div class="id-sign">Authorized Signature</div>
             </div>
         </div>
         <div class="id-back-footer-bar">
-            <div>Emergency Contact: <span>{{ $phone }}</span></div>
-            <div>{{ $website }}</div>
+            <div>If found, please contact: <span>{{ $phone }}</span></div>
         </div>
     </div>
 </div>

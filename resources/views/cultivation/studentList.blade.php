@@ -11,6 +11,7 @@ Student List
                                 <h3 class="mb-0"><i class="fa-solid fa-graduation-cap"></i> Student List</h3>
                                 <div class="d-flex gap-3 flex-wrap">
                                     <a href="{{ route('student.export.pdf') }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+                                        <a href="{{ route('studentBulkUpdate') }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
                                     <a href="{{route('admitStudent')}}" class="btn btn-success btn-sm"><i class="fa-solid fa-user-plus"></i> New Admission</a>
                                 </div>
                             </div>

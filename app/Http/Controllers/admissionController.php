@@ -87,6 +87,9 @@ class AdmissionController extends Controller
                 'sessionText' => $sessionText,
                 'validity' => $validDate,
                 'photoUrl' => $photoUrl,
+                'guardianName' => $s->gurdian ?? '',
+                'guardianRelation' => $s->relationWithStd ?? '',
+                'guardianPhone' => $s->gurdianPhone ?? $s->phone ?? '',
             ];
         }
 
@@ -662,6 +665,141 @@ class AdmissionController extends Controller
         } catch (\Exception $e) {
             return back()->with('error', 'Delete failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Show bulk update form for students
+     */
+    public function bulkStudentUpdateForm()
+    {
+        $classDetails = classManage::orderBy('id')->get();
+        $sessionDetails = sessionManage::orderBy('id')->get();
+        $sectionDetails = sectionManage::orderBy('id')->get();
+        $departmentDetails = Department::orderBy('id')->get();
+
+        $filters = [
+            'classId' => request()->get('classId'),
+            'sessionId' => request()->get('sessionId'),
+            'sectionId' => request()->get('sectionId'),
+            'departmentId' => request()->get('departmentId'),
+            'search' => request()->get('search'),
+        ];
+
+        $q = newAdmission::query();
+        if (!empty($filters['classId'])) {
+            $q->where('className', (int) $filters['classId']);
+        }
+        if (!empty($filters['sessionId'])) {
+            $q->where('sessName', (int) $filters['sessionId']);
+        }
+        if (!empty($filters['sectionId'])) {
+            $q->where('sectionName', (int) $filters['sectionId']);
+        }
+        if (!empty($filters['departmentId'])) {
+            $q->where('departmentName', (int) $filters['departmentId']);
+        }
+        if (!empty($filters['search'])) {
+            $s = $filters['search'];
+            $q->where(function($w) use ($s){
+                $w->where('fullName', 'like', '%'.$s.'%')
+                  ->orWhere('sureName', 'like', '%'.$s.'%')
+                  ->orWhere('stdId', 'like', '%'.$s.'%')
+                  ->orWhere('phone', 'like', '%'.$s.'%');
+            });
+        }
+
+        $students = $q->select(
+                'id',
+                'stdId',
+                'fullName',
+                'sureName',
+                'father',
+                'mother',
+                'gender',
+                'dob',
+                'mail',
+                'phone',
+                'address',
+                'sessName',
+                'className',
+                'departmentName',
+                'sectionName',
+                'rollNumber',
+                'gurdianName',
+                'gurdianMobile',
+                'relationGurdian'
+            )
+            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+            ->orderBy('fullName')
+            ->get();
+
+        return view('cultivation.student-bulk-update', compact(
+            'students',
+            'classDetails',
+            'sessionDetails',
+            'sectionDetails',
+            'departmentDetails',
+            'filters'
+        ));
+    }
+
+    /**
+     * Store bulk updates for students (per-row editing)
+     */
+    public function bulkStudentUpdateStore(Request $request)
+    {
+        $request->validate([
+            'students' => 'required|array',
+            'students.*.id' => 'required|exists:new_admissions,id',
+            'students.*.fullName' => 'nullable|string|max:255',
+            'students.*.sureName' => 'nullable|string|max:255',
+            'students.*.father' => 'nullable|string|max:255',
+            'students.*.mother' => 'nullable|string|max:255',
+            'students.*.gender' => 'nullable|in:1,2,3',
+            'students.*.dob' => 'nullable|date',
+            'students.*.mail' => 'nullable|email|max:255',
+            'students.*.phone' => 'nullable|string|max:20',
+            'students.*.address' => 'nullable|string',
+            'students.*.sessName' => 'nullable|integer|exists:session_manages,id',
+            'students.*.className' => 'nullable|integer|exists:class_manages,id',
+            'students.*.departmentName' => 'nullable|integer|exists:departments,id',
+            'students.*.sectionName' => 'nullable|integer|exists:section_manages,id',
+            'students.*.rollNumber' => 'nullable|string|max:20',
+            'students.*.gurdianName' => 'nullable|string|max:255',
+            'students.*.gurdianMobile' => 'nullable|string|max:20',
+            'students.*.relationGurdian' => 'nullable|integer',
+        ]);
+
+        $updated = 0;
+        foreach ($request->input('students', []) as $studentData) {
+            $student = newAdmission::find($studentData['id'] ?? null);
+            if (!$student) {
+                continue;
+            }
+
+            $student->fullName = $studentData['fullName'] ?? $student->fullName;
+            $student->sureName = $studentData['sureName'] ?? $student->sureName;
+            $student->father = $studentData['father'] ?? $student->father;
+            $student->mother = $studentData['mother'] ?? $student->mother;
+            $student->gender = $studentData['gender'] ?? $student->gender;
+            $student->dob = $studentData['dob'] ?? $student->dob;
+            $student->mail = $studentData['mail'] ?? $student->mail;
+            $student->phone = $studentData['phone'] ?? $student->phone;
+            $student->address = $studentData['address'] ?? $student->address;
+            $student->sessName = $studentData['sessName'] ?? $student->sessName;
+            $student->className = $studentData['className'] ?? $student->className;
+            $student->departmentName = $studentData['departmentName'] ?? $student->departmentName;
+            $student->sectionName = $studentData['sectionName'] ?? $student->sectionName;
+            $student->rollNumber = $studentData['rollNumber'] ?? $student->rollNumber;
+            $student->gurdianName = $studentData['gurdianName'] ?? $student->gurdianName;
+            $student->gurdianMobile = $studentData['gurdianMobile'] ?? $student->gurdianMobile;
+            $student->relationGurdian = $studentData['relationGurdian'] ?? $student->relationGurdian;
+
+            $student->save();
+            $updated++;
+        }
+
+        return redirect()->route('studentBulkUpdate')->with('success', "Successfully updated {$updated} student(s)");
     }
 
 

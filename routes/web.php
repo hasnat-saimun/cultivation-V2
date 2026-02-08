@@ -1013,6 +1013,16 @@ Route::middleware(['adminGuard'])->group (function(){
         'bulkUpdateStore'
     ])->name('teacherBulkUpdateStore');
 
+    Route::get('/student/bulk-update',[
+        AdmissionController::class,
+        'bulkStudentUpdateForm'
+    ])->name('studentBulkUpdate');
+
+    Route::post('/student/bulk-update',[
+        AdmissionController::class,
+        'bulkStudentUpdateStore'
+    ])->name('studentBulkUpdateStore');
+
     Route::get('/teacher/export/pdf',[
         TeacherController::class,
         'exportPDF'
