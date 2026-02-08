@@ -78,6 +78,19 @@ Generate printable ID cards for an entire class/section.
 Tips:
 - If a student photo is missing, upload via the Student profile or bulk photo upload form.
 - Logo and institute details are taken from Server/Institute Configuration.
+- Use the color picker to change header/footer, border, and font colors before printing.
+
+## Bulk Student Update
+Update many student records in one table.
+
+- Navigate: Student List -> Bulk Update or Admission -> Bulk Details Update.
+- Filter: Use Session, Class, Section, Department, and Search to load a specific list.
+- Edit: Change fields directly in the table.
+- Save: Click "Save All Changes" to update all rows.
+
+Tips:
+- Use filters first to limit the list for faster editing.
+- Unsaved changes are highlighted and you will be warned before leaving the page.
 
 ## Creating a Testimonial
 1. From Student List, click Create (for eligible students).
@@ -182,6 +195,8 @@ If you need additional features or roles, contact your administrator.
 - Print-optimized layout with watermark
 - DataTables search enabled and styled
 - Bulk Student ID Cards page with professional layout
+- Bulk Student Update with filters
+- ID Card color customization panel
 - Result Archive and bulk transcript listing
 
 ---

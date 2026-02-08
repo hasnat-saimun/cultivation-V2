@@ -83,7 +83,9 @@
                     <ul class="list">
                         <li><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M16 11a4 4 0 10-8 0 4 4 0 008 0zm-9 7a7 7 0 0114 0v1H7v-1z"/></svg>Student/Teacher/Staff Management</li>
                         <li><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h16v2H4V5zm0 4h10v2H4V9zm0 4h12v2H4v-2zm0 4h8v2H4v-2z"/></svg>Bulk Uploads & Photo Tools</li>
+                        <li><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M5 5h14v4H5V5zm0 6h14v2H5v-2zm0 4h10v2H5v-2z"/></svg>Bulk Student & Teacher Updates</li>
                         <li><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4h10a2 2 0 012 2v12H5V6a2 2 0 012-2zm1 3v2h8V7H8zm0 4v2h8v-2H8z"/></svg>Professional ID Cards</li>
+                        <li><svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v12H4V6zm2 2v8h12V8H6z"/></svg>ID Card Color Customization</li>
                     </ul>
                 </div>
                 <div class="card">
