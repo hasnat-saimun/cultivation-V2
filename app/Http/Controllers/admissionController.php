@@ -776,24 +776,31 @@ class AdmissionController extends Controller
             if (!$student) {
                 continue;
             }
+            $fields = [
+                'fullName',
+                'sureName',
+                'father',
+                'mother',
+                'gender',
+                'dob',
+                'mail',
+                'phone',
+                'address',
+                'sessName',
+                'className',
+                'departmentName',
+                'sectionName',
+                'rollNumber',
+                'gurdianName',
+                'gurdianMobile',
+                'relationGurdian',
+            ];
 
-            $student->fullName = $studentData['fullName'] ?? $student->fullName;
-            $student->sureName = $studentData['sureName'] ?? $student->sureName;
-            $student->father = $studentData['father'] ?? $student->father;
-            $student->mother = $studentData['mother'] ?? $student->mother;
-            $student->gender = $studentData['gender'] ?? $student->gender;
-            $student->dob = $studentData['dob'] ?? $student->dob;
-            $student->mail = $studentData['mail'] ?? $student->mail;
-            $student->phone = $studentData['phone'] ?? $student->phone;
-            $student->address = $studentData['address'] ?? $student->address;
-            $student->sessName = $studentData['sessName'] ?? $student->sessName;
-            $student->className = $studentData['className'] ?? $student->className;
-            $student->departmentName = $studentData['departmentName'] ?? $student->departmentName;
-            $student->sectionName = $studentData['sectionName'] ?? $student->sectionName;
-            $student->rollNumber = $studentData['rollNumber'] ?? $student->rollNumber;
-            $student->gurdianName = $studentData['gurdianName'] ?? $student->gurdianName;
-            $student->gurdianMobile = $studentData['gurdianMobile'] ?? $student->gurdianMobile;
-            $student->relationGurdian = $studentData['relationGurdian'] ?? $student->relationGurdian;
+            foreach ($fields as $field) {
+                if (array_key_exists($field, $studentData)) {
+                    $student->{$field} = $studentData[$field];
+                }
+            }
 
             $student->save();
             $updated++;

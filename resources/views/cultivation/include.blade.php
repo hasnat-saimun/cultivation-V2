@@ -67,8 +67,8 @@
 
     <script>
         $(document).ready(function() {
-            $(".alert").fadeTo(2000, 500).slideUp(500, function() {
-                $(".alert").slideUp(500);
+            $(".alert").fadeTo(20000, 5000).slideUp(5000, function() {
+                $(".alert").slideUp(5000);
             });
             
             // Simple sidebar menu toggle: one open at a time

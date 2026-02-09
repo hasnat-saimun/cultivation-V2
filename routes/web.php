@@ -809,6 +809,11 @@ Route::middleware(['adminGuard'])->group (function(){
         'getStudentForTutionFee'
     ])->name('getStudentForTutionFee');
 
+    Route::get('/getStudentsForTutionFeeFilter',[
+        tuitionController::class,
+        'getStudentsForTutionFeeFilter'
+    ])->name('getStudentsForTutionFeeFilter');
+
     Route::get('/add-tuition-fee',[
         tuitionController::class,   //add tuition free
         'tuitionFee'
@@ -1365,6 +1370,17 @@ Route::middleware(['adminGuard'])->group (function(){
         MarksheetController::class ,
         'generateMarksheet'
     ])->name('generateMarksheet');
+
+    Route::middleware(\App\Http\Middleware\Roles::class.':3')->group(function(){
+        Route::get('/result/final-publish',[
+            MarksheetController::class,
+            'finalPublishIndex'
+        ])->name('result.final.publish');
+        Route::post('/result/final-publish',[
+            MarksheetController::class,
+            'finalPublishStore'
+        ])->name('result.final.publish.store');
+    });
 
 
     //Admit Card route declaration

@@ -21,9 +21,52 @@ Tuition Fee
                 <div class="row mb-4">
                     <h4 class="text-bold">Student Fees Collection</h4>
                 </div>
+                <div class="mb-4">
+                    <div class="card-body">
+                        <h6 class="mb-3">Find Student</h6>
+                        <div class="row">
+                            <div class="col-md-3 form-group">
+                                <label>Class</label>
+                                <select class="select2" id="filterClass">
+                                    <option value="">All Classes</option>
+                                    @foreach($classData as $cls)
+                                        <option value="{{ $cls->id }}">{{ $cls->className }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 form-group">
+                                <label>Session</label>
+                                <select class="select2" id="filterSession">
+                                    <option value="">All Sessions</option>
+                                    @foreach($sessionData as $sess)
+                                        <option value="{{ $sess->id }}">{{ $sess->session }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 form-group">
+                                <label>Section</label>
+                                <select class="select2" id="filterSection">
+                                    <option value="">All Sections</option>
+                                    @foreach($sectionData as $sec)
+                                        <option value="{{ $sec->id }}">{{ $sec->section }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-3 form-group">
+                                <label>Search</label>
+                                <input type="text" id="filterSearch" class="form-control" placeholder="ID, name, roll">
+                            </div>
+                        </div>
+                        <div class="gap-2 mt-2">
+                            <button type="button" class="btn btn-primary" onclick="searchStudents()">Search</button>
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetStudentSearch()">Reset</button>
+                        </div>
+                        <div id="studentFilterResults"></div>
+                    </div>
+                </div>
                 <div class="row align-items-center">
                     <div class="col-4 form-group">
-                        <input type="text" class="form-control" placeholder="Enter student ID to collect tution fee" name="stdId" id="stdId" required >
+                        <input type="text" class="form-control" placeholder="Enter student ID to collect tution fee" name="stdId" id="stdId" required>
                     </div>
                     <div class="col-4 text-center form-group">
                         <a href="#" onclick="getStudent()" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</a>
@@ -36,6 +79,50 @@ Tuition Fee
     </div>
 </div>
 <script>
+    function searchStudents(){
+        var classId = document.getElementById('filterClass').value;
+        var sessionId = document.getElementById('filterSession').value;
+        var sectionId = document.getElementById('filterSection').value;
+        var search = document.getElementById('filterSearch').value;
+
+        var params = new URLSearchParams();
+        if(classId) params.append('classId', classId);
+        if(sessionId) params.append('sessionId', sessionId);
+        if(sectionId) params.append('sectionId', sectionId);
+        if(search) params.append('search', search);
+
+        var url = "{{ route('getStudentsForTutionFeeFilter') }}" + '?' + params.toString();
+        var container = document.getElementById('studentFilterResults');
+        container.innerHTML = '<div class="text-muted mt-2">Loading...</div>';
+
+        fetch(url)
+            .then(function(res){ return res.text(); })
+            .then(function(html){ container.innerHTML = html; })
+            .catch(function(){ container.innerHTML = '<div class="alert alert-danger mt-2">Failed to load students.</div>'; });
+    }
+
+    function resetStudentSearch(){
+        document.getElementById('filterClass').value = '';
+        document.getElementById('filterSession').value = '';
+        document.getElementById('filterSection').value = '';
+        document.getElementById('filterSearch').value = '';
+        document.getElementById('studentFilterResults').innerHTML = '';
+        try{
+            if(window.jQuery){
+                $('#filterClass').val('').trigger('change');
+                $('#filterSession').val('').trigger('change');
+                $('#filterSection').val('').trigger('change');
+            }
+        }catch(e){ /* ignore */ }
+    }
+
+    function selectStudent(stdId){
+        var input = document.getElementById('stdId');
+        input.value = stdId;
+        getStudent();
+        input.scrollIntoView({behavior:'smooth', block:'center'});
+    }
+
     function getStudent() {
         var str   = document.getElementById('stdId').value;
         if(str == "") {

@@ -3,6 +3,33 @@
 Institute Info
 @endsection
 @section('backIndex')
+<style>
+    .invoice-wrap{background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 8px 20px rgba(15,23,42,0.06);}
+    .invoice-head{display:flex;justify-content:space-between;gap:16px;border-bottom:1px dashed #e5e7eb;padding:18px 22px;align-items:flex-start;}
+    .invoice-title{font-size:18px;font-weight:700;letter-spacing:.5px;}
+    .invoice-meta{font-size:13px;color:#475569;}
+    .invoice-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px;padding:14px 22px;}
+    .invoice-card{border:1px solid #eef2f7;border-radius:8px;padding:12px 14px;background:#f8fafc;}
+    .invoice-card h6{font-size:12px;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;color:#64748b;}
+    .invoice-card p{margin:0 0 6px 0;font-size:14px;color:#0f172a;}
+    .invoice-table{padding:0 22px 6px 22px;}
+    .invoice-table table{width:100%;border-collapse:collapse;}
+    .invoice-table th{background:#0f172a;color:#fff;font-size:13px;padding:10px;border:1px solid #0f172a;}
+    .invoice-table td{border:1px solid #e5e7eb;padding:10px;font-size:14px;}
+    .invoice-total{display:flex;justify-content:flex-end;padding:10px 22px 18px 22px;}
+    .invoice-total .total-box{min-width:220px;border:1px solid #e5e7eb;border-radius:8px;padding:10px 12px;background:#fff;}
+    .invoice-total .row{display:flex;justify-content:space-between;margin:0 !important;font-size:14px;}
+    .invoice-total .grand{font-weight:700;font-size:16px;color:#0f172a;border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:6px;}
+    .invoice-sign{display:flex;justify-content:space-between;gap:16px;padding:20px 22px 26px 22px;}
+    .invoice-sign .line{border-top:1px solid #0f172a;margin-top:28px;min-width:220px;text-align:center;font-size:13px;color:#0f172a;}
+    @media print{
+        .d-print-none{display:none!important;}
+        html, body{background:#ffffff!important;}
+        .wrapper, .dashboard-page-one, .card, .card-body{background:#ffffff!important;}
+        .invoice-wrap{box-shadow:none;border:1px solid #e5e7eb;background:#ffffff!important;}
+        *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    }
+</style>
 <div class="row gutters-20 mb-4">
     <div class="col-10 mx-auto">
         <div class="row" id="report">
@@ -31,112 +58,95 @@ Institute Info
                     $hideDateCol = ($reportType === 'single');
                 @endphp
                 @if(!empty($student))
-                <div class="receipt-main col-12 mx-auto">
-                    @include('components.institute-header')
-                    <div class="receipt-header receipt-header-mid row">
-                        <div class="col-xs-8 col-sm-8 col-md-8 text-left">
-                            <div class="receipt-right">
-                                <h5>{{$student->fullName}}</h5>
-
-                                <p><b>Student ID :</b> {{ $student->stdId }}</p>
-
-                                <p><b>Roll : </b> {{$student->rollNumber}}</p>
-
-                                @if(!empty($classData))
-                                <p><b>Class : </b> {{$classData->className}}</p>
-                                @else
-                                <p><b>Class : </b> -</p>
-                                @endif
-
-                                @if(!empty($sectionData))
-                                <p><b>Section : </b> {{$sectionData->section}}</p>
-                                @else
-                                <p><b>Section : </b> -</p>
-                                @endif
-
-                                @if(!empty($sessionData))
-                                <p><b>Session : </b> {{$sessionData->session}}</p>
-                                @else
-                                <p><b>Session : </b> -</p>
-                                @endif
+                <div class="receipt-main col-10 mx-auto">
+                    <div class="invoice-wrap">
+                        @include('components.institute-header')
+                        <div class="invoice-head">
+                            <div>
+                                <div class="invoice-title">Student Fees Invoice</div>
+                                <div class="invoice-meta">
+                                    Generated: {{ date('d-M-Y') }}
+                                    @if(!empty($betweenText))
+                                        · {{ $betweenText }}
+                                    @endif
+                                </div>
+                            </div>
+                            <div class="invoice-meta text-end">
+                                <div><strong>Student ID:</strong> {{ $student->stdId }}</div>
+                                <div><strong>Roll:</strong> {{ $student->rollNumber }}</div>
                             </div>
                         </div>
-                        <div class="col-xs-4 col-sm-4 col-md-4">
-                            <div class="receipt-left">
-                                <p><b>Date : </b> {{date('d-M-Y')}}</p>
-                                <p><b>Mobile : </b> {{ $student->phone }}</p>
-                                <p><b>Email : </b> {{ $student->mail }}</p>
-                                @if(!empty($betweenText))
-                                <p><b>Report: </b> {{ $betweenText }}</p>
-                                @endif
+                        <div class="invoice-grid">
+                            <div class="invoice-card">
+                                <h6>Student</h6>
+                                <p><strong>{{ $student->fullName }}</strong></p>
+                                <p><strong>Class:</strong> {{ $classData->className ?? '-' }}</p>
+                                <p><strong>Section:</strong> {{ $sectionData->section ?? '-' }}</p>
+                                <p><strong>Session:</strong> {{ $sessionData->session ?? '-' }}</p>
+                            </div>
+                            <div class="invoice-card">
+                                <h6>Contact</h6>
+                                <p><strong>Mobile:</strong> {{ $student->phone ?? '-' }}</p>
+                                <p><strong>Email:</strong> {{ $student->mail ?? '-' }}</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-4">
-                        <table class="table table-bordered">
-                            <thead>
-                                <tr>
-                                    @unless($hideDateCol)
-                                    <th>Date</th>
-                                    @endunless
-                                    <th>Description</th>
-                                    <th>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @if(!empty($feesList))
-                                @foreach($feesList as $fl)
-                                    @php
-                                        $feesData = \App\Models\feesManager::find($fl->feesType);
-                                        if(!empty($feesData)):
-                                            $feesName   = $feesData->feesName;
-                                            $amount     = $fl->amount;
-                                        else:
-                                            $feesName="-";
-                                            $amount="-";
-                                        endif;
-                                    @endphp
+                        <div class="invoice-table">
+                            <table>
+                                <thead>
                                     <tr>
                                         @unless($hideDateCol)
-                                        <td>{{ $fl->created_at->format('Y-m-d') }}</td>
+                                        <th>Date</th>
                                         @endunless
-                                        <td >{{ $feesName }}</td>
-                                        <td > {{ $amount }}/-</td>
+                                        <th>Description</th>
+                                        <th style="width:180px;">Amount</th>
                                     </tr>
-                                @endforeach
-                                <tr>
-                                    <td class="text-right" colspan="{{ $hideDateCol ? 1 : 2 }}">
-                                        <h2><strong>Total: </strong></h2>
-                                    </td>
-                                    <td class="text-left text-danger">
-                                        <h2>
-                                            <strong>{{ $sumAmount }}</strong>
-                                        </h2>
-                                    </td>
-                                </tr>
-                                @else
-                                <tr>
-                                    <td colspan="{{ $hideDateCol ? 2 : 3 }}">Sorry! No data found with your query</td>
-                                </tr>
-                                @endif
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="receipt-header receipt-header-mid receipt-footer row ">
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-left mt-5">
-                                    <p><u>Gurdian Sign</u></p>
+                                </thead>
+                                <tbody>
+                                    @if(!empty($feesList))
+                                    @foreach($feesList as $fl)
+                                        @php
+                                            $feesData = \App\Models\feesManager::find($fl->feesType);
+                                            if(!empty($feesData)):
+                                                $feesName   = $feesData->feesName;
+                                                $amount     = $fl->amount;
+                                            else:
+                                                $feesName="-";
+                                                $amount="-";
+                                            endif;
+                                        @endphp
+                                        <tr>
+                                            @unless($hideDateCol)
+                                            <td>{{ $fl->created_at->format('Y-m-d') }}</td>
+                                            @endunless
+                                            <td>{{ $feesName }}</td>
+                                            <td>{{ $amount }}/-</td>
+                                        </tr>
+                                    @endforeach
+                                    @else
+                                    <tr>
+                                        <td colspan="{{ $hideDateCol ? 2 : 3 }}">Sorry! No data found with your query</td>
+                                    </tr>
+                                    @endif
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="invoice-total">
+                            <div class="total-box">
+                                <div class="row"><span>Subtotal</span><span>{{ $sumAmount }}</span></div>
+                                <div class="row grand"><span>Total</span><span>{{ $sumAmount }}</span></div>
                             </div>
-                            <div class="col-xs-6 col-sm-6 col-md-6 text-right mt-5">
-                                    <p><u>Cash Incharge</u></p>
-                            </div>
+                        </div>
+                        <div class="invoice-sign">
+                            <div class="line">Guardian Sign</div>
+                            <div class="line">Cash Incharge</div>
+                        </div>
                     </div>
                     <div class="row text-center">
-                        <div class="col-2 d-grid gap-2 mt-5">
-                            <a href="{{ route('feesReport') }}" class="btn btn-secondary btn-lg my-4 d-print-none">&larr; Go Back</a>
+                        <div class="col-2 d-grid gap-2 mt-4">
+                            <a href="{{ route('feesReport') }}" class="btn btn-secondary btn-lg my-2 d-print-none">&larr; Go Back</a>
                         </div>
-                        <div class="col-2 d-grid gap-2 mt-5">
-                            <button class="btn btn-success btn-lg my-4 d-print-none" onclick="printDiv('report')"><i class="fa-regular fa-print"></i> Print</button>
+                        <div class="col-2 d-grid gap-2 mt-4">
+                            <button class="btn btn-success btn-lg my-2 d-print-none" onclick="printDiv('report')"><i class="fa-regular fa-print"></i> Print</button>
                         </div>
                     </div>
                 </div>
@@ -157,11 +167,7 @@ Institute Info
 
 <script type="text/javascript">
     function printDiv(e){
-        var printContents = document.getElementById(e).innerHTML;
-        var originalContents = document.body.innerHTML;
-        document.body.innerHTML = printContents;
         window.print();
-        document.body.innerHTML = originalContents;
     }
 </script>
 @endsection

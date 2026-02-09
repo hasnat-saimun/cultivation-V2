@@ -72,24 +72,11 @@ Add New Marks
                                         </select>
                                     </div>
 
+                                    <input type="hidden" name="sessionId" value="">
                                     <div class="col-12 form-group">
-                                        <label>Session *</label>
-                                        <select class="select2" name="sessionId" required>
-                                            <option value="">Select *</option>
-                                            @php
-                                                $sessions = \App\Models\sessionManage::orderBy('id','DESC')->get();
-                                            @endphp
-                                            @if(!empty($sessions))
-                                                @foreach($sessions as $sess)
-                                                <option value="{{ $sess->id }}">{{ $sess->session }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
-                                    <div class="col-12 form-group">
-                                        <label>Section/Group *</label>
-                                        <select class="select2" name="groupId" required>
-                                            <option value="">Select *</option>
+                                        <label>Section/Group</label>
+                                        <select class="select2" name="groupId">
+                                            <option value="">Select (optional)</option>
                                             @php
                                                 $department = \App\Models\sectionManage::orderBy('id','DESC')->get();
                                             @endphp
@@ -105,7 +92,7 @@ Add New Marks
                                     <div class="col-12 form-group">
                                         <label>Subject *</label>
                                         <select class="select2" id="subject_select" name="subjectId" required>
-                                            <option value="">Select class and section first</option>
+                                            <option value="">Select class first</option>
                                         </select>
                                     </div>
                                     <div class="col-12 form-group mg-t-8">

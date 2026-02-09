@@ -7,12 +7,27 @@ use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\GradeList;
 use App\Models\ServerConfig;
+use App\Models\sessionManage;
+use App\Models\ResultPublish;
 use App\Models\Subject;
 use App\Models\Exam;
 use App\Models\ReligiousSubjectDefault;
 
 class MarksheetController extends Controller
 {
+    private function isResultPublished(int $examId, int $sessionId, int $classId, $groupId = null): bool
+    {
+        return ResultPublish::where('examId', $examId)
+            ->where('sessionId', $sessionId)
+            ->where('classId', $classId)
+            ->where(function($q) use ($groupId){
+                $q->whereNull('groupId');
+                if($groupId){
+                    $q->orWhere('groupId', $groupId);
+                }
+            })
+            ->exists();
+    }
     public function addMarks(){
         // Restrict visible classes & subjects if teacher
         $adminId = session('cultivationAdmin');
@@ -29,37 +44,71 @@ class MarksheetController extends Controller
         ]);
     }
     public function getMarks(Request $requ){
+        $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
+            ->when($requ->groupId, function($q) use ($requ){
+                return $q->where('sectionName', (int)$requ->groupId);
+            })
+            ->orderBy('sessName','DESC')
+            ->value('sessName');
+        $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
+        if(!$sessionId){
+            return redirect()->route('addMarks')->with('error','Session not found');
+        }
+        $groupId = $requ->groupId ?: null;
+        $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
         // Server-side enforcement of teacher's assigned class & subject
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        $isTeacherAdmin = $user && $user->isTeacher();
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $requ->groupId ?? null);
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId);
             if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
         }
         // Fetch students class-wise along with session and section filters
-        $studentList = newAdmission::where([
+        $studentQuery = newAdmission::where([
             'className'   => (int)$requ->classId,
-            'sessName'    => (int)$requ->sessionId,
-            'sectionName' => (int)$requ->groupId,
-        ])->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
+            'sessName'    => (int)$sessionId,
+        ]);
+        if($groupId){
+            $studentQuery->where('sectionName', (int)$groupId);
+        }
+        $studentList = $studentQuery->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
         return view('result.get-marks',[
             'studentList'=>$studentList,
-            'groupId'=>$requ->groupId,
+            'groupId'=>$groupId,
             'classId'=>$requ->classId,
-            'sessionId'=>$requ->sessionId,
+            'sessionId'=>$sessionId,
             'examId'=>$requ->examId,
-            'subjectId'=>$requ->subjectId
+            'subjectId'=>$requ->subjectId,
+            'isFinalPublished'=>$isFinalPublished,
+            'isTeacherAdmin'=>$isTeacherAdmin,
         ]);
     }
 
     public function confirmMarks(Request $requ){
+        $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
+            ->when($requ->groupId, function($q) use ($requ){
+                return $q->where('sectionName', (int)$requ->groupId);
+            })
+            ->orderBy('sessName','DESC')
+            ->value('sessName');
+        $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
+        if(!$sessionId){
+            return redirect()->route('addMarks')->with('error','Session not found');
+        }
+        $groupId = $requ->groupId ?: null;
         // Enforce teacher role restrictions before saving
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        $isTeacherAdmin = $user && $user->isTeacher();
+        $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
+        if($isTeacherAdmin && $isFinalPublished){
+            return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
+        }
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $requ->groupId ?? null);
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId);
             if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
             }
@@ -69,7 +118,15 @@ class MarksheetController extends Controller
         $x = 0;
         $skipped = 0;
         while($x<$totalData){
-            $chkData = Marksheet::where(['sessionId'=>$requ->sessionId,'classId'=>$requ->classId,'groupId'=>$requ->groupId,'studentId'=>$requ->studentId[$x],'examId'=>$requ->examId,'subjectId'=>$requ->subjectId])->first();
+            $chkData = Marksheet::where([
+                'sessionId'=>$sessionId,
+                'classId'=>$requ->classId,
+                'studentId'=>$requ->studentId[$x],
+                'examId'=>$requ->examId,
+                'subjectId'=>$requ->subjectId
+            ])->when($groupId, function($q) use ($groupId){
+                return $q->where('groupId',$groupId);
+            })->first();
             if(isset($chkData) && !empty($chkData)):
                 // If existing marks are entered by another teacher, do not overwrite
                 if($user && $user->isTeacher() && (int)$chkData->teacher_id !== (int)$user->id){
@@ -112,10 +169,10 @@ class MarksheetController extends Controller
 
             $marks->studentId       = $requ->studentId[$x];
             $marks->classId         = $requ->classId;
-            $marks->sessionId       = $requ->sessionId;
+            $marks->sessionId       = $sessionId;
             $marks->examId          = $requ->examId;
             $marks->subjectId       = $requ->subjectId;
-            $marks->groupId         = $requ->groupId;
+            $marks->groupId         = $groupId;
             $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? (float)$requ->cqMarks[$x] : null;
             $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? (float)$requ->mcqMarks[$x] : null;
             $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? (float)$requ->practical[$x] : null;
@@ -137,6 +194,80 @@ class MarksheetController extends Controller
 
     public function createMarksheet(){
         return view('result.createMarksheet');
+    }
+
+    public function finalPublishIndex(){
+        $examList = Exam::orderBy('id','DESC')->get();
+        $sessionList = sessionManage::orderBy('id','DESC')->get();
+        $classList = \App\Models\classManage::orderBy('id','DESC')->get();
+        $sectionList = \App\Models\sectionManage::orderBy('id','DESC')->get();
+        $publishedList = ResultPublish::orderBy('published_at','DESC')->get();
+
+        $examNames = Exam::orderBy('id','DESC')->pluck('examName','id');
+        $sessionNames = sessionManage::orderBy('id','DESC')->pluck('session','id');
+        $classNames = \App\Models\classManage::orderBy('id','DESC')->pluck('className','id');
+        $sectionNames = \App\Models\sectionManage::orderBy('id','DESC')->pluck('section','id');
+
+        return view('result.final-publish', compact(
+            'examList',
+            'sessionList',
+            'classList',
+            'sectionList',
+            'publishedList',
+            'examNames',
+            'sessionNames',
+            'classNames',
+            'sectionNames'
+        ));
+    }
+
+    public function finalPublishStore(Request $requ){
+        $requ->validate([
+            'examId' => 'required|integer',
+            'sessionId' => 'required|integer',
+            'classId' => 'required',
+            'groupId' => 'nullable|integer',
+            'action' => 'required|in:publish,unpublish',
+        ]);
+
+        $classId = $requ->classId;
+        if($classId !== 'all' && !ctype_digit((string)$classId)){
+            return back()->with('error', 'Invalid class selection.');
+        }
+
+        $groupId = $requ->groupId ? (string)$requ->groupId : null;
+        $classIds = [];
+        if($classId === 'all'){
+            $classIds = \App\Models\classManage::orderBy('id','DESC')->pluck('id')->map(fn($v) => (string)$v)->all();
+        } else {
+            $classIds = [(string)$classId];
+        }
+
+        foreach($classIds as $cid){
+            $payload = [
+                'examId' => (string)$requ->examId,
+                'sessionId' => (string)$requ->sessionId,
+                'classId' => $cid,
+                'groupId' => $groupId,
+            ];
+
+            if($requ->action === 'publish'){
+                ResultPublish::updateOrCreate(
+                    $payload,
+                    [
+                        'published_by' => session('cultivationAdmin'),
+                        'published_at' => now(),
+                    ]
+                );
+            } else {
+                ResultPublish::where($payload)->delete();
+            }
+        }
+
+        $msg = $requ->action === 'publish'
+            ? 'Final result published successfully.'
+            : 'Final result unpublished successfully.';
+        return back()->with('success', $msg);
     }
 
     public function allMarksheet(Request $request){

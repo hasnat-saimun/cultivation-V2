@@ -24,7 +24,7 @@
                     @php
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
-                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','transcripts.bulk'];
+                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','transcripts.bulk','result.final.publish'];
                         $classRoutes = ['allClasses','createClass'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
@@ -45,9 +45,6 @@
                         $demoHosts = ['demoadmin.cultivationapp.com', 'www.demoadmin.cultivationppa.com'];
                         $isDemoHost = in_array(request()->getHost(), $demoHosts, true);
                     @endphp
-                    @if(config('app.debug'))
-                        <div class="alert alert-info mt-2 mb-2">Debug: cultivationAdmin={{ session('cultivationAdmin') }} | userType={{ $userType }}</div>
-                    @endif
                     <ul class="nav nav-sidebar-menu sidebar-toggle-view">
                         @if($userType == 1)
                             @include('cultivation.teacherMenu')
@@ -61,6 +58,11 @@
                                     <li class="nav-item">
                                         <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marks Entry</a>
                                     </li>
+                                    @if((int)($userType ?? 0) >= 3)
+                                        <li class="nav-item">
+                                            <a href="{{ route('result.final.publish') }}" class="nav-link {{ request()->routeIs('result.final.publish') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Final Result Publish</a>
+                                        </li>
+                                    @endif
                                     <li class="nav-item">
                                         <a href="{{ route('createMarksheet') }}" class="nav-link {{ request()->routeIs('createMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Academic Transcript</a>
                                     </li>

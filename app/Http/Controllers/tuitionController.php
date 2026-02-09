@@ -31,6 +31,35 @@ class tuitionController extends Controller
         return view('account.tuition.getTutionStudentList',['studentData'=>$studentList,'feesData'=>$feesDetails]);
     }
 
+    public function getStudentsForTutionFeeFilter(Request $requ){
+        $classId = $requ->input('classId');
+        $sessionId = $requ->input('sessionId');
+        $sectionId = $requ->input('sectionId');
+        $search = trim((string)$requ->input('search', ''));
+
+        $query = newAdmission::query();
+        if($classId){ $query->where('className', (int)$classId); }
+        if($sessionId){ $query->where('sessName', (int)$sessionId); }
+        if($sectionId){ $query->where('sectionName', (int)$sectionId); }
+        if($search !== ''){
+            $query->where(function($q) use ($search){
+                $q->where('stdId','like',"%{$search}%")
+                    ->orWhere('fullName','like',"%{$search}%")
+                    ->orWhere('sureName','like',"%{$search}%")
+                    ->orWhere('rollNumber','like',"%{$search}%");
+            });
+        }
+
+        $students = $query->orderBy('className','ASC')
+            ->orderBy('rollNumber','ASC')
+            ->limit(100)
+            ->get();
+
+        return view('account.tuition.getTutionStudentFilterList', [
+            'students' => $students,
+        ]);
+    }
+
     public function saveTuitionfee(Request $requ){
         // Support multi-row submission
         $validated = $requ->validate([

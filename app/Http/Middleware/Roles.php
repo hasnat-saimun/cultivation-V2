@@ -26,8 +26,8 @@ class Roles
         }
 
         $userType = (int)($user->userType ?? 0);
-        if ($userType === CultivationAdmin::ROLE_GENERAL) {
-            // General admin has full access
+        if ($userType >= CultivationAdmin::ROLE_GENERAL) {
+            // General or higher admin has full access
             return $next($request);
         }
 

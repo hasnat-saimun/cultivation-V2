@@ -45,6 +45,14 @@ Get Mark
                     <div class="col-6 col-md-4 mb-2"><b>Subject:</b> {{ $subjectName }}</div>
                 </div>
                 @csrf
+                @php
+                    $isReadOnly = !empty($isFinalPublished) && !empty($isTeacherAdmin);
+                @endphp
+                @if($isReadOnly)
+                    <div class="alert alert-warning mt-2">
+                        Final result is published for this exam/class/session. Marks entry is locked for teachers.
+                    </div>
+                @endif
                 <div class="alert alert-info mt-2">
                     <strong>Note:</strong> Marks entry is restricted to classes/sections/subjects assigned to the teacher via Admin Assign. The Primary Class/Section setting is used only for Attendance.
                 </div>
@@ -93,6 +101,7 @@ Get Mark
                             $practicalMarks = $marksData ? $marksData->practicalMarks : "";
                             $currentUserId = session('cultivationAdmin');
                             $readonlyByOther = ($marksData && $marksData->teacher_id && $marksData->teacher_id != $currentUserId);
+                            $readonly = $readonlyByOther || $isReadOnly;
                             $enteredBy = ($marksData && $marksData->teacher_id) ? optional(\App\Models\CultivationAdmin::find($marksData->teacher_id))->adminName : null;
                         @endphp
                         <input type="hidden" name="studentId[]" value="{{ $std->id }}">
@@ -102,7 +111,7 @@ Get Mark
                             <td>{{ $std->fullName.' '.$std->sureName }}</td>
                             @if($showCQ)
                                 <td>
-                                    <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                     @endif
@@ -110,7 +119,7 @@ Get Mark
                             @endif
                             @if($showMCQ)
                                 <td>
-                                    <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                     @endif
@@ -118,7 +127,7 @@ Get Mark
                             @endif
                             @if($showPractical)
                                 <td>
-                                    <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                    <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                     @endif
@@ -127,19 +136,19 @@ Get Mark
                             
                             @if($showAll)
                             <td>
-                                <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                 @endif
                             </td>
                             <td>
-                                <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                 @endif
                             </td>
                             <td>
-                                <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonlyByOther ? 'readonly' : '' }}>
+                                <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
                                 @endif
@@ -147,7 +156,12 @@ Get Mark
                             @endif
                         </tr>
                         @endforeach
-                        <div class="mb-4"><input type="submit" value="Save" class="btn btn-success"> <a href="{{ route('addMarks') }}" class="btn btn-primary">Back</a></div>
+                        <div class="mb-4">
+                            @if(!$isReadOnly)
+                                <input type="submit" value="Save" class="btn btn-success">
+                            @endif
+                            <a href="{{ route('addMarks') }}" class="btn btn-primary">Back</a>
+                        </div>
                         @else
                         <tr>
                             <td colspan="5">Sorry! No data found</td>
