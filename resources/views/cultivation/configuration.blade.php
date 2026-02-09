@@ -52,12 +52,36 @@ Configuration
         border-top: 1px dashed var(--cfg-border);
         margin-top: .75rem;
     }
+    #principalDesignation { color: #111111; background: #ffffff; }
+    #principalDesignation option { color: #111111; background: #ffffff; }
+    .select2-container--default .select2-selection--single {
+        color: #111111;
+        background: #ffffff;
+        border: 1px solid #ced4da;
+        height: calc(1.5em + .75rem + 2px);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #111111;
+        line-height: calc(1.5em + .75rem);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: calc(1.5em + .75rem);
+    }
+    .input-group .select2-container {
+        flex: 1 1 auto;
+        width: 1% !important;
+    }
+    .input-group .select2-container .select2-selection--single {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
     #sms_type { color:#111111; background-color:#ffffff; }
     #sms_type option { color:#111111; background-color:#ffffff; }
 </style>
 @endpush
 @php
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
+    $teacherDesignations = \App\Models\Designation::teacherDesignations();
     if(!empty($serverData)):
         $validSmsTypes = ['present_only','absent_only','both'];
         $serverId               = $serverData->id;
@@ -256,37 +280,52 @@ Configuration
                         <div class="row">
                             <div class="col-md-6 col-12">
                                 <div class="mb-3">
-                                    <label for="principalName" class="form-label">Principal Name</label>
+                                    <label for="principalName" class="form-label">Institute Head Name</label>
                                     <div class="input-group">
                                         <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-user-tie"></i></span></div>
-                                        <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the principal" >
+                                        <input type="text" name="principalName" class="form-control" id="principalName" value="{{ $principalName }}" placeholder="Enter the name of the institute head" >
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="mb-3">
-                                    <label for="principalDesignation" class="form-label">Principal Designation</label>
+                                    <label for="principalDesignation" class="form-label">Institute Head Designation</label>
                                     <div class="input-group">
-                                        <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-id-badge"></i></span></div>
-                                        <input type="text" name="principalDesignation" class="form-control" id="principalDesignation" value="{{ $principalDesignation }}" placeholder="Enter the current designation of the principal" >
+                                        <span class="input-group-text"><i class="far fa-id-badge"></i></span>
+                                        <select name="principalDesignation" class="form-select select2" id="principalDesignation">
+                                            <option value="">Select Designation</option>
+                                            @if(!empty($principalDesignation))
+                                                @php
+                                                    $hasMatch = $teacherDesignations->first(function($d) use ($principalDesignation){
+                                                        return (string)$d->name === (string)$principalDesignation || (string)$d->id === (string)$principalDesignation;
+                                                    });
+                                                @endphp
+                                                @if(!$hasMatch)
+                                                    <option value="{{ $principalDesignation }}" selected>{{ $principalDesignation }}</option>
+                                                @endif
+                                            @endif
+                                            @foreach($teacherDesignations as $designation)
+                                                <option value="{{ $designation->name }}" {{ (string)$principalDesignation === (string)$designation->name || (string)$principalDesignation === (string)$designation->id ? 'selected' : '' }}>{{ $designation->name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="mb-3">
-                                    <label for="principalMobile" class="form-label">Principal Mobile</label>
+                                    <label for="principalMobile" class="form-label">Institute Head Mobile</label>
                                     <div class="input-group">
                                         <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-phone"></i></span></div>
-                                        <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter principal mobile number" >
+                                        <input type="text" name="principalMobile" class="form-control" id="principalMobile" value="{{ $principalMobile }}" placeholder="Enter institute head mobile number" >
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-6 col-12">
                                 <div class="mb-3">
-                                    <label for="principalMail" class="form-label">Principal Email</label>
+                                    <label for="principalMail" class="form-label">Institute Head Email</label>
                                     <div class="input-group">
                                         <div class="input-group-prepend"><span class="input-group-text"><i class="far fa-envelope"></i></span></div>
-                                        <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter principal email address" >
+                                        <input type="text" name="principalMail" class="form-control" id="principalMail" value="{{ $principalMail }}" placeholder="Enter institute head email address" >
                                     </div>
                                 </div>
                             </div>
@@ -414,7 +453,7 @@ Configuration
                                 <input type="file" name="adminPhoto" class="form-control-file" id="adminPhoto" >
                             </div>
                             <div class="mb-3">
-                                <label for="principalSign" class="form-label">Principal Sign</label>
+                                <label for="principalSign" class="form-label">Institute Head Sign</label>
                                 <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
                             </div>
                             <div class="mb-3">
@@ -492,13 +531,13 @@ Configuration
                     </div>
                     <div class="col-md-6 col-12">
                         <div class="mb-3">
-                            <label for="adminPhoto" class="form-label fw-bold">Principal(300 X 350)</label>
+                            <label for="adminPhoto" class="form-label fw-bold">Institute Head (300 X 350)</label>
                             @if(empty($avatar))
                             <form class="form" action="{{ route('saveAvatar') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}"class="form-control-file" >
                                 <input type="file" name="adminPhoto" id="adminPhoto" class="form-control-file" >
-                                <button type="submit" class="btn btn-danger btn-lg mt-4">Update Principal Photo</button>
+                                <button type="submit" class="btn btn-danger btn-lg mt-4">Update Institute Head Photo</button>
                             </form>
                             @else
                             <div class="pt-1">
@@ -510,13 +549,13 @@ Configuration
                             @endif
                         </div>
                         <div class="mb-3">
-                            <label for="principalSign" class="form-label fw-bold">Principal Sign</label>
+                            <label for="principalSign" class="form-label fw-bold">Institute Head Sign</label>
                             @if(empty($principalSign))
                             <form class="form" action="{{ route('saveSign') }}" method="POST" enctype="multipart/form-data">
                                 @csrf
                                 <input type="hidden" name="serverId" value="{{ $serverId }}">
                                 <input type="file" name="principalSign" class="form-control-file" id="principalSign" >
-                                <button type="submit" class="btn btn-warning btn-lg mt-4">Update Principal Sign</button>
+                                <button type="submit" class="btn btn-warning btn-lg mt-4">Update Institute Head Sign</button>
                             </form>
                             @else
                             <div class="pt-1">
