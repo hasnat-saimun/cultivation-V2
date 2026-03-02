@@ -8,26 +8,45 @@ use App\Models\newAdmission;
 
 class ExamController extends Controller
 {
+    protected function validateExamRequest(Request $requ, $isUpdate = false)
+    {
+        $rules = [
+            'examName' => 'required|string|max:255',
+            'examClass' => 'required',
+            'examDate' => 'required|date',
+            'closeDate' => 'required|date|after_or_equal:examDate',
+            'baseMark' => 'required|numeric|min:0',
+            'passingSystem' => 'required|in:1,2',
+        ];
+
+        if ($isUpdate) {
+            $rules['itemId'] = 'required|exists:exams,id';
+        }
+
+        return $requ->validate($rules);
+    }
+
     
     public function createExam(){
         return view('result.new-exam');
     }
 
     public function confirmExam(Request $requ){
+        $validated = $this->validateExamRequest($requ);
         $chk = Exam::where(['examName'=>$requ->examName]);
         if($chk->exists()):
             return back()->with('error','Alias already exist');
         else:
             $exam = new Exam();
-            $aliasCreate = str_replace(' ','_',$requ->examName);
+            $aliasCreate = str_replace(' ','_',$validated['examName']);
             $alias = strtolower($aliasCreate);
 
-            $exam->examName     = $requ->examName;
-            $exam->className    = $requ->examClass;
-            $exam->examDate     = $requ->examDate;
-            $exam->closeDate    = $requ->closeDate;
-            $exam->baseMark     = $requ->baseMark;
-            $exam->passingSystem = $requ->passingSystem;
+            $exam->examName     = $validated['examName'];
+            $exam->className    = $validated['examClass'];
+            $exam->examDate     = $validated['examDate'];
+            $exam->closeDate    = $validated['closeDate'];
+            $exam->baseMark     = $validated['baseMark'];
+            $exam->passingSystem = $validated['passingSystem'];
             $exam->alias        = $alias;
             $exam->save();
             return back()->with('success','Record successfully saved');
@@ -46,17 +65,18 @@ class ExamController extends Controller
     
 
     public function updateExam(Request $requ){
-        $exam = Exam::find($requ->itemId);
+        $validated = $this->validateExamRequest($requ, true);
+        $exam = Exam::find($validated['itemId']);
         if(!empty($exam) && $exam->exists()):
-            $aliasCreate = str_replace(' ','_',$requ->examName);
+            $aliasCreate = str_replace(' ','_',$validated['examName']);
             $alias = strtolower($aliasCreate);
 
-            $exam->examName     = $requ->examName;
-            $exam->className    = $requ->examClass;
-            $exam->examDate     = $requ->examDate;
-            $exam->closeDate    = $requ->closeDate;
-            $exam->baseMark     = $requ->baseMark;
-            $exam->passingSystem = $requ->passingSystem;
+            $exam->examName     = $validated['examName'];
+            $exam->className    = $validated['examClass'];
+            $exam->examDate     = $validated['examDate'];
+            $exam->closeDate    = $validated['closeDate'];
+            $exam->baseMark     = $validated['baseMark'];
+            $exam->passingSystem = $validated['passingSystem'];
             $exam->alias        = $alias;
             $exam->save();
             return back()->with('success','Record successfully updated');
