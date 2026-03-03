@@ -120,6 +120,16 @@ Register Form
                                             </select>
                                         </div>
                                         <div class="mb-2">
+                                            <select id="assign_group_select" class="form-select mt-2 d-none">
+                                                <option value="">All Groups</option>
+                                                @if(isset($groupList))
+                                                    @foreach($groupList as $grp)
+                                                        <option value="{{ $grp->id }}">{{ $grp->departmentName }}</option>
+                                                    @endforeach
+                                                @endif
+                                            </select>
+                                        </div>
+                                        <div class="mb-2">
                                             <select id="assign_subject_select" class="form-select mt-2 d-none">
                                                 <option value="">Select subject</option>
                                                 @if($subjectList)
@@ -136,7 +146,7 @@ Register Form
                                         <div class="table-responsive">
                                             <table class="table table-sm table-striped mt-2" id="assign_table">
                                                 <thead>
-                                                    <tr><th>Class</th><th>Section</th><th>Subject</th><th></th></tr>
+                                                    <tr><th>Class</th><th>Section</th><th>Group (Optional)</th><th>Subject</th><th></th></tr>
                                                 </thead>
                                                 <tbody>
                                                     @php
@@ -145,7 +155,7 @@ Register Form
                                                         if(isset($user) && $user->userType == 1){
                                                             $comps = \App\Models\TeacherClassSubject::where('teacher_id', $user->id)->get();
                                                             foreach($comps as $c){
-                                                                $rows[] = ['cid'=>$c->class_id,'sid'=>($c->section_id === null ? null : $c->section_id),'subid'=>($c->subject_id === null ? null : $c->subject_id)];
+                                                                $rows[] = ['cid'=>$c->class_id,'sid'=>($c->section_id === null ? null : $c->section_id),'gid'=>($c->group_id === null ? null : $c->group_id),'subid'=>($c->subject_id === null ? null : $c->subject_id)];
                                                             }
                                                             // If no composite rows exist, fall back to legacy arrays
                                                             if(empty($rows)){
@@ -154,13 +164,13 @@ Register Form
                                                                     $cid = $subModel && $subModel->assign_class ? $subModel->assign_class : ($assignedClasses[0] ?? null);
                                                                     $sid = $assignedSections[0] ?? null;
                                                                     if(!$cid) continue;
-                                                                    $rows[] = ['cid'=>$cid,'sid'=>$sid,'subid'=>$subid];
+                                                                    $rows[] = ['cid'=>$cid,'sid'=>$sid,'gid'=>null,'subid'=>$subid];
                                                                 }
                                                                 foreach($assignedClasses as $cid) {
                                                                     $found = false;
                                                                     foreach($rows as $r) { if($r['cid'] == $cid) { $found = true; break; } }
                                                                     if(!$found) {
-                                                                        $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'subid'=>null];
+                                                                        $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'gid'=>null,'subid'=>null];
                                                                     }
                                                                 }
                                                             }
@@ -171,13 +181,13 @@ Register Form
                                                                 $cid = $subModel && $subModel->assign_class ? $subModel->assign_class : ($assignedClasses[0] ?? null);
                                                                 $sid = $assignedSections[0] ?? null;
                                                                 if(!$cid) continue;
-                                                                $rows[] = ['cid'=>$cid,'sid'=>$sid,'subid'=>$subid];
+                                                                $rows[] = ['cid'=>$cid,'sid'=>$sid,'gid'=>null,'subid'=>$subid];
                                                             }
                                                             foreach($assignedClasses as $cid) {
                                                                 $found = false;
                                                                 foreach($rows as $r) { if($r['cid'] == $cid) { $found = true; break; } }
                                                                 if(!$found) {
-                                                                    $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'subid'=>null];
+                                                                    $rows[] = ['cid'=>$cid,'sid'=>$assignedSections[0] ?? null,'gid'=>null,'subid'=>null];
                                                                 }
                                                             }
                                                         }
@@ -186,19 +196,23 @@ Register Form
                                                         @php
                                                             $cid = $r['cid'];
                                                             $sid = $r['sid'];
+                                                            $gid = $r['gid'] ?? null;
                                                             $subid = $r['subid'];
                                                             $clsText = optional(collect($classList)->firstWhere('id', $cid))->className ?? ('Class #'.$cid);
                                                             $secText = $sid ? ( ($sid==='all') ? 'All Sections' : ( ($sid==='none') ? 'No Section (show all class data)' : (optional(collect($sectionList)->firstWhere('id',$sid))->section ?? ('Section #'.$sid)) ) ) : '';
+                                                            $grpText = $gid ? (optional(collect($groupList ?? collect())->firstWhere('id',$gid))->departmentName ?? ('Group #'.$gid)) : 'All Groups';
                                                             $subText = $subid ? (optional(collect($subjectList)->firstWhere('id',$subid))->subjectName ?? ('Subject #'.$subid)) : '';
-                                                            $key = $cid.'-'.($sid ?? '').'-'.($subid ?? '');
+                                                            $key = $cid.'-'.($sid ?? '').'-'.($gid ?? '').'-'.($subid ?? '');
                                                         @endphp
                                                         <tr data-key="{{ $key }}">
                                                             <td>{{ $clsText }}</td>
                                                             <td>{{ $secText }}</td>
+                                                            <td>{{ $grpText }}</td>
                                                             <td>{{ $subText }}</td>
                                                             <td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>
                                                             <input type="hidden" name="className[]" value="{{ $cid }}">
                                                             <input type="hidden" name="section[]" value="{{ $sid }}">
+                                                            <input type="hidden" name="optionalGroup[]" value="{{ $gid }}">
                                                             <input type="hidden" name="subject[]" value="{{ $subid }}">
                                                         </tr>
                                                     @endforeach
@@ -278,6 +292,7 @@ Register Form
     document.addEventListener('DOMContentLoaded', function(){
         const classSelect = document.getElementById('assign_class_select');
         const sectionSelect = document.getElementById('assign_section_select');
+        const groupSelect = document.getElementById('assign_group_select');
         const subjectSelect = document.getElementById('assign_subject_select');
         const assignBtn = document.getElementById('assign_btn');
         const assignTableBody = document.querySelector('#assign_table tbody');
@@ -291,11 +306,14 @@ Register Form
                 show(sectionSelect);
                 // reset section and subject
                 sectionSelect.value = '';
+                groupSelect.value = '';
                 subjectSelect.value = '';
+                hide(groupSelect);
                 hide(subjectSelect);
                 hide(assignBtn);
             } else {
                 hide(sectionSelect);
+                hide(groupSelect);
                 hide(subjectSelect);
                 hide(assignBtn);
             }
@@ -304,6 +322,7 @@ Register Form
         sectionSelect && sectionSelect.addEventListener('change', function(){
             const cls = classSelect.value;
             if(this.value && cls){
+                show(groupSelect);
                 // populate subjectSelect options based on data-assign-class (match cls or '0' or empty)
                 for(const opt of subjectSelect.options){
                     if(!opt.value) continue;
@@ -315,6 +334,7 @@ Register Form
                 show(subjectSelect);
                 hide(assignBtn);
             } else {
+                hide(groupSelect);
                 hide(subjectSelect);
                 hide(assignBtn);
             }
@@ -331,8 +351,9 @@ Register Form
         document.querySelectorAll('#assign_table tbody tr').forEach(function(tr){
             const cls = tr.querySelector('input[name="className[]"]')?.value || '';
             const sec = tr.querySelector('input[name="section[]"]')?.value || '';
+            const grp = tr.querySelector('input[name="optionalGroup[]"]')?.value || '';
             const sub = tr.querySelector('input[name="subject[]"]')?.value || '';
-            if(cls) assignments.add([cls,sec,sub].join('-'));
+            if(cls) assignments.add([cls,sec,grp,sub].join('-'));
         });
 
         // Delegate remove button clicks so server-rendered rows are removable too
@@ -344,31 +365,34 @@ Register Form
             // determine the assignment key from hidden inputs inside the row
             const cls = tr.querySelector('input[name="className[]"]')?.value || '';
             const sec = tr.querySelector('input[name="section[]"]')?.value || '';
+            const grp = tr.querySelector('input[name="optionalGroup[]"]')?.value || '';
             const sub = tr.querySelector('input[name="subject[]"]')?.value || '';
-            const key = [cls,sec,sub].join('-');
+            const key = [cls,sec,grp,sub].join('-');
             if(assignments.has(key)) assignments.delete(key);
             tr.remove();
         });
 
         assignBtn && assignBtn.addEventListener('click', function(){
-            const clsId = classSelect.value; const secId = sectionSelect.value; const subId = subjectSelect.value;
+            const clsId = classSelect.value; const secId = sectionSelect.value; const grpId = groupSelect.value; const subId = subjectSelect.value;
             if(!clsId || !secId || !subId) return showGlobalFlash('Please select class, section and subject.','danger');
-            const key = [clsId,secId,subId].join('-');
+            const key = [clsId,secId,grpId,subId].join('-');
             if(assignments.has(key)) return showGlobalFlash('This assignment already added','warning');
             assignments.add(key);
             const clsText = classSelect.options[classSelect.selectedIndex].text;
             let secText = sectionSelect.options[sectionSelect.selectedIndex].text;
             if(secId === 'all') secText = 'All Sections';
             if(secId === 'none') secText = 'No Section (show all class data)';
+            const grpText = grpId ? groupSelect.options[groupSelect.selectedIndex].text : 'All Groups';
             const subText = subjectSelect.options[subjectSelect.selectedIndex].text;
 
             const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${clsText}</td><td>${secText}</td><td>${subText}</td><td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>`;
+            tr.innerHTML = `<td>${clsText}</td><td>${secText}</td><td>${grpText}</td><td>${subText}</td><td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>`;
             assignTableBody.appendChild(tr);
 
             // hidden inputs for controller sync
             const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; tr.appendChild(hiddenCls);
             const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; tr.appendChild(hiddenSec);
+            const hiddenGrp = document.createElement('input'); hiddenGrp.type='hidden'; hiddenGrp.name='optionalGroup[]'; hiddenGrp.value=grpId; hiddenGrp.dataset.key=key; tr.appendChild(hiddenGrp);
             const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; tr.appendChild(hiddenSub);
 
             // remove handler
@@ -378,7 +402,7 @@ Register Form
             });
 
             // reset selects for next assignment
-            sectionSelect.value=''; subjectSelect.value=''; hide(subjectSelect); hide(assignBtn);
+            sectionSelect.value=''; groupSelect.value=''; subjectSelect.value=''; hide(subjectSelect); hide(assignBtn);
         });
 
         // Existing assignments are rendered server-side in the table; no JS prepopulate needed.

@@ -12,6 +12,6 @@ class TeacherClassSubject extends Model
     protected $table = 'teacher_class_subjects';
 
     protected $fillable = [
-        'teacher_id', 'class_id', 'section_id', 'subject_id'
+        'teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id'
     ];
 }

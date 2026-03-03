@@ -5,6 +5,7 @@ Get Mark
 @php
     $classData = \App\Models\classManage::find($classId);
     $sectionData = \App\Models\sectionManage::find($groupId);
+    $optionalGroupData = !empty($optionalGroupId) ? \App\Models\Department::find($optionalGroupId) : null;
     $sessionData = \App\Models\sessionManage::find($sessionId);
     $examData = \App\Models\Exam::find($examId);
     $subjectData = \App\Models\Subject::find($subjectId);
@@ -17,6 +18,11 @@ Get Mark
         $sectionName = $sectionData->section;
     else:
         $sectionName = "-";
+    endif;
+    if($optionalGroupData):
+        $optionalGroupName = $optionalGroupData->departmentName;
+    else:
+        $optionalGroupName = "-";
     endif;
     if($sessionData):
         $session_name = $sessionData->session;
@@ -39,6 +45,7 @@ Get Mark
         <form method="POST" class="card-body form form-group" action="{{ route('confirmMarks') }}">
                 <div class="row">
                     <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ $sectionName }}</div>
+                    <div class="col-6 col-md-4 mb-2"><b>Group (Optional):</b>  {{ $optionalGroupName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Class:</b>  {{ $className }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Session:</b> {{ $session_name }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Exam:</b> {{ $examName }}</div>
@@ -85,6 +92,7 @@ Get Mark
                         <input type="hidden" name="classId" value="{{ $classId }}">
                         <input type="hidden" name="examId" value="{{ $examId }}">
                         <input type="hidden" name="groupId" value="{{ $groupId }}">
+                        <input type="hidden" name="optionalGroupId" value="{{ $optionalGroupId }}">
                         <input type="hidden" name="subjectId" value="{{ $subjectId }}">
                          @foreach($studentList as $std)
                         @php

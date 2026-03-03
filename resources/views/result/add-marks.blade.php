@@ -7,6 +7,7 @@ Add New Marks
     use App\Models\CultivationAdmin;
     use App\Models\classManage;
     use App\Models\Subject;
+    use App\Models\Department;
 
     $adminId = session('cultivationAdmin'); // or your custom session key
     $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
@@ -87,6 +88,21 @@ Add New Marks
                                             @endif
                                         </select>
                                     </div>
+
+                                    <div class="col-12 form-group">
+                                        <label>Group (Optional)</label>
+                                        <select class="select2" name="optionalGroupId">
+                                            <option value="">Select (optional)</option>
+                                            @php
+                                                $optionalGroups = Department::orderBy('id','ASC')->get();
+                                            @endphp
+                                            @if(!empty($optionalGroups))
+                                                @foreach($optionalGroups as $grp)
+                                                <option value="{{ $grp->id }}">{{ $grp->departmentName }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
                                     
                                     <!-- Subject Dropdown (dynamically loaded per class+section) -->
                                     <div class="col-12 form-group">
@@ -107,19 +123,20 @@ Add New Marks
     document.addEventListener('DOMContentLoaded', function(){
         const classSelect = document.querySelector('select[name="classId"]');
         const sectionSelect = document.querySelector('select[name="groupId"]');
+        const optionalGroupSelect = document.querySelector('select[name="optionalGroupId"]');
         const subjectSelect = document.getElementById('subject_select');
 
         // initialize subject loader
 
         async function loadSubjects(){
-            const classId = classSelect.value; const sectionId = sectionSelect.value || '';
+            const classId = classSelect.value; const sectionId = sectionSelect.value || ''; const optionalGroupId = optionalGroupSelect.value || '';
             if(!classId) { subjectSelect.innerHTML = '<option value="">Select class and section first</option>'; return; }
             try{
                 const res = await fetch("{{ route('api.teacher.subjects') }}", {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: JSON.stringify({ classId: classId, sectionId: sectionId })
+                    body: JSON.stringify({ classId: classId, sectionId: sectionId, optionalGroupId: optionalGroupId })
                 });
                 if(!res.ok) throw new Error('Request failed');
                 const json = await res.json();
@@ -150,12 +167,14 @@ Add New Marks
         // Native event listeners
         if(classSelect) classSelect.addEventListener('change', loadSubjects);
         if(sectionSelect) sectionSelect.addEventListener('change', loadSubjects);
+        if(optionalGroupSelect) optionalGroupSelect.addEventListener('change', loadSubjects);
 
         // Bind jQuery/select2 events too (some pages initialize select2 which may prevent native events)
         try{
             if(window.jQuery){
                 if(classSelect) $(classSelect).on('change', loadSubjects);
                 if(sectionSelect) $(sectionSelect).on('change', loadSubjects);
+                if(optionalGroupSelect) $(optionalGroupSelect).on('change', loadSubjects);
             }
         }catch(e){ /* no-op */ }
 

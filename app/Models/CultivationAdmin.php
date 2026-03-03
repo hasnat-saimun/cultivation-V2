@@ -52,8 +52,8 @@ class CultivationAdmin extends Model
     
     use HasFactory;
 
-    // Check whether this teacher may teach a specific class+subject+(optional)section
-    public function canTeachClassSubject(int $classId, int $subjectId, $sectionId = null): bool
+    // Check whether this teacher may teach a specific class+subject+(optional)section+(optional)group
+    public function canTeachClassSubject(int $classId, int $subjectId, $sectionId = null, $optionalGroupId = null): bool
     {
         // First check per-class-subject assignments if present
         $q = TeacherClassSubject::where('teacher_id', $this->id)
@@ -66,6 +66,13 @@ class CultivationAdmin extends Model
             // match either specific section or null (meaning no section restriction)
             $q->where(function($qq2) use ($sectionId){
                 $qq2->whereNull('section_id')->orWhere('section_id', $sectionId);
+            });
+        }
+
+        if($optionalGroupId !== null && $optionalGroupId !== ''){
+            // match either specific group or null (meaning no group restriction)
+            $q->where(function($qq3) use ($optionalGroupId){
+                $qq3->whereNull('group_id')->orWhere('group_id', $optionalGroupId);
             });
         }
 

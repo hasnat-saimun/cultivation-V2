@@ -8,6 +8,7 @@ use App\Models\CultivationAdmin;
 use App\Models\Subject;
 use App\Models\classManage as ClassModel;
 use App\Models\sectionManage as SectionModel;
+use App\Models\Department;
 use App\Models\Attendance;
 use App\Models\newAdmission;
 use App\Models\cashManage;
@@ -640,7 +641,8 @@ class CultivationController extends Controller
         $subjectList = Subject::orderBy('id','ASC')->get();
         $classList   = ClassModel::orderBy('id','ASC')->get();
         $sectionList = SectionModel::orderBy('id','ASC')->get();
-        return view('userPanal.userRegister',compact('subjectList','classList','sectionList'));
+        $groupList   = Department::orderBy('id','ASC')->get();
+        return view('userPanal.userRegister',compact('subjectList','classList','sectionList','groupList'));
     }
 
      public function editUser($id){
@@ -651,7 +653,8 @@ class CultivationController extends Controller
         $subjectList = Subject::orderBy('id','ASC')->get();
         $classList   = ClassModel::orderBy('id','ASC')->get();
         $sectionList = SectionModel::orderBy('id','ASC')->get();
-        return view('userPanal.userRegister',compact('subjectList','classList','sectionList','user'));
+        $groupList   = Department::orderBy('id','ASC')->get();
+        return view('userPanal.userRegister',compact('subjectList','classList','sectionList','groupList','user'));
     }
 
      public function saveUser(Request $requ){
@@ -660,7 +663,6 @@ class CultivationController extends Controller
             if(!$cultivation) {
                 return back()->with('error', 'User not found for update');
             }
-            // Only update password if a new password is provided
             if($requ->filled('pass')) {
                 $cultivation->loginPassword = Hash::make($requ->pass);
             }
@@ -668,7 +670,7 @@ class CultivationController extends Controller
             if($requ->pass !== $requ->confirmPass) {
                 return back()->with('error', 'Password and Confirm Password do not match');
             }
-            
+
             $cultivation = CultivationAdmin::where('adminUser',$requ->userName)->orWhere('adminMail',$requ->userMail)->first();
             if($cultivation) {
                 return back()->with('error', 'User already exists with this ID('.$requ->userName.') or Email('.$requ->userMail.')');
@@ -682,27 +684,24 @@ class CultivationController extends Controller
         $cultivation->adminName     = $requ->adminName;
         $cultivation->adminMobile   = $requ->userMobile;
         $cultivation->userType      = $requ->userType;
-            // primary class and section for class-teacher role
+
         if ($requ->filled('primaryClass')) {
             $cultivation->primary_class_id = (int)$requ->primaryClass;
         } else {
             $cultivation->primary_class_id = null;
         }
-            if ($requ->filled('primarySection')) {
-                $cultivation->primary_section_id = (int)$requ->primarySection;
-            } else {
-                $cultivation->primary_section_id = null;
-            }
+        if ($requ->filled('primarySection')) {
+            $cultivation->primary_section_id = (int)$requ->primarySection;
+        } else {
+            $cultivation->primary_section_id = null;
+        }
 
         if($cultivation->save()):
-            // Sync teacher assignments to pivot tables (pivot-only; no legacy columns)
             if ((int)$requ->userType === \App\Models\CultivationAdmin::ROLE_TEACHER) {
-                // Build assignments row-wise so we can support special section values like 'all' and 'none'
                 $rawCls = $requ->input('className', []);
                 $rawSec = $requ->input('section', []);
                 $rawSub = $requ->input('subject', []);
-
-                // incoming assignment arrays available in $rawCls, $rawSec, $rawSub
+                $rawGrp = $requ->input('optionalGroup', []);
 
                 $clsIds = [];
                 $subIds = [];
@@ -715,49 +714,41 @@ class CultivationController extends Controller
                         $cId = (int)$c;
                         $clsIds[] = $cId;
 
-                        // subject (optional per-row)
                         $sVal = $rawSub[$i] ?? null;
                         if(is_numeric($sVal)) $subIds[] = (int)$sVal;
 
-                        // section handling: support 'all' and 'none'
                         $secVal = $rawSec[$i] ?? null;
                         if($secVal === 'all'){
-                            // include every section id available
                             $allSections = SectionModel::pluck('id')->toArray();
                             $secIds = array_merge($secIds, $allSections);
                         } elseif($secVal === 'none' || $secVal === null || $secVal === ''){
-                            // 'none' means no section restriction for this class -> do not add any section rows
                         } elseif(is_numeric($secVal)){
                             $secIds[] = (int)$secVal;
                         }
                     }
                 } else {
-                    // Fallback: legacy independent arrays (checkbox-style). Ignore non-numeric values.
                     if(is_array($rawCls)) $clsIds = array_map('intval', array_filter($rawCls, fn($v)=>is_numeric($v)));
                     if(is_array($rawSub)) $subIds = array_map('intval', array_filter($rawSub, fn($v)=>is_numeric($v)));
                     if(is_array($rawSec)) $secIds = array_map('intval', array_filter($rawSec, fn($v)=>is_numeric($v)));
                 }
 
-                // Deduplicate values
                 $clsIds = array_values(array_unique(array_filter($clsIds)));
                 $subIds = array_values(array_unique(array_filter($subIds)));
                 $secIds = array_values(array_unique(array_filter($secIds)));
 
-                // Sync to pivots
                 $cultivation->classes()->sync($clsIds);
                 $cultivation->subjects()->sync($subIds);
                 $cultivation->sections()->sync($secIds);
 
-                // Build and persist per-class-subject assignments (teacher_class_subjects)
-                // Delete existing assignments for this teacher and insert new ones based on row triplets
                 $assignRows = [];
                 for($i=0;$i<count($rawCls);$i++){
                     $c = $rawCls[$i] ?? null; if(!$c) continue;
                     $cId = (int)$c;
                     $sVal = $rawSub[$i] ?? null;
                     $secVal = $rawSec[$i] ?? null;
+                    $grpVal = $rawGrp[$i] ?? null;
+                    $grpId = is_numeric($grpVal) ? (int)$grpVal : null;
 
-                    // determine section ids: 'all' expands to all sections
                     if($secVal === 'all'){
                         $allSections = SectionModel::pluck('id')->toArray();
                         foreach($allSections as $secId){
@@ -765,16 +756,17 @@ class CultivationController extends Controller
                                 'teacher_id' => $cultivation->id,
                                 'class_id' => $cId,
                                 'section_id' => $secId,
+                                'group_id' => $grpId,
                                 'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
                                 'created_at' => now(), 'updated_at' => now()
                             ];
                         }
                     } elseif($secVal === 'none' || $secVal === null || $secVal === ''){
-                        // no section restriction: insert with null section_id
                         $assignRows[] = [
                             'teacher_id' => $cultivation->id,
                             'class_id' => $cId,
                             'section_id' => null,
+                            'group_id' => $grpId,
                             'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
                             'created_at' => now(), 'updated_at' => now()
                         ];
@@ -783,90 +775,86 @@ class CultivationController extends Controller
                             'teacher_id' => $cultivation->id,
                             'class_id' => $cId,
                             'section_id' => (int)$secVal,
+                            'group_id' => $grpId,
                             'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
                             'created_at' => now(), 'updated_at' => now()
                         ];
                     }
                 }
 
-                // Deduplicate by composite key (teacher,class,section,subject)
                 $unique = [];
                 $rowsToInsert = [];
                 foreach($assignRows as $r){
-                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
-                    if(isset($unique[$k])) continue; $unique[$k]=true; $rowsToInsert[] = $r;
+                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['group_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
+                    if(isset($unique[$k])) continue;
+                    $unique[$k]=true;
+                    $rowsToInsert[] = $r;
                 }
 
-                // Compute existing rows for this teacher and perform a diff:
-                // - skip (and report) desired rows that already exist
-                // - delete existing rows that are not in desired
-                // - insert only new rows
                 $existing = \Illuminate\Support\Facades\DB::table('teacher_class_subjects')
                     ->where('teacher_id', $cultivation->id)->get();
-                // Diagnostic: assignment arrays and computed rows available for debugging during development
                 $existingMap = [];
                 foreach($existing as $er){
-                    $k = $er->teacher_id."-".$er->class_id."-".($er->section_id ?? 'n')."-".($er->subject_id ?? 'n');
+                    $k = $er->teacher_id."-".$er->class_id."-".($er->section_id ?? 'n')."-".($er->group_id ?? 'n')."-".($er->subject_id ?? 'n');
                     $existingMap[$k] = (array)$er;
                 }
 
                 $desiredMap = [];
                 foreach($rowsToInsert as $r){
-                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
+                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['group_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
                     $desiredMap[$k] = $r;
                 }
-
-                // existing & desired keys computed above
 
                 $toInsert = [];
                 $skipped = [];
                 foreach($desiredMap as $k=>$r){
                     if(isset($existingMap[$k])){
-                        $skipped[$k] = $r; // already present
+                        $skipped[$k] = $r;
                     } else {
                         $toInsert[] = $r;
                     }
                 }
 
-                // compute deletions: existing keys not present in desiredMap
                 $toDeleteKeys = [];
-                foreach($existingMap as $k=>$er){ if(!isset($desiredMap[$k])) $toDeleteKeys[] = $k; }
+                foreach($existingMap as $k=>$er){
+                    if(!isset($desiredMap[$k])) $toDeleteKeys[] = $k;
+                }
 
-                // perform deletions
                 if(!empty($toDeleteKeys)){
                     foreach($toDeleteKeys as $k){
                         $parts = explode('-', $k);
-                        $tId = $parts[0]; $cId = $parts[1]; $secId = $parts[2] === 'n' ? null : $parts[2]; $subId = $parts[3] === 'n' ? null : $parts[3];
+                        $tId = $parts[0];
+                        $cId = $parts[1];
+                        $secId = $parts[2] === 'n' ? null : $parts[2];
+                        $grpId = $parts[3] === 'n' ? null : $parts[3];
+                        $subId = $parts[4] === 'n' ? null : $parts[4];
                         \Illuminate\Support\Facades\DB::table('teacher_class_subjects')
                             ->where('teacher_id', $tId)
                             ->where('class_id', $cId)
                             ->where(function($q) use ($secId){ if($secId === null) $q->whereNull('section_id'); else $q->where('section_id', $secId); })
+                            ->where(function($qg) use ($grpId){ if($grpId === null) $qg->whereNull('group_id'); else $qg->where('group_id', $grpId); })
                             ->where(function($q2) use ($subId){ if($subId === null) $q2->whereNull('subject_id'); else $q2->where('subject_id', $subId); })
                             ->delete();
                     }
                 }
 
-                // computed insert/delete counts available in $toInsert and $toDeleteKeys
-
-                // perform inserts for genuinely new rows
                 if(!empty($toInsert)){
                     \Illuminate\Support\Facades\DB::table('teacher_class_subjects')->insert($toInsert);
                 }
 
-                // If any desired rows were skipped (already existed), show a warning to the user
                 if(!empty($skipped)){
                     $readable = [];
                     foreach($skipped as $k=>$r){
                         $cls = \App\Models\classManage::find($r['class_id']);
                         $sec = $r['section_id'] ? \App\Models\sectionManage::find($r['section_id']) : null;
+                        $grp = $r['group_id'] ? \App\Models\Department::find($r['group_id']) : null;
                         $sub = $r['subject_id'] ? \App\Models\Subject::find($r['subject_id']) : null;
-                        $readable[] = trim(($cls?$cls->className:$r['class_id']).' / '.($sec?$sec->section:($r['section_id']===null?'No Section':'All Sections')).' / '.($sub?$sub->subjectName: 'No Subject'));
+                        $readable[] = trim(($cls?$cls->className:$r['class_id']).' / '.($sec?$sec->section:($r['section_id']===null?'No Section':'All Sections')).' / '.($grp?$grp->departmentName:'All Groups').' / '.($sub?$sub->subjectName: 'No Subject'));
                     }
                     $msg = 'Some assignments were already present and skipped: '.implode('; ', $readable);
                     return back()->with('warning', $msg);
                 }
             } else {
-                // Clear assignments for non-teacher
                 $cultivation->classes()->sync([]);
                 $cultivation->subjects()->sync([]);
                 $cultivation->sections()->sync([]);
@@ -899,7 +887,7 @@ class CultivationController extends Controller
 
     /**
      * Return subjects allowed for the current teacher for a given class and section.
-     * Accepts POST with `classId` and optional `sectionId` and returns JSON list of subjects.
+     * Accepts POST with `classId`, optional `sectionId`, optional `optionalGroupId` and returns JSON list of subjects.
      */
     public function teacherSubjects(\Illuminate\Http\Request $requ)
     {
@@ -908,6 +896,7 @@ class CultivationController extends Controller
 
         $classId = (int)($requ->input('classId') ?? 0);
         $sectionId = $requ->filled('sectionId') ? (int)$requ->input('sectionId') : null;
+        $optionalGroupId = $requ->filled('optionalGroupId') ? (int)$requ->input('optionalGroupId') : null;
 
         if(!$classId){
             return response()->json(['error'=>'classId required'], 400);
@@ -923,6 +912,13 @@ class CultivationController extends Controller
                     } else {
                         $qq->whereNull('section_id')->orWhere('section_id', $sectionId);
                     }
+                })
+                ->where(function($qg) use ($optionalGroupId){
+                    if($optionalGroupId === null) {
+                        $qg->whereNull('group_id')->orWhereNotNull('group_id');
+                    } else {
+                        $qg->whereNull('group_id')->orWhere('group_id', $optionalGroupId);
+                    }
                 });
 
             $subjectIds = $q->distinct()->pluck('subject_id')->filter()->values()->all();
@@ -930,7 +926,6 @@ class CultivationController extends Controller
             return response()->json($subjects);
         }
 
-        // Non-teacher: return all subjects
         $subjects = Subject::orderBy('subjectName')->get(['id','subjectName']);
         return response()->json($subjects);
     }

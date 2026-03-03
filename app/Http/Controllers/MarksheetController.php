@@ -48,6 +48,9 @@ class MarksheetController extends Controller
             ->when($requ->groupId, function($q) use ($requ){
                 return $q->where('sectionName', (int)$requ->groupId);
             })
+            ->when($requ->optionalGroupId, function($q) use ($requ){
+                return $q->where('departmentName', (int)$requ->optionalGroupId);
+            })
             ->orderBy('sessName','DESC')
             ->value('sessName');
         $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
@@ -60,8 +63,9 @@ class MarksheetController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         $isTeacherAdmin = $user && $user->isTeacher();
+        $optionalGroupId = $requ->optionalGroupId ?: null;
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId);
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId);
             if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
@@ -74,10 +78,14 @@ class MarksheetController extends Controller
         if($groupId){
             $studentQuery->where('sectionName', (int)$groupId);
         }
+        if($optionalGroupId){
+            $studentQuery->where('departmentName', (int)$optionalGroupId);
+        }
         $studentList = $studentQuery->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
         return view('result.get-marks',[
             'studentList'=>$studentList,
             'groupId'=>$groupId,
+            'optionalGroupId'=>$optionalGroupId,
             'classId'=>$requ->classId,
             'sessionId'=>$sessionId,
             'examId'=>$requ->examId,
@@ -92,6 +100,9 @@ class MarksheetController extends Controller
             ->when($requ->groupId, function($q) use ($requ){
                 return $q->where('sectionName', (int)$requ->groupId);
             })
+            ->when($requ->optionalGroupId, function($q) use ($requ){
+                return $q->where('departmentName', (int)$requ->optionalGroupId);
+            })
             ->orderBy('sessName','DESC')
             ->value('sessName');
         $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
@@ -99,6 +110,7 @@ class MarksheetController extends Controller
             return redirect()->route('addMarks')->with('error','Session not found');
         }
         $groupId = $requ->groupId ?: null;
+        $optionalGroupId = $requ->optionalGroupId ?: null;
         // Enforce teacher role restrictions before saving
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
@@ -108,7 +120,7 @@ class MarksheetController extends Controller
             return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
         }
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId);
+            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId);
             if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
             }
