@@ -34,6 +34,7 @@ class newAdmission extends Model
         'departmentName',
         'sectionName',
         'religiousSubjectId',
+        'fourthSubjectId',
         'rollNumber',
         'gurdian',
         'gurdianPhone',

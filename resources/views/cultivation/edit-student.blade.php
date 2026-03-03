@@ -290,6 +290,17 @@ Edit Student
                                             @endif
                                         </div>
                                     </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
+                                        <label>4th Subject (Optional)</label>
+                                        <select class="select2" name="fourthSubjectId">
+                                            <option value="">Select (optional)</option>
+                                            @if(!empty($optionalSubjectList) && count($optionalSubjectList)>0)
+                                                @foreach($optionalSubjectList as $optSub)
+                                                    <option value="{{ $optSub->id }}" {{ (isset($stdData->fourthSubjectId) && (int)$stdData->fourthSubjectId === (int)$optSub->id) ? 'selected' : '' }}>{{ $optSub->subjectName }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="row mb-2 mt-5">
                                     <h5 class="fw-semibold">Guardian Information</h5>

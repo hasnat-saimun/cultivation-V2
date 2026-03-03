@@ -44,12 +44,19 @@ class MarksheetController extends Controller
         ]);
     }
     public function getMarks(Request $requ){
+        $subjectId = (int)$requ->subjectId;
+        $subject = Subject::find($subjectId);
+        $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
+
         $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
             ->when($requ->groupId, function($q) use ($requ){
                 return $q->where('sectionName', (int)$requ->groupId);
             })
             ->when($requ->optionalGroupId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->optionalGroupId);
+            })
+            ->when($isOptionalSubject, function($q) use ($subjectId){
+                return $q->where('fourthSubjectId', $subjectId);
             })
             ->orderBy('sessName','DESC')
             ->value('sessName');
@@ -81,7 +88,13 @@ class MarksheetController extends Controller
         if($optionalGroupId){
             $studentQuery->where('departmentName', (int)$optionalGroupId);
         }
-        $studentList = $studentQuery->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
+        if($isOptionalSubject){
+            $studentQuery->where('fourthSubjectId', $subjectId);
+        }
+        $studentList = $studentQuery
+            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+            ->orderBy('id','ASC')
+            ->get();
         return view('result.get-marks',[
             'studentList'=>$studentList,
             'groupId'=>$groupId,
@@ -96,12 +109,19 @@ class MarksheetController extends Controller
     }
 
     public function confirmMarks(Request $requ){
+        $subjectId = (int)$requ->subjectId;
+        $subject = Subject::find($subjectId);
+        $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
+
         $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
             ->when($requ->groupId, function($q) use ($requ){
                 return $q->where('sectionName', (int)$requ->groupId);
             })
             ->when($requ->optionalGroupId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->optionalGroupId);
+            })
+            ->when($isOptionalSubject, function($q) use ($subjectId){
+                return $q->where('fourthSubjectId', $subjectId);
             })
             ->orderBy('sessName','DESC')
             ->value('sessName');
@@ -125,11 +145,35 @@ class MarksheetController extends Controller
                 return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
             }
         }
+
+        $allowedOptionalStudentIds = [];
+        if($isOptionalSubject){
+            $allowedOptionalStudentIds = newAdmission::where('className', (int)$requ->classId)
+                ->where('sessName', (int)$sessionId)
+                ->when($groupId, function($q) use ($groupId){
+                    return $q->where('sectionName', (int)$groupId);
+                })
+                ->when($optionalGroupId, function($q) use ($optionalGroupId){
+                    return $q->where('departmentName', (int)$optionalGroupId);
+                })
+                ->where('fourthSubjectId', $subjectId)
+                ->pluck('id')
+                ->map(fn($v) => (int)$v)
+                ->all();
+            $allowedOptionalStudentIds = array_fill_keys($allowedOptionalStudentIds, true);
+        }
+
         $studentId = $requ->studentId;
         $totalData = count($studentId);
         $x = 0;
         $skipped = 0;
         while($x<$totalData){
+            if($isOptionalSubject && !isset($allowedOptionalStudentIds[(int)$requ->studentId[$x]])){
+                $skipped++;
+                $x++;
+                continue;
+            }
+
             $chkData = Marksheet::where([
                 'sessionId'=>$sessionId,
                 'classId'=>$requ->classId,
@@ -324,6 +368,7 @@ class MarksheetController extends Controller
 
             foreach($students as $stu){
                 $selectedReligiousId = $stu->religiousSubjectId ? (int)$stu->religiousSubjectId : 0;
+                $selectedFourthSubjectId = $stu->fourthSubjectId ? (int)$stu->fourthSubjectId : 0;
                 $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
                 // Build a fresh query per student to avoid accumulating where clauses
                 $stuMarks = Marksheet::where('examId',$examId)
@@ -466,7 +511,13 @@ class MarksheetController extends Controller
                     $gp = ($sr['grade'] === 'F') ? 0.0 : (is_numeric($sr['gradePoint']) ? (float)$sr['gradePoint'] : null);
                     if($gp !== null){
                         if(($sr['type'] ?? 'Main') === 'Main'){ $mainGradePointsPaired[] = $gp; }
-                        else{ $optionalFoundPaired = true; $optionalPointPaired = $gp; }
+                        else{
+                            $sourceIds = $sr['sourceIds'] ?? [];
+                            if($selectedFourthSubjectId > 0 && in_array($selectedFourthSubjectId, $sourceIds, true)){
+                                $optionalFoundPaired = true;
+                                $optionalPointPaired = $gp;
+                            }
+                        }
                     }
                 }
                 // If no subjects have marks at all, skip this student entirely (paired criterion)
@@ -495,6 +546,7 @@ class MarksheetController extends Controller
                     'isFail' => $hasFailPaired,
                     'isIncomplete' => $isIncomplete,
                     'religiousSubjectIdUsed' => $effectiveReligiousId,
+                    'fourthSubjectIdUsed' => $selectedFourthSubjectId,
                     'religiousSubjectUsedName' => ($effectiveReligiousId && isset($subjectCache[$effectiveReligiousId])) ? $subjectCache[$effectiveReligiousId]->subjectName : null,
                     'markedSubjectsCount' => $markedPairedCount,
                 ];
@@ -980,6 +1032,7 @@ class MarksheetController extends Controller
             }
             $out[] = [
                 'id' => implode('-', $ids),
+                'sourceIds' => array_values(array_map(fn($x) => (int)$x, $ids)),
                 'name' => $g['name'],
                 'type' => $type,
                 'isReligious' => 0,
@@ -1011,6 +1064,7 @@ class MarksheetController extends Controller
                 $rr = $r;
                 $rr['paired'] = false;
                 $rr['paper1'] = null; $rr['paper2'] = null;
+                $rr['sourceIds'] = [(int)$r['id']];
                 $rr['cqGrade'] = $cqPct!==null ? (GradeList::forScore($cqPct)->gradeName ?? '-') : '-';
                 $rr['mcqGrade'] = $mcqPct!==null ? (GradeList::forScore($mcqPct)->gradeName ?? '-') : '-';
                 $rr['prGrade'] = $prPct!==null ? (GradeList::forScore($prPct)->gradeName ?? '-') : '-';

@@ -148,6 +148,7 @@ Marksheet Generate
         
         $subtotalMarks = 0;
         $selectedReligiousId = (int) ($studentDetails->religiousSubjectId ?? 0);
+        $selectedFourthSubjectId = (int) ($studentDetails->fourthSubjectId ?? 0);
         $classIdForResolve = (int) ($studentDetails->className ?? 0);
         $map = \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first();
         $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : ($map ? (int)$map->subjectId : 0);
@@ -521,7 +522,7 @@ Marksheet Generate
             if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()>0) {
                 foreach($studentDetails->marksheet as $ckMark) {
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
-                    if($subjectDetails && $subjectDetails->subjectType=="Optional") {
+                    if($subjectDetails && $subjectDetails->subjectType=="Optional" && (int)$subjectDetails->id === $selectedFourthSubjectId) {
                         $hasAnyOpt = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
                         if($hasAnyOpt){ $hasOptional = true; break; }
                     }
@@ -534,7 +535,7 @@ Marksheet Generate
                     $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
                     // Optional table unaffected by religious selection
 
-                    if($subjectDetails && $subjectDetails->subjectType=="Optional") {
+                    if($subjectDetails && $subjectDetails->subjectType=="Optional" && (int)$subjectDetails->id === $selectedFourthSubjectId) {
                         $fullCQ        = $subjectDetails->CQ ?? 0;
                         $fullMCQ       = $subjectDetails->MCQ ?? 0;
                         $fullPractical = $subjectDetails->Practical ?? 0;
@@ -581,7 +582,7 @@ Marksheet Generate
                         $gradePointDisplay = ($grade === 'F') ? '0.00' : (is_numeric($gradePoint) ? number_format($gradePoint,2) : '-');
                     }
                 @endphp
-                @if($subjectDetails && $subjectDetails->subjectType=="Optional")
+                @if($subjectDetails && $subjectDetails->subjectType=="Optional" && (int)$subjectDetails->id === $selectedFourthSubjectId)
                 <tr>
                     <td>{{ $subjectDetails->subjectName }}</td>
                     <td>{{ $subjectMarks !== null ? $subjectMarks : '-' }}</td>
@@ -595,7 +596,7 @@ Marksheet Generate
             @endforeach
         @else
         <tr>
-            <td colspan="10">No data found</td>
+            <td colspan="10">No selected 4th subject data found</td>
         </tr>
         @endif
     </tbody>
@@ -626,13 +627,15 @@ Marksheet Generate
         }
     }
     
-    // Optional subject logic (unchanged)
+    // Optional subject logic (selected 4th subject only)
+    $optionalSubjectFound = false;
+    $optionalPoint = 0;
     if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count() > 0) {
         foreach($studentDetails->marksheet as $ckMark) {
             $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
             $hasAny = is_numeric($ckMark->subjectMarks) || is_numeric($ckMark->objectMarks) || is_numeric($ckMark->practicalMarks);
             if(!$hasAny){ continue; }
-            if($subjectDetails && $subjectDetails->subjectType == "Optional") {
+            if($subjectDetails && $subjectDetails->subjectType == "Optional" && (int)$subjectDetails->id === $selectedFourthSubjectId) {
                 $optionalSubjectFound = true;
                 $subjectMarks   = is_numeric($ckMark->subjectMarks) ? $ckMark->subjectMarks : 0;
                 $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;

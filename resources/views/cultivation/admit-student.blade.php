@@ -309,6 +309,16 @@ New Admission
                                             @endif
                                         </div>
                                     </div>
+                                    <div class="col-xl-3 col-lg-6 col-12 form-group">
+                                        <label>4th Subject (Optional)</label>
+                                        <select class="select2" name="fourthSubjectId">
+                                            <option value="">Select (optional)</option>
+                                            @php($optionalSubjects = \App\Models\Subject::where('subjectType','Optional')->orderBy('subjectName')->get())
+                                            @foreach($optionalSubjects as $optSub)
+                                                <option value="{{ $optSub->id }}">{{ $optSub->subjectName }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                 </div>
                                 <div class="row mb-2 mt-5">
                                     <h5 class="section-title">Guardian Information</h5>
@@ -375,7 +385,7 @@ New Admission
                     </div>
                     <div class="alert alert-info">
                         <strong>File Format:</strong><br>
-                        Columns: Full Name, Sure Name, Father Name, Mother Name, Gender, DOB, Blood Group, Religion, Email, Phone, Address, Session, Class, Department, Section, Roll, Guardian, Guardian Phone, Relation
+                        Columns: Full Name, Sure Name, Father Name, Mother Name, Gender, DOB, Blood Group, Religion, Email, Phone, Address, Session, Class, Department, Section, 4th Subject, Roll, Guardian, Guardian Phone, Relation
                     </div>
                 </div>
                 <div class="modal-footer">

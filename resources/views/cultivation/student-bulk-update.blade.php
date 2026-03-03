@@ -105,6 +105,7 @@ Bulk Student Profile Update
                                         <th>Class</th>
                                         <th>Section</th>
                                         <th>Department</th>
+                                        <th>4th Subject</th>
                                         <th>Email</th>
                                         <th>Mobile</th>
                                         <th>Gender</th>
@@ -174,6 +175,14 @@ Bulk Student Profile Update
                                                     <option value="">-- Select --</option>
                                                     @foreach($departmentDetails as $dept)
                                                         <option value="{{ $dept->id }}" {{ (int)$student->departmentName === (int)$dept->id ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </td>
+                                            <td>
+                                                <select name="students[{{ $index }}][fourthSubjectId]" class="form-select form-select-sm editable-input">
+                                                    <option value="">-- Select --</option>
+                                                    @foreach($optionalSubjectList as $optSub)
+                                                        <option value="{{ $optSub->id }}" {{ (int)$student->fourthSubjectId === (int)$optSub->id ? 'selected' : '' }}>{{ $optSub->subjectName }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>

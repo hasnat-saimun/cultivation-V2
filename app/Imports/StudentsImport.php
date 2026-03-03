@@ -28,6 +28,7 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
         $phone      = $this->nv($row, 'phone');
         $address    = $this->nv($row, 'address');
         $roll       = $this->nv($row, 'roll');
+        $fourthSubRaw = $this->nv($row, '4th_subject') ?? $this->nv($row, 'fourth_subject');
         $guardian   = $this->nv($row, 'guardian');
         $guardianPhone = $this->nv($row, 'guardian_phone');
         $relation   = $this->nv($row, 'relation');
@@ -55,6 +56,7 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
             'className' => $this->getClassId($this->nv($row, 'class')),
             'departmentName' => $this->getDepartmentId($this->nv($row, 'department')),
             'sectionName' => $this->getSectionId($this->nv($row, 'section')),
+            'fourthSubjectId' => $this->getOptionalSubjectId($fourthSubRaw),
             'rollNumber' => $roll,
             'guardianName' => $guardian,
             'guardianPhone' => $guardianPhone,
@@ -73,6 +75,8 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
             'mother_name' => 'nullable|string',
             'gender' => 'nullable|string',
             'religion' => 'nullable|string',
+            '4th_subject' => 'nullable|string',
+            'fourth_subject' => 'nullable|string',
         ];
     }
 
@@ -182,6 +186,23 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
         if(!$name){ return null; }
         $section = \App\Models\sectionManage::whereRaw('LOWER(section) = ?', [strtolower($name)])->first();
         return $section ? $section->id : null;
+    }
+
+    private function getOptionalSubjectId($subjectName)
+    {
+        $name = $this->nvRaw($subjectName);
+        if(!$name){ return null; }
+
+        if(is_numeric($name)){
+            $id = (int)$name;
+            $subject = \App\Models\Subject::where('id', $id)->where('subjectType', 'Optional')->first();
+            return $subject ? $subject->id : null;
+        }
+
+        $subject = \App\Models\Subject::whereRaw('LOWER(subjectName) = ?', [strtolower($name)])
+            ->where('subjectType', 'Optional')
+            ->first();
+        return $subject ? $subject->id : null;
     }
 
     // Normalize a value: trim string, empty => null

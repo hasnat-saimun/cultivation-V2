@@ -442,6 +442,7 @@ class AdmissionController extends Controller
             $data->sectionName      = $requ->sectionName;
             // Religious subject selection (single checkbox)
             $data->religiousSubjectId = $requ->religiousSubjectId ? (int) $requ->religiousSubjectId : null;
+            $data->fourthSubjectId  = $requ->fourthSubjectId ? (int) $requ->fourthSubjectId : null;
             $data->rollNumber       = $requ->rollNumber;
             $data->gurdianName      = $requ->gurdian;
             $data->gurdianMobile    = $requ->gurdianPhone;
@@ -543,8 +544,9 @@ class AdmissionController extends Controller
         $classDetails = classManage::all();
         $sectionDetails= sectionManage::all();
         $departmentDetails= Department::all();
+        $optionalSubjectList = Subject::where('subjectType', 'Optional')->orderBy('subjectName')->get();
         $stdDataa= newAdmission::find($id);
-        return view('cultivation.edit-student',['classDetails'=>$classDetails,'sectionDatails'=>$sectionDetails,'stdData'=>$stdDataa,'departmentDetails'=>$departmentDetails]);
+        return view('cultivation.edit-student',['classDetails'=>$classDetails,'sectionDatails'=>$sectionDetails,'stdData'=>$stdDataa,'departmentDetails'=>$departmentDetails,'optionalSubjectList'=>$optionalSubjectList]);
     }
 
     //update
@@ -568,6 +570,7 @@ class AdmissionController extends Controller
                 $data->departmentName   = $requ->departmentName;
                 $data->sectionName      = $requ->sectionName;
                 $data->religiousSubjectId = $requ->religiousSubjectId ? (int) $requ->religiousSubjectId : null;
+                $data->fourthSubjectId  = $requ->fourthSubjectId ? (int) $requ->fourthSubjectId : null;
                 $data->rollNumber       = $requ->rollNumber;
                 $data->gurdianName      = $requ->gurdian;
                 $data->gurdianMobile    = $requ->gurdianPhone;
@@ -676,6 +679,7 @@ class AdmissionController extends Controller
         $sessionDetails = sessionManage::orderBy('id')->get();
         $sectionDetails = sectionManage::orderBy('id')->get();
         $departmentDetails = Department::orderBy('id')->get();
+        $optionalSubjectList = Subject::where('subjectType', 'Optional')->orderBy('subjectName')->get();
 
         $filters = [
             'classId' => request()->get('classId'),
@@ -724,6 +728,7 @@ class AdmissionController extends Controller
                 'className',
                 'departmentName',
                 'sectionName',
+                'fourthSubjectId',
                 'rollNumber',
                 'gurdianName',
                 'gurdianMobile',
@@ -739,6 +744,7 @@ class AdmissionController extends Controller
             'sessionDetails',
             'sectionDetails',
             'departmentDetails',
+            'optionalSubjectList',
             'filters'
         ));
     }
@@ -764,6 +770,7 @@ class AdmissionController extends Controller
             'students.*.className' => 'nullable|integer|exists:class_manages,id',
             'students.*.departmentName' => 'nullable|integer|exists:departments,id',
             'students.*.sectionName' => 'nullable|integer|exists:section_manages,id',
+            'students.*.fourthSubjectId' => 'nullable|integer|exists:subjects,id',
             'students.*.rollNumber' => 'nullable|string|max:20',
             'students.*.gurdianName' => 'nullable|string|max:255',
             'students.*.gurdianMobile' => 'nullable|string|max:20',
@@ -790,6 +797,7 @@ class AdmissionController extends Controller
                 'className',
                 'departmentName',
                 'sectionName',
+                'fourthSubjectId',
                 'rollNumber',
                 'gurdianName',
                 'gurdianMobile',
