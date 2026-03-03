@@ -323,12 +323,10 @@ Register Form
             const cls = classSelect.value;
             if(this.value && cls){
                 show(groupSelect);
-                // populate subjectSelect options based on data-assign-class (match cls or '0' or empty)
+                // show all configured subjects for teacher assignment
                 for(const opt of subjectSelect.options){
                     if(!opt.value) continue;
-                    const map = (opt.dataset.assignClass || '').toString();
-                    const allowed = map === '' || map === '0' || map.split(',').map(s=>s.trim()).includes(cls.toString());
-                    opt.style.display = allowed ? '' : 'none';
+                    opt.style.display = '';
                 }
                 subjectSelect.value = '';
                 show(subjectSelect);
