@@ -15,6 +15,20 @@ use App\Models\ReligiousSubjectDefault;
 
 class MarksheetController extends Controller
 {
+    private function resolveSessionIdFromValue($sessionValue): ?int
+    {
+        if ($sessionValue === null || $sessionValue === '') {
+            return null;
+        }
+
+        if (is_numeric($sessionValue)) {
+            return (int)$sessionValue;
+        }
+
+        $mappedId = sessionManage::where('session', (string)$sessionValue)->value('id');
+        return $mappedId ? (int)$mappedId : null;
+    }
+
     private function isResultPublished(int $examId, int $sessionId, int $classId, $groupId = null): bool
     {
         return ResultPublish::where('examId', $examId)
@@ -48,53 +62,66 @@ class MarksheetController extends Controller
         $subject = Subject::find($subjectId);
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
-        $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
-            ->when($requ->groupId, function($q) use ($requ){
-                return $q->where('sectionName', (int)$requ->groupId);
+        $groupId = $requ->groupId ?: null;
+        $optionalGroupId = $requ->optionalGroupId ?: null;
+
+        $studentBaseQuery = newAdmission::where('className', (int)$requ->classId)
+            ->when($groupId, function($q) use ($groupId){
+                return $q->where('sectionName', (int)$groupId);
             })
-            ->when($requ->optionalGroupId, function($q) use ($requ){
-                return $q->where('departmentName', (int)$requ->optionalGroupId);
+            ->when($optionalGroupId, function($q) use ($optionalGroupId){
+                return $q->where('departmentName', (int)$optionalGroupId);
             })
             ->when($isOptionalSubject, function($q) use ($subjectId){
                 return $q->where('fourthSubjectId', $subjectId);
-            })
-            ->orderBy('sessName','DESC')
-            ->value('sessName');
-        $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
+            });
+
+        $studentSessionValue = $requ->sessionId ?: (clone $studentBaseQuery)->orderBy('id','DESC')->value('sessName');
+        $sessionId = $this->resolveSessionIdFromValue($studentSessionValue);
+        $sessionId = $sessionId ?: (int)sessionManage::orderBy('id','DESC')->value('id');
+
+        if (!$studentSessionValue && $sessionId) {
+            $studentSessionValue = (string)$sessionId;
+        }
+
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
         }
-        $groupId = $requ->groupId ?: null;
         $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
         // Server-side enforcement of teacher's assigned class & subject
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         $isTeacherAdmin = $user && $user->isTeacher();
-        $optionalGroupId = $requ->optionalGroupId ?: null;
         if($user && $user->isTeacher()){
             $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId);
             if(!$allowed){
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
         }
+
         // Fetch students class-wise along with session and section filters
-        $studentQuery = newAdmission::where([
-            'className'   => (int)$requ->classId,
-            'sessName'    => (int)$sessionId,
-        ]);
-        if($groupId){
-            $studentQuery->where('sectionName', (int)$groupId);
+        $studentQuery = clone $studentBaseQuery;
+        if($studentSessionValue){
+            $studentQuery->where('sessName', $studentSessionValue);
         }
-        if($optionalGroupId){
-            $studentQuery->where('departmentName', (int)$optionalGroupId);
-        }
-        if($isOptionalSubject){
-            $studentQuery->where('fourthSubjectId', $subjectId);
-        }
+
         $studentList = $studentQuery
             ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
             ->orderBy('id','ASC')
             ->get();
+
+        // Fallback for legacy data where sessName stores id/text inconsistently
+        if($studentList->isEmpty() && $studentSessionValue && is_numeric($studentSessionValue)){
+            $sessionText = sessionManage::where('id', (int)$studentSessionValue)->value('session');
+            if($sessionText){
+                $studentList = (clone $studentBaseQuery)
+                    ->where('sessName', $sessionText)
+                    ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+                    ->orderBy('id','ASC')
+                    ->get();
+            }
+        }
+
         return view('result.get-marks',[
             'studentList'=>$studentList,
             'groupId'=>$groupId,
@@ -113,19 +140,23 @@ class MarksheetController extends Controller
         $subject = Subject::find($subjectId);
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
-        $sessionId = $requ->sessionId ?: newAdmission::where('className', (int)$requ->classId)
-            ->when($requ->groupId, function($q) use ($requ){
-                return $q->where('sectionName', (int)$requ->groupId);
-            })
-            ->when($requ->optionalGroupId, function($q) use ($requ){
-                return $q->where('departmentName', (int)$requ->optionalGroupId);
-            })
-            ->when($isOptionalSubject, function($q) use ($subjectId){
-                return $q->where('fourthSubjectId', $subjectId);
-            })
-            ->orderBy('sessName','DESC')
-            ->value('sessName');
-        $sessionId = $sessionId ?: sessionManage::orderBy('id','DESC')->value('id');
+        $sessionId = $this->resolveSessionIdFromValue($requ->sessionId);
+        if(!$sessionId){
+            $sessionCandidate = newAdmission::where('className', (int)$requ->classId)
+                ->when($requ->groupId, function($q) use ($requ){
+                    return $q->where('sectionName', (int)$requ->groupId);
+                })
+                ->when($requ->optionalGroupId, function($q) use ($requ){
+                    return $q->where('departmentName', (int)$requ->optionalGroupId);
+                })
+                ->when($isOptionalSubject, function($q) use ($subjectId){
+                    return $q->where('fourthSubjectId', $subjectId);
+                })
+                ->orderBy('id','DESC')
+                ->value('sessName');
+            $sessionId = $this->resolveSessionIdFromValue($sessionCandidate);
+        }
+        $sessionId = $sessionId ?: (int)sessionManage::orderBy('id','DESC')->value('id');
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
         }
