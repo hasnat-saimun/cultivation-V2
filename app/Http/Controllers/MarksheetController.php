@@ -73,7 +73,11 @@ class MarksheetController extends Controller
                 return $q->where('departmentName', (int)$optionalGroupId);
             })
             ->when($isOptionalSubject, function($q) use ($subjectId){
-                return $q->where('fourthSubjectId', $subjectId);
+                return $q->where(function($qq) use ($subjectId){
+                    $qq->where('fourthSubjectId', $subjectId)
+                        ->orWhereNull('fourthSubjectId')
+                        ->orWhere('fourthSubjectId', 0);
+                });
             });
 
         $studentSessionValue = $requ->sessionId ?: (clone $studentBaseQuery)->orderBy('id','DESC')->value('sessName');
@@ -187,7 +191,11 @@ class MarksheetController extends Controller
                 ->when($optionalGroupId, function($q) use ($optionalGroupId){
                     return $q->where('departmentName', (int)$optionalGroupId);
                 })
-                ->where('fourthSubjectId', $subjectId)
+                ->where(function($q) use ($subjectId){
+                    $q->where('fourthSubjectId', $subjectId)
+                        ->orWhereNull('fourthSubjectId')
+                        ->orWhere('fourthSubjectId', 0);
+                })
                 ->pluck('id')
                 ->map(fn($v) => (int)$v)
                 ->all();
