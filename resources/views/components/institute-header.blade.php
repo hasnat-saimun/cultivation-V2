@@ -50,16 +50,6 @@
 
 <div class="report-header d-flex flex-wrap align-items-center justify-content-center text-center mb-3 pb-3 border-bottom w-100" style="width:100%">
     <div class="text-center">
-        @if(!empty($config?->logo))
-            @php
-                $appBase = rtrim(config('app.url'), '/').'/public';
-                $logoFile = $config->logo;
-                $logoSrc = preg_match('~^https?://~i', $logoFile) ? $logoFile : $appBase.'/upload/image/cultivation/'.$logoFile;
-            @endphp
-            <div class="me-3" style="flex:0 0 auto;">
-                <img class="hdr-logo" src="{{ $logoSrc }}" alt="Institute Logo">
-            </div>
-        @endif
         <h4 class="name">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
         <div class="subline">{{ $config->address ?? '' }}</div>
         <div class="contacts">
