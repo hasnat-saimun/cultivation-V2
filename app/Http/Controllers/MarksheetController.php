@@ -940,12 +940,47 @@ class MarksheetController extends Controller
         ]);
     }
 
-    // Resolve effective religious subject for a class (mapping -> assigned -> any)
+    private function resolveIslamReligiousSubjectId(?int $classId = null): int
+    {
+        $query = Subject::where('isReligious', true)
+            ->where(function($q){
+                $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
+                  ->orWhereRaw('LOWER(alias) LIKE ?', ['%islam%']);
+            });
+
+        if (!empty($classId) && $classId > 0) {
+            $query->where(function($q) use ($classId){
+                $q->where('assign_class', (string)$classId)
+                  ->orWhere('assign_class', '0');
+            });
+        }
+
+        $sub = $query
+            ->orderByRaw("CASE WHEN LOWER(subjectName) LIKE '%111%' OR LOWER(alias) LIKE '%111%' THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->first();
+
+        return $sub ? (int)$sub->id : 0;
+    }
+
+    // Resolve effective religious subject for a class (mapping -> Islam default -> assigned -> any)
     private function resolveReligiousSubjectForClass(int $classId): int
     {
-        if ($classId <= 0) return 0;
+        if ($classId <= 0) {
+            $islamGlobal = $this->resolveIslamReligiousSubjectId(null);
+            if ($islamGlobal > 0) return $islamGlobal;
+            $sub = Subject::where('isReligious', true)->orderBy('id')->first();
+            return $sub ? (int)$sub->id : 0;
+        }
+
         $map = ReligiousSubjectDefault::where('classId', $classId)->first();
-        if ($map) return (int)$map->subjectId;
+        if ($map && Subject::where('id', (int)$map->subjectId)->where('isReligious', true)->exists()) {
+            return (int)$map->subjectId;
+        }
+
+        $islamForClass = $this->resolveIslamReligiousSubjectId($classId);
+        if ($islamForClass > 0) return $islamForClass;
+
         $sub = Subject::where('isReligious', true)
             ->where(function($q) use ($classId){
                 $q->where('assign_class', (string)$classId)
@@ -953,6 +988,10 @@ class MarksheetController extends Controller
             })
             ->orderBy('id')->first();
         if ($sub) return (int)$sub->id;
+
+        $islamGlobal = $this->resolveIslamReligiousSubjectId(null);
+        if ($islamGlobal > 0) return $islamGlobal;
+
         $sub = Subject::where('isReligious', true)->orderBy('id')->first();
         return $sub ? (int)$sub->id : 0;
     }

@@ -153,7 +153,16 @@ Marksheet Generate
         $map = \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first();
         $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : ($map ? (int)$map->subjectId : 0);
         if($effectiveReligiousId === 0){
-            $fallback = \App\Models\Subject::where('isReligious', true)
+            $islamPreferred = \App\Models\Subject::where('isReligious', true)
+                ->where(function($q){
+                    $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
+                      ->orWhereRaw('LOWER(alias) LIKE ?', ['%islam%']);
+                })
+                ->where(function($q) use ($classIdForResolve){ $q->where('assign_class', (string)$classIdForResolve)->orWhere('assign_class','0'); })
+                ->orderByRaw("CASE WHEN LOWER(subjectName) LIKE '%111%' OR LOWER(alias) LIKE '%111%' THEN 0 ELSE 1 END")
+                ->orderBy('id')
+                ->first();
+            $fallback = $islamPreferred ?: \App\Models\Subject::where('isReligious', true)
                 ->where(function($q) use ($classIdForResolve){ $q->where('assign_class', (string)$classIdForResolve)->orWhere('assign_class','0'); })
                 ->orderBy('id')->first();
             if($fallback){ $effectiveReligiousId = (int)$fallback->id; }

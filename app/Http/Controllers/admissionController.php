@@ -680,6 +680,15 @@ class AdmissionController extends Controller
         $sectionDetails = sectionManage::orderBy('id')->get();
         $departmentDetails = Department::orderBy('id')->get();
         $optionalSubjectList = Subject::where('subjectType', 'Optional')->orderBy('subjectName')->get();
+        $religiousSubjectList = Subject::where('isReligious', true)->orderBy('subjectName')->get();
+        $islamDefaultSubjectId = Subject::where('isReligious', true)
+            ->where(function($q){
+                $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
+                  ->orWhereRaw('LOWER(alias) LIKE ?', ['%islam%']);
+            })
+            ->orderByRaw("CASE WHEN LOWER(subjectName) LIKE '%111%' OR LOWER(alias) LIKE '%111%' THEN 0 ELSE 1 END")
+            ->orderBy('id')
+            ->value('id');
 
         $filters = [
             'classId' => request()->get('classId'),
@@ -728,6 +737,7 @@ class AdmissionController extends Controller
                 'className',
                 'departmentName',
                 'sectionName',
+                'religiousSubjectId',
                 'fourthSubjectId',
                 'rollNumber',
                 'gurdianName',
@@ -745,6 +755,8 @@ class AdmissionController extends Controller
             'sectionDetails',
             'departmentDetails',
             'optionalSubjectList',
+            'religiousSubjectList',
+            'islamDefaultSubjectId',
             'filters'
         ));
     }
@@ -770,6 +782,7 @@ class AdmissionController extends Controller
             'students.*.className' => 'nullable|integer|exists:class_manages,id',
             'students.*.departmentName' => 'nullable|integer|exists:departments,id',
             'students.*.sectionName' => 'nullable|integer|exists:section_manages,id',
+            'students.*.religiousSubjectId' => 'nullable|integer|exists:subjects,id',
             'students.*.fourthSubjectId' => 'nullable|integer|exists:subjects,id',
             'students.*.rollNumber' => 'nullable|string|max:20',
             'students.*.gurdianName' => 'nullable|string|max:255',
@@ -797,6 +810,7 @@ class AdmissionController extends Controller
                 'className',
                 'departmentName',
                 'sectionName',
+                'religiousSubjectId',
                 'fourthSubjectId',
                 'rollNumber',
                 'gurdianName',
