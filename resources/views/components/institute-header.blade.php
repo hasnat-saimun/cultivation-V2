@@ -2,14 +2,49 @@
     $config = \App\Models\ServerConfig::orderBy('id','DESC')->first();
 @endphp
 <style>
-    .report-header{gap:12px;}
-    .report-header .hdr-logo{height:120px;width:120px;object-fit:contain}
-    .report-header .name{font-weight:700;margin-bottom:0}
-    .report-header .subline{font-size:12px;color:#6b7280}
-    .report-header .contacts{font-size:12px}
+   .report-header{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        text-align:center;
+        gap:12px;
+    }
+
+    .report-header .hdr-logo{
+        height:60px;
+        width:60px;
+        object-fit:contain;
+        display:block;
+        margin:0 auto;
+    }
+
+    .report-header .name{
+        font-weight:700;
+        margin-bottom:0;
+    }
+
+    .report-header .subline{
+        font-size:12px;
+        color:#6b7280;
+    }
+
+    .report-header .contacts{
+        font-size:12px;
+    }
+
     @media print{
-        .report-header{margin-bottom:8px !important;padding-bottom:6px !important;border-bottom:1px solid #e5e7eb !important}
-        .report-header .hdr-logo{height:56px !important;width:56px !important}
+        .report-header{
+            margin-bottom:8px !important;
+            padding-bottom:6px !important;
+            border-bottom:1px solid #e5e7eb !important;
+        }
+
+        .report-header .hdr-logo{
+            height:56px !important;
+            width:56px !important;
+            margin:0 auto !important;
+            display:block !important;
+        }
     }
 </style>
 
