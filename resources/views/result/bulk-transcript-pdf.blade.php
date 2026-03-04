@@ -8,30 +8,34 @@
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111827; margin: 0; }
         .transcript-page { page-break-after: always; page-break-inside: avoid; }
         .transcript-page:last-child { page-break-after: auto; }
-        .marksheet .transcript { background: #fff; padding: 6px; border: 1px solid #d1d5db; }
+        .marksheet .transcript { background: #fff; padding: 10px; border: 2px solid #111827; }
         .marksheet table { width: 100%; border-collapse: collapse; }
         .marksheet table th, .marksheet table td { border: 1px solid #111827; padding: 4px 5px; }
         .marksheet table thead th { background: #f3f4f6; font-weight: 700; }
         .title { text-align: center; margin: 4px 0 8px 0; }
         .title h3 { margin: 0; font-size: 18px; text-transform: uppercase; }
         .title p { margin: 4px 0 0 0; font-weight: 700; }
-        .student-info { margin-bottom: 8px; }
-        .student-info th { width: 132px; text-align: left; white-space: nowrap; }
-        .student-info td { word-break: break-word; }
+        .meta-wrap { width: 100%; margin-bottom: 8px; }
+        .meta-wrap td { border: 0 !important; vertical-align: top; padding: 0; }
+        .meta-left { width: 62%; padding-right: 10px !important; }
+        .meta-right { width: 38%; }
+        .student-info { margin-bottom: 0; }
+        .student-info th { width: auto; text-align: left; white-space: nowrap;border: 0px solid #111827 !important; }
+        .student-info td { word-break: break-word;border: 0px solid #111827 !important; }
+        .grade-scale th, .grade-scale td { text-align: center; font-size: 10px;border: 1px solid #111827 !important; }
         .section-title { margin: 8px 0 4px 0; font-size: 14px; font-weight: 700; }
         .failed-subjects h4 { margin: 6px 0 2px 0; color: #b91c1c; }
         .failed-subjects ul { margin: 4px 0 0 0; padding-left: 14px; columns: 2; column-gap: 10px; }
         .signature-row { width: 100%; margin-top: 14px; }
-        .signature-row td { width: 33.33%; border: 0; text-align: center; vertical-align: bottom; height: 56px; }
+        .signature-row td { width: 33.33%; border: 0 !important; text-align: center; vertical-align: bottom; height: 72px; }
         .signature-line { border-top: 1px solid #111827; width: 75%; margin: 0 auto; }
         .small { font-size: 11px; color: #4b5563; }
+        .sign-image { height: 40px; width: auto; max-width: 130px; object-fit: contain; margin: 0 auto 6px auto; display: block; }
 
-        .pdf-header,
-        .pdf-header * { text-align: center !important; }
+        .pdf-header { text-align: center !important; }
         .pdf-header .report-header { display: block !important; width: 100% !important; margin: 0 auto 8px auto !important; padding-bottom: 6px !important; }
-        .pdf-header .report-header > div { display: block !important; width: 100% !important; margin: 0 auto !important; }
-        .pdf-header .report-header .me-3 { margin: 0 auto 6px auto !important; }
-        .pdf-header .report-header .hdr-logo { margin: 0 auto !important; display: block !important; }
+        .pdf-header .report-header .logo-wrap { width: 100% !important; text-align: center !important; margin: 0 auto 6px auto !important; }
+        .pdf-header .report-header .hdr-logo { margin: 0 auto !important; display: inline-block !important; }
     </style>
 </head>
 <body>
@@ -142,21 +146,53 @@
                 <p>{{ $examName }}</p>
             </div>
 
-            <table class="student-info">
-                <tbody>
-                    <tr><th>Student ID</th><td>:</td><td colspan="4">{{ !empty($adminId) ? $adminId : '-' }}</td></tr>
-                    <tr><th>Name</th><td>:</td><td colspan="4">{{ $stdName }}</td></tr>
-                    <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $fName }}</td></tr>
-                    <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $mName }}</td></tr>
-                    <tr>
-                        <th>Roll Number</th><td>:</td><td>{{ $rollNumber }}</td>
-                        <th>Session</th><td>:</td><td>{{ $sessionName }}</td>
-                    </tr>
-                    <tr>
-                        <th>Class</th><td>:</td><td>{{ $className }}</td>
-                        <th>Section</th><td>:</td><td>{{ $sectionName }}</td>
-                    </tr>
-                </tbody>
+            @php
+                $gradeScale = \App\Models\GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
+            @endphp
+            <table class="meta-wrap">
+                <tr>
+                    <td class="meta-left">
+                        <table class="student-info">
+                            <tbody>
+                                <tr><th>Student ID</th><td>:</td><td colspan="4">{{ !empty($adminId) ? $adminId : '-' }}</td></tr>
+                                <tr><th>Name</th><td>:</td><td colspan="4">{{ $stdName }}</td></tr>
+                                <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $fName }}</td></tr>
+                                <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $mName }}</td></tr>
+                                <tr>
+                                    <th>Roll Number</th><td>:</td><td>{{ $rollNumber }}</td>
+                                    <th>Session</th><td>:</td><td>{{ $sessionName }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Class</th><td>:</td><td>{{ $className }}</td>
+                                    <th>Section</th><td>:</td><td>{{ $sectionName }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Merit Position</th><td>:</td><td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '1' }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td class="meta-right">
+                        <table class="grade-scale">
+                            <thead>
+                                <tr>
+                                    <th>Range of Marks</th>
+                                    <th>Grade</th>
+                                    <th>Point</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($gradeScale as $gs)
+                                    <tr>
+                                        <td>{{ $gs->minMark }} - {{ $gs->maxMark }}</td>
+                                        <td>{{ $gs->gradeName }}</td>
+                                        <td>{{ number_format((float)$gs->gradePoint, 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
             </table>
 
             @php
@@ -473,6 +509,14 @@
                     $finalLetterGrade = '-';
                     $finalGradePoint = '-';
                 }
+
+                $principalSignSrc = null;
+                if(!empty($config?->principalSign)){
+                    $signBase = rtrim(config('app.url'), '/').'/public';
+                    $principalSignSrc = preg_match('~^https?://~i', $config->principalSign)
+                        ? $config->principalSign
+                        : $signBase.'/upload/image/cultivation/'.$config->principalSign;
+                }
             @endphp
 
             <table style="margin-top:10px;">
@@ -511,6 +555,9 @@
                     </td>
                     <td>
                         <div>Principal/Head Master</div>
+                        @if(!empty($principalSignSrc))
+                            <img src="{{ $principalSignSrc }}" alt="Principal Signature" class="sign-image">
+                        @endif
                         <div class="signature-line"></div>
                         <div class="small">Signature</div>
                     </td>

@@ -3,19 +3,27 @@
 @endphp
 <style>
    .report-header{
-        display:flex;
-        flex-direction:column;
-        align-items:center;
+    display:block !important;
+        width:100%;
         text-align:center;
-        gap:12px;
+        margin:0 auto 8px;
+        padding-bottom:6px;
+        border-bottom:1px solid #e5e7eb;
     }
 
     .report-header .hdr-logo{
         height:60px;
         width:60px;
         object-fit:contain;
-        display:block;
-        margin:0 auto;
+        display:inline-block;
+        margin:0;
+    }
+
+    .report-header .logo-wrap{
+        width:100%;
+        display:block !important;
+        text-align:center;
+        margin:0 auto 6px;
     }
 
     .report-header .name{
@@ -45,20 +53,34 @@
             margin:0 auto !important;
             display:block !important;
         }
+
+        .report-header .logo-wrap{
+            width:100% !important;
+            text-align:center !important;
+            margin:0 auto 6px !important;
+        }
     }
 </style>
 
-<div class="report-header d-flex flex-wrap align-items-center justify-content-center text-center mb-3 pb-3 border-bottom w-100" style="width:100%">
-    <div class="text-center">
-        <h4 class="name">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
-        <div class="subline">{{ $config->address ?? '' }}</div>
-        <div class="contacts">
-            @if(!empty($config?->officeMobile))
-                <span><i class="fa fa-phone"></i> {{ $config->officeMobile ?? '' }}</span>
-            @endif
-            @if(!empty($config?->officeEmail))
-                <span class="ms-3"><i class="fa fa-envelope-o"></i> {{ $config->officeEmail ?? '' }}</span>
-            @endif
+<div class="report-header">
+    @if(!empty($config?->logo))
+        @php
+            $appBase = rtrim(config('app.url'), '/').'/public';
+            $logoFile = $config->logo;
+            $logoSrc = preg_match('~^https?://~i', $logoFile) ? $logoFile : $appBase.'/upload/image/cultivation/'.$logoFile;
+        @endphp
+        <div class="logo-wrap">
+            <img class="hdr-logo" src="{{ $logoSrc }}" alt="Institute Logo">
         </div>
+    @endif
+    <h4 class="name">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
+    <div class="subline">{{ $config->address ?? '' }}</div>
+    <div class="contacts">
+        @if(!empty($config?->officeMobile))
+            <span><i class="fa fa-phone"></i> {{ $config->officeMobile ?? '' }}</span>
+        @endif
+        @if(!empty($config?->officeEmail))
+            <span style="margin-left:12px;"><i class="fa fa-envelope-o"></i> {{ $config->officeEmail ?? '' }}</span>
+        @endif
     </div>
 </div>

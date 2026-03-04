@@ -46,6 +46,7 @@ Marksheet Generate
         .signature-line { width: 80%; border-bottom: 1px solid #2d3748; }
         .signature-role { font-weight: 600; margin-bottom: 6px; }
         .signature-label { margin-top: 6px; font-size: 11px; color: #4a5568; }
+        .sign-image { height: 44px; width: auto; max-width: 140px; object-fit: contain; margin-bottom: 8px; }
         /* Student info table: tidy labels and values */
         .student-info th { width: 140px; white-space: nowrap; }
         .student-info td { word-break: break-word; overflow-wrap: anywhere; }
@@ -716,6 +717,15 @@ Marksheet Generate
                                 <div class="signature-box">
                                     <div class="signature-role">Principal/Head Master</div>
                                     <div class="signature-space"></div>
+                                    @if(!empty($config?->principalSign))
+                                        @php
+                                            $signBase = rtrim(config('app.url'), '/').'/public';
+                                            $principalSignSrc = preg_match('~^https?://~i', $config->principalSign)
+                                                ? $config->principalSign
+                                                : $signBase.'/upload/image/cultivation/'.$config->principalSign;
+                                        @endphp
+                                        <img src="{{ $principalSignSrc }}" alt="Principal Signature" class="sign-image">
+                                    @endif
                                     <div class="signature-line"></div>
                                     <div class="signature-label">Signature</div>
                                 </div>
