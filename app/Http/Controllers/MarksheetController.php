@@ -940,6 +940,72 @@ class MarksheetController extends Controller
         ]);
     }
 
+    public function bulkTranscriptPdf(Request $request)
+    {
+        $request->validate([
+            'examId' => 'required|integer',
+            'stdIds' => 'required|array|min:1',
+            'stdIds.*' => 'required',
+        ]);
+
+        $examId = (int)$request->input('examId');
+        $rawIds = collect($request->input('stdIds', []))
+            ->map(fn($v) => trim((string)$v))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($rawIds->isEmpty()) {
+            return back()->with('error', 'No students selected for PDF.');
+        }
+
+        $numericIds = $rawIds->filter(fn($v) => ctype_digit($v))->map(fn($v) => (int)$v)->values();
+
+        $students = newAdmission::query()
+            ->where(function($q) use ($rawIds, $numericIds){
+                $q->whereIn('stdId', $rawIds);
+                if ($numericIds->isNotEmpty()) {
+                    $q->orWhereIn('id', $numericIds);
+                }
+            })
+            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+            ->orderBy('id', 'ASC')
+            ->get();
+
+        if ($students->isEmpty()) {
+            return back()->with('error', 'No matching students found for selected IDs.');
+        }
+
+        $exam = Exam::find($examId);
+        if (!$exam) {
+            return back()->with('error', 'Selected exam not found.');
+        }
+
+        $students->load(['marksheet' => function($q) use ($examId){
+            $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
+        }]);
+
+        $transcripts = [];
+        foreach ($students as $student) {
+            $transcripts[] = [
+                'studentDetails' => $student,
+                'meritRank' => null,
+                'maxMarkedSubjects' => 0,
+                'studentMarkedSubjects' => 0,
+                'hideForMaxRule' => false,
+            ];
+        }
+
+        $config = ServerConfig::first();
+        $pdf = \PDF::loadView('result.bulk-transcript-pdf', [
+            'exam' => $exam,
+            'transcripts' => $transcripts,
+            'config' => $config,
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download('bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf');
+    }
+
     private function resolveIslamReligiousSubjectId(?int $classId = null): int
     {
         $query = Subject::where('isReligious', true)

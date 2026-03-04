@@ -1540,6 +1540,10 @@ Route::middleware(['adminGuard'])->group (function(){
         MarksheetController::class,
         'transcriptList'
     ])->name('transcripts.bulk');
+    Route::post('/transcripts/bulk/pdf', [
+        MarksheetController::class,
+        'bulkTranscriptPdf'
+    ])->name('transcripts.bulk.pdf');
     // Single transcript view (existing generator wired up)
     Route::get('/marksheet/generate', [
         MarksheetController::class,

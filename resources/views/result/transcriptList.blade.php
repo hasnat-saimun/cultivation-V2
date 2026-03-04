@@ -83,10 +83,17 @@ Transcript Generator
             <div class="d-flex justify-content-between align-items-center mb-2 controls">
                 <div>
                     <button type="button" class="btn btn-primary btn-sm" onclick="openSelected()">Open Selected Transcripts</button>
+                    <button type="button" class="btn btn-success btn-sm" onclick="downloadSelectedPdf()">Download Selected PDF</button>
                     <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAll(this)">Select All</button>
                 </div>
                 <div class="text-muted small">Tip: Use browser print to save to PDF.</div>
             </div>
+
+            <form id="bulkPdfForm" method="POST" action="{{ route('transcripts.bulk.pdf') }}" class="d-none">
+                @csrf
+                <input type="hidden" name="examId" value="{{ $examId }}">
+                <div id="bulkPdfStdIds"></div>
+            </form>
             <div class="table-responsive">
                 <table class="table table-bordered table-striped align-middle">
                     <thead class="table-dark text-dark">
@@ -138,6 +145,24 @@ function openSelected(){
         const url = `{{ route('marksheetGenerate') }}?stdId=${encodeURIComponent(stdId)}&examId=${encodeURIComponent(examId)}`;
         setTimeout(() => window.open(url, '_blank'), idx * 150);
     });
+}
+
+function downloadSelectedPdf(){
+    const examId = '{{ $examId }}';
+    if(!examId){ alert('Please select an Exam first.'); return; }
+    const rows = Array.from(document.querySelectorAll('.ck_row:checked'));
+    if(rows.length === 0){ alert('Select at least one student.'); return; }
+
+    const container = document.getElementById('bulkPdfStdIds');
+    container.innerHTML = '';
+    rows.forEach((r) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'stdIds[]';
+        input.value = r.value;
+        container.appendChild(input);
+    });
+    document.getElementById('bulkPdfForm').submit();
 }
 </script>
 @endsection
