@@ -268,13 +268,11 @@ Marksheet Generate
                                 </tbody>
                             </table>
 @if(!empty($hideForMaxRule))
-    <div class="alert alert-warning col-12">
-        Result not available: this student has marks in {{ $studentMarkedSubjects }} subject(s), which is less than the class maximum of {{ $maxMarkedSubjects }} subject(s) for this exam.
-        <div class="mt-2">
-            <a href="{{ url()->previous() }}" class="btn btn-success btn-sm">Go Back</a>
-        </div>
+    <div class="alert alert-warning col-12 d-print-none">
+        Notice: this student has marks in {{ $studentMarkedSubjects }} subject(s), while class maximum is {{ $maxMarkedSubjects }} for this exam.
+        Transcript is shown with available marks.
     </div>
-@else
+@endif
 @php
     $isFeatureWise = isset($examDetails) && $examDetails->passingSystem == 1;
     $finalLetterGrade = '-';
@@ -549,9 +547,9 @@ Marksheet Generate
                         $mcqPercent       = ($fullMCQ > 0 && $objectMarks !== null)   ? ($objectMarks / $fullMCQ) * 100 : null;
                         $practicalPercent = ($fullPractical > 0 && $parcticalMarks !== null) ? ($parcticalMarks / $fullPractical) * 100 : null;
 
-                        $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $cqPercent)->where('maxMark', '>=', $cqPercent)->first() : null;
-                        $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $mcqPercent)->where('maxMark', '>=', $mcqPercent)->first() : null;
-                        $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::where('minMark', '<=', $practicalPercent)->where('maxMark', '>=', $practicalPercent)->first() : null;
+                        $cqGradeRow = $cqPercent !== null ? \App\Models\GradeList::forScore((float)$cqPercent) : null;
+                        $mcqGradeRow = $mcqPercent !== null ? \App\Models\GradeList::forScore((float)$mcqPercent) : null;
+                        $practicalGradeRow = $practicalPercent !== null ? \App\Models\GradeList::forScore((float)$practicalPercent) : null;
 
                         $cqGrade = $cqGradeRow ? $cqGradeRow->gradeName : '-';
                         $mcqGrade = $mcqGradeRow ? $mcqGradeRow->gradeName : '-';
@@ -560,9 +558,9 @@ Marksheet Generate
                         $totalMarks = null; $grade = '-'; $gradePoint = null;
                         if($hasAnyRow){
                             $totalMarks     = ($subjectMarks ?: 0) + ($objectMarks ?: 0) + ($parcticalMarks ?: 0);
-                            $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)
-                                ->where('maxMark', '>=', $totalMarks)
-                                ->first();
+                            $optionalFullMark = ((float)$fullCQ + (float)$fullMCQ + (float)$fullPractical);
+                            $optionalPercent = $optionalFullMark > 0 ? (($totalMarks / $optionalFullMark) * 100) : null;
+                            $gradeRow = $optionalPercent !== null ? \App\Models\GradeList::forScore((float)$optionalPercent) : null;
                             $grade      = $gradeRow ? $gradeRow->gradeName : '-';
                             $gradePoint = $gradeRow ? (float)$gradeRow->gradePoint : null;
                             // accumulate optional total for final Total Marks display
@@ -641,7 +639,9 @@ Marksheet Generate
                 $objectMarks    = is_numeric($ckMark->objectMarks) ? $ckMark->objectMarks : 0;
                 $parcticalMarks = is_numeric($ckMark->practicalMarks) ? $ckMark->practicalMarks : 0;
                 $totalMarks     = $subjectMarks + $objectMarks + $parcticalMarks;
-                $gradeRow = \App\Models\GradeList::where('minMark', '<=', $totalMarks)->where('maxMark', '>=', $totalMarks)->first();
+                $optionalFullMark = (float)($subjectDetails->CQ ?? 0) + (float)($subjectDetails->MCQ ?? 0) + (float)($subjectDetails->Practical ?? 0);
+                $optionalPercent = $optionalFullMark > 0 ? (($totalMarks / $optionalFullMark) * 100) : null;
+                $gradeRow = $optionalPercent !== null ? \App\Models\GradeList::forScore((float)$optionalPercent) : null;
                 $optionalPoint = $gradeRow ? $gradeRow->gradePoint : 0;
             }
         }
@@ -662,9 +662,7 @@ Marksheet Generate
         $finalGradePoint = '0.00';
     } elseif(count($mainGradePoints) > 0) {
         // Find letter grade by average point
-        $gradeListRow = \App\Models\GradeList::where('gradePoint', '<=', $finalGradePoint)
-            ->orderBy('gradePoint', 'desc')
-            ->first();
+        $gradeListRow = \App\Models\GradeList::forGpa((float)$finalGradePoint);
         $finalLetterGrade = $gradeListRow ? $gradeListRow->gradeName : '-';
     } else {
         $finalLetterGrade = '-';
@@ -690,8 +688,6 @@ Marksheet Generate
         @endforeach
     </ul>
 </div>
-@endif
-
 @endif
 
                             

@@ -371,6 +371,7 @@ class MarksheetController extends Controller
         $classId   = $request->get('classId');
         $sessionId = $request->get('sessionId');
         $sectionId = $request->get('sectionId'); // group/section
+        $departmentId = $request->get('departmentId');
 
         $exam      = $examId ? Exam::find($examId) : null;
         $isFeatureWise = $exam && $exam->passingSystem == 1; // same logic as single marksheet
@@ -392,9 +393,24 @@ class MarksheetController extends Controller
             if($sectionId){ $marksBaseQuery->where('groupId',$sectionId); }
 
             $studentIds = $marksBaseQuery->distinct()->pluck('studentId');
-            $students = newAdmission::whereIn('id',$studentIds)->get();
+            $students = newAdmission::whereIn('id',$studentIds)
+                ->when($departmentId, function($q) use ($departmentId){
+                    return $q->where('departmentName', (int)$departmentId);
+                })
+                ->get();
+            $filteredStudentIds = $students->pluck('id');
             // Determine active subjects for this class/session/section/exam from marks present
-            $activeSubjectIds = $marksBaseQuery->distinct()->pluck('subjectId')->map(fn($v) => (int)$v)->all();
+            $activeSubjectIds = Marksheet::where('examId',$examId)
+                ->where('classId',$classId)
+                ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
+                ->when($departmentId, function($q) use ($filteredStudentIds){
+                    return $q->whereIn('studentId', $filteredStudentIds);
+                })
+                ->distinct()
+                ->pluck('subjectId')
+                ->map(fn($v) => (int)$v)
+                ->all();
             $studentsLoaded = true;
             $maxMarkedSubjects = 0;
 
@@ -476,8 +492,10 @@ class MarksheetController extends Controller
                                 $componentGrades[$key] = $row ? $row->gradeName : '-';
                             }
                         }
-                        // Overall grade (by total marks)
-                        $gradeRow = GradeList::forScore($total);
+                        // Overall grade (by normalized percentage of subject full marks)
+                        $subjectFullMark = ((float)$fullCQ + (float)$fullMCQ + (float)$fullPR);
+                        $totalPercent = $subjectFullMark > 0 ? (($total / $subjectFullMark) * 100) : null;
+                        $gradeRow = $totalPercent !== null ? GradeList::forScore($totalPercent) : null;
                         $overallGrade = $gradeRow ? $gradeRow->gradeName : '-';
                         $overallPoint = $gradeRow ? $gradeRow->gradePoint : 0;
                         // Feature-wise fail override
@@ -737,6 +755,7 @@ class MarksheetController extends Controller
             'classId' => $classId,
             'sessionId' => $sessionId,
             'sectionId' => $sectionId,
+            'departmentId' => $departmentId,
             'studentsLoaded' => $studentsLoaded,
             'exam' => $exam,
         ]);
@@ -745,14 +764,30 @@ class MarksheetController extends Controller
     public function generateMarksheet(Request $requ){
         // return $requ->all();
         $config = ServerConfig::first(); 
+        $examId = (int)$requ->examId;
+        $stdIdInput = trim((string)($requ->stdId ?? $requ->studentId ?? $requ->id ?? ''));
 
-        $student = newAdmission::where('stdId', $requ->stdId)
-        ->with(['marksheet'])
-        ->first();
+        $studentQuery = newAdmission::query();
+        if ($stdIdInput !== '') {
+            $studentQuery->where(function($q) use ($stdIdInput){
+                $q->where('stdId', $stdIdInput)
+                  ->orWhereRaw('TRIM(stdId) = ?', [$stdIdInput]);
+                if (ctype_digit($stdIdInput)) {
+                    $q->orWhere('id', (int)$stdIdInput);
+                }
+            });
+        } else {
+            $studentQuery->whereRaw('1 = 0');
+        }
+
+        $student = $studentQuery
+            ->with(['marksheet' => function($q) use ($examId){
+                $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
+            }])
+            ->first();
 
         // Apply classwise max-subject rule to individual page
         $maxMarkedSubjects = 0; $studentMarkedSubjects = 0; $hideForMaxRule = false;
-        $examId = $requ->examId;
         if ($student && $examId) {
             $classId = $student->className ?? null;
             $sessionId = $student->sessName ?? null;
@@ -878,6 +913,7 @@ class MarksheetController extends Controller
         $classId   = $request->get('classId');
         $sessionId = $request->get('sessionId');
         $sectionId = $request->get('sectionId');
+        $departmentId = $request->get('departmentId');
 
         $students = collect();
         $studentsLoaded = false;
@@ -885,7 +921,11 @@ class MarksheetController extends Controller
             $q = newAdmission::query()->where('className', (int)$classId);
             if ($sessionId) { $q->where('sessName', (int)$sessionId); }
             if ($sectionId) { $q->where('sectionName', (int)$sectionId); }
-            $students = $q->orderBy('rollNumber','ASC')->orderBy('id','ASC')->get();
+            if ($departmentId) { $q->where('departmentName', (int)$departmentId); }
+            $students = $q
+                ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+                ->orderBy('id','ASC')
+                ->get();
             $studentsLoaded = true;
         }
 
@@ -894,6 +934,7 @@ class MarksheetController extends Controller
             'classId' => $classId,
             'sessionId' => $sessionId,
             'sectionId' => $sectionId,
+            'departmentId' => $departmentId,
             'students' => $students,
             'studentsLoaded' => $studentsLoaded,
         ]);

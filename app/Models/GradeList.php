@@ -9,6 +9,36 @@ class GradeList extends Model
 {
     use HasFactory;
 
+    private static function virtualGrade(string $gradeName, float $gradePoint): self
+    {
+        $row = new self();
+        $row->gradeName = $gradeName;
+        $row->gradePoint = $gradePoint;
+        return $row;
+    }
+
+    private static function fallbackForScore(float $score): self
+    {
+        if ($score >= 80) return self::virtualGrade('A+', 5.00);
+        if ($score >= 70) return self::virtualGrade('A', 4.00);
+        if ($score >= 60) return self::virtualGrade('A-', 3.50);
+        if ($score >= 50) return self::virtualGrade('B', 3.00);
+        if ($score >= 40) return self::virtualGrade('C', 2.00);
+        if ($score >= 33) return self::virtualGrade('D', 1.00);
+        return self::virtualGrade('F', 0.00);
+    }
+
+    private static function fallbackForGpa(float $gpa): self
+    {
+        if ($gpa >= 5.00) return self::virtualGrade('A+', 5.00);
+        if ($gpa >= 4.00) return self::virtualGrade('A', 4.00);
+        if ($gpa >= 3.50) return self::virtualGrade('A-', 3.50);
+        if ($gpa >= 3.00) return self::virtualGrade('B', 3.00);
+        if ($gpa >= 2.00) return self::virtualGrade('C', 2.00);
+        if ($gpa >= 1.00) return self::virtualGrade('D', 1.00);
+        return self::virtualGrade('F', 0.00);
+    }
+
     /**
      * Find grade row for a given score (0-100) using minMark/maxMark.
      */
@@ -24,7 +54,7 @@ class GradeList extends Model
                 return $row;
             }
         }
-        return null;
+        return self::fallbackForScore($scoreF);
     }
 
     /**
@@ -52,7 +82,7 @@ class GradeList extends Model
                 }
             }
         }
-        return $candidate;
+        return $candidate ?: self::fallbackForGpa($gpaF);
     }
 
     public static function letterForScore(float $score): ?string

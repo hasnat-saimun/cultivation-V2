@@ -16,13 +16,21 @@ class PlacementController extends Controller
             'classId' => $request->input('classId'),
             'groupId' => $request->input('groupId'),
             'examId' => $request->input('examId'),
+            'departmentId' => $request->input('departmentId'),
         ];
 
         $query = Placement::query();
-        foreach ($filters as $key => $value) {
+        foreach (['sessionId', 'classId', 'groupId', 'examId'] as $key) {
+            $value = $filters[$key] ?? null;
             if (!empty($value)) {
                 $query->where($key, $value);
             }
+        }
+        if (!empty($filters['departmentId'])) {
+            $studentIds = newAdmission::query()
+                ->where('departmentName', (int)$filters['departmentId'])
+                ->pluck('id');
+            $query->whereIn('studentId', $studentIds);
         }
         $placements = $query->orderByDesc('gpa')->orderByDesc('totalMarks')->orderBy('position')->paginate(50);
 
@@ -36,12 +44,14 @@ class PlacementController extends Controller
             'classId' => 'required',
             'examId' => 'required',
             'groupId' => 'nullable',
+            'departmentId' => 'nullable',
         ]);
 
         $sessionId = (string) $request->input('sessionId');
         $classId = (string) $request->input('classId');
         $groupId = $request->input('groupId') ? (string) $request->input('groupId') : null;
         $examId = (string) $request->input('examId');
+        $departmentId = $request->input('departmentId') ? (int)$request->input('departmentId') : null;
 
         $marksQuery = Marksheet::query()
             ->where('sessionId', $sessionId)
@@ -50,6 +60,12 @@ class PlacementController extends Controller
 
         if ($groupId !== null) {
             $marksQuery->where('groupId', $groupId);
+        }
+        if ($departmentId !== null) {
+            $studentIds = newAdmission::query()
+                ->where('departmentName', $departmentId)
+                ->pluck('id');
+            $marksQuery->whereIn('studentId', $studentIds);
         }
 
         $marks = $marksQuery->get();
@@ -60,6 +76,12 @@ class PlacementController extends Controller
             ->where('classId', $classId)
             ->where('examId', $examId);
         if ($groupId !== null) { $wipeQuery->where('groupId', $groupId); }
+        if ($departmentId !== null) {
+            $wipeStudentIds = newAdmission::query()
+                ->where('departmentName', $departmentId)
+                ->pluck('id');
+            $wipeQuery->whereIn('studentId', $wipeStudentIds);
+        }
         $wipeQuery->delete();
 
         // Group marks by studentId and compute GPA, totals
@@ -134,6 +156,7 @@ class PlacementController extends Controller
             'classId' => $classId,
             'groupId' => $groupId,
             'examId' => $examId,
+            'departmentId' => $departmentId,
         ])->with('success', 'Placements recalculated');
     }
 }

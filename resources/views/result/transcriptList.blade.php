@@ -53,6 +53,16 @@ Transcript Generator
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Department</label>
+                    <select name="departmentId" class="form-control">
+                        <option value="">All</option>
+                        @php $departmentList = \App\Models\Department::orderBy('id','ASC')->get(); @endphp
+                        @foreach($departmentList as $dept)
+                            <option value="{{ $dept->id }}" {{ $dept->id == request('departmentId') ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <button class="btn btn-success w-100">Load Students</button>
                 </div>
                 @if($studentsLoaded)
@@ -91,13 +101,13 @@ Transcript Generator
                     <tbody>
                         @forelse($students as $stu)
                             <tr>
-                                <td><input type="checkbox" class="ck_row" value="{{ $stu->stdId }}" data-roll="{{ $stu->rollNumber }}"></td>
+                                <td><input type="checkbox" class="ck_row" value="{{ $stu->stdId ?: $stu->id }}" data-roll="{{ $stu->rollNumber }}"></td>
                                 <td>{{ $stu->rollNumber }}</td>
                                 <td>{{ $stu->stdId }}</td>
                                 <td>{{ $stu->fullName }} {{ $stu->sureName }}</td>
                                 <td>
                                     <a class="btn btn-sm btn-outline-primary" target="_blank"
-                                       href="{{ route('marksheetGenerate', ['stdId' => $stu->stdId, 'examId' => $examId]) }}">Open Transcript</a>
+                                        href="{{ route('marksheetGenerate', ['stdId' => ($stu->stdId ?: $stu->id), 'studentId' => $stu->id, 'examId' => $examId]) }}">Open Transcript</a>
                                 </td>
                             </tr>
                         @empty

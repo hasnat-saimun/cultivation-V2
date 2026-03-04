@@ -8,12 +8,13 @@
         <div class="bg-green-100 text-green-800 p-2 rounded mb-3">{{ session('success') }}</div>
     @endif
 
-    <form method="POST" action="{{ route('placements.recalculate') }}" class="grid grid-cols-1 md:grid-cols-5 gap-3 mb-6">
+    <form method="POST" action="{{ route('placements.recalculate') }}" class="grid grid-cols-1 md:grid-cols-6 gap-3 mb-6">
         @csrf
         <input type="text" name="sessionId" value="{{ old('sessionId', $filters['sessionId'] ?? '') }}" placeholder="Session ID" class="border rounded p-2" />
         <input type="text" name="classId" value="{{ old('classId', $filters['classId'] ?? '') }}" placeholder="Class ID" class="border rounded p-2" />
         <input type="text" name="groupId" value="{{ old('groupId', $filters['groupId'] ?? '') }}" placeholder="Group ID (optional)" class="border rounded p-2" />
         <input type="text" name="examId" value="{{ old('examId', $filters['examId'] ?? '') }}" placeholder="Exam ID" class="border rounded p-2" />
+        <input type="text" name="departmentId" value="{{ old('departmentId', $filters['departmentId'] ?? '') }}" placeholder="Department ID (optional)" class="border rounded p-2" />
         <button type="submit" class="bg-blue-600 text-white rounded p-2">Recalculate</button>
     </form>
 

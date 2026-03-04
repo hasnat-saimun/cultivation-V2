@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\ResultArchive;
 use App\Models\newAdmission;
 use App\Models\Exam;
+use App\Models\Department;
 
 class ResultArchiveController extends Controller
 {
@@ -51,6 +52,12 @@ class ResultArchiveController extends Controller
         if ($request->filled('exam_id')) {
             $query->where('exam_id', $request->input('exam_id'));
         }
+        if ($request->filled('departmentId')) {
+            $departmentId = (int)$request->input('departmentId');
+            $query->whereHas('student', function($q) use ($departmentId){
+                $q->where('departmentName', $departmentId);
+            });
+        }
         $archives = $query->orderByRaw('CAST(old_roll as UNSIGNED) ASC')->get();
 
         // For filter dropdowns, load all possible values
@@ -61,10 +68,11 @@ class ResultArchiveController extends Controller
         $classNames = \App\Models\classManage::whereIn('id', $classIds)->pluck('className', 'id');
         $sessionNames = \App\Models\sessionManage::whereIn('id', $sessionIds)->pluck('session', 'id');
         $sectionNames = \App\Models\sectionManage::whereIn('id', $sectionIds)->pluck('section', 'id');
+        $departmentNames = Department::orderBy('id','ASC')->pluck('departmentName', 'id');
 
         $examList = Exam::pluck('examName', 'id');
 
-        return view('result.resultArchive', compact('archives', 'classNames', 'sessionNames', 'sectionNames', 'examList'));
+        return view('result.resultArchive', compact('archives', 'classNames', 'sessionNames', 'sectionNames', 'departmentNames', 'examList'));
     }
 
 }

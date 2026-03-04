@@ -136,6 +136,16 @@ All Marksheet
                     </select>
                 </div>
                 <div class="col-md-2">
+                    <label class="form-label">Department</label>
+                    <select name="departmentId" class="form-control">
+                        <option value="">All</option>
+                        @php $departmentList = \App\Models\Department::orderBy('id','ASC')->get(); @endphp
+                        @foreach($departmentList as $dept)
+                            <option value="{{ $dept->id }}" {{ $dept->id == request('departmentId') ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-2">
                     <button class="btn btn-success w-100">Load Results</button>
                 </div>
                 <div class="col-md-2">
@@ -424,13 +434,21 @@ All Marksheet
                             </tr>
                             @foreach($group as $i=>$res)
                                 @php $rowByName = []; if(isset($res['subjects'])){ foreach($res['subjects'] as $sr){ $rowByName[$sr['name']] = $sr; } } @endphp
-                                <tr class="table-danger">
+                                <tr>
                                     <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                     <td>{{ $res['student']->rollNumber }}</td>
                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                     @foreach($visibleSubjects as $sub)
-                                        @php $cell = $rowByName[$sub->subjectName] ?? null; @endphp
-                                        <td class="subject-td">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                        @php
+                                            $cell = $rowByName[$sub->subjectName] ?? null;
+                                            $cellLetter = $cell['grade'] ?? null;
+                                            $cellPoint  = $cell['gradePoint'] ?? null;
+                                            $cellIsFail = $cell && (
+                                                $cellLetter === 'F' ||
+                                                (is_numeric($cellPoint) && (float)$cellPoint <= 0)
+                                            );
+                                        @endphp
+                                        <td class="subject-td {{ $cellIsFail ? 'text-danger fw-bold' : '' }}">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
                                     @endforeach
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>
@@ -603,7 +621,7 @@ All Marksheet
                                     <th><b>GPA</b></th>
                                 </tr>
                                 @foreach($group as $i=>$res)
-                                    <tr class="table-danger">
+                                    <tr>
                                         <td>{{ $res['student']->rollNumber }}</td>
                                         @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
                                         <td>{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
@@ -613,8 +631,13 @@ All Marksheet
                                             @if(isset($res['subjectsCompact']) && count($res['subjectsCompact'])>0)
                                                 <ul class="mb-0">
                                                     @foreach($res['subjectsCompact'] as $s)
+                                                        @php
+                                                            $subLetter = $s['grade'] ?? null;
+                                                            $subPoint  = $s['gradePoint'] ?? null;
+                                                            $subIsFail = ($subLetter === 'F') || (is_numeric($subPoint) && (float)$subPoint <= 0);
+                                                        @endphp
                                                         <li>
-                                                            <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
+                                                            <span class="{{ $subIsFail ? 'text-danger fw-bold' : '' }}"><b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}</span>
                                                         </li>
                                                     @endforeach
                                                 </ul>

@@ -86,6 +86,20 @@ Attendent Sheet
                                             @endif
                                         </select>
                                     </div>
+                                    <div class="col-12 form-group">
+                                        <label>Department</label>
+                                        <select class="select2" name="departmentId">
+                                            <option value="">All</option>
+                                            @php
+                                                $departments = \App\Models\Department::orderBy('id','ASC')->get();
+                                            @endphp
+                                            @if(!empty($departments))
+                                                @foreach($departments as $dept)
+                                                <option value="{{ $dept->id }}">{{ $dept->departmentName }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
                                     <div class="col-12 form-group mg-t-8">
                                         <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</button>
                                     </div>

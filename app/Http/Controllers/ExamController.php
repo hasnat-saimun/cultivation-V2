@@ -102,7 +102,13 @@ class ExamController extends Controller
     }
 
     public function getAdmitCard(Request $requ){
-        $studentList = newAdmission::where(['sessName'=>$requ->sessionId,'sectionName'=>$requ->groupId,'className'=>$requ->classId])->get();
+        $studentList = newAdmission::where('sessName', $requ->sessionId)
+            ->where('sectionName', $requ->groupId)
+            ->where('className', $requ->classId)
+            ->when($requ->departmentId, function($q) use ($requ){
+                return $q->where('departmentName', (int)$requ->departmentId);
+            })
+            ->get();
         return view('result.get-admitCard',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
     }
 
@@ -111,7 +117,13 @@ class ExamController extends Controller
     }
 
     public function getAttendSheet(Request $requ){
-        $studentList = newAdmission::where(['sessName'=>$requ->sessionId,'sectionName'=>$requ->groupId,'className'=>$requ->classId])->get();
+        $studentList = newAdmission::where('sessName', $requ->sessionId)
+            ->where('sectionName', $requ->groupId)
+            ->where('className', $requ->classId)
+            ->when($requ->departmentId, function($q) use ($requ){
+                return $q->where('departmentName', (int)$requ->departmentId);
+            })
+            ->get();
         return view('result.getAttendSheet',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
     }
 }
