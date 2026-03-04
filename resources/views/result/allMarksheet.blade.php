@@ -183,6 +183,19 @@ All Marksheet
                 // Determine if only failed students are present
                 $onlyFailed = $hasFailSection && !$hasPassSection && !$hasIncompleteSection;
             @endphp
+
+            @php
+                $optionalSubjectNameMap = [];
+                $allRowsForType = array_merge($passResults ?? [], $failResults ?? [], $incompleteResults ?? [], $passResultsCompact ?? [], $failResultsCompact ?? [], $incompleteResultsCompact ?? []);
+                foreach($allRowsForType as $row){
+                    foreach(($row['subjects'] ?? []) as $sr){
+                        if(($sr['type'] ?? null) === 'Optional' && !empty($sr['name'])){ $optionalSubjectNameMap[$sr['name']] = true; }
+                    }
+                    foreach(($row['subjectsCompact'] ?? []) as $sr){
+                        if(($sr['type'] ?? null) === 'Optional' && !empty($sr['name'])){ $optionalSubjectNameMap[$sr['name']] = true; }
+                    }
+                }
+            @endphp
             @if($onlyFailed)
                 @php
                     // Build a single-line summary at the very top
@@ -323,10 +336,11 @@ All Marksheet
                             @if(count($visibleSubjects) > 0)
                                 @foreach($visibleSubjects as $sub)
                                     @php
-                                        $words = preg_split('/\s+/', trim($sub->subjectName));
+                                        $subjectTitle = ($sub->subjectName ?? '').(isset($optionalSubjectNameMap[$sub->subjectName ?? '']) ? ' (4th)' : '');
+                                        $words = preg_split('/\s+/', trim($subjectTitle));
                                         $subjectDisplay = (count($words) > 3)
                                             ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
-                                            : $sub->subjectName;
+                                            : $subjectTitle;
                                     @endphp
                                     @php $isDual = (count($words) > 3); @endphp
                                     <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
@@ -420,10 +434,11 @@ All Marksheet
                                 @if(count($visibleSubjects) > 0)
                                     @foreach($visibleSubjects as $sub)
                                         @php
-                                            $words = preg_split('/\s+/', trim($sub->subjectName));
+                                            $subjectTitle = ($sub->subjectName ?? '').(isset($optionalSubjectNameMap[$sub->subjectName ?? '']) ? ' (4th)' : '');
+                                            $words = preg_split('/\s+/', trim($subjectTitle));
                                             $subjectDisplay = (count($words) > 3)
                                                 ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
-                                                : $sub->subjectName;
+                                                : $subjectTitle;
                                         @endphp
                                         @php $isDual = (count($words) > 3); @endphp
                                         <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
@@ -494,10 +509,11 @@ All Marksheet
                             @if(count($visibleSubjects) > 0)
                                 @foreach($visibleSubjects as $sub)
                                     @php
-                                        $words = preg_split('/\s+/', trim($sub->subjectName));
+                                        $subjectTitle = ($sub->subjectName ?? '').(isset($optionalSubjectNameMap[$sub->subjectName ?? '']) ? ' (4th)' : '');
+                                        $words = preg_split('/\s+/', trim($subjectTitle));
                                         $subjectDisplay = (count($words) > 3)
                                             ? implode(' ', array_slice($words, 3)).'<br>'.implode(' ', array_slice($words, 0, 3))
-                                            : $sub->subjectName;
+                                            : $subjectTitle;
                                     @endphp
                                     @php $isDual = (count($words) > 3); @endphp
                                     <th colspan="1" class="subject-th {{ $isDual ? 'dual' : '' }}"><span class="v-text"><b>{!! $subjectDisplay !!}</b></span></th>
@@ -554,7 +570,7 @@ All Marksheet
                                             <ul class="mb-0">
                                                 @foreach($res['subjectsCompact'] as $s)
                                                     <li>
-                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
+                                                        <b>{{ $s['name'] }}{{ (($s['type'] ?? '') === 'Optional') ? ' (4th)' : '' }}</b>: TOTAL {{ $s['total'] }}
                                                     </li>
                                                 @endforeach
                                             </ul>
@@ -648,7 +664,7 @@ All Marksheet
                                                             $subIsFail = ($subLetter === 'F') || (is_numeric($subPoint) && (float)$subPoint <= 0);
                                                         @endphp
                                                         <li>
-                                                            <span class="{{ $subIsFail ? 'text-danger fw-bold' : '' }}"><b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}</span>
+                                                            <span class="{{ $subIsFail ? 'text-danger fw-bold' : '' }}"><b>{{ $s['name'] }}{{ (($s['type'] ?? '') === 'Optional') ? ' (4th)' : '' }}</b>: TOTAL {{ $s['total'] }}</span>
                                                         </li>
                                                     @endforeach
                                                 </ul>
@@ -692,7 +708,7 @@ All Marksheet
                                             <ul class="mb-0">
                                                 @foreach($res['subjectsCompact'] as $s)
                                                     <li>
-                                                        <b>{{ $s['name'] }}</b>: TOTAL {{ $s['total'] }}
+                                                        <b>{{ $s['name'] }}{{ (($s['type'] ?? '') === 'Optional') ? ' (4th)' : '' }}</b>: TOTAL {{ $s['total'] }}
                                                     </li>
                                                 @endforeach
                                             </ul>
