@@ -156,7 +156,6 @@
                         <th>Class</th><td>:</td><td>{{ $className }}</td>
                         <th>Section</th><td>:</td><td>{{ $sectionName }}</td>
                     </tr>
-                    <tr><th>Merit Position</th><td>:</td><td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '-' }}</td></tr>
                 </tbody>
             </table>
 

@@ -12,6 +12,7 @@ use App\Models\ResultPublish;
 use App\Models\Subject;
 use App\Models\Exam;
 use App\Models\ReligiousSubjectDefault;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class MarksheetController extends Controller
 {
@@ -997,7 +998,7 @@ class MarksheetController extends Controller
         }
 
         $config = ServerConfig::first();
-        $pdf = \PDF::loadView('result.bulk-transcript-pdf', [
+        $pdf = Pdf::loadView('result.bulk-transcript-pdf', [
             'exam' => $exam,
             'transcripts' => $transcripts,
             'config' => $config,
