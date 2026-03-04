@@ -12,7 +12,8 @@ use App\Models\ResultPublish;
 use App\Models\Subject;
 use App\Models\Exam;
 use App\Models\ReligiousSubjectDefault;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class MarksheetController extends Controller
 {
@@ -998,13 +999,26 @@ class MarksheetController extends Controller
         }
 
         $config = ServerConfig::first();
-        $pdf = Pdf::loadView('result.bulk-transcript-pdf', [
+        $html = view('result.bulk-transcript-pdf', [
             'exam' => $exam,
             'transcripts' => $transcripts,
             'config' => $config,
-        ])->setPaper('a4', 'portrait');
+        ])->render();
 
-        return $pdf->download('bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf');
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $fileName = 'bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf';
+        return response($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+        ]);
     }
 
     private function resolveIslamReligiousSubjectId(?int $classId = null): int
