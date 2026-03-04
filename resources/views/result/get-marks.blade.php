@@ -108,9 +108,13 @@ Get Mark
                             $objectMarks = $marksData ? $marksData->objectMarks : "";
                             $practicalMarks = $marksData ? $marksData->practicalMarks : "";
                             $currentUserId = session('cultivationAdmin');
-                            $readonlyByOther = ($marksData && $marksData->teacher_id && $marksData->teacher_id != $currentUserId);
+                            $readonlyByOther = (!empty($isTeacherAdmin) && $marksData && $marksData->teacher_id && $marksData->teacher_id != $currentUserId);
                             $readonly = $readonlyByOther || $isReadOnly;
-                            $enteredBy = ($marksData && $marksData->teacher_id) ? optional(\App\Models\CultivationAdmin::find($marksData->teacher_id))->adminName : null;
+                            $enteredById = $marksData ? ($marksData->entered_by ?? $marksData->teacher_id) : null;
+                            $enteredBy = $enteredById ? optional(\App\Models\CultivationAdmin::find($enteredById))->adminName : null;
+                            $enteredRole = $marksData->entered_by_role ?? ($marksData && $marksData->teacher_id ? 'teacher' : null);
+                            $updatedBy = ($marksData && $marksData->updated_by) ? optional(\App\Models\CultivationAdmin::find($marksData->updated_by))->adminName : null;
+                            $updatedRole = $marksData->updated_by_role ?? null;
                         @endphp
                         <input type="hidden" name="studentId[]" value="{{ $std->id }}">
                         <tr>
@@ -121,7 +125,10 @@ Get Mark
                                 <td>
                                     <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
-                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                        @if($updatedBy)
+                                            <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                        @endif
                                     @endif
                                 </td>
                             @endif
@@ -129,7 +136,10 @@ Get Mark
                                 <td>
                                     <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
-                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                        @if($updatedBy)
+                                            <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                        @endif
                                     @endif
                                 </td>
                             @endif
@@ -137,7 +147,10 @@ Get Mark
                                 <td>
                                     <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
-                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                        <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                        @if($updatedBy)
+                                            <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                        @endif
                                     @endif
                                 </td>
                             @endif
@@ -146,19 +159,28 @@ Get Mark
                             <td>
                                 <input type="text" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
-                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                    @if($updatedBy)
+                                        <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                    @endif
                                 @endif
                             </td>
                             <td>
                                 <input type="text" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
-                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                    @if($updatedBy)
+                                        <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                    @endif
                                 @endif
                             </td>
                             <td>
                                 <input type="text" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
-                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}</small>
+                                    <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
+                                    @if($updatedBy)
+                                        <br><small class="text-muted">Last updated: {{ $updatedBy }}{{ $updatedRole ? ' ('.ucfirst($updatedRole).')' : '' }}</small>
+                                    @endif
                                 @endif
                             </td>
                             @endif

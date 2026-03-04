@@ -116,9 +116,9 @@ All Marksheet
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label">Session</label>
-                    <select name="sessionId" class="form-control">
-                        <option value="">All</option>
+                    <label class="form-label">Session *</label>
+                    <select name="sessionId" class="form-control" required>
+                        <option value="">Select</option>
                         @php $sessionList = \App\Models\sessionManage::orderBy('id','DESC')->get(); @endphp
                         @foreach($sessionList as $s)
                             <option value="{{ $s->id }}" {{ $s->id == request('sessionId') ? 'selected' : '' }}>{{ $s->session ?? ('Session-'.$s->id) }}</option>
@@ -164,11 +164,11 @@ All Marksheet
             </form>
         </div>
 
-        @if(!$examId || !$classId)
-            <div class="alert alert-info container">Please select required filters (Exam & Class) to view results.</div>
+        @if(!$examId || !$classId || !$sessionId)
+            <div class="alert alert-info container">Please select required filters (Exam, Class & Session) to view results.</div>
         @endif
 
-        @if($examId && $classId)
+        @if($examId && $classId && $sessionId)
         @php
             $hasPassSection = !$compactMode ? (count($passResults ?? []) > 0) : (count($passResultsCompact ?? []) > 0);
             $hasFailSection = !$compactMode ? (count($failResults ?? []) > 0) : (count($failResultsCompact ?? []) > 0);
@@ -447,8 +447,19 @@ All Marksheet
                                                 $cellLetter === 'F' ||
                                                 (is_numeric($cellPoint) && (float)$cellPoint <= 0)
                                             );
+                                            $failedFeatures = [];
+                                            if($cellIsFail && $cell){
+                                                if(!empty($cell['hasCQFeature']) && (($cell['cqGrade'] ?? null) === 'F')){ $failedFeatures[] = 'cq'; }
+                                                if(!empty($cell['hasMCQFeature']) && (($cell['mcqGrade'] ?? null) === 'F')){ $failedFeatures[] = 'mcq'; }
+                                                if(!empty($cell['hasPracticalFeature']) && (($cell['prGrade'] ?? null) === 'F')){ $failedFeatures[] = 'pr'; }
+                                            }
                                         @endphp
-                                        <td class="subject-td {{ $cellIsFail ? 'text-danger fw-bold' : '' }}">{{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}</td>
+                                        <td class="subject-td {{ $cellIsFail ? 'text-danger fw-bold' : '' }}">
+                                            {{ ($cell && is_numeric($cell['total'])) ? $cell['total'] : '' }}
+                                            @if($cellIsFail && count($failedFeatures) > 0)
+                                                <small class="d-block" style="font-size:9px; line-height:1.1;">{{ implode('/', $failedFeatures) }}</small>
+                                            @endif
+                                        </td>
                                     @endforeach
                                     <td>{{ $res['totalMarks'] }}</td>
                                     <td>{{ $res['finalLetter'] }}</td>

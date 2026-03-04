@@ -206,6 +206,8 @@ class MarksheetController extends Controller
         $totalData = count($studentId);
         $x = 0;
         $skipped = 0;
+        $actorId = $user ? (int)$user->id : null;
+        $actorRole = ($user && $user->isTeacher()) ? 'teacher' : 'admin';
         while($x<$totalData){
             if($isOptionalSubject && !isset($allowedOptionalStudentIds[(int)$requ->studentId[$x]])){
                 $skipped++;
@@ -213,7 +215,7 @@ class MarksheetController extends Controller
                 continue;
             }
 
-            $chkData = Marksheet::where([
+            $existingMark = Marksheet::where([
                 'sessionId'=>$sessionId,
                 'classId'=>$requ->classId,
                 'studentId'=>$requ->studentId[$x],
@@ -222,14 +224,13 @@ class MarksheetController extends Controller
             ])->when($groupId, function($q) use ($groupId){
                 return $q->where('groupId',$groupId);
             })->first();
-            if(isset($chkData) && !empty($chkData)):
+            if(isset($existingMark) && !empty($existingMark)):
                 // If existing marks are entered by another teacher, do not overwrite
-                if($user && $user->isTeacher() && (int)$chkData->teacher_id !== (int)$user->id){
+                if($user && $user->isTeacher() && (int)$existingMark->teacher_id !== (int)$user->id){
                     $skipped++;
                     $x++;
                     continue;
                 }
-                $chkData->delete();
             endif;
             $totalMarks = 0;
             $hasAny = false;
@@ -252,7 +253,7 @@ class MarksheetController extends Controller
                 continue;
             }
 
-            $grade = GradeList::whereRaw("'$totalMarks' BETWEEN minMark AND maxMark")->first();
+            $grade = GradeList::forScore((float)$totalMarks);
             if(isset($grade) && !empty($grade)){
                 $gradePoint = $grade->gradePoint;
                 $laterGrade = $grade->gradeName;
@@ -260,7 +261,7 @@ class MarksheetController extends Controller
                 $gradePoint = 0.00;
                 $laterGrade = 'F';
             }
-            $marks = new Marksheet();
+            $marks = $existingMark ?: new Marksheet();
 
             $marks->studentId       = $requ->studentId[$x];
             $marks->classId         = $requ->classId;
@@ -274,7 +275,13 @@ class MarksheetController extends Controller
             $marks->totalMarks      = $totalMarks;
             $marks->laterGrade      = $laterGrade;
             $marks->gradePoint      = $gradePoint;
-            $marks->teacher_id      = $user ? (int)$user->id : null;
+            if(!$existingMark){
+                $marks->entered_by      = $actorId;
+                $marks->entered_by_role = $actorRole;
+            }
+            $marks->updated_by      = $actorId;
+            $marks->updated_by_role = $actorRole;
+            $marks->teacher_id      = $actorId;
             $marks->save();
 
             $x++;
@@ -385,11 +392,11 @@ class MarksheetController extends Controller
     $incompleteResults = [];
         $studentsLoaded = false;
 
-        if($examId && $classId){
+        if($examId && $classId && $sessionId){
             // Build marks query for the selected filters
             $marksBaseQuery = Marksheet::where('examId',$examId)
                 ->where('classId',$classId);
-            if($sessionId){ $marksBaseQuery->where('sessionId',$sessionId); }
+            $marksBaseQuery->where('sessionId',$sessionId);
             if($sectionId){ $marksBaseQuery->where('groupId',$sectionId); }
 
             $studentIds = $marksBaseQuery->distinct()->pluck('studentId');
@@ -402,7 +409,7 @@ class MarksheetController extends Controller
             // Determine active subjects for this class/session/section/exam from marks present
             $activeSubjectIds = Marksheet::where('examId',$examId)
                 ->where('classId',$classId)
-                ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                ->where('sessionId',$sessionId)
                 ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
                 ->when($departmentId, function($q) use ($filteredStudentIds){
                     return $q->whereIn('studentId', $filteredStudentIds);
@@ -428,7 +435,7 @@ class MarksheetController extends Controller
                 // Build a fresh query per student to avoid accumulating where clauses
                 $stuMarks = Marksheet::where('examId',$examId)
                     ->where('classId',$classId)
-                    ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
+                    ->where('sessionId',$sessionId)
                     ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
                     ->where('studentId',$stu->id)
                     ->get();
@@ -517,6 +524,9 @@ class MarksheetController extends Controller
                         'name' => $sub->subjectName,
                         'type' => $sub->subjectType,
                         'isReligious' => (int)($sub->isReligious ?? 0),
+                        'hasCQFeature' => ((float)$fullCQ > 0),
+                        'hasMCQFeature' => ((float)$fullMCQ > 0),
+                        'hasPracticalFeature' => ((float)$fullPR > 0),
                         'cq' => $cqDisplay,
                         'mcq' => $mcqDisplay,
                         'practical' => $prDisplay,
@@ -613,17 +623,7 @@ class MarksheetController extends Controller
             }
         }
 
-        // Filter to only include students who have marks in the maximum number of subjects
-        if ($studentsLoaded && isset($maxMarkedSubjects) && $maxMarkedSubjects > 0) {
-            $applyMaxFilter = function(array &$arr, int $max){
-                $arr = array_values(array_filter($arr, function($row) use ($max){
-                    return isset($row['markedSubjectsCount']) && ((int)$row['markedSubjectsCount'] === $max);
-                }));
-            };
-            $applyMaxFilter($passResults, $maxMarkedSubjects);
-            $applyMaxFilter($failResults, $maxMarkedSubjects);
-            $applyMaxFilter($incompleteResults, $maxMarkedSubjects);
-        }
+        // Keep all matched students; do not prune by max subject-count.
 
         // Skip subjects that have no data across the class (no rows in subjectWise)
         // Build active subject id list
@@ -1116,6 +1116,9 @@ class MarksheetController extends Controller
                 'name' => $g['name'],
                 'type' => $type,
                 'isReligious' => 0,
+                'hasCQFeature' => ((float)$fullCQ > 0),
+                'hasMCQFeature' => ((float)$fullMCQ > 0),
+                'hasPracticalFeature' => ((float)$fullPr > 0),
                 'paired' => true,
                 'paper1' => $paper1,
                 'paper2' => $paper2,
@@ -1145,6 +1148,9 @@ class MarksheetController extends Controller
                 $rr['paired'] = false;
                 $rr['paper1'] = null; $rr['paper2'] = null;
                 $rr['sourceIds'] = [(int)$r['id']];
+                $rr['hasCQFeature'] = ($fullCQ > 0);
+                $rr['hasMCQFeature'] = ($fullMCQ > 0);
+                $rr['hasPracticalFeature'] = ($fullPr > 0);
                 $rr['cqGrade'] = $cqPct!==null ? (GradeList::forScore($cqPct)->gradeName ?? '-') : '-';
                 $rr['mcqGrade'] = $mcqPct!==null ? (GradeList::forScore($mcqPct)->gradeName ?? '-') : '-';
                 $rr['prGrade'] = $prPct!==null ? (GradeList::forScore($prPct)->gradeName ?? '-') : '-';
