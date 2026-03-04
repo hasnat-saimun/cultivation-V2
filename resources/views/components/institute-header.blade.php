@@ -20,7 +20,7 @@
             $logoFile = $config->logo;
             $logoSrc = preg_match('~^https?://~i', $logoFile) ? $logoFile : $appBase.'/upload/image/cultivation/'.$logoFile;
         @endphp
-        <div class="me-3" style="flex:0 0 auto;">
+        <div class="me-3 text-center" style="flex:0 0 auto;">
             <img class="hdr-logo" src="{{ $logoSrc }}" alt="Institute Logo">
         </div>
     @endif

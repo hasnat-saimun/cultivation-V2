@@ -14,6 +14,7 @@ use App\Models\Exam;
 use App\Models\ReligiousSubjectDefault;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Illuminate\Support\Facades\Log;
 
 class MarksheetController extends Controller
 {
@@ -998,27 +999,52 @@ class MarksheetController extends Controller
             ];
         }
 
-        $config = ServerConfig::first();
-        $html = view('result.bulk-transcript-pdf', [
-            'exam' => $exam,
-            'transcripts' => $transcripts,
-            'config' => $config,
-        ])->render();
+        try {
+            @set_time_limit(180);
+            @ini_set('memory_limit', '512M');
 
-        $options = new Options();
-        $options->set('isRemoteEnabled', true);
-        $options->set('isHtml5ParserEnabled', true);
+            $config = ServerConfig::first();
+            $html = view('result.bulk-transcript-pdf', [
+                'exam' => $exam,
+                'transcripts' => $transcripts,
+                'config' => $config,
+            ])->render();
 
-        $dompdf = new Dompdf($options);
-        $dompdf->loadHtml($html, 'UTF-8');
-        $dompdf->setPaper('A4', 'portrait');
-        $dompdf->render();
+            $fileName = 'bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf';
 
-        $fileName = 'bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf';
-        return response($dompdf->output(), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
-        ]);
+            if (class_exists(Dompdf::class) && class_exists(Options::class)) {
+                $options = new Options();
+                $options->set('isRemoteEnabled', true);
+                $options->set('isHtml5ParserEnabled', true);
+
+                $dompdf = new Dompdf($options);
+                $dompdf->loadHtml($html, 'UTF-8');
+                $dompdf->setPaper('A4', 'portrait');
+                $dompdf->render();
+
+                return response($dompdf->output(), 200, [
+                    'Content-Type' => 'application/pdf',
+                    'Content-Disposition' => 'attachment; filename="'.$fileName.'"',
+                ]);
+            }
+
+            if (class_exists(\Barryvdh\DomPDF\Facade\Pdf::class)) {
+                $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+                return $pdf->download($fileName);
+            }
+
+            throw new \RuntimeException('No PDF engine available (Dompdf classes missing).');
+        } catch (\Throwable $e) {
+            Log::error('Bulk transcript PDF generation failed', [
+                'exam_id' => $examId,
+                'student_count' => count($transcripts),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return back()->with('error', 'PDF generation failed on server. Please contact admin.');
+        }
     }
 
     private function resolveIslamReligiousSubjectId(?int $classId = null): int
