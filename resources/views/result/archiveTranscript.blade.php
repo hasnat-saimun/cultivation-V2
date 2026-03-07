@@ -121,7 +121,7 @@ Archived Transcript
                         <tr>
                             <th>Merit Position</th>
                             <td>:</td>
-                            <td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '-' }}</td>
+                            <td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? str_pad((string)((int)$meritRank), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                         </tr>
                         <tr>
                             <th>Archived At</th>

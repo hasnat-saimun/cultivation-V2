@@ -16,6 +16,16 @@ class newAdmission extends Model
         return $this->hasMany(Marksheet::class, 'studentId', 'id');
     }
 
+    public function getRollNumberAttribute($value)
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+        return is_numeric($value)
+            ? str_pad((string)((int)$value), 2, '0', STR_PAD_LEFT)
+            : $value;
+    }
+
     protected $fillable = [
         'stdId',
         'fullName',

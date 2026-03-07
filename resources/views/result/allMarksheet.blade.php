@@ -423,7 +423,7 @@ All Marksheet
                                     <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                     <td class="fail-col">{{ $fails }}</td>
                                     @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                    <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
+                                    <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : (is_numeric($res['meritRank'] ?? null) ? str_pad((string)((int)$res['meritRank']), 2, '0', STR_PAD_LEFT) : '-') }}</td>
                                 </tr>
                             @endforeach
                             </tbody>
@@ -489,7 +489,7 @@ All Marksheet
                                             <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                             <td class="fail-col">{{ $fails }}</td>
                                             @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                            <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
+                                            <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : (is_numeric($res['meritRank'] ?? null) ? str_pad((string)((int)$res['meritRank']), 2, '0', STR_PAD_LEFT) : '-') }}</td>
                                         </tr>
                                     @endforeach
                                     </tbody>
@@ -618,7 +618,7 @@ All Marksheet
                                         <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                         <td class="fail-col">{{ $fails }}</td>
                                         @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                        <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                        <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                     </tr>
                                 @endforeach
                                 </tbody>
@@ -703,7 +703,7 @@ All Marksheet
                                                 <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                                 <td class="fail-col">{{ $fails }}</td>
                                                 @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                                <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                                <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                             </tr>
                                         @endforeach
                                         </tbody>
@@ -860,7 +860,7 @@ All Marksheet
                                     <tr>
                                         <td>{{ $res['student']->rollNumber }}</td>
                                         @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                        <td>{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
+                                        <td>{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : (is_numeric($res['meritRank'] ?? null) ? str_pad((string)((int)$res['meritRank']), 2, '0', STR_PAD_LEFT) : '-') }}</td>
                                         <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                         <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                         <td class="text-start">
@@ -911,7 +911,7 @@ All Marksheet
                                             <tr>
                                                 <td>{{ $res['student']->rollNumber }}</td>
                                                 @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                                <td>{{ $meritRankingMap[$rowKey] ?? ($res['meritRank'] ?? '-') }}</td>
+                                                <td>{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : (is_numeric($res['meritRank'] ?? null) ? str_pad((string)((int)$res['meritRank']), 2, '0', STR_PAD_LEFT) : '-') }}</td>
                                                 <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                                 <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                                 <td class="text-start">
@@ -1003,7 +1003,7 @@ All Marksheet
                                         <tr>
                                             <td>{{ $res['student']->rollNumber }}</td>
                                             @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                            <td>{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                            <td>{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                             <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                             <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                             <td class="text-start">
@@ -1059,7 +1059,7 @@ All Marksheet
                                                 <tr>
                                                     <td>{{ $res['student']->rollNumber }}</td>
                                                     @php $rowKey = (string)($res['student']->id ?? $res['student']->stdId ?? ''); @endphp
-                                                    <td>{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                                    <td>{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                                     <td>{{ $res['student']->fullName }} {{ $res['student']->sureName }}</td>
                                                     <td class="sid-col">{{ $res['student']->stdId ?? $res['student']->id ?? '-' }}</td>
                                                     <td class="text-start">

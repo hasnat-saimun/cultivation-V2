@@ -358,7 +358,7 @@ At a glance result
                                                             <td class="tot-col">{{ $res['totalMarks'] }}</td>
                                                             <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                                             <td class="fail-col">{{ $fails }}</td>
-                                                            <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                                            <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -447,7 +447,7 @@ At a glance result
                                                 <td class="tot-col">{{ $res['totalMarks'] }}</td>
                                                 <td class="grade-col">{{ $res['finalLetter'] }}</td>
                                                 <td class="fail-col">{{ $fails }}</td>
-                                                <td class="merit-col">{{ $meritRankingMap[$rowKey] ?? '-' }}</td>
+                                                <td class="merit-col">{{ is_numeric($meritRankingMap[$rowKey] ?? null) ? str_pad((string)((int)$meritRankingMap[$rowKey]), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
