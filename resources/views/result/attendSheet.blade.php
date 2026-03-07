@@ -73,9 +73,9 @@ Attendent Sheet
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
-                                        <label>Section/Group *</label>
-                                        <select class="select2" name="groupId" required>
-                                            <option value="">Select *</option>
+                                        <label>Section/Group</label>
+                                        <select class="select2" name="groupId">
+                                            <option value="">All</option>
                                             @php
                                                 $department = \App\Models\sectionManage::orderBy('id','DESC')->get();
                                             @endphp

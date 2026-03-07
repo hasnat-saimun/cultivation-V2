@@ -22,6 +22,14 @@ Get Admit Card
     $halfCount = (int) ceil($routineEntries->count() / 2);
     $leftEntries = $routineEntries->slice(0, $halfCount)->values();
     $rightEntries = $routineEntries->slice($halfCount)->values();
+
+    $serverConfig = \App\Models\ServerConfig::latest('id')->first();
+    $headMasterSign = null;
+    if (!empty($serverConfig?->principalSign)) {
+        $headMasterSign = preg_match('~^https?://~i', $serverConfig->principalSign)
+            ? $serverConfig->principalSign
+            : asset('/public/upload/image/cultivation/'.$serverConfig->principalSign);
+    }
 @endphp
 @section('backIndex')
 <style>
@@ -29,9 +37,9 @@ Get Admit Card
         background: #fff;
     }
     .admit-card-item {
-        border: 2px solid #18b7a0;
+        border: 2px dashed #18b7a0;
         padding: 14px;
-        margin-bottom: 20px;
+        margin: 20px;
         page-break-after: always;
         background: #fff;
     }
@@ -141,7 +149,19 @@ Get Admit Card
         text-align: center;
         font-size: 13px;
     }
+    .head-sign-image {
+        display: block;
+        height: 42px;
+        width: auto;
+        max-width: 140px;
+        margin: 0 420px;
+        right: -10px !important;
+        object-fit: contain;
+    }
     @media print {
+        .bg-ash{
+            background: #fff !important;
+        }
         body {
             background: #fff !important;
             overflow: visible !important;
@@ -244,15 +264,15 @@ Get Admit Card
                         <table class="routine-table">
                             <thead>
                                 <tr>
-                                    <th style="width:11%;">Date</th>
-                                    <th style="width:11%;">Day</th>
-                                    <th style="width:10%;">Time</th>
-                                    <th style="width:18%;">Subject</th>
+                                    <th style="width:9%;">Date</th>
+                                    <th style="width:9%;">Day</th>
+                                    <th style="width:12%;">Time</th>
+                                    <th style="width:20%;">Subject</th>
                                     <th class="split-cell"></th>
-                                    <th style="width:11%;">Date</th>
-                                    <th style="width:11%;">Day</th>
-                                    <th style="width:10%;">Time</th>
-                                    <th style="width:18%;">Subject</th>
+                                    <th style="width:9%;">Date</th>
+                                    <th style="width:9%;">Day</th>
+                                    <th style="width:12%;">Time</th>
+                                    <th style="width:20%;">Subject</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -315,7 +335,10 @@ Get Admit Card
                         <span class="signature-line">Guardian</span>
                     </div>
                     <div class="col-6 text-right">
-                        <span class="signature-line">Head Teacher</span>
+                        @if(!empty($headMasterSign))
+                            <img src="{{ $headMasterSign }}" alt="Head Master Signature" class="head-sign-image">
+                        @endif
+                        <span class="signature-line">Head of Institution</span>
                     </div>
                 </div>
             </div>

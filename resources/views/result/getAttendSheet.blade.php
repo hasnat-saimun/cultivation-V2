@@ -15,7 +15,7 @@ Get Admit Card
     if($sectionData):
         $sectionName = $sectionData->section;
     else:
-        $sectionName = "-";
+        $sectionName = "All";
     endif;
     if($sessionData):
         $sessionName = $sessionData->session;
@@ -27,6 +27,14 @@ Get Admit Card
     else:
         $examName = "-";
     endif;
+
+    $serverConfig = \App\Models\ServerConfig::latest('id')->first();
+    $headMasterSign = null;
+    if (!empty($serverConfig?->principalSign)) {
+        $headMasterSign = preg_match('~^https?://~i', $serverConfig->principalSign)
+            ? $serverConfig->principalSign
+            : asset('/public/upload/image/cultivation/'.$serverConfig->principalSign);
+    }
 @endphp
 @section('backIndex')
     @if($studentList->count()>0)
@@ -199,7 +207,10 @@ Get Admit Card
                                             <p>(Signature with seal)</p>
                                         </div>
                                         <div class="col-6 text-right">
-                                            <p class="fw-bold">Principal</p>
+                                            @if(!empty($headMasterSign))
+                                                <img src="{{ $headMasterSign }}" alt="Head Master Signature" style="height:40px; width:auto; max-width:140px; object-fit:contain; display:block; margin-left:auto; margin-bottom:6px;">
+                                            @endif
+                                            <p class="fw-bold">Head of Institution</p>
                                             <p>(Signature with seal)</p>
                                         </div>
                                         <div class="col-12">

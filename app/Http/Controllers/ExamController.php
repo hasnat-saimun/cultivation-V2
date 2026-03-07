@@ -107,8 +107,10 @@ class ExamController extends Controller
 
     public function getAdmitCard(Request $requ){
         $studentList = newAdmission::where('sessName', $requ->sessionId)
-            ->where('sectionName', $requ->groupId)
             ->where('className', $requ->classId)
+            ->when($requ->groupId, function($q) use ($requ){
+                return $q->where('sectionName', (int)$requ->groupId);
+            })
             ->when($requ->departmentId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->departmentId);
             })
@@ -363,8 +365,10 @@ class ExamController extends Controller
 
     public function getAttendSheet(Request $requ){
         $studentList = newAdmission::where('sessName', $requ->sessionId)
-            ->where('sectionName', $requ->groupId)
             ->where('className', $requ->classId)
+            ->when($requ->groupId, function($q) use ($requ){
+                return $q->where('sectionName', (int)$requ->groupId);
+            })
             ->when($requ->departmentId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->departmentId);
             })

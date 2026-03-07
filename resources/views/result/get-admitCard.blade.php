@@ -15,7 +15,7 @@ Seat Plans
     if($sectionData):
         $sectionName = $sectionData->section;
     else:
-        $sectionName = "-";
+        $sectionName = "All";
     endif;
     if($sessionData):
         $sessionName = $sessionData->session;
@@ -137,6 +137,9 @@ Seat Plans
             .seat-grid { grid-template-columns: 1fr; }
         }
         @media print {
+            .bg-ash{
+                background: #fff !important;
+            }
             html, body,
             #wrapper,
             .wrapper,
