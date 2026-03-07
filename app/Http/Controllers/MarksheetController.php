@@ -167,6 +167,7 @@ class MarksheetController extends Controller
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
         }
+        $sessionText = sessionManage::where('id', (int)$sessionId)->value('session');
         $groupId = $requ->groupId ?: null;
         $optionalGroupId = $requ->optionalGroupId ?: null;
         // Enforce teacher role restrictions before saving
@@ -187,7 +188,12 @@ class MarksheetController extends Controller
         $allowedOptionalStudentIds = [];
         if($isOptionalSubject){
             $allowedOptionalStudentIds = newAdmission::where('className', (int)$requ->classId)
-                ->where('sessName', (int)$sessionId)
+                ->where(function($q) use ($sessionId, $sessionText){
+                    $q->where('sessName', (string)$sessionId);
+                    if(!empty($sessionText)){
+                        $q->orWhere('sessName', (string)$sessionText);
+                    }
+                })
                 ->when($groupId, function($q) use ($groupId){
                     return $q->where('sectionName', (int)$groupId);
                 })
@@ -209,6 +215,7 @@ class MarksheetController extends Controller
         $totalData = count($studentId);
         $x = 0;
         $skipped = 0;
+        $saved = 0;
         $actorId = $user ? (int)$user->id : null;
         $actorRole = ($user && $user->isTeacher()) ? 'teacher' : 'admin';
         while($x<$totalData){
@@ -218,15 +225,30 @@ class MarksheetController extends Controller
                 continue;
             }
 
-            $existingMark = Marksheet::where([
-                'sessionId'=>$sessionId,
-                'classId'=>$requ->classId,
-                'studentId'=>$requ->studentId[$x],
-                'examId'=>$requ->examId,
-                'subjectId'=>$requ->subjectId
-            ])->when($groupId, function($q) use ($groupId){
-                return $q->where('groupId',$groupId);
-            })->first();
+            $studentSectionId = (int)(newAdmission::where('id', (int)$requ->studentId[$x])->value('sectionName') ?? 0);
+
+            $existingMarkQuery = Marksheet::where('classId', $requ->classId)
+                ->where('studentId', $requ->studentId[$x])
+                ->where('examId', $requ->examId)
+                ->where('subjectId', $requ->subjectId)
+                ;
+
+            if(!empty($sessionId) || !empty($sessionText)){
+                $existingMarkQuery->orderByRaw(
+                    'CASE WHEN sessionId = ? THEN 0 '.(!empty($sessionText) ? 'WHEN sessionId = ? THEN 1 ' : '').'ELSE 2 END',
+                    !empty($sessionText)
+                        ? [(string)$sessionId, (string)$sessionText]
+                        : [(string)$sessionId]
+                );
+            }
+
+            if($groupId !== null){
+                $existingMarkQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 ELSE 1 END', [$groupId]);
+            } elseif($studentSectionId > 0) {
+                $existingMarkQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 WHEN groupId IS NULL OR groupId = "" THEN 2 ELSE 1 END', [$studentSectionId]);
+            }
+
+            $existingMark = $existingMarkQuery->orderByDesc('id')->first();
             if(isset($existingMark) && !empty($existingMark)):
                 // If existing marks are entered by another teacher, do not overwrite
                 if($user && $user->isTeacher() && (int)$existingMark->teacher_id !== (int)$user->id){
@@ -252,6 +274,21 @@ class MarksheetController extends Controller
 
             // Skip saving a marksheet row if no marks were entered
             if(!$hasAny){
+                if($existingMark){
+                    $existingMark->subjectMarks = null;
+                    $existingMark->objectMarks = null;
+                    $existingMark->practicalMarks = null;
+                    $existingMark->totalMarks = null;
+                    $existingMark->laterGrade = null;
+                    $existingMark->gradePoint = null;
+                    $existingMark->updated_by = $actorId;
+                    $existingMark->updated_by_role = $actorRole;
+                    $existingMark->teacher_id = $actorId;
+                    $existingMark->save();
+                    $saved++;
+                } else {
+                    $skipped++;
+                }
                 $x++;
                 continue;
             }
@@ -271,7 +308,15 @@ class MarksheetController extends Controller
             $marks->sessionId       = $sessionId;
             $marks->examId          = $requ->examId;
             $marks->subjectId       = $requ->subjectId;
-            $marks->groupId         = $groupId;
+            if($groupId !== null){
+                $marks->groupId = $groupId;
+            } elseif($existingMark && $existingMark->groupId !== null && $existingMark->groupId !== ''){
+                $marks->groupId = $existingMark->groupId;
+            } elseif($studentSectionId > 0){
+                $marks->groupId = $studentSectionId;
+            } else {
+                $marks->groupId = null;
+            }
             $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? (float)$requ->cqMarks[$x] : null;
             $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? (float)$requ->mcqMarks[$x] : null;
             $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? (float)$requ->practical[$x] : null;
@@ -286,15 +331,17 @@ class MarksheetController extends Controller
             $marks->updated_by_role = $actorRole;
             $marks->teacher_id      = $actorId;
             $marks->save();
+            $saved++;
 
             $x++;
         }
-        // return $x;
-        if($x>=$totalData):
-            return redirect(route('addMarks'))->with('success','Marks added successfull');
-        else:
-            return redirect(route('addMarks'))->with('error','Marks added failed');
-        endif;
+
+        if($saved > 0){
+            $msg = 'Marks updated successfully (Saved: '.$saved.($skipped > 0 ? ', Skipped: '.$skipped : '').')';
+            return redirect(route('addMarks'))->with('success', $msg);
+        }
+
+        return redirect(route('addMarks'))->with('error', 'No marks were updated. Please verify filters/session/student mapping.'.($skipped > 0 ? ' Skipped: '.$skipped : ''));
     }
 
     public function createMarksheet(){
@@ -745,7 +792,9 @@ class MarksheetController extends Controller
             }
         }
 
-        return view('result.allMarksheet', [
+        $viewName = $request->routeIs('atGlanceResult') ? 'result.atGlanceResult' : 'result.allMarksheet';
+
+        return view($viewName, [
             'subjects' => $subjects,
             'passResults' => $passResults,
             'failResults' => $failResults,
@@ -761,6 +810,140 @@ class MarksheetController extends Controller
             'departmentId' => $departmentId,
             'studentsLoaded' => $studentsLoaded,
             'exam' => $exam,
+        ]);
+    }
+
+    public function resultSummary(Request $request)
+    {
+        $baseView = $this->allMarksheet($request);
+        $data = method_exists($baseView, 'getData') ? $baseView->getData() : [];
+
+        $subjects = collect($data['subjects'] ?? []);
+        $passResults = $data['passResults'] ?? [];
+        $failResults = $data['failResults'] ?? [];
+        $incompleteResults = $data['incompleteResults'] ?? [];
+
+        $examId = $data['examId'] ?? $request->get('examId');
+        $classId = $data['classId'] ?? $request->get('classId');
+        $sessionId = $data['sessionId'] ?? $request->get('sessionId');
+        $sectionId = $data['sectionId'] ?? $request->get('sectionId');
+        $departmentId = $data['departmentId'] ?? $request->get('departmentId');
+
+        $allRows = array_merge($passResults, $failResults, $incompleteResults);
+
+        $totalStudents = 0;
+        if ($examId && $classId && $sessionId) {
+            $totalStudents = newAdmission::where('className', (int)$classId)
+                ->where('sessName', (int)$sessionId)
+                ->when($sectionId, function ($q) use ($sectionId) {
+                    return $q->where('sectionName', (int)$sectionId);
+                })
+                ->when($departmentId, function ($q) use ($departmentId) {
+                    return $q->where('departmentName', (int)$departmentId);
+                })
+                ->count();
+        }
+
+        $presentCount = count($allRows);
+        $absentCount = max(0, (int)$totalStudents - (int)$presentCount);
+
+        $overallSummary = [
+            'total' => (int)$totalStudents,
+            'present' => (int)$presentCount,
+            'absent' => (int)$absentCount,
+            'pass' => count($passResults),
+            'fail' => count($failResults),
+            'incomplete' => count($incompleteResults),
+        ];
+
+        $subjectStats = [];
+        foreach ($subjects as $subject) {
+            $subjectName = (string)($subject->subjectName ?? '');
+            if ($subjectName === '') {
+                continue;
+            }
+
+            $appeared = 0;
+            $passed = 0;
+            $failed = 0;
+            $missing = 0;
+
+            foreach ($allRows as $row) {
+                $subjectRow = null;
+                foreach (($row['subjects'] ?? []) as $sr) {
+                    if ((string)($sr['name'] ?? '') === $subjectName) {
+                        $subjectRow = $sr;
+                        break;
+                    }
+                }
+
+                if (!$subjectRow) {
+                    $missing++;
+                    continue;
+                }
+
+                $hasMarks = ($subjectRow['cq'] ?? '-') !== '-'
+                    || ($subjectRow['mcq'] ?? '-') !== '-'
+                    || ($subjectRow['practical'] ?? '-') !== '-'
+                    || ($subjectRow['total'] ?? '-') !== '-';
+
+                if (!$hasMarks) {
+                    $missing++;
+                    continue;
+                }
+
+                $appeared++;
+                if (($subjectRow['grade'] ?? '-') === 'F') {
+                    $failed++;
+                } else {
+                    $passed++;
+                }
+            }
+
+            $subjectStats[] = [
+                'subjectName' => $subjectName,
+                'appeared' => $appeared,
+                'pass' => $passed,
+                'fail' => $failed,
+                'missing' => $missing,
+                'passRate' => $appeared > 0 ? round(($passed / $appeared) * 100, 2) : 0.00,
+                'failRate' => $appeared > 0 ? round(($failed / $appeared) * 100, 2) : 0.00,
+            ];
+        }
+
+        usort($subjectStats, function ($a, $b) {
+            return strcasecmp($a['subjectName'], $b['subjectName']);
+        });
+
+        $failureBuckets = [];
+        foreach ($allRows as $row) {
+            $failCount = 0;
+            foreach (($row['subjects'] ?? []) as $sr) {
+                if (($sr['grade'] ?? '-') === 'F') {
+                    $failCount++;
+                }
+            }
+
+            if ($failCount > 0) {
+                if (!isset($failureBuckets[$failCount])) {
+                    $failureBuckets[$failCount] = 0;
+                }
+                $failureBuckets[$failCount]++;
+            }
+        }
+        ksort($failureBuckets);
+
+        return view('result.result-summary', [
+            'examId' => $examId,
+            'classId' => $classId,
+            'sessionId' => $sessionId,
+            'sectionId' => $sectionId,
+            'departmentId' => $departmentId,
+            'studentsLoaded' => (bool)($data['studentsLoaded'] ?? false),
+            'overallSummary' => $overallSummary,
+            'subjectStats' => $subjectStats,
+            'failureBuckets' => $failureBuckets,
+            'hasData' => count($allRows) > 0,
         ]);
     }
 

@@ -73,8 +73,8 @@
             <img class="hdr-logo" src="{{ $logoSrc }}" alt="Institute Logo">
         </div>
     @endif
-    <h4 class="name">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
-    <div class="subline">{{ $config->address ?? '' }}</div>
+    <h4 class="name my-2">{{ $config->instituteName ?? 'Jahanara Ayub Academy' }}</h4>
+    <div class="subline mt-4">{{ $config->address ?? '' }}</div>
     <div class="contacts">
         @if(!empty($config?->officeMobile))
             <span><i class="fa fa-phone"></i> {{ $config->officeMobile ?? '' }}</span>

@@ -1366,6 +1366,16 @@ Route::middleware(['adminGuard'])->group (function(){
         'allMarksheet'
     ])->name('allMarksheet');
 
+    Route::get('/marksheet/at-a-glance',[
+        MarksheetController::class ,
+        'allMarksheet'
+    ])->name('atGlanceResult');
+
+    Route::get('/marksheet/result-summary',[
+        MarksheetController::class,
+        'resultSummary'
+    ])->name('result.summary');
+
     Route::post('/marksheet/generate',[
         MarksheetController::class ,
         'generateMarksheet'

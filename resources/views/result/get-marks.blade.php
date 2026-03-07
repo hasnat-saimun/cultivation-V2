@@ -3,12 +3,19 @@
 Get Mark
 @endsection
 @php
-    $classData = \App\Models\classManage::find($classId);
-    $sectionData = \App\Models\sectionManage::find($groupId);
-    $optionalGroupData = !empty($optionalGroupId) ? \App\Models\Department::find($optionalGroupId) : null;
-    $sessionData = \App\Models\sessionManage::find($sessionId);
-    $examData = \App\Models\Exam::find($examId);
-    $subjectData = \App\Models\Subject::find($subjectId);
+    $classIdSafe = request()->input('classId', $classId ?? null);
+    $groupIdSafe = request()->input('groupId', $groupId ?? null);
+    $optionalGroupIdSafe = request()->input('optionalGroupId', $optionalGroupId ?? null);
+    $sessionIdSafe = request()->input('sessionId', $sessionId ?? null);
+    $examIdSafe = request()->input('examId', $examId ?? null);
+    $subjectIdSafe = request()->input('subjectId', $subjectId ?? null);
+
+    $classData = \App\Models\classManage::find($classIdSafe);
+    $sectionData = \App\Models\sectionManage::find($groupIdSafe);
+    $optionalGroupData = !empty($optionalGroupIdSafe) ? \App\Models\Department::find($optionalGroupIdSafe) : null;
+    $sessionData = \App\Models\sessionManage::find($sessionIdSafe);
+    $examData = \App\Models\Exam::find($examIdSafe);
+    $subjectData = \App\Models\Subject::find($subjectIdSafe);
     if($classData):
         $className = $classData->className;
     else:
@@ -66,10 +73,10 @@ Get Mark
                 <table class="table table-bordered">
                 @php
                     // Get available features for the subject
-                    $showCQ         = $subjectData->CQ;
-                    $showMCQ        = $subjectData->MCQ;
-                    $showPractical  = $subjectData->Practical;
-                    $showAll        = $subjectData->Practical == null && $subjectData->MCQ == null && $subjectData->CQ == null;
+                    $showCQ         = optional($subjectData)->CQ;
+                    $showMCQ        = optional($subjectData)->MCQ;
+                    $showPractical  = optional($subjectData)->Practical;
+                    $showAll        = optional($subjectData)->Practical == null && optional($subjectData)->MCQ == null && optional($subjectData)->CQ == null;
                 @endphp
                     <thead>
                         <tr>
@@ -88,22 +95,39 @@ Get Mark
                     </thead>
                     <tbody>
                         @if($studentList->count()>0)
-                        <input type="hidden" name="sessionId" value="{{ $sessionId }}">
-                        <input type="hidden" name="classId" value="{{ $classId }}">
-                        <input type="hidden" name="examId" value="{{ $examId }}">
-                        <input type="hidden" name="groupId" value="{{ $groupId }}">
-                        <input type="hidden" name="optionalGroupId" value="{{ $optionalGroupId }}">
-                        <input type="hidden" name="subjectId" value="{{ $subjectId }}">
+                        <input type="hidden" name="sessionId" value="{{ $sessionIdSafe }}">
+                        <input type="hidden" name="classId" value="{{ $classIdSafe }}">
+                        <input type="hidden" name="examId" value="{{ $examIdSafe }}">
+                        <input type="hidden" name="groupId" value="{{ $groupIdSafe }}">
+                        <input type="hidden" name="optionalGroupId" value="{{ $optionalGroupIdSafe }}">
+                        <input type="hidden" name="subjectId" value="{{ $subjectIdSafe }}">
                          @foreach($studentList as $std)
                         @php
-                            $marksData = \App\Models\Marksheet::where([
-                                'sessionId'=>$sessionId,
-                                'classId'=>$classId,
-                                'groupId'=>$groupId,
-                                'studentId'=>$std->id,
-                                'examId'=>$examId,
-                                'subjectId'=>$subjectId
-                            ])->first();
+                            $sessionTextForMark = optional(\App\Models\sessionManage::find((int)$sessionIdSafe))->session;
+                            $stdSectionId = (int)($std->sectionName ?? 0);
+                            $marksDataQuery = \App\Models\Marksheet::where('classId', $classIdSafe)
+                                ->where('studentId', $std->id)
+                                ->where('examId', $examIdSafe)
+                                ->where('subjectId', $subjectIdSafe);
+
+                            if(!empty($sessionIdSafe) || !empty($sessionTextForMark)){
+                                $marksDataQuery->orderByRaw(
+                                    'CASE WHEN sessionId = ? THEN 0 '.(!empty($sessionTextForMark) ? 'WHEN sessionId = ? THEN 1 ' : '').'ELSE 2 END',
+                                    !empty($sessionTextForMark)
+                                        ? [(string)$sessionIdSafe, (string)$sessionTextForMark]
+                                        : [(string)$sessionIdSafe]
+                                );
+                            }
+
+                            if(!empty($groupIdSafe)){
+                                $marksDataQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 ELSE 1 END', [$groupIdSafe]);
+                            } elseif($stdSectionId > 0) {
+                                $marksDataQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 WHEN groupId IS NULL OR groupId = "" THEN 1 ELSE 2 END', [$stdSectionId]);
+                            }
+
+                            $marksData = $marksDataQuery
+                                ->orderByDesc('id')
+                                ->first();
                             $subjectMarks = $marksData ? $marksData->subjectMarks : "";
                             $objectMarks = $marksData ? $marksData->objectMarks : "";
                             $practicalMarks = $marksData ? $marksData->practicalMarks : "";

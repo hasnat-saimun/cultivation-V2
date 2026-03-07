@@ -24,7 +24,7 @@
                     @php
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
-                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','transcripts.bulk','result.final.publish'];
+                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','atGlanceResult','result.summary','transcripts.bulk','result.final.publish'];
                         $classRoutes = ['allClasses','createClass'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
@@ -70,7 +70,13 @@
                                         <a href="{{ route('transcripts.bulk') }}" class="nav-link {{ request()->routeIs('transcripts.bulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk Transcripts</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Tabulation Sheet</a>
+                                        <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Subjectwise Result</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('atGlanceResult') }}" class="nav-link {{ request()->routeIs('atGlanceResult') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>At a glance result</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('result.summary') }}" class="nav-link {{ request()->routeIs('result.summary') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Result Summary</a>
                                     </li>
                                 </ul>
                             </li>
