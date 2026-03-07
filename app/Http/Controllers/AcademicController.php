@@ -317,7 +317,9 @@ class AcademicController extends Controller
     // class routine ends here
 
     public function examRoutineManage(){
-        $examRoutine = ExamRoutine::orderBy('id','DESC')->get();
+        $examRoutine = ExamRoutine::where(function($q){
+            $q->whereNull('status')->orWhere('status', '!=', 'result_routine');
+        })->orderBy('id','DESC')->get();
         return view('academic.examRoutine',['examRoutineList'=>$examRoutine]);
     }
 
@@ -335,7 +337,6 @@ class AcademicController extends Controller
         if(!empty($requ->attachment)):
              $validated = $requ->validate([
                     'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
-                     // max 2 MB
                 ],[
                     'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
                     'attachment.max'    => 'Each file must be less than 2MB.'
@@ -345,7 +346,6 @@ class AcademicController extends Controller
             $attachment->move(public_path('upload/image/cultivation/examRoutine'),$newAttachment);
             $item->attachment   = $newAttachment;
         endif;
-        // $item->status        = $requ->status;
 
         if($item->save()):
             return back()->with('success','Item successfully saved');
@@ -355,7 +355,9 @@ class AcademicController extends Controller
     }
 
     public function editExamRoutine($id){
-        $examRoutine = ExamRoutine::orderBy('id','DESC')->get();
+        $examRoutine = ExamRoutine::where(function($q){
+            $q->whereNull('status')->orWhere('status', '!=', 'result_routine');
+        })->orderBy('id','DESC')->get();
         return view('academic.examRoutine',['itemId'=>$id,'examRoutineList'=>$examRoutine]);
     }
 
@@ -402,7 +404,9 @@ class AcademicController extends Controller
 
     public function newExamSchedule()
     {
-        $result=ExamRoutine::get();
+        $result = ExamRoutine::where(function($q){
+            $q->whereNull('status')->orWhere('status', '!=', 'result_routine');
+        })->get();
         return view('frontend.academic.examSchedule',['Datakey'=>$result]);
     }
 

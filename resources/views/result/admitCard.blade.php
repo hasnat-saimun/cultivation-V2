@@ -1,6 +1,6 @@
 @extends('result.include')
 @section('backTitle')
-Admit Card
+Seat Plan
 @endsection
 @section('backIndex')
                 <!-- Dashboard summery Start Here -->
@@ -24,7 +24,7 @@ Admit Card
                             </div>
                             <div class="heading-layout1">
                                 <div class="item-title">
-                                    <h3>Admit Card Generate</h3>
+                                    <h3>Seat Plan Generate</h3>
                                 </div>
                             </div>
                             <form class="new-added-form" action="{{ route('getAdmitCard') }}" method="POST">

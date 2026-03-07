@@ -30,7 +30,7 @@
                         $sectionRoutes = ['allSection','createSection'];
                         $sessionRoutes = ['allSession','createSession'];
                         $subjectRoutes = ['allSubject','createSubject'];
-                        $examRoutes = ['allExam','createExam','admitCard','attendSheet'];
+                        $examRoutes = ['allExam','createExam','admitCard','getAdmitCard','resultExamRoutineManage','saveResultExamRoutine','editResultExamRoutine','delResultExamRoutine','admitCardRoutine','getAdmitCardRoutine','attendSheet','getAttendSheet'];
 
                         $resultOpen = request()->routeIs($resultRoutes);
                         $classOpen = request()->routeIs($classRoutes);
@@ -145,7 +145,13 @@
                                         <a href="{{ route('createExam') }}" class="nav-link {{ request()->routeIs('createExam') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Create Exam</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a href="{{ route('admitCard') }}" class="nav-link {{ request()->routeIs('admitCard') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Admit Card</a>
+                                        <a href="{{ route('admitCard') }}" class="nav-link {{ request()->routeIs('admitCard') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Seat Plan</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('resultExamRoutineManage') }}" class="nav-link {{ request()->routeIs('resultExamRoutineManage') || request()->routeIs('editResultExamRoutine') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Exam Routine</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('admitCardRoutine') }}" class="nav-link {{ request()->routeIs('admitCardRoutine') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Admit Card</a>
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('attendSheet') }}" class="nav-link {{ request()->routeIs('attendSheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Attended Sheet</a>

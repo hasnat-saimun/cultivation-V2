@@ -1404,6 +1404,32 @@ Route::middleware(['adminGuard'])->group (function(){
         'getAdmitCard'
     ])->name('getAdmitCard');
 
+    Route::get('/result/exam-routine/manage',[
+        ExamController::class,
+        'resultExamRoutineManage'
+    ])->name('resultExamRoutineManage');
+    Route::post('/result/exam-routine/save',[
+        ExamController::class,
+        'saveResultExamRoutine'
+    ])->name('saveResultExamRoutine');
+    Route::get('/result/exam-routine/edit/{id}',[
+        ExamController::class,
+        'editResultExamRoutine'
+    ])->name('editResultExamRoutine');
+    Route::get('/result/exam-routine/del/{id}',[
+        ExamController::class,
+        'delResultExamRoutine'
+    ])->name('delResultExamRoutine');
+
+    Route::get('/admit-card/creation',[
+        ExamController::class,
+        'admitCardRoutine'
+    ])->name('admitCardRoutine');
+    Route::post('/admit-card/getData',[
+        ExamController::class,
+        'getAdmitCardRoutine'
+    ])->name('getAdmitCardRoutine');
+
     //Attend Sheet route declaration
 
     Route::get('/attend/sheet/creation',[
