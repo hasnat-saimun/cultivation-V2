@@ -175,7 +175,7 @@
                                 <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $fName }}</td></tr>
                                 <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $mName }}</td></tr>
                                 <tr>
-                                    <th>Roll Number</th><td>:</td><td>{{ $rollNumber }}</td>
+                                    <th>Roll Number</th><td>:</td><td>{{ is_numeric($rollNumber) ? str_pad((string)((int)$rollNumber), 2, '0', STR_PAD_LEFT) : $rollNumber }}</td>
                                     <th>Session</th><td>:</td><td>{{ $sessionName }}</td>
                                 </tr>
                                 <tr>
@@ -186,7 +186,7 @@
                                     <th>Department</th><td>:</td><td colspan="4">{{ $departmentName }}</td>
                                 </tr>
                                 <tr>
-                                    <th>Merit Position</th><td>:</td><td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '1' }}</td>
+                                    <th>Merit Position</th><td>:</td><td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? str_pad((string)((int)$meritRank), 2, '0', STR_PAD_LEFT) : '01' }}</td>
                                 </tr>
                             </tbody>
                         </table>

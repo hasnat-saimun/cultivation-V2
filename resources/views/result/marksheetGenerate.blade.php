@@ -254,7 +254,7 @@ Marksheet Generate
                                     <tr>
                                         <th>Roll Number</th>
                                         <td>:</td>
-                                        <td>{{ $rollNumber }}</td>
+                                        <td>{{ is_numeric($rollNumber) ? str_pad((string)((int)$rollNumber), 2, '0', STR_PAD_LEFT) : $rollNumber }}</td>
                                         <th>Session</th>
                                         <td>:</td>
                                         <td>{{ $sessionName }}</td>
@@ -275,7 +275,7 @@ Marksheet Generate
                                     <tr>
                                         <th>Merit Position</th>
                                         <td>:</td>
-                                        <td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? $meritRank : '-' }}</td>
+                                        <td colspan="4">{{ isset($meritRank) && is_numeric($meritRank) ? str_pad((string)((int)$meritRank), 2, '0', STR_PAD_LEFT) : '-' }}</td>
                                     </tr>
                                 </tbody>
                             </table>
