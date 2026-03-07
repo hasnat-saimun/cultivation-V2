@@ -19,7 +19,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <strong>Student Name:</strong> {{ $stdName }}<br>
-                <strong>Roll:</strong> {{ $rollNumber }}<br>
+                <strong>Roll:</strong> {{ is_numeric($rollNumber) ? str_pad((string)((int)$rollNumber), 2, '0', STR_PAD_LEFT) : $rollNumber }}<br>
                 <strong>Class:</strong> {{ $className }}<br>
                 <strong>Section:</strong> {{ $sectionName }}<br>
             </div>

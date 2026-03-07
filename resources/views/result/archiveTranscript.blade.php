@@ -98,7 +98,7 @@ Archived Transcript
                         <tr>
                             <th>Roll Number</th>
                             <td>:</td>
-                            <td>{{ $rollNumber }}</td>
+                            <td>{{ is_numeric($rollNumber) ? str_pad((string)((int)$rollNumber), 2, '0', STR_PAD_LEFT) : $rollNumber }}</td>
                             <th>Session</th>
                             <td>:</td>
                             <td>{{ $sessionName }}</td>
