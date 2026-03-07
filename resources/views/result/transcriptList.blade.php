@@ -108,7 +108,7 @@ Transcript Generator
                     <tbody>
                         @forelse($students as $stu)
                             <tr>
-                                <td><input type="checkbox" class="ck_row" value="{{ $stu->stdId ?: $stu->id }}" data-roll="{{ $stu->rollNumber }}"></td>
+                                <td><input type="checkbox" class="ck_row" value="{{ $stu->id }}" data-roll="{{ $stu->rollNumber }}" data-stdid="{{ $stu->stdId ?: $stu->id }}"></td>
                                 <td>{{ $stu->rollNumber }}</td>
                                 <td>{{ $stu->stdId }}</td>
                                 <td>{{ $stu->fullName }} {{ $stu->sureName }}</td>
@@ -141,8 +141,9 @@ function openSelected(){
     const rows = Array.from(document.querySelectorAll('.ck_row:checked'));
     if(rows.length === 0){ alert('Select at least one student.'); return; }
     rows.forEach((r,idx) => {
-        const stdId = r.value;
-        const url = `{{ route('marksheetGenerate') }}?stdId=${encodeURIComponent(stdId)}&examId=${encodeURIComponent(examId)}`;
+        const studentId = r.value;
+        const stdId = r.getAttribute('data-stdid') || studentId;
+        const url = `{{ route('marksheetGenerate') }}?studentId=${encodeURIComponent(studentId)}&stdId=${encodeURIComponent(stdId)}&examId=${encodeURIComponent(examId)}`;
         setTimeout(() => window.open(url, '_blank'), idx * 150);
     });
 }

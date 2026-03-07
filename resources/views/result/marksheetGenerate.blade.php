@@ -128,6 +128,23 @@ Marksheet Generate
                     }
                 }
             }catch(\Throwable $e){ $sectionName = '-'; }
+            // Resolve department name from student table field
+            $departmentName = '-';
+            try{
+                $deptCandidates = [];
+                if(isset($studentDetails->departmentName) && is_numeric($studentDetails->departmentName)) $deptCandidates[] = (int)$studentDetails->departmentName;
+                if(isset($studentDetails->departmentId) && is_numeric($studentDetails->departmentId)) $deptCandidates[] = (int)$studentDetails->departmentId;
+                $deptModel = null;
+                foreach($deptCandidates as $did){
+                    $deptModel = \App\Models\Department::find($did);
+                    if($deptModel) break;
+                }
+                if($deptModel){
+                    $departmentName = $deptModel->departmentName ?? ('Department-'.$deptModel->id);
+                } elseif(isset($studentDetails->departmentName) && is_string($studentDetails->departmentName) && trim($studentDetails->departmentName) !== '') {
+                    $departmentName = (string)$studentDetails->departmentName;
+                }
+            }catch(\Throwable $e){ $departmentName = '-'; }
         else:
             $adminId        = "";
             $stdName        = "";
@@ -139,6 +156,7 @@ Marksheet Generate
             $sessionName    = "";
             $className      = "";
             $sectionName    = "";
+            $departmentName = "";
         endif;
         $examDetails    = \App\Models\Exam::find($examId);
         if(isset($examDetails)):
@@ -248,6 +266,11 @@ Marksheet Generate
                                         <th>Section</th>
                                         <td>:</td>
                                         <td>{{ $sectionName }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Department</th>
+                                        <td>:</td>
+                                        <td colspan="4">{{ $departmentName }}</td>
                                     </tr>
                                     <tr>
                                         <th>Merit Position</th>
@@ -422,6 +445,33 @@ Marksheet Generate
             'fullPr' => $fullPr,
         ];
     }
+
+    // Custom transcript subject order:
+    // Bangla (excluding Bangladesh), English, Math, General Science,
+    // Social Science, Religious Subject, Others, ICT (always last).
+    $subjectOrderRank = function($name){
+        $n = strtolower(trim((string)$name));
+        if($n === '') return 700;
+        if((strpos($n, 'information') !== false && strpos($n, 'communication') !== false) || strpos($n, 'ict') !== false){
+            return 900;
+        }
+        if(strpos($n, 'bangla') !== false && strpos($n, 'bangladesh') === false){ return 100; }
+        if(strpos($n, 'english') !== false){ return 200; }
+        if(strpos($n, 'mathematics') !== false || preg_match('/\bmath\b/', $n)){ return 300; }
+        if(strpos($n, 'general science') !== false){ return 400; }
+        if(strpos($n, 'social science') !== false || strpos($n, 'bangladesh') !== false || strpos($n, 'bgs') !== false){ return 500; }
+        if(strpos($n, 'religion') !== false || strpos($n, 'islam') !== false || strpos($n, 'hindu') !== false || strpos($n, 'buddh') !== false || strpos($n, 'christ') !== false){
+            return 600;
+        }
+        return 700;
+    };
+    usort($pairedMain, function($a, $b) use ($subjectOrderRank){
+        $ra = $subjectOrderRank($a['name'] ?? '');
+        $rb = $subjectOrderRank($b['name'] ?? '');
+        if($ra !== $rb){ return $ra <=> $rb; }
+        return strcasecmp((string)($a['name'] ?? ''), (string)($b['name'] ?? ''));
+    });
+
     // Override subtotal to use paired sums for consistency
     $subtotalMarks = $subtotalMarksPaired;
 @endphp

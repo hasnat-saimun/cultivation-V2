@@ -951,10 +951,13 @@ class MarksheetController extends Controller
         // return $requ->all();
         $config = ServerConfig::first(); 
         $examId = (int)$requ->examId;
+        $studentIdInput = trim((string)($requ->studentId ?? ''));
         $stdIdInput = trim((string)($requ->stdId ?? $requ->studentId ?? $requ->id ?? ''));
 
         $studentQuery = newAdmission::query();
-        if ($stdIdInput !== '') {
+        if ($studentIdInput !== '' && ctype_digit($studentIdInput)) {
+            $studentQuery->where('id', (int)$studentIdInput);
+        } elseif ($stdIdInput !== '') {
             $studentQuery->where(function($q) use ($stdIdInput){
                 $q->where('stdId', $stdIdInput)
                   ->orWhereRaw('TRIM(stdId) = ?', [$stdIdInput]);
