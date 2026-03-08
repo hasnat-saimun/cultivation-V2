@@ -317,75 +317,23 @@ class AcademicController extends Controller
     // class routine ends here
 
     public function examRoutineManage(){
-        $examRoutine = ExamRoutine::where(function($q){
-            $q->whereNull('status')->orWhere('status', '!=', 'result_routine');
-        })->orderBy('id','DESC')->get();
-        return view('academic.examRoutine',['examRoutineList'=>$examRoutine]);
+        return redirect()->route('resultExamRoutineManage');
     }
 
     public function saveExamRoutine(Request $requ){
-        if(empty($requ->itemId)):
-            $item   = new ExamRoutine();
-        else:
-            $item   = ExamRoutine::find($requ->itemId);
-        endif;
-
-        $item->title            = $requ->title;
-        $item->assignClass      = $requ->assignClass;
-        $item->assignDepartment = $requ->assignDepartment;
-        $item->assignSession    = $requ->assignSession;
-        if(!empty($requ->attachment)):
-             $validated = $requ->validate([
-                    'attachment' => 'required|mimes:pdf,jpeg,png,jpg,gif,webp,avif,|max:2048',
-                ],[
-                    'attachment.mimes'  => 'Allowed formats: pdf,jpeg,png,jpg,gif,webp,avif.',
-                    'attachment.max'    => 'Each file must be less than 2MB.'
-                ]);
-            $attachment = $requ->attachment;
-            $newAttachment      = rand().date('Ymd').'.'.$attachment->getClientOriginalExtension();
-            $attachment->move(public_path('upload/image/cultivation/examRoutine'),$newAttachment);
-            $item->attachment   = $newAttachment;
-        endif;
-
-        if($item->save()):
-            return back()->with('success','Item successfully saved');
-        else:
-            return back()->with('error','Item failed to save');
-        endif;
+        return app(\App\Http\Controllers\ExamController::class)->saveResultExamRoutine($requ);
     }
 
     public function editExamRoutine($id){
-        $examRoutine = ExamRoutine::where(function($q){
-            $q->whereNull('status')->orWhere('status', '!=', 'result_routine');
-        })->orderBy('id','DESC')->get();
-        return view('academic.examRoutine',['itemId'=>$id,'examRoutineList'=>$examRoutine]);
+        return redirect()->route('editResultExamRoutine', ['id' => $id]);
     }
 
     public function delExamRoutine($id){
-        $item = ExamRoutine::find($id);
-        if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/examRoutine/').$item->attachment)):
-                File::delete(public_path('upload/image/cultivation/examRoutine/').$item->attachment);
-            endif;
-            $item->delete();
-            return back()->with('success','Item deleted successfully');
-        else:
-            return back()->with('success','Item failed to delete');
-        endif;
+        return app(\App\Http\Controllers\ExamController::class)->delResultExamRoutine($id);
     }
 
     public function delExamRoutineContent($id){
-        $item = ExamRoutine::find($id);
-        if(!empty($item)):
-            if(File::exists(public_path('upload/image/cultivation/examRoutine/').$item->attachment)):
-                File::delete(public_path('upload/image/cultivation/examRoutine/').$item->attachment);
-            endif;
-            $item->attachment = NULL;
-            $item->save();
-            return back()->with('success','Item deleted successfully');
-        else:
-            return back()->with('success','Item failed to delete');
-        endif;
+        return redirect()->route('examRoutineManage')->with('error', 'Attachment delete is not applicable in the new Exam Routine system.');
     }
 
 

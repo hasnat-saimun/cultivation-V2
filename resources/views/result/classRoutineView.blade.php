@@ -15,7 +15,7 @@ Class Routine View
     $cellMap = [];
 
     foreach (($entries ?? collect()) as $entry) {
-        $dayName = ucfirst(strtolower((string)($entry->exam_day ?? '')));
+        $dayName = ucfirst(strtolower((string)($entry->class_day ?? '')));
         $start = (string)($entry->start_time ?? '');
         $end = (string)($entry->end_time ?? '');
         $subject = trim((string)($entry->subject_name ?? ''));

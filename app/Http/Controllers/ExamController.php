@@ -6,12 +6,22 @@ use Illuminate\Http\Request;
 use App\Models\Exam;
 use App\Models\ExamRoutine;
 use App\Models\ExamRoutineItem;
+use App\Models\ClassRoutine;
+use App\Models\ClassRoutineItem;
 use App\Models\Subject;
 use App\Models\newAdmission;
+use App\Models\classManage;
+use App\Models\sectionManage;
+use App\Models\Department;
+use App\Models\sessionManage;
 use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
 {
+    private const CLASS_ROUTINE_ALLOWED_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+    private const CLASS_ROUTINE_BREAK_TOKEN = '__BREAK__';
+    private const CLASS_ROUTINE_BREAK_LABEL = 'Break/Tiffin Time';
+
     protected function validateExamRequest(Request $requ, $isUpdate = false)
     {
         $rules = [
@@ -126,16 +136,25 @@ class ExamController extends Controller
             ->orderBy('id', 'DESC')
             ->get();
 
-        return view('result.examRoutineManage', ['routineList' => $routineList]);
+        $lookup = $this->buildRoutineLookupMaps($routineList, true);
+
+        return view('result.examRoutineManage', [
+            'routineList' => $routineList,
+            'lookup' => $lookup,
+        ]);
     }
 
     public function resultClassRoutineManage(){
-        $routineList = ExamRoutine::where('status', 'class_routine')
-            ->withCount('entries')
+        $routineList = ClassRoutine::withCount('entries')
             ->orderBy('id', 'DESC')
             ->get();
 
-        return view('result.classRoutineManage', ['routineList' => $routineList]);
+        $lookup = $this->buildRoutineLookupMaps($routineList, false);
+
+        return view('result.classRoutineManage', [
+            'routineList' => $routineList,
+            'lookup' => $lookup,
+        ]);
     }
 
     public function saveResultClassRoutine(Request $requ){
@@ -149,9 +168,9 @@ class ExamController extends Controller
 
         try {
             if (empty($requ->itemId)) {
-                $item = new ExamRoutine();
+                $item = new ClassRoutine();
             } else {
-                $item = ExamRoutine::where('status', 'class_routine')->find($requ->itemId);
+                $item = ClassRoutine::find($requ->itemId);
             }
 
             if (empty($item)) {
@@ -164,11 +183,9 @@ class ExamController extends Controller
             $item->assignSection = !empty($requ->assignSection) ? (int)$requ->assignSection : null;
             $item->assignDepartment = $requ->assignDepartment;
             $item->assignSession = $requ->assignSession;
-            $item->status = 'class_routine';
-            $item->assignExam = null;
             $item->save();
 
-            ExamRoutineItem::where('exam_routine_id', $item->id)->delete();
+            ClassRoutineItem::where('class_routine_id', $item->id)->delete();
 
             $days = $requ->input('entry_day', []);
             $startTimes = $requ->input('entry_start_time', []);
@@ -179,18 +196,18 @@ class ExamController extends Controller
             $savedRows = 0;
             $usedSubjectKeysByDay = [];
             $usedTimeRangesByDay = [];
-            $allowedDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+            $allowedDays = self::CLASS_ROUTINE_ALLOWED_DAYS;
 
             for ($i = 0; $i < $rows; $i++) {
                 $entryDay = trim((string)($days[$i] ?? ''));
                 $entryStartTime = trim((string)($startTimes[$i] ?? ''));
                 $entryEndTime = trim((string)($endTimes[$i] ?? ''));
                 $rawSubjectId = trim((string)($subjectIds[$i] ?? ''));
-                $isBreakTime = ($rawSubjectId === '__BREAK__');
+                $isBreakTime = ($rawSubjectId === self::CLASS_ROUTINE_BREAK_TOKEN);
                 $entrySubjectId = (!$isBreakTime && ctype_digit($rawSubjectId)) ? (int)$rawSubjectId : null;
                 $subjectData = !empty($entrySubjectId) ? Subject::find($entrySubjectId) : null;
-                $entrySubject = $isBreakTime ? 'Break/Tiffin Time' : ($subjectData->subjectName ?? '');
-                $entrySubjectKey = $isBreakTime ? '__BREAK__' : (string)$entrySubjectId;
+                $entrySubject = $isBreakTime ? self::CLASS_ROUTINE_BREAK_LABEL : ($subjectData->subjectName ?? '');
+                $entrySubjectKey = $isBreakTime ? self::CLASS_ROUTINE_BREAK_TOKEN : (string)$entrySubjectId;
 
                 if ($entryDay === '' && $entryStartTime === '' && $entryEndTime === '' && empty($entrySubjectId)) {
                     continue;
@@ -263,13 +280,12 @@ class ExamController extends Controller
                     $entryTime = date('h:i A', strtotime($entryStartTime)).'-'.date('h:i A', strtotime($entryEndTime));
                 }
 
-                ExamRoutineItem::create([
-                    'exam_routine_id' => $item->id,
-                    'exam_date' => null,
-                    'exam_day' => $normalizedDay,
+                ClassRoutineItem::create([
+                    'class_routine_id' => $item->id,
+                    'class_day' => $normalizedDay,
                     'start_time' => $entryStartTime !== '' ? $entryStartTime : null,
                     'end_time' => $entryEndTime !== '' ? $entryEndTime : null,
-                    'exam_time' => $entryTime,
+                    'class_time' => $entryTime,
                     'subject_id' => $entrySubjectId,
                     'subject_name' => $entrySubject,
                     'sort_order' => $i + 1,
@@ -297,16 +313,21 @@ class ExamController extends Controller
     }
 
     public function editResultClassRoutine($id){
-        $routineList = ExamRoutine::where('status', 'class_routine')
-            ->withCount('entries')
+        $routineList = ClassRoutine::withCount('entries')
             ->orderBy('id', 'DESC')
             ->get();
 
-        return view('result.classRoutineManage', ['itemId' => $id, 'routineList' => $routineList]);
+        $lookup = $this->buildRoutineLookupMaps($routineList, false);
+
+        return view('result.classRoutineManage', [
+            'itemId' => $id,
+            'routineList' => $routineList,
+            'lookup' => $lookup,
+        ]);
     }
 
     public function delResultClassRoutine($id){
-        $item = ExamRoutine::where('status', 'class_routine')->find($id);
+        $item = ClassRoutine::find($id);
 
         if(empty($item)):
             return back()->with('error', 'Item failed to delete');
@@ -317,28 +338,24 @@ class ExamController extends Controller
     }
 
     public function viewResultClassRoutine($id){
-        $routine = ExamRoutine::with('entries')
-            ->where('status', 'class_routine')
-            ->find($id);
+        $routine = ClassRoutine::with('entries')->find($id);
 
         if (empty($routine)) {
             return back()->with('error', 'Sorry! Routine not found.');
         }
 
         $dayOrder = [
-            'Saturday' => 1,
-            'Sunday' => 2,
-            'Monday' => 3,
-            'Tuesday' => 4,
-            'Wednesday' => 5,
-            'Thursday' => 6,
-            'Friday' => 7,
+            'Sunday' => 1,
+            'Monday' => 2,
+            'Tuesday' => 3,
+            'Wednesday' => 4,
+            'Thursday' => 5,
         ];
 
         $entries = $routine->entries
             ->sort(function ($a, $b) use ($dayOrder) {
-                $aDay = ucfirst(strtolower((string)($a->exam_day ?? '')));
-                $bDay = ucfirst(strtolower((string)($b->exam_day ?? '')));
+                $aDay = ucfirst(strtolower((string)($a->class_day ?? '')));
+                $bDay = ucfirst(strtolower((string)($b->class_day ?? '')));
 
                 $aDayOrder = $dayOrder[$aDay] ?? 99;
                 $bDayOrder = $dayOrder[$bDay] ?? 99;
@@ -365,7 +382,7 @@ class ExamController extends Controller
     }
 
     public function printResultClassRoutine($id){
-        $routine = ExamRoutine::where('status', 'class_routine')->find($id);
+        $routine = ClassRoutine::find($id);
 
         if (empty($routine)) {
             return back()->with('error', 'Sorry! Routine not found.');
@@ -375,28 +392,24 @@ class ExamController extends Controller
     }
 
     public function downloadResultClassRoutinePdf($id){
-        $routine = ExamRoutine::with('entries')
-            ->where('status', 'class_routine')
-            ->find($id);
+        $routine = ClassRoutine::with('entries')->find($id);
 
         if (empty($routine)) {
             return back()->with('error', 'Sorry! Routine not found.');
         }
 
         $dayOrder = [
-            'Saturday' => 1,
-            'Sunday' => 2,
-            'Monday' => 3,
-            'Tuesday' => 4,
-            'Wednesday' => 5,
-            'Thursday' => 6,
-            'Friday' => 7,
+            'Sunday' => 1,
+            'Monday' => 2,
+            'Tuesday' => 3,
+            'Wednesday' => 4,
+            'Thursday' => 5,
         ];
 
         $entries = $routine->entries
             ->sort(function ($a, $b) use ($dayOrder) {
-                $aDay = ucfirst(strtolower((string)($a->exam_day ?? '')));
-                $bDay = ucfirst(strtolower((string)($b->exam_day ?? '')));
+                $aDay = ucfirst(strtolower((string)($a->class_day ?? '')));
+                $bDay = ucfirst(strtolower((string)($b->class_day ?? '')));
 
                 $aDayOrder = $dayOrder[$aDay] ?? 99;
                 $bDayOrder = $dayOrder[$bDay] ?? 99;
@@ -437,6 +450,75 @@ class ExamController extends Controller
         $fileName = $titlePart.'-'.$classPart.'-'.$sessionPart.'-'.date('Y-m-d').'.pdf';
 
         return $pdf->download($fileName);
+    }
+
+    // Legacy Academic Panel route compatibility (old classRoutine* routes)
+    public function classRoutineManage()
+    {
+        return redirect()->route('resultClassRoutineManage');
+    }
+
+    public function saveClassRoutine(Request $requ)
+    {
+        return $this->saveResultClassRoutine($requ);
+    }
+
+    public function editClassRoutine($id)
+    {
+        return redirect()->route('editResultClassRoutine', ['id' => $id]);
+    }
+
+    public function delClassRoutine($id)
+    {
+        return $this->delResultClassRoutine($id);
+    }
+
+    public function delClassRoutineContent($id)
+    {
+        return redirect()->route('classRoutineManage')->with('error', 'Attachment delete is not applicable in the new Class Routine system.');
+    }
+
+    // Legacy Academic Panel route compatibility (old examRoutine* routes)
+    public function examRoutineManage()
+    {
+        return redirect()->route('resultExamRoutineManage');
+    }
+
+    public function saveExamRoutine(Request $requ)
+    {
+        return $this->saveResultExamRoutine($requ);
+    }
+
+    public function editExamRoutine($id)
+    {
+        return redirect()->route('editResultExamRoutine', ['id' => $id]);
+    }
+
+    public function delExamRoutine($id)
+    {
+        return $this->delResultExamRoutine($id);
+    }
+
+    public function delExamRoutineContent($id)
+    {
+        return redirect()->route('examRoutineManage')->with('error', 'Attachment delete is not applicable in the new Exam Routine system.');
+    }
+
+    private function buildRoutineLookupMaps($routineList, bool $includeExam = false): array
+    {
+        $classIds = $routineList->pluck('assignClass')->filter()->unique()->values()->all();
+        $sectionIds = $routineList->pluck('assignSection')->filter()->unique()->values()->all();
+        $departmentIds = $routineList->pluck('assignDepartment')->filter()->unique()->values()->all();
+        $sessionIds = $routineList->pluck('assignSession')->filter()->unique()->values()->all();
+        $examIds = $includeExam ? $routineList->pluck('assignExam')->filter()->unique()->values()->all() : [];
+
+        return [
+            'classes' => !empty($classIds) ? classManage::whereIn('id', $classIds)->get()->keyBy('id') : collect(),
+            'sections' => !empty($sectionIds) ? sectionManage::whereIn('id', $sectionIds)->get()->keyBy('id') : collect(),
+            'departments' => !empty($departmentIds) ? Department::whereIn('id', $departmentIds)->get()->keyBy('id') : collect(),
+            'sessions' => !empty($sessionIds) ? sessionManage::whereIn('id', $sessionIds)->get()->keyBy('id') : collect(),
+            'exams' => ($includeExam && !empty($examIds)) ? Exam::whereIn('id', $examIds)->get()->keyBy('id') : collect(),
+        ];
     }
 
     public function saveResultExamRoutine(Request $requ){
@@ -525,7 +607,6 @@ class ExamController extends Controller
                     'end_time' => $entryEndTime !== '' ? $entryEndTime : null,
                     'exam_time' => $entryTime,
                     'subject_id' => $entrySubjectId,
-                    'subject_name' => $entrySubject,
                     'sort_order' => $i + 1,
                 ]);
             }
@@ -569,7 +650,13 @@ class ExamController extends Controller
             ->orderBy('id', 'DESC')
             ->get();
 
-        return view('result.examRoutineManage', ['itemId' => $id, 'routineList' => $routineList]);
+        $lookup = $this->buildRoutineLookupMaps($routineList, true);
+
+        return view('result.examRoutineManage', [
+            'itemId' => $id,
+            'routineList' => $routineList,
+            'lookup' => $lookup,
+        ]);
     }
 
     public function delResultExamRoutine($id){
@@ -600,7 +687,7 @@ class ExamController extends Controller
             ->orderBy('id', 'ASC')
             ->get();
 
-        $routine = ExamRoutine::with('entries')->where('status', 'result_routine')
+        $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
             ->where('assignClass', $requ->classId)
             ->where('assignSession', $requ->sessionId)
             ->where('assignExam', $requ->examId)
@@ -618,7 +705,7 @@ class ExamController extends Controller
             ->first();
 
         if (empty($routine) && !empty($requ->departmentId)) {
-            $routine = ExamRoutine::with('entries')->where('status', 'result_routine')
+            $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
                 ->where('assignClass', $requ->classId)
                 ->where(function($q) use ($requ){
                     if (!empty($requ->groupId)) {
@@ -640,7 +727,7 @@ class ExamController extends Controller
         }
 
         if (empty($routine)) {
-            $routine = ExamRoutine::with('entries')->where('status', 'result_routine')
+            $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
                 ->where('assignClass', $requ->classId)
                 ->where(function($q) use ($requ){
                     $q->whereNull('assignSection')

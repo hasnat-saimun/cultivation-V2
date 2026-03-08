@@ -291,7 +291,7 @@ Get Admit Card
                                                 {{ $left->exam_time ?? '' }}
                                             @endif
                                         </td>
-                                        <td>{{ $left->subject_name ?? '' }}</td>
+                                        <td>{{ data_get($left, 'subject.subjectName', '') }}</td>
                                         <td class="split-cell"></td>
                                         <td>{{ $right && !empty($right->exam_date) ? \Carbon\Carbon::parse($right->exam_date)->format('d-m-Y') : '' }}</td>
                                         <td>{{ $right->exam_day ?? '' }}</td>
@@ -302,7 +302,7 @@ Get Admit Card
                                                 {{ $right->exam_time ?? '' }}
                                             @endif
                                         </td>
-                                        <td>{{ $right->subject_name ?? '' }}</td>
+                                        <td>{{ data_get($right, 'subject.subjectName', '') }}</td>
                                     </tr>
                                 @endfor
                             </tbody>

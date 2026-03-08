@@ -4,6 +4,12 @@ Class Routine Management
 @endsection
 @section('backIndex')
 @php
+    $lookup = $lookup ?? [];
+    $lookupClasses = $lookup['classes'] ?? collect();
+    $lookupSections = $lookup['sections'] ?? collect();
+    $lookupDepartments = $lookup['departments'] ?? collect();
+    $lookupSessions = $lookup['sessions'] ?? collect();
+
     $itemId = $itemId ?? null;
     $title = 'Class Routine';
     $assignClass = '';
@@ -13,7 +19,7 @@ Class Routine Management
     $routineEntries = collect();
 
     if(!empty($itemId)):
-        $items = \App\Models\ExamRoutine::with('entries')->where('status', 'class_routine')->find($itemId);
+        $items = \App\Models\ClassRoutine::with('entries')->find($itemId);
         if(!empty($items)):
             $title = $items->title;
             $assignClass = $items->assignClass;
@@ -26,7 +32,7 @@ Class Routine Management
 
     if($routineEntries->count() === 0) {
         $routineEntries = collect([(object)[
-            'exam_day' => '',
+            'class_day' => '',
             'start_time' => '',
             'end_time' => '',
             'subject_id' => null,
@@ -214,7 +220,7 @@ Class Routine Management
                                                     <select name="entry_day[]" class="form-select routine-grid-input">
                                                         <option value="">Select Day</option>
                                                         @foreach($dayOptions as $day)
-                                                            <option value="{{ $day }}" {{ strtolower((string)($entry->exam_day ?? '')) === strtolower($day) ? 'selected' : '' }}>{{ $day }}</option>
+                                                            <option value="{{ $day }}" {{ strtolower((string)($entry->class_day ?? '')) === strtolower($day) ? 'selected' : '' }}>{{ $day }}</option>
                                                         @endforeach
                                                     </select>
                                                 </td>
@@ -265,19 +271,13 @@ Class Routine Management
                         @if(!empty($routineList) && $routineList->count() > 0)
                             @php $x = 1; @endphp
                             @foreach($routineList as $item)
-                                @php
-                                    $itemClass = \App\Models\classManage::find($item->assignClass);
-                                    $itemSection = \App\Models\sectionManage::find($item->assignSection);
-                                    $itemDepartment = \App\Models\Department::find($item->assignDepartment);
-                                    $itemSession = \App\Models\sessionManage::find($item->assignSession);
-                                @endphp
                                 <tr>
                                     <td>{{ $x }}</td>
                                     <td>{{ $item->title }}</td>
-                                    <td>{{ $itemClass->className ?? '-' }}</td>
-                                    <td>{{ $itemSection->section ?? 'All' }}</td>
-                                    <td>{{ $itemDepartment->departmentName ?? 'All' }}</td>
-                                    <td>{{ $itemSession->session ?? '-' }}</td>
+                                    <td>{{ optional($lookupClasses->get($item->assignClass))->className ?? '-' }}</td>
+                                    <td>{{ optional($lookupSections->get($item->assignSection))->section ?? 'All' }}</td>
+                                    <td>{{ optional($lookupDepartments->get($item->assignDepartment))->departmentName ?? 'All' }}</td>
+                                    <td>{{ optional($lookupSessions->get($item->assignSession))->session ?? '-' }}</td>
                                     <td>{{ $item->entries_count ?? 0 }}</td>
                                     <td>
                                         <a href="{{ route('downloadResultClassRoutinePdf',['id'=>$item->id]) }}" title="Download PDF"><i class="fa-solid fa-file-pdf mx-2" style="color: #b9102b;"></i></a>

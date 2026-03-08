@@ -4,8 +4,15 @@ Exam Routine Management
 @endsection
 @section('backIndex')
 @php
+    $lookup = $lookup ?? [];
+    $lookupExams = $lookup['exams'] ?? collect();
+    $lookupClasses = $lookup['classes'] ?? collect();
+    $lookupSections = $lookup['sections'] ?? collect();
+    $lookupDepartments = $lookup['departments'] ?? collect();
+    $lookupSessions = $lookup['sessions'] ?? collect();
+
     if(!empty($itemId)):
-        $items = \App\Models\ExamRoutine::with('entries')->where('status', 'result_routine')->find($itemId);
+        $items = \App\Models\ExamRoutine::with('entries.subject')->where('status', 'result_routine')->find($itemId);
         if(!empty($items)):
             $title = $items->title;
             $assignClass = $items->assignClass;
@@ -34,7 +41,6 @@ Exam Routine Management
             'end_time' => '',
             'exam_time' => '',
             'subject_id' => null,
-            'subject_name' => '',
         ]]);
     }
 
@@ -219,10 +225,10 @@ Exam Routine Management
                                             <td><input type="time" name="entry_start_time[]" class="form-control routine-grid-input" value="{{ $existingStart }}"></td>
                                             <td><input type="time" name="entry_end_time[]" class="form-control routine-grid-input" value="{{ $existingEnd }}"></td>
                                             <td>
-                                                <select name="entry_subject_id[]" class="form-select subject-select" data-existing-subject-id="{{ $entry->subject_id ?? '' }}" data-existing-subject-name="{{ $entry->subject_name ?? '' }}">
+                                                <select name="entry_subject_id[]" class="form-select subject-select" data-existing-subject-id="{{ $entry->subject_id ?? '' }}" data-existing-subject-name="{{ data_get($entry, 'subject.subjectName', '') }}">
                                                     <option value="">Select Subject</option>
                                                     @foreach($subjectList as $subject)
-                                                        <option value="{{ $subject->id }}" {{ (string)($entry->subject_id ?? '') === (string)$subject->id || ((empty($entry->subject_id) && ($entry->subject_name ?? '') === $subject->subjectName) ? 'selected' : '') }}>{{ $subject->subjectName }}</option>
+                                                        <option value="{{ $subject->id }}" {{ (string)($entry->subject_id ?? '') === (string)$subject->id ? 'selected' : '' }}>{{ $subject->subjectName }}</option>
                                                     @endforeach
                                                 </select>
                                             </td>
@@ -263,21 +269,14 @@ Exam Routine Management
                         @if(!empty($routineList) && $routineList->count() > 0)
                             @php $x = 1; @endphp
                             @foreach($routineList as $item)
-                                @php
-                                    $itemExam = \App\Models\Exam::find($item->assignExam);
-                                    $itemClass = \App\Models\classManage::find($item->assignClass);
-                                    $itemSection = \App\Models\sectionManage::find($item->assignSection);
-                                    $itemDepartment = \App\Models\Department::find($item->assignDepartment);
-                                    $itemSession = \App\Models\sessionManage::find($item->assignSession);
-                                @endphp
                                 <tr>
                                     <td>{{ $x }}</td>
                                     <td>{{ $item->title }}</td>
-                                    <td>{{ $itemExam->examName ?? '-' }}</td>
-                                    <td>{{ $itemClass->className ?? '-' }}</td>
-                                    <td>{{ $itemSection->section ?? 'All' }}</td>
-                                    <td>{{ $itemDepartment->departmentName ?? 'All' }}</td>
-                                    <td>{{ $itemSession->session ?? '-' }}</td>
+                                    <td>{{ optional($lookupExams->get($item->assignExam))->examName ?? '-' }}</td>
+                                    <td>{{ optional($lookupClasses->get($item->assignClass))->className ?? '-' }}</td>
+                                    <td>{{ optional($lookupSections->get($item->assignSection))->section ?? 'All' }}</td>
+                                    <td>{{ optional($lookupDepartments->get($item->assignDepartment))->departmentName ?? 'All' }}</td>
+                                    <td>{{ optional($lookupSessions->get($item->assignSession))->session ?? '-' }}</td>
                                     <td>{{ $item->entries_count ?? 0 }}</td>
                                     <td>
                                         <a href="{{ route('editResultExamRoutine',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>

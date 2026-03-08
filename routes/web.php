@@ -454,52 +454,52 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('delSyllabus');
 
     Route::get('/academic/classRoutine/',[
-        AcademicController::class ,
+        ExamController::class ,
         'classRoutineManage'
     ])->name('classRoutineManage');
 
     Route::post('/academic/classRoutine/save',[
-        AcademicController::class ,
+        ExamController::class ,
         'saveClassRoutine'
     ])->name('saveClassRoutine');
 
     Route::get('/academic/classRoutine/edit/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'editClassRoutine'
     ])->name('editClassRoutine');
 
     Route::get('/academic/classRoutine/del/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'delClassRoutine'
     ])->name('delClassRoutine');
 
     Route::get('/academic/classRoutine/content/delete/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'delClassRoutineContent'
     ])->name('delClassRoutineContent');
 
     Route::get('/academic/examRoutine/',[
-        AcademicController::class ,
+        ExamController::class ,
         'examRoutineManage'
     ])->name('examRoutineManage');
 
     Route::post('/academic/examRoutine/save',[
-        AcademicController::class ,
+        ExamController::class ,
         'saveExamRoutine'
     ])->name('saveExamRoutine');
 
     Route::get('/academic/examRoutine/edit/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'editExamRoutine'
     ])->name('editExamRoutine');
 
     Route::get('/academic/examRoutine/del/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'delExamRoutine'
     ])->name('delExamRoutine');
 
     Route::get('/academic/examRoutine/content/delete/{id}',[
-        AcademicController::class ,
+        ExamController::class ,
         'delExamRoutineContent'
     ])->name('delExamRoutineContent');
 
