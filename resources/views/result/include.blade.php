@@ -25,7 +25,7 @@
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
                         $resultRoutes = ['addMarks','createMarksheet','allMarksheet','atGlanceResult','result.summary','transcripts.bulk','result.final.publish'];
-                        $classRoutes = ['allClasses','createClass'];
+                        $classRoutes = ['allClasses','createClass','resultClassRoutineManage','saveResultClassRoutine','editResultClassRoutine','viewResultClassRoutine','printResultClassRoutine','downloadResultClassRoutinePdf'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
                         $sessionRoutes = ['allSession','createSession'];
@@ -88,6 +88,9 @@
                                     </li>
                                     <li class="nav-item">
                                         <a href="{{ route('createClass') }}" class="nav-link {{ request()->routeIs('createClass') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Add New Class</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="{{ route('resultClassRoutineManage') }}" class="nav-link {{ request()->routeIs('resultClassRoutineManage') || request()->routeIs('editResultClassRoutine') || request()->routeIs('viewResultClassRoutine') || request()->routeIs('printResultClassRoutine') || request()->routeIs('downloadResultClassRoutinePdf') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Class Routine</a>
                                     </li>
                                 </ul>
                             </li>

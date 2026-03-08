@@ -129,6 +129,316 @@ class ExamController extends Controller
         return view('result.examRoutineManage', ['routineList' => $routineList]);
     }
 
+    public function resultClassRoutineManage(){
+        $routineList = ExamRoutine::where('status', 'class_routine')
+            ->withCount('entries')
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        return view('result.classRoutineManage', ['routineList' => $routineList]);
+    }
+
+    public function saveResultClassRoutine(Request $requ){
+        $requ->validate([
+            'title' => 'required|string|max:255',
+            'assignClass' => 'required',
+            'assignSession' => 'required',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            if (empty($requ->itemId)) {
+                $item = new ExamRoutine();
+            } else {
+                $item = ExamRoutine::where('status', 'class_routine')->find($requ->itemId);
+            }
+
+            if (empty($item)) {
+                DB::rollBack();
+                return back()->with('error', 'Routine failed to save');
+            }
+
+            $item->title = trim((string)($requ->title ?? '')) ?: 'Class Routine';
+            $item->assignClass = $requ->assignClass;
+            $item->assignSection = !empty($requ->assignSection) ? (int)$requ->assignSection : null;
+            $item->assignDepartment = $requ->assignDepartment;
+            $item->assignSession = $requ->assignSession;
+            $item->status = 'class_routine';
+            $item->assignExam = null;
+            $item->save();
+
+            ExamRoutineItem::where('exam_routine_id', $item->id)->delete();
+
+            $days = $requ->input('entry_day', []);
+            $startTimes = $requ->input('entry_start_time', []);
+            $endTimes = $requ->input('entry_end_time', []);
+            $subjectIds = $requ->input('entry_subject_id', []);
+
+            $rows = max(count($days), count($startTimes), count($endTimes), count($subjectIds));
+            $savedRows = 0;
+            $usedSubjectKeysByDay = [];
+            $usedTimeRangesByDay = [];
+            $allowedDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+
+            for ($i = 0; $i < $rows; $i++) {
+                $entryDay = trim((string)($days[$i] ?? ''));
+                $entryStartTime = trim((string)($startTimes[$i] ?? ''));
+                $entryEndTime = trim((string)($endTimes[$i] ?? ''));
+                $rawSubjectId = trim((string)($subjectIds[$i] ?? ''));
+                $isBreakTime = ($rawSubjectId === '__BREAK__');
+                $entrySubjectId = (!$isBreakTime && ctype_digit($rawSubjectId)) ? (int)$rawSubjectId : null;
+                $subjectData = !empty($entrySubjectId) ? Subject::find($entrySubjectId) : null;
+                $entrySubject = $isBreakTime ? 'Break/Tiffin Time' : ($subjectData->subjectName ?? '');
+                $entrySubjectKey = $isBreakTime ? '__BREAK__' : (string)$entrySubjectId;
+
+                if ($entryDay === '' && $entryStartTime === '' && $entryEndTime === '' && empty($entrySubjectId)) {
+                    continue;
+                }
+
+                if ($entryDay === '') {
+                    DB::rollBack();
+                    return back()->with('error', 'Day is required for each routine row.');
+                }
+
+                if (!$isBreakTime && empty($entrySubjectId)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Subject is required for each routine row.');
+                }
+
+                $normalizedDay = ucfirst(strtolower($entryDay));
+                $dayKey = strtolower($normalizedDay);
+
+                if (!in_array($normalizedDay, $allowedDays, true)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Day must be between Sunday and Thursday.');
+                }
+
+                if (!array_key_exists($dayKey, $usedSubjectKeysByDay)) {
+                    $usedSubjectKeysByDay[$dayKey] = [];
+                }
+
+                if (!array_key_exists($dayKey, $usedTimeRangesByDay)) {
+                    $usedTimeRangesByDay[$dayKey] = [];
+                }
+
+                if (in_array($entrySubjectKey, $usedSubjectKeysByDay[$dayKey], true)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Same subject/break cannot be added multiple times on '.$normalizedDay.'.');
+                }
+
+                if ($entryStartTime === '' || $entryEndTime === '') {
+                    DB::rollBack();
+                    return back()->with('error', 'Start Time and End Time are required for each routine row.');
+                }
+
+                $startTs = strtotime($entryStartTime);
+                $endTs = strtotime($entryEndTime);
+
+                if ($startTs === false || $endTs === false) {
+                    DB::rollBack();
+                    return back()->with('error', 'Invalid time format in routine rows.');
+                }
+
+                if ($startTs >= $endTs) {
+                    DB::rollBack();
+                    return back()->with('error', 'Start Time must be earlier than End Time for '.$normalizedDay.'.');
+                }
+
+                foreach ($usedTimeRangesByDay[$dayKey] as $range) {
+                    $overlaps = ($startTs < $range['end']) && ($range['start'] < $endTs);
+                    if ($overlaps) {
+                        DB::rollBack();
+                        return back()->with('error', 'Overlapping time range found on '.$normalizedDay.'. Please keep separate time slots.');
+                    }
+                }
+
+                if (!$isBreakTime && !empty($entrySubjectId) && !$this->subjectMatchesClass($subjectData?->assign_class, (int)$requ->assignClass)) {
+                    DB::rollBack();
+                    return back()->with('error', 'Selected subject does not match the chosen class.');
+                }
+
+                $entryTime = '';
+                if ($entryStartTime !== '' && $entryEndTime !== '') {
+                    $entryTime = date('h:i A', strtotime($entryStartTime)).'-'.date('h:i A', strtotime($entryEndTime));
+                }
+
+                ExamRoutineItem::create([
+                    'exam_routine_id' => $item->id,
+                    'exam_date' => null,
+                    'exam_day' => $normalizedDay,
+                    'start_time' => $entryStartTime !== '' ? $entryStartTime : null,
+                    'end_time' => $entryEndTime !== '' ? $entryEndTime : null,
+                    'exam_time' => $entryTime,
+                    'subject_id' => $entrySubjectId,
+                    'subject_name' => $entrySubject,
+                    'sort_order' => $i + 1,
+                ]);
+
+                $usedSubjectKeysByDay[$dayKey][] = $entrySubjectKey;
+                $usedTimeRangesByDay[$dayKey][] = [
+                    'start' => $startTs,
+                    'end' => $endTs,
+                ];
+                $savedRows++;
+            }
+
+            if ($savedRows === 0) {
+                DB::rollBack();
+                return back()->with('error', 'Please add at least one routine row.');
+            }
+
+            DB::commit();
+            return back()->with('success', 'Class routine successfully saved');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Routine failed to save');
+        }
+    }
+
+    public function editResultClassRoutine($id){
+        $routineList = ExamRoutine::where('status', 'class_routine')
+            ->withCount('entries')
+            ->orderBy('id', 'DESC')
+            ->get();
+
+        return view('result.classRoutineManage', ['itemId' => $id, 'routineList' => $routineList]);
+    }
+
+    public function delResultClassRoutine($id){
+        $item = ExamRoutine::where('status', 'class_routine')->find($id);
+
+        if(empty($item)):
+            return back()->with('error', 'Item failed to delete');
+        else:
+            $item->delete();
+            return back()->with('success', 'Item deleted successfully');
+        endif;
+    }
+
+    public function viewResultClassRoutine($id){
+        $routine = ExamRoutine::with('entries')
+            ->where('status', 'class_routine')
+            ->find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        $dayOrder = [
+            'Saturday' => 1,
+            'Sunday' => 2,
+            'Monday' => 3,
+            'Tuesday' => 4,
+            'Wednesday' => 5,
+            'Thursday' => 6,
+            'Friday' => 7,
+        ];
+
+        $entries = $routine->entries
+            ->sort(function ($a, $b) use ($dayOrder) {
+                $aDay = ucfirst(strtolower((string)($a->exam_day ?? '')));
+                $bDay = ucfirst(strtolower((string)($b->exam_day ?? '')));
+
+                $aDayOrder = $dayOrder[$aDay] ?? 99;
+                $bDayOrder = $dayOrder[$bDay] ?? 99;
+
+                if ($aDayOrder !== $bDayOrder) {
+                    return $aDayOrder <=> $bDayOrder;
+                }
+
+                $aStart = (string)($a->start_time ?? '23:59:59');
+                $bStart = (string)($b->start_time ?? '23:59:59');
+
+                if ($aStart !== $bStart) {
+                    return $aStart <=> $bStart;
+                }
+
+                return ((int)$a->sort_order) <=> ((int)$b->sort_order);
+            })
+            ->values();
+
+        return view('result.classRoutineView', [
+            'routine' => $routine,
+            'entries' => $entries,
+        ]);
+    }
+
+    public function printResultClassRoutine($id){
+        $routine = ExamRoutine::where('status', 'class_routine')->find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        return redirect()->route('viewResultClassRoutine', ['id' => $id, 'print' => 1]);
+    }
+
+    public function downloadResultClassRoutinePdf($id){
+        $routine = ExamRoutine::with('entries')
+            ->where('status', 'class_routine')
+            ->find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        $dayOrder = [
+            'Saturday' => 1,
+            'Sunday' => 2,
+            'Monday' => 3,
+            'Tuesday' => 4,
+            'Wednesday' => 5,
+            'Thursday' => 6,
+            'Friday' => 7,
+        ];
+
+        $entries = $routine->entries
+            ->sort(function ($a, $b) use ($dayOrder) {
+                $aDay = ucfirst(strtolower((string)($a->exam_day ?? '')));
+                $bDay = ucfirst(strtolower((string)($b->exam_day ?? '')));
+
+                $aDayOrder = $dayOrder[$aDay] ?? 99;
+                $bDayOrder = $dayOrder[$bDay] ?? 99;
+
+                if ($aDayOrder !== $bDayOrder) {
+                    return $aDayOrder <=> $bDayOrder;
+                }
+
+                $aStart = (string)($a->start_time ?? '23:59:59');
+                $bStart = (string)($b->start_time ?? '23:59:59');
+
+                if ($aStart !== $bStart) {
+                    return $aStart <=> $bStart;
+                }
+
+                return ((int)$a->sort_order) <=> ((int)$b->sort_order);
+            })
+            ->values();
+
+        $pdf = \PDF::loadView('exports.class-routine-pdf', [
+            'routine' => $routine,
+            'entries' => $entries,
+        ])->setPaper('a4', 'landscape');
+
+        $className = optional(\App\Models\classManage::find($routine->assignClass))->className ?? 'class';
+        $sessionName = optional(\App\Models\sessionManage::find($routine->assignSession))->session ?? 'session';
+
+        $toSlug = function (string $value): string {
+            $value = strtolower(trim($value));
+            $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+            return trim($value, '-');
+        };
+
+        $titlePart = $toSlug((string)($routine->title ?: 'class-routine')) ?: 'class-routine';
+        $classPart = $toSlug((string)$className) ?: 'class';
+        $sessionPart = $toSlug((string)$sessionName) ?: 'session';
+
+        $fileName = $titlePart.'-'.$classPart.'-'.$sessionPart.'-'.date('Y-m-d').'.pdf';
+
+        return $pdf->download($fileName);
+    }
+
     public function saveResultExamRoutine(Request $requ){
         DB::beginTransaction();
 

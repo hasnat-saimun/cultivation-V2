@@ -1421,6 +1421,35 @@ Route::middleware(['adminGuard'])->group (function(){
         'delResultExamRoutine'
     ])->name('delResultExamRoutine');
 
+    Route::get('/result/class-routine/manage',[
+        ExamController::class,
+        'resultClassRoutineManage'
+    ])->name('resultClassRoutineManage');
+    Route::post('/result/class-routine/save',[
+        ExamController::class,
+        'saveResultClassRoutine'
+    ])->name('saveResultClassRoutine');
+    Route::get('/result/class-routine/edit/{id}',[
+        ExamController::class,
+        'editResultClassRoutine'
+    ])->name('editResultClassRoutine');
+    Route::get('/result/class-routine/del/{id}',[
+        ExamController::class,
+        'delResultClassRoutine'
+    ])->name('delResultClassRoutine');
+    Route::get('/result/class-routine/view/{id}',[
+        ExamController::class,
+        'viewResultClassRoutine'
+    ])->name('viewResultClassRoutine');
+    Route::get('/result/class-routine/print/{id}',[
+        ExamController::class,
+        'printResultClassRoutine'
+    ])->name('printResultClassRoutine');
+    Route::get('/result/class-routine/pdf/{id}',[
+        ExamController::class,
+        'downloadResultClassRoutinePdf'
+    ])->name('downloadResultClassRoutinePdf');
+
     Route::get('/admit-card/creation',[
         ExamController::class,
         'admitCardRoutine'
