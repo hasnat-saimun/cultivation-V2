@@ -770,6 +770,91 @@ class ExamController extends Controller
                 return $q->where('departmentName', (int)$requ->departmentId);
             })
             ->get();
-        return view('result.getAttendSheet',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
+
+        $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
+            ->where('assignClass', $requ->classId)
+            ->where('assignSession', $requ->sessionId)
+            ->where('assignExam', $requ->examId)
+            ->when($requ->groupId, function($q) use ($requ){
+                return $q->where('assignSection', (int)$requ->groupId);
+            }, function($q){
+                return $q->where(function($sq){
+                    $sq->whereNull('assignSection')->orWhere('assignSection', '');
+                });
+            })
+            ->when($requ->departmentId, function($q) use ($requ){
+                return $q->where('assignDepartment', $requ->departmentId);
+            })
+            ->latest('id')
+            ->first();
+
+        if (empty($routine) && !empty($requ->departmentId)) {
+            $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
+                ->where('assignClass', $requ->classId)
+                ->where(function($q) use ($requ){
+                    if (!empty($requ->groupId)) {
+                        $q->where('assignSection', (int)$requ->groupId)
+                            ->orWhereNull('assignSection')
+                            ->orWhere('assignSection', '');
+                    } else {
+                        $q->whereNull('assignSection')->orWhere('assignSection', '');
+                    }
+                })
+                ->where('assignSession', $requ->sessionId)
+                ->where('assignExam', $requ->examId)
+                ->where(function($q){
+                    $q->whereNull('assignDepartment')
+                      ->orWhere('assignDepartment', '');
+                })
+                ->latest('id')
+                ->first();
+        }
+
+        if (empty($routine)) {
+            $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')
+                ->where('assignClass', $requ->classId)
+                ->where(function($q) use ($requ){
+                    $q->whereNull('assignSection')
+                      ->orWhere('assignSection', '')
+                      ->when(!empty($requ->groupId), function($sq) use ($requ){
+                          $sq->orWhere('assignSection', (int)$requ->groupId);
+                      });
+                })
+                ->where('assignSession', $requ->sessionId)
+                ->where('assignExam', $requ->examId)
+                ->when($requ->departmentId, function($q) use ($requ){
+                    return $q->where('assignDepartment', $requ->departmentId);
+                })
+                ->latest('id')
+                ->first();
+        }
+
+        $routineRows = collect($routine?->entries ?? [])->sort(function ($a, $b) {
+            $aDate = (string)($a->exam_date ?? '');
+            $bDate = (string)($b->exam_date ?? '');
+
+            if ($aDate !== $bDate) {
+                return strcmp($aDate, $bDate);
+            }
+
+            $aStart = (string)($a->start_time ?? '');
+            $bStart = (string)($b->start_time ?? '');
+
+            if ($aStart !== $bStart) {
+                return strcmp($aStart, $bStart);
+            }
+
+            return ((int)$a->id) <=> ((int)$b->id);
+        })->values();
+
+        return view('result.getAttendSheet',[
+            'studentList' => $studentList,
+            'groupId' => $requ->groupId,
+            'classId' => $requ->classId,
+            'sessionId' => $requ->sessionId,
+            'examId' => $requ->examId,
+            'departmentId' => $requ->departmentId,
+            'routineRows' => $routineRows,
+        ]);
     }
 }

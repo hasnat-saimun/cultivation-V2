@@ -28,6 +28,9 @@ Get Admit Card
         $examName = "-";
     endif;
 
+    $routineRows = collect($routineRows ?? []);
+    $blankRows = 6;
+
     $serverConfig = \App\Models\ServerConfig::latest('id')->first();
     $headMasterSign = null;
     if (!empty($serverConfig?->principalSign)) {
@@ -92,111 +95,33 @@ Get Admit Card
                                                 <th>Examiner Sign</th>
                                             </thead>
                                             <tbody>
-                                                <tr>
-                                                    <td>1</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>2</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>3</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>4</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>5</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>6</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>7</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>8</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>9</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>10</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>11</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>12</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>13</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>14</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
-                                                <tr>
-                                                    <td>15</td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                    <td></td>
-                                                </tr>
+                                                @php $serial = 1; @endphp
+                                                @foreach($routineRows as $entry)
+                                                    <tr>
+                                                        <td>{{ $serial }}</td>
+                                                        <td>
+                                                            @if(!empty($entry->exam_date))
+                                                                {{ \Carbon\Carbon::parse($entry->exam_date)->format('d-m-Y') }}
+                                                                <div style="font-size: 12px; line-height: 1.2;">{{ !empty($entry->exam_day) ? $entry->exam_day : \Carbon\Carbon::parse($entry->exam_date)->format('l') }}</div>
+                                                            @endif
+                                                        </td>
+                                                        <td>{{ data_get($entry, 'subject.subjectName', '') }}</td>
+                                                        <td></td>
+                                                        <td></td>
+                                                    </tr>
+                                                    @php $serial++; @endphp
+                                                @endforeach
+
+                                                @for($i = 0; $i < $blankRows; $i++)
+                                                    <tr>
+                                                        <td>{{ $serial }}</td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                        <td></td>
+                                                    </tr>
+                                                    @php $serial++; @endphp
+                                                @endfor
                                             </tbody>
                                         </table>
                                     </div>
