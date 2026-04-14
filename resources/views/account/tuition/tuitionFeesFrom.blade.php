@@ -19,8 +19,13 @@ Tuition Fee
             @endif
                 @csrf
                 <div class="row mb-4">
-                    <h4 class="text-bold">Student Fees Collection</h4>
+                    <h4 class="text-bold">Student Fees Collection (Monthly)</h4>
                 </div>
+                @if(!empty($isTeacher) && $isTeacher)
+                <div class="alert alert-info">
+                    Class teacher mode is active. You can collect fees only for your assigned class/section students.
+                </div>
+                @endif
                 <div class="mb-4">
                     <div class="card-body">
                         <h6 class="mb-3">Find Student</h6>
@@ -65,10 +70,15 @@ Tuition Fee
                     </div>
                 </div>
                 <div class="row align-items-center">
-                    <div class="col-4 form-group">
+                    <div class="col-md-3 form-group">
+                        <label class="form-label">Fee Month</label>
+                        <input type="month" class="form-control" name="feeMonth" id="feeMonth" value="{{ old('feeMonth', now()->format('Y-m')) }}" required>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label class="form-label">Student ID</label>
                         <input type="text" class="form-control" placeholder="Enter student ID to collect tution fee" name="stdId" id="stdId" required>
                     </div>
-                    <div class="col-4 text-center form-group">
+                    <div class="col-md-3 text-center form-group pt-md-4">
                         <a href="#" onclick="getStudent()" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</a>
                     </div>
                 </div>
@@ -125,6 +135,7 @@ Tuition Fee
 
     function getStudent() {
         var str   = document.getElementById('stdId').value;
+        var feeMonth = document.getElementById('feeMonth').value;
         if(str == "") {
             document.getElementById("studentData").innerHTML = "";
             return;
@@ -136,7 +147,11 @@ Tuition Fee
                     if(window.initTuitionFeesDynamicRows){ window.initTuitionFeesDynamicRows(); }
                 }
             };
-            xmlhttp.open("GET","{{ url('/') }}/"+"getStudentForTutionFee/"+str,true);
+            var url = "{{ url('/') }}/"+"getStudentForTutionFee/"+str;
+            if(feeMonth){
+                url += "?feeMonth=" + encodeURIComponent(feeMonth);
+            }
+            xmlhttp.open("GET", url, true);
             xmlhttp.send();
         }
     }
@@ -198,9 +213,15 @@ Tuition Fee
                 if(opt){
                     const amt = parseFloat(opt.getAttribute('data-amount'));
                     const row = sel.closest('.fees-row');
-                    const input = row ? row.querySelector('.amount-input') : null;
-                    if(input && !isNaN(amt)){
-                        input.value = amt;
+                    const setupInput = row ? row.querySelector('.total-input') : null;
+                    const payInput = row ? row.querySelector('.amount-input') : null;
+                    if(!isNaN(amt)){
+                        if(setupInput){
+                            setupInput.value = amt;
+                        }
+                        if(payInput && (payInput.value === '' || parseFloat(payInput.value) === 0)){
+                            payInput.value = amt;
+                        }
                         computeTotal();
                     }
                 }

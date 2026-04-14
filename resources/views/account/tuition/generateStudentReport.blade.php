@@ -31,7 +31,7 @@ Institute Info
     }
 </style>
 <div class="row gutters-20 mb-4">
-    <div class="col-10 mx-auto">
+    <div class="col-12 mx-auto">
         <div class="row" id="report">
             @if(!empty($feesList))
                 @php
@@ -40,25 +40,30 @@ Institute Info
                         $classData = \App\Models\classManage::find($student->className);
                         $sectionData = \App\Models\sectionManage::find($student->sectionName);
                     endif;
-                    $sumAmount = $feesList->sum('amount');
+                    $sumCollectedAmount = $feesList->sum(function($row){
+                        return (float)($row->paid_amount ?? $row->amount ?? 0);
+                    });
+                    $sumSetupAmount = $feesList->sum(function($row){
+                        return (float)($row->due_amount ?? $row->amount ?? 0);
+                    });
+                    $sumDueAmount = max(0, $sumSetupAmount - $sumCollectedAmount);
                     // Prefer explicit report context passed from controller
                     $reportType = $reportType ?? null;
-                    $betweenText = null;
-                    if($reportType === 'multiple' && !empty($selectedDates)){
-                        $sorted = collect($selectedDates)->sort()->values();
-                        $minDate = \Carbon\Carbon::parse($sorted->first())->format('d-M-Y');
-                        $maxDate = \Carbon\Carbon::parse($sorted->last())->format('d-M-Y');
-                        $betweenText = "Between {$minDate} to {$maxDate}";
-                    } elseif($reportType === 'range' && !empty($fromDate) && !empty($toDate)){
+                    $periodText = null;
+                    if($reportType === 'daily' && !empty($dailyDate)){
+                        $periodText = 'Daily: '.\Carbon\Carbon::parse($dailyDate)->format('d-M-Y');
+                    } elseif($reportType === 'monthly' && !empty($reportMonth)){
+                        $periodText = 'Monthly: '.\Carbon\Carbon::parse($reportMonth)->format('F Y');
+                    } elseif($reportType === 'custom' && !empty($fromDate) && !empty($toDate)){
                         $minDate = \Carbon\Carbon::parse($fromDate)->format('d-M-Y');
                         $maxDate = \Carbon\Carbon::parse($toDate)->format('d-M-Y');
-                        $betweenText = "Between {$minDate} to {$maxDate}";
+                        $periodText = "Custom: {$minDate} to {$maxDate}";
                     }
-                    // Hide Date column when report is by a single date
-                    $hideDateCol = ($reportType === 'single');
+                    // Hide Date column only when report basis is daily.
+                    $hideDateCol = ($reportType === 'daily');
                 @endphp
                 @if(!empty($student))
-                <div class="receipt-main col-10 mx-auto">
+                <div class="receipt-main col-11 mx-auto">
                     <div class="invoice-wrap">
                         @include('components.institute-header')
                         <div class="invoice-head">
@@ -66,8 +71,8 @@ Institute Info
                                 <div class="invoice-title">Student Fees Invoice</div>
                                 <div class="invoice-meta">
                                     Generated: {{ date('d-M-Y') }}
-                                    @if(!empty($betweenText))
-                                        · {{ $betweenText }}
+                                    @if(!empty($periodText))
+                                        · {{ $periodText }}
                                     @endif
                                 </div>
                             </div>
@@ -97,8 +102,12 @@ Institute Info
                                         @unless($hideDateCol)
                                         <th>Date</th>
                                         @endunless
+                                        <th>Month</th>
                                         <th>Description</th>
-                                        <th style="width:180px;">Amount</th>
+                                        <th style="width:120px;">Setup Amount</th>
+                                        <th style="width:120px;">Collected Amount</th>
+                                        <th style="width:100px;">Due Amount</th>
+                                        <th style="width:110px;">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -108,23 +117,31 @@ Institute Info
                                             $feesData = \App\Models\feesManager::find($fl->feesType);
                                             if(!empty($feesData)):
                                                 $feesName   = $feesData->feesName;
-                                                $amount     = $fl->amount;
+                                                $dueAmount = (float)($fl->due_amount ?? $fl->amount ?? 0);
+                                                $paidAmount = (float)($fl->paid_amount ?? $fl->amount ?? 0);
+                                                $status = $fl->payment_status ?? ($paidAmount >= $dueAmount && $dueAmount > 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid'));
                                             else:
                                                 $feesName="-";
-                                                $amount="-";
+                                                $dueAmount=0;
+                                                $paidAmount=0;
+                                                $status='unpaid';
                                             endif;
                                         @endphp
                                         <tr>
                                             @unless($hideDateCol)
                                             <td>{{ $fl->created_at->format('Y-m-d') }}</td>
                                             @endunless
+                                            <td>{{ !empty($fl->fee_month) ? \Carbon\Carbon::parse($fl->fee_month)->format('M Y') : '-' }}</td>
                                             <td>{{ $feesName }}</td>
-                                            <td>{{ $amount }}/-</td>
+                                            <td>{{ number_format($dueAmount, 2) }}</td>
+                                            <td>{{ number_format($paidAmount, 2) }}</td>
+                                            <td>{{ number_format(max(0, $dueAmount - $paidAmount), 2) }}</td>
+                                            <td>{{ ucfirst($status) }}</td>
                                         </tr>
                                     @endforeach
                                     @else
                                     <tr>
-                                        <td colspan="{{ $hideDateCol ? 2 : 3 }}">Sorry! No data found with your query</td>
+                                        <td colspan="{{ $hideDateCol ? 6 : 7 }}">Sorry! No data found with your query</td>
                                     </tr>
                                     @endif
                                 </tbody>
@@ -132,8 +149,9 @@ Institute Info
                         </div>
                         <div class="invoice-total">
                             <div class="total-box">
-                                <div class="row"><span>Subtotal</span><span>{{ $sumAmount }}</span></div>
-                                <div class="row grand"><span>Total</span><span>{{ $sumAmount }}</span></div>
+                                <div class="row"><span>Total Setup Amount</span><span>{{ number_format($sumSetupAmount, 2) }}</span></div>
+                                <div class="row"><span>Total Collected Amount</span><span>{{ number_format($sumCollectedAmount, 2) }}</span></div>
+                                <div class="row grand"><span>Total Due Amount</span><span>{{ number_format($sumDueAmount, 2) }}</span></div>
                             </div>
                         </div>
                         <div class="invoice-sign">

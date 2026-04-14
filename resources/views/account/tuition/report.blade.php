@@ -31,7 +31,7 @@ Report
     }
 </style>
 <div class="row gutters-20 mb-4">
-    <div class="col-10 mx-auto">
+    <div class="col-12 mx-auto">
         <div class="row" id="report">
             @if(!empty($singleView))
                 @php
@@ -43,7 +43,7 @@ Report
                     endif;
                 @endphp
                 @if(!empty($stdData))
-                <div class="receipt-main col-10 mx-auto">
+                <div class="receipt-main col-12 mx-auto">
                     <div class="invoice-wrap">
                         @include('components.institute-header')
                         <div class="invoice-head">
@@ -54,6 +54,7 @@ Report
                             <div class="invoice-meta text-end">
                                 <div><strong>Student ID:</strong> {{ $stdData->stdId }}</div>
                                 <div><strong>Roll:</strong> {{ $stdData->rollNumber }}</div>
+                                <div><strong>Fee Month:</strong> {{ !empty($singleView->fee_month) ? \Carbon\Carbon::parse($singleView->fee_month)->format('M Y') : '-' }}</div>
                             </div>
                         </div>
                         <div class="invoice-grid">
@@ -71,15 +72,21 @@ Report
                             </div>
                         </div>
                         @php
-                            $amount = $singleView->amount;
-                            $totalAmount = $amount;
+                            $setupAmount = (float)($singleView->due_amount ?? $singleView->amount ?? 0);
+                            $collectedAmount = (float)($singleView->paid_amount ?? $singleView->amount ?? 0);
+                            $dueAmount = max(0, $setupAmount - $collectedAmount);
+                            $status = $singleView->payment_status ?? ($collectedAmount >= $setupAmount && $setupAmount > 0 ? 'paid' : ($collectedAmount > 0 ? 'partial' : 'unpaid'));
                         @endphp
                         <div class="invoice-table">
                             <table>
                                 <thead>
                                     <tr>
+                                        <th>Month</th>
                                         <th>Description</th>
-                                        <th style="width:180px;">Amount</th>
+                                        <th style="width:140px;">Setup Amount</th>
+                                        <th style="width:140px;">Collected Amount</th>
+                                        <th style="width:120px;">Due Amount</th>
+                                        <th style="width:110px;">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -92,16 +99,21 @@ Report
                                     endif;
                                 @endphp
                                     <tr>
+                                        <td>{{ !empty($singleView->fee_month) ? \Carbon\Carbon::parse($singleView->fee_month)->format('M Y') : '-' }}</td>
                                         <td>{{ $feesName }}</td>
-                                        <td>{{ $amount }}/-</td>
+                                        <td>{{ number_format($setupAmount, 2) }}</td>
+                                        <td>{{ number_format($collectedAmount, 2) }}</td>
+                                        <td>{{ number_format($dueAmount, 2) }}</td>
+                                        <td>{{ ucfirst($status) }}</td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                         <div class="invoice-total">
                             <div class="total-box">
-                                <div class="row"><span>Subtotal</span><span>{{ $amount }}/-</span></div>
-                                <div class="row grand"><span>Total</span><span>{{ $totalAmount }}/-</span></div>
+                                <div class="row"><span>Setup Amount</span><span>{{ number_format($setupAmount, 2) }}</span></div>
+                                <div class="row"><span>Collected Amount</span><span>{{ number_format($collectedAmount, 2) }}</span></div>
+                                <div class="row grand"><span>Due Amount</span><span>{{ number_format($dueAmount, 2) }}</span></div>
                             </div>
                         </div>
                         <div class="invoice-sign">

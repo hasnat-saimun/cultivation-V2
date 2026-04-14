@@ -6,85 +6,117 @@
     <style>
         body {
             font-family: DejaVu Sans, sans-serif;
-            font-size: 11px;
-            color: #1d1d1d;
-            background: #ffffff;
+            font-size: 10px;
+            color: #111827;
+            background: #fff;
             margin: 0;
         }
-        .schedule-shell {
-            background: #e6e6e8;
-            border: 1px solid #cfd4d8;
-            padding: 12px;
+        .routine-sheet {
+            border: 1px solid #111827;
+            padding: 8px;
         }
-        .schedule-title {
+
+        .routine-header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .institute-name {
             margin: 0;
-            font-size: 32px;
+            font-size: 24px;
             line-height: 1;
-            font-weight: 900;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #575f68;
+            font-weight: 700;
+            color: #111827;
         }
-        .schedule-meta {
-            margin-top: 6px;
-            margin-bottom: 10px;
-            color: #4d5258;
-            font-size: 11px;
+
+        .routine-title {
+            margin: 2px 0;
+            font-size: 13px;
             font-weight: 600;
+            text-transform: uppercase;
         }
-        .schedule-meta span {
-            margin-right: 12px;
+
+        .routine-meta {
+            font-size: 10px;
+            color: #374151;
         }
-        .schedule-table {
+
+        .routine-meta span {
+            margin: 0 8px;
+        }
+
+        .routine-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            background: #f4f4f5;
         }
-        .schedule-table th,
-        .schedule-table td {
-            border: 2px solid #666b72;
+
+        .routine-table th,
+        .routine-table td {
+            border: 1px solid #111827;
             text-align: center;
             vertical-align: middle;
-            padding: 8px 6px;
-            color: #525861;
+            padding: 5px 3px;
+            color: #111827;
         }
-        .schedule-table thead th {
-            font-size: 17px;
-            font-weight: 800;
-            letter-spacing: .4px;
-            text-transform: uppercase;
+
+        .routine-table thead th {
+            font-size: 10px;
+            font-weight: 700;
+            background: #eceff3;
         }
-        .slot-head { background: #eadc9f; width: 18%; }
-        .day-sunday { background: #efc9a0; }
-        .day-monday { background: #eea3a8; }
-        .day-tuesday { background: #ef89d5; }
-        .day-wednesday { background: #cda8d8; }
-        .day-thursday { background: #beb1e6; }
-        .slot-cell {
-            background: #ececef;
-            font-size: 14px;
+
+        .day-col {
+            width: 11%;
+            background: #e5e7eb !important;
+            font-weight: 700;
+        }
+
+        .period-head {
+            background: #dbe7f5 !important;
+        }
+
+        .period-time {
+            background: #f3f4f6 !important;
+            font-size: 9px;
             font-weight: 600;
         }
-        .subject-cell {
-            background: #f2f2f3;
-            font-size: 11px;
+
+        .break-col {
+            width: 7%;
+            background: #fbe9c8 !important;
+            font-size: 9px;
             font-weight: 700;
-            min-height: 36px;
         }
+
+        .break-cell {
+            background: #fff3d6;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
+            font-size: 9px;
+        }
+
+        .day-name {
+            background: #f9fafb;
+            font-weight: 700;
+        }
+
+        .subject-cell {
+            font-size: 10px;
+            font-weight: 600;
+            min-height: 24px;
+        }
+
         .subject-empty {
-            color: #a3a8ae;
-            font-weight: 400;
-        }
-        .subject-break {
-            background: #fff3cd;
-            color: #6a4b00;
-            font-weight: 800;
+            color: #9ca3af;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
     @php
+        $config = \App\Models\ServerConfig::orderBy('id', 'DESC')->first();
         $itemClass = \App\Models\classManage::find($routine->assignClass);
         $itemSection = \App\Models\sectionManage::find($routine->assignSection);
         $itemDepartment = \App\Models\Department::find($routine->assignDepartment);
@@ -93,6 +125,31 @@
         $dayHeaders = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
         $slotMap = [];
         $cellMap = [];
+        $breakCounts = [];
+
+        $isBreakText = function (?string $text): bool {
+            $normalized = strtolower(trim((string) $text));
+            return in_array($normalized, ['break/tiffin time', 'break', 'tiffin', 'tiffin time'], true);
+        };
+
+        $formatTimeRange = function (string $start, string $end): string {
+            return date('h:i A', strtotime($start)).' - '.date('h:i A', strtotime($end));
+        };
+
+        $ordinal = function (int $number): string {
+            $abs = abs($number);
+            $lastTwo = $abs % 100;
+            if ($lastTwo >= 11 && $lastTwo <= 13) {
+                return $number.'th';
+            }
+
+            return match ($abs % 10) {
+                1 => $number.'st',
+                2 => $number.'nd',
+                3 => $number.'rd',
+                default => $number.'th',
+            };
+        };
 
         foreach (($entries ?? collect()) as $entry) {
             $dayName = ucfirst(strtolower((string)($entry->class_day ?? '')));
@@ -113,57 +170,109 @@
                 $slotMap[$slotKey] = [
                     'key' => $slotKey,
                     'start' => $start,
-                    'label' => date('H:i', strtotime($start)).' - '.date('H:i', strtotime($end)),
+                    'end' => $end,
+                    'label' => $formatTimeRange($start, $end),
                 ];
             }
 
-            if (!isset($cellMap[$slotKey])) {
-                $cellMap[$slotKey] = [];
+            if (!isset($cellMap[$dayName])) {
+                $cellMap[$dayName] = [];
             }
 
-            $cellMap[$slotKey][$dayName] = $subject;
+            $cellMap[$dayName][$slotKey] = $subject;
+
+            if ($isBreakText($subject)) {
+                $breakCounts[$slotKey] = ($breakCounts[$slotKey] ?? 0) + 1;
+            }
         }
 
-        $slots = collect(array_values($slotMap))->sortBy('start')->values();
+        $sortedSlots = collect(array_values($slotMap))->sortBy('start')->values();
+        $breakSlotKey = collect($breakCounts)->sortDesc()->keys()->first();
+        $breakExists = !empty($breakSlotKey) && isset($slotMap[$breakSlotKey]);
+        $breakLabel = $breakExists ? ($slotMap[$breakSlotKey]['label'] ?? 'Break') : '';
+        $breakInsertIndex = null;
+
+        if ($breakExists) {
+            $breakInsertIndex = 0;
+            foreach ($sortedSlots as $slot) {
+                if (($slot['key'] ?? '') === $breakSlotKey) {
+                    break;
+                }
+
+                $breakInsertIndex++;
+            }
+        }
+
+        $periodSlots = $sortedSlots->filter(function ($slot) use ($breakSlotKey) {
+            return ($slot['key'] ?? '') !== $breakSlotKey;
+        })->values();
+
+        $periodColumns = [];
+        foreach ($periodSlots as $index => $slot) {
+            $periodNumber = $index + 1;
+            $periodColumns[] = [
+                'key' => $slot['key'],
+                'period' => $ordinal($periodNumber),
+                'time' => $slot['label'],
+            ];
+        }
     @endphp
 
-    <div class="schedule-shell">
-        <h3 class="schedule-title">Class Schedule</h3>
-        <div class="schedule-meta">
-            <span>Class: {{ $itemClass->className ?? '-' }}</span>
-            <span>Session: {{ $itemSession->session ?? '-' }}</span>
-            <span>Section: {{ $itemSection->section ?? 'All' }}</span>
-            <span>Department: {{ $itemDepartment->departmentName ?? 'All' }}</span>
+    <div class="routine-sheet">
+        <div class="routine-header">
+            <h2 class="institute-name">{{ $config->instituteName ?? config('app.name', 'Institute Name') }}</h2>
+            <div class="routine-title">{{ $routine->title ?? 'Class Routine' }}</div>
+            <div class="routine-meta">
+                <span>Class: {{ $itemClass->className ?? '-' }}</span>
+                <span>Session: {{ $itemSession->session ?? '-' }}</span>
+                <span>Section: {{ $itemSection->section ?? 'All' }}</span>
+                <span>Department: {{ $itemDepartment->departmentName ?? 'All' }}</span>
+            </div>
         </div>
 
-        <table class="schedule-table">
+        <table class="routine-table">
             <thead>
                 <tr>
-                    <th class="slot-head">&nbsp;</th>
-                    <th class="day-sunday">Sunday</th>
-                    <th class="day-monday">Monday</th>
-                    <th class="day-tuesday">Tuesday</th>
-                    <th class="day-wednesday">Wednesday</th>
-                    <th class="day-thursday">Thursday</th>
+                    <th class="day-col" rowspan="2">Day</th>
+                    @foreach($periodColumns as $idx => $column)
+                        @if($breakExists && $breakInsertIndex === $idx)
+                            <th class="break-col" rowspan="2">Break<br>{{ $breakLabel }}</th>
+                        @endif
+                        <th class="period-head">{{ $column['period'] }} Period</th>
+                    @endforeach
+                    @if($breakExists && $breakInsertIndex === count($periodColumns))
+                        <th class="break-col" rowspan="2">Break<br>{{ $breakLabel }}</th>
+                    @endif
+                </tr>
+                <tr>
+                    @foreach($periodColumns as $column)
+                        <th class="period-time">{{ $column['time'] }}</th>
+                    @endforeach
                 </tr>
             </thead>
             <tbody>
-                @if($slots->count() > 0)
-                    @foreach($slots as $slot)
+                @if(count($periodColumns) > 0 || $breakExists)
+                    @foreach($dayHeaders as $dayIndex => $dayLabel)
                         <tr>
-                            <td class="slot-cell">{{ $slot['label'] }}</td>
-                            @foreach($dayHeaders as $dayLabel)
+                            <td class="day-name">{{ $dayLabel }}</td>
+                            @foreach($periodColumns as $idx => $column)
+                                @if($breakExists && $breakInsertIndex === $idx && $dayIndex === 0)
+                                    <td class="break-cell" rowspan="{{ count($dayHeaders) }}">Break {{ $breakLabel }}</td>
+                                @endif
                                 @php
-                                    $subjectText = $cellMap[$slot['key']][$dayLabel] ?? '';
-                                    $isBreakCell = strtolower(trim((string)$subjectText)) === 'break/tiffin time';
+                                    $subjectText = trim((string)($cellMap[$dayLabel][$column['key']] ?? ''));
                                 @endphp
-                                <td class="subject-cell {{ $subjectText === '' ? 'subject-empty' : '' }} {{ $isBreakCell ? 'subject-break' : '' }}">{{ $subjectText !== '' ? $subjectText : '-' }}</td>
+                                <td class="subject-cell {{ $subjectText === '' ? 'subject-empty' : '' }}">{{ $subjectText !== '' ? $subjectText : '-' }}</td>
                             @endforeach
+
+                            @if($breakExists && $breakInsertIndex === count($periodColumns) && $dayIndex === 0)
+                                <td class="break-cell" rowspan="{{ count($dayHeaders) }}">Break {{ $breakLabel }}</td>
+                            @endif
                         </tr>
                     @endforeach
                 @else
                     <tr>
-                        <td colspan="6" class="subject-cell subject-empty">No routine rows found for Sunday to Thursday.</td>
+                        <td colspan="2" class="subject-cell subject-empty">No routine rows found for Sunday to Thursday.</td>
                     </tr>
                 @endif
             </tbody>

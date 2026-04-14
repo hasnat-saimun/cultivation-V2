@@ -14,6 +14,8 @@ use App\Models\classManage;
 use App\Models\sectionManage;
 use App\Models\Department;
 use App\Models\sessionManage;
+use App\Models\TeacherManagement;
+use App\Models\CultivationAdmin;
 use Illuminate\Support\Facades\DB;
 
 class ExamController extends Controller
@@ -150,11 +152,134 @@ class ExamController extends Controller
             ->get();
 
         $lookup = $this->buildRoutineLookupMaps($routineList, false);
+        $teacherAssignmentScope = $this->resolveTeacherAssignmentScope();
+        $teacherAssignmentData = $this->loadTeacherAssignmentData(
+            $teacherAssignmentScope['class_id'],
+            $teacherAssignmentScope['section_id'],
+            $teacherAssignmentScope['group_id']
+        );
 
         return view('result.classRoutineManage', [
             'routineList' => $routineList,
             'lookup' => $lookup,
+            'teacherAssignmentScope' => $teacherAssignmentScope,
+            'teacherAssignmentData' => $teacherAssignmentData,
         ]);
+    }
+
+    public function saveResultClassRoutineTeacherAssignments(Request $requ)
+    {
+        $requ->validate([
+            'ta_assignClass' => 'required|integer',
+            'ta_assignSection' => 'nullable|integer',
+            'ta_assignDepartment' => 'nullable|integer',
+        ]);
+
+        $classId = (int)$requ->input('ta_assignClass');
+        $sectionId = $requ->filled('ta_assignSection') ? (int)$requ->input('ta_assignSection') : null;
+        $groupId = $requ->filled('ta_assignDepartment') ? (int)$requ->input('ta_assignDepartment') : null;
+
+        $teacherIds = $requ->input('ta_teacher_id', []);
+        $subjectIds = $requ->input('ta_subject_id', []);
+        $assignedDaysRaw = $requ->input('ta_assigned_days', []);
+
+        $rowCount = max(count($teacherIds), count($subjectIds));
+        $rows = [];
+
+        $allowedDays = self::CLASS_ROUTINE_ALLOWED_DAYS;
+
+        for ($i = 0; $i < $rowCount; $i++) {
+            $teacherIdRaw = trim((string)($teacherIds[$i] ?? ''));
+            $subjectIdRaw = trim((string)($subjectIds[$i] ?? ''));
+
+            if ($teacherIdRaw === '' && $subjectIdRaw === '') {
+                continue;
+            }
+
+            if (!ctype_digit($teacherIdRaw) || !ctype_digit($subjectIdRaw)) {
+                return back()->with('error', 'Teacher and Subject are required for each assignment row.');
+            }
+
+            $teacherId = (int)$teacherIdRaw;
+            $subjectId = (int)$subjectIdRaw;
+
+            // Parse assigned days for this row
+            $daysJson = (string)($assignedDaysRaw[$i] ?? '[]');
+            $assignedDays = json_decode($daysJson, true);
+            if (!is_array($assignedDays)) {
+                $assignedDays = [];
+            }
+            $assignedDays = array_values(array_intersect($assignedDays, $allowedDays));
+            $assignedDays = empty($assignedDays) ? null : $assignedDays;
+
+            $teacherExists = CultivationAdmin::where('id', $teacherId)
+                ->where('userType', CultivationAdmin::ROLE_TEACHER)
+                ->exists();
+            if (!$teacherExists) {
+                return back()->with('error', 'Selected teacher is invalid.');
+            }
+
+            $subject = Subject::find($subjectId);
+            if (empty($subject)) {
+                return back()->with('error', 'Selected subject is invalid.');
+            }
+
+            if (!$this->subjectMatchesClass($subject->assign_class, $classId)) {
+                return back()->with('error', 'Selected subject does not match the selected class.');
+            }
+
+            $rows[] = [
+                'teacher_id' => $teacherId,
+                'class_id' => $classId,
+                'section_id' => $sectionId,
+                'group_id' => $groupId,
+                'subject_id' => $subjectId,
+                'assigned_days' => $assignedDays ? json_encode($assignedDays) : null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (empty($rows)) {
+            return back()->with('error', 'Please add at least one teacher assignment row.');
+        }
+
+        $deduped = [];
+        $seen = [];
+        foreach ($rows as $row) {
+            $key = $row['teacher_id'].'|'.$row['class_id'].'|'.($row['section_id'] ?? 'n').'|'.($row['group_id'] ?? 'n').'|'.$row['subject_id'];
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $deduped[] = $row;
+        }
+
+        DB::beginTransaction();
+        try {
+            $deleteQuery = DB::table('teacher_class_subjects')->where('class_id', $classId);
+
+            if ($sectionId === null) {
+                $deleteQuery->whereNull('section_id');
+            } else {
+                $deleteQuery->where('section_id', $sectionId);
+            }
+
+            if ($groupId === null) {
+                $deleteQuery->whereNull('group_id');
+            } else {
+                $deleteQuery->where('group_id', $groupId);
+            }
+
+            $deleteQuery->delete();
+            DB::table('teacher_class_subjects')->insert($deduped);
+            DB::commit();
+
+            return back()->with('success', 'Teacher-wise class assignment saved successfully.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Failed to save teacher assignments.');
+        }
     }
 
     public function saveResultClassRoutine(Request $requ){
@@ -319,10 +444,24 @@ class ExamController extends Controller
 
         $lookup = $this->buildRoutineLookupMaps($routineList, false);
 
+        $editingRoutine = ClassRoutine::find($id);
+        $teacherAssignmentScope = $this->resolveTeacherAssignmentScope([
+            'class_id' => !empty($editingRoutine) ? (int)$editingRoutine->assignClass : null,
+            'section_id' => !empty($editingRoutine) && !empty($editingRoutine->assignSection) ? (int)$editingRoutine->assignSection : null,
+            'group_id' => !empty($editingRoutine) && !empty($editingRoutine->assignDepartment) ? (int)$editingRoutine->assignDepartment : null,
+        ]);
+        $teacherAssignmentData = $this->loadTeacherAssignmentData(
+            $teacherAssignmentScope['class_id'],
+            $teacherAssignmentScope['section_id'],
+            $teacherAssignmentScope['group_id']
+        );
+
         return view('result.classRoutineManage', [
             'itemId' => $id,
             'routineList' => $routineList,
             'lookup' => $lookup,
+            'teacherAssignmentScope' => $teacherAssignmentScope,
+            'teacherAssignmentData' => $teacherAssignmentData,
         ]);
     }
 
@@ -344,36 +483,7 @@ class ExamController extends Controller
             return back()->with('error', 'Sorry! Routine not found.');
         }
 
-        $dayOrder = [
-            'Sunday' => 1,
-            'Monday' => 2,
-            'Tuesday' => 3,
-            'Wednesday' => 4,
-            'Thursday' => 5,
-        ];
-
-        $entries = $routine->entries
-            ->sort(function ($a, $b) use ($dayOrder) {
-                $aDay = ucfirst(strtolower((string)($a->class_day ?? '')));
-                $bDay = ucfirst(strtolower((string)($b->class_day ?? '')));
-
-                $aDayOrder = $dayOrder[$aDay] ?? 99;
-                $bDayOrder = $dayOrder[$bDay] ?? 99;
-
-                if ($aDayOrder !== $bDayOrder) {
-                    return $aDayOrder <=> $bDayOrder;
-                }
-
-                $aStart = (string)($a->start_time ?? '23:59:59');
-                $bStart = (string)($b->start_time ?? '23:59:59');
-
-                if ($aStart !== $bStart) {
-                    return $aStart <=> $bStart;
-                }
-
-                return ((int)$a->sort_order) <=> ((int)$b->sort_order);
-            })
-            ->values();
+        $entries = $this->getSortedClassRoutineEntries($routine);
 
         return view('result.classRoutineView', [
             'routine' => $routine,
@@ -398,36 +508,7 @@ class ExamController extends Controller
             return back()->with('error', 'Sorry! Routine not found.');
         }
 
-        $dayOrder = [
-            'Sunday' => 1,
-            'Monday' => 2,
-            'Tuesday' => 3,
-            'Wednesday' => 4,
-            'Thursday' => 5,
-        ];
-
-        $entries = $routine->entries
-            ->sort(function ($a, $b) use ($dayOrder) {
-                $aDay = ucfirst(strtolower((string)($a->class_day ?? '')));
-                $bDay = ucfirst(strtolower((string)($b->class_day ?? '')));
-
-                $aDayOrder = $dayOrder[$aDay] ?? 99;
-                $bDayOrder = $dayOrder[$bDay] ?? 99;
-
-                if ($aDayOrder !== $bDayOrder) {
-                    return $aDayOrder <=> $bDayOrder;
-                }
-
-                $aStart = (string)($a->start_time ?? '23:59:59');
-                $bStart = (string)($b->start_time ?? '23:59:59');
-
-                if ($aStart !== $bStart) {
-                    return $aStart <=> $bStart;
-                }
-
-                return ((int)$a->sort_order) <=> ((int)$b->sort_order);
-            })
-            ->values();
+        $entries = $this->getSortedClassRoutineEntries($routine);
 
         $pdf = \PDF::loadView('exports.class-routine-pdf', [
             'routine' => $routine,
@@ -448,6 +529,68 @@ class ExamController extends Controller
         $sessionPart = $toSlug((string)$sessionName) ?: 'session';
 
         $fileName = $titlePart.'-'.$classPart.'-'.$sessionPart.'-'.date('Y-m-d').'.pdf';
+
+        return $pdf->download($fileName);
+    }
+
+    public function viewResultClassRoutineTeacherWise($id)
+    {
+        $routine = ClassRoutine::with('entries')->find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        $entries = $this->getSortedClassRoutineEntries($routine);
+        $teacherWise = $this->buildTeacherWiseRoutineData($routine, $entries);
+
+        return view('result.classRoutineTeacherWiseView', [
+            'routine' => $routine,
+            'entries' => $entries,
+            'teacherWise' => $teacherWise,
+        ]);
+    }
+
+    public function printResultClassRoutineTeacherWise($id)
+    {
+        $routine = ClassRoutine::find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        return redirect()->route('viewResultClassRoutineTeacherWise', ['id' => $id, 'print' => 1]);
+    }
+
+    public function downloadResultClassRoutineTeacherWisePdf($id)
+    {
+        $routine = ClassRoutine::with('entries')->find($id);
+
+        if (empty($routine)) {
+            return back()->with('error', 'Sorry! Routine not found.');
+        }
+
+        $entries = $this->getSortedClassRoutineEntries($routine);
+        $teacherWise = $this->buildTeacherWiseRoutineData($routine, $entries);
+
+        $pdf = \PDF::loadView('exports.class-routine-teacher-wise-pdf', [
+            'routine' => $routine,
+            'entries' => $entries,
+            'teacherWise' => $teacherWise,
+        ])->setPaper('a4', 'landscape');
+
+        $className = optional(\App\Models\classManage::find($routine->assignClass))->className ?? 'class';
+        $sessionName = optional(\App\Models\sessionManage::find($routine->assignSession))->session ?? 'session';
+
+        $toSlug = function (string $value): string {
+            $value = strtolower(trim($value));
+            $value = preg_replace('/[^a-z0-9]+/', '-', $value) ?? '';
+            return trim($value, '-');
+        };
+
+        $classPart = $toSlug((string)$className) ?: 'class';
+        $sessionPart = $toSlug((string)$sessionName) ?: 'session';
+        $fileName = 'teacher-wise-class-routine-'.$classPart.'-'.$sessionPart.'-'.date('Y-m-d').'.pdf';
 
         return $pdf->download($fileName);
     }
@@ -518,6 +661,366 @@ class ExamController extends Controller
             'departments' => !empty($departmentIds) ? Department::whereIn('id', $departmentIds)->get()->keyBy('id') : collect(),
             'sessions' => !empty($sessionIds) ? sessionManage::whereIn('id', $sessionIds)->get()->keyBy('id') : collect(),
             'exams' => ($includeExam && !empty($examIds)) ? Exam::whereIn('id', $examIds)->get()->keyBy('id') : collect(),
+        ];
+    }
+
+    private function getSortedClassRoutineEntries(ClassRoutine $routine)
+    {
+        $dayOrder = [
+            'Sunday' => 1,
+            'Monday' => 2,
+            'Tuesday' => 3,
+            'Wednesday' => 4,
+            'Thursday' => 5,
+        ];
+
+        return $routine->entries
+            ->sort(function ($a, $b) use ($dayOrder) {
+                $aDay = ucfirst(strtolower((string)($a->class_day ?? '')));
+                $bDay = ucfirst(strtolower((string)($b->class_day ?? '')));
+
+                $aDayOrder = $dayOrder[$aDay] ?? 99;
+                $bDayOrder = $dayOrder[$bDay] ?? 99;
+
+                if ($aDayOrder !== $bDayOrder) {
+                    return $aDayOrder <=> $bDayOrder;
+                }
+
+                $aStart = (string)($a->start_time ?? '23:59:59');
+                $bStart = (string)($b->start_time ?? '23:59:59');
+
+                if ($aStart !== $bStart) {
+                    return $aStart <=> $bStart;
+                }
+
+                return ((int)$a->sort_order) <=> ((int)$b->sort_order);
+            })
+            ->values();
+    }
+
+    private function buildTeacherWiseRoutineData(ClassRoutine $routine, $entries): array
+    {
+        $dayHeaders = self::CLASS_ROUTINE_ALLOWED_DAYS;
+        $slotMap = [];
+        $breakCounts = [];
+        $entriesByDaySlot = [];
+
+        $isBreakText = function (?string $text): bool {
+            $normalized = strtolower(trim((string)$text));
+            return in_array($normalized, ['break/tiffin time', 'break', 'tiffin', 'tiffin time'], true);
+        };
+
+        $formatTimeRange = function (string $start, string $end): string {
+            return date('h:i A', strtotime($start)).' - '.date('h:i A', strtotime($end));
+        };
+
+        $ordinal = function (int $number): string {
+            $abs = abs($number);
+            $lastTwo = $abs % 100;
+            if ($lastTwo >= 11 && $lastTwo <= 13) {
+                return $number.'th';
+            }
+
+            return match ($abs % 10) {
+                1 => $number.'st',
+                2 => $number.'nd',
+                3 => $number.'rd',
+                default => $number.'th',
+            };
+        };
+
+        foreach ($entries as $entry) {
+            $dayName = ucfirst(strtolower((string)($entry->class_day ?? '')));
+            $start = (string)($entry->start_time ?? '');
+            $end = (string)($entry->end_time ?? '');
+            $subjectName = trim((string)($entry->subject_name ?? ''));
+
+            if ($dayName === '' || $start === '' || $end === '' || !in_array($dayName, $dayHeaders, true)) {
+                continue;
+            }
+
+            $slotKey = $start.'|'.$end;
+            if (!isset($slotMap[$slotKey])) {
+                $slotMap[$slotKey] = [
+                    'key' => $slotKey,
+                    'start' => $start,
+                    'end' => $end,
+                    'time' => $formatTimeRange($start, $end),
+                ];
+            }
+
+            $entriesByDaySlot[$dayName][$slotKey] = [
+                'subject_id' => !empty($entry->subject_id) ? (int)$entry->subject_id : null,
+                'subject_name' => $subjectName,
+            ];
+
+            if ($isBreakText($subjectName)) {
+                $breakCounts[$slotKey] = ($breakCounts[$slotKey] ?? 0) + 1;
+            }
+        }
+
+        $sortedSlots = collect(array_values($slotMap))->sortBy('start')->values();
+        $breakSlotKey = collect($breakCounts)->sortDesc()->keys()->first();
+        $breakExists = !empty($breakSlotKey) && isset($slotMap[$breakSlotKey]);
+        $breakLabel = $breakExists ? ($slotMap[$breakSlotKey]['time'] ?? 'Break') : '';
+        $breakInsertIndex = null;
+
+        if ($breakExists) {
+            $breakInsertIndex = 0;
+            foreach ($sortedSlots as $slot) {
+                if (($slot['key'] ?? '') === $breakSlotKey) {
+                    break;
+                }
+                $breakInsertIndex++;
+            }
+        }
+
+        $periodSlots = $sortedSlots->filter(function ($slot) use ($breakSlotKey) {
+            return ($slot['key'] ?? '') !== $breakSlotKey;
+        })->values();
+
+        $periodColumns = [];
+        foreach ($periodSlots as $index => $slot) {
+            $periodColumns[] = [
+                'key' => $slot['key'],
+                'period' => $ordinal($index + 1),
+                'time' => $slot['time'],
+            ];
+        }
+
+        $assignmentQuery = DB::table('teacher_class_subjects')
+            ->where('class_id', (int)$routine->assignClass);
+
+        if (!empty($routine->assignSection)) {
+            $sectionId = (int)$routine->assignSection;
+            $assignmentQuery->where(function ($q) use ($sectionId) {
+                $q->whereNull('section_id')->orWhere('section_id', $sectionId);
+            });
+        }
+
+        if (!empty($routine->assignDepartment)) {
+            $groupId = (int)$routine->assignDepartment;
+            $assignmentQuery->where(function ($q) use ($groupId) {
+                $q->whereNull('group_id')->orWhere('group_id', $groupId);
+            });
+        }
+
+        $assignmentRows = $assignmentQuery
+            ->select('teacher_id', 'subject_id', 'assigned_days')
+            ->get();
+
+        $teacherIds = $assignmentRows->pluck('teacher_id')->filter()->unique()->values()->all();
+
+        $teacherNameMap = [];
+        if (!empty($teacherIds)) {
+            $adminRows = DB::table('cultivation_admins')
+                ->whereIn('id', $teacherIds)
+                ->select('id', 'adminName')
+                ->get();
+
+            foreach ($adminRows as $adminRow) {
+                $teacherNameMap[(int)$adminRow->id] = trim((string)$adminRow->adminName) ?: ('Teacher #'.(int)$adminRow->id);
+            }
+
+            $missingTeacherIds = array_values(array_diff($teacherIds, array_keys($teacherNameMap)));
+            if (!empty($missingTeacherIds)) {
+                $teacherRows = TeacherManagement::whereIn('id', $missingTeacherIds)
+                    ->get(['id', 'firstName', 'lastName']);
+
+                foreach ($teacherRows as $teacherRow) {
+                    $fullName = trim(((string)$teacherRow->firstName).' '.((string)$teacherRow->lastName));
+                    $teacherNameMap[(int)$teacherRow->id] = $fullName !== '' ? $fullName : ('Teacher #'.(int)$teacherRow->id);
+                }
+            }
+
+            foreach ($teacherIds as $teacherId) {
+                if (!isset($teacherNameMap[(int)$teacherId])) {
+                    $teacherNameMap[(int)$teacherId] = 'Teacher #'.(int)$teacherId;
+                }
+            }
+        }
+
+        $subjectTeacherMap = [];
+        $teacherAssignmentDaysMap = [];
+        $wildcardTeacherIds = [];
+        foreach ($assignmentRows as $row) {
+            $teacherId = (int)($row->teacher_id ?? 0);
+            if (!$teacherId) {
+                continue;
+            }
+
+            $assignedDays = null;
+            if (!empty($row->assigned_days)) {
+                $decoded = json_decode($row->assigned_days, true);
+                if (is_array($decoded)) {
+                    $assignedDays = $decoded;
+                }
+            }
+
+            if (!empty($row->subject_id)) {
+                $subjectId = (int)$row->subject_id;
+                if (!isset($subjectTeacherMap[$subjectId])) {
+                    $subjectTeacherMap[$subjectId] = [];
+                }
+                $subjectTeacherMap[$subjectId][] = $teacherId;
+                
+                // Store the assigned days for this teacher-subject pair
+                $key = $subjectId.'|'.$teacherId;
+                $teacherAssignmentDaysMap[$key] = $assignedDays;
+            } else {
+                $wildcardTeacherIds[] = $teacherId;
+            }
+        }
+
+        foreach ($subjectTeacherMap as $subjectId => $ids) {
+            $subjectTeacherMap[$subjectId] = array_values(array_unique($ids));
+        }
+        $wildcardTeacherIds = array_values(array_unique($wildcardTeacherIds));
+
+        $teacherRows = [];
+        foreach ($teacherNameMap as $teacherId => $teacherName) {
+            $cells = [];
+            foreach ($periodColumns as $column) {
+                $cells[$column['key']] = [];
+            }
+
+            $teacherRows[] = [
+                'id' => (int)$teacherId,
+                'name' => $teacherName,
+                'cells' => $cells,
+            ];
+        }
+
+        usort($teacherRows, function ($a, $b) {
+            return strcasecmp((string)$a['name'], (string)$b['name']);
+        });
+
+        $teacherIndexMap = [];
+        foreach ($teacherRows as $index => $teacherRow) {
+            $teacherIndexMap[(int)$teacherRow['id']] = $index;
+        }
+
+        foreach ($dayHeaders as $dayName) {
+            foreach ($periodColumns as $column) {
+                $slotKey = $column['key'];
+                $entryData = $entriesByDaySlot[$dayName][$slotKey] ?? null;
+                if (empty($entryData)) {
+                    continue;
+                }
+
+                $subjectId = !empty($entryData['subject_id']) ? (int)$entryData['subject_id'] : 0;
+                $subjectName = trim((string)($entryData['subject_name'] ?? ''));
+
+                if ($subjectId <= 0 || $subjectName === '') {
+                    continue;
+                }
+
+                $candidateTeacherIds = array_values(array_unique(array_merge(
+                    $subjectTeacherMap[$subjectId] ?? [],
+                    $wildcardTeacherIds
+                )));
+
+                foreach ($candidateTeacherIds as $teacherId) {
+                    if (!isset($teacherIndexMap[$teacherId])) {
+                        continue;
+                    }
+
+                    // Check if this teacher is assigned for this subject on this day
+                    $assignmentKey = $subjectId.'|'.$teacherId;
+                    $assignedDays = $teacherAssignmentDaysMap[$assignmentKey] ?? null;
+                    
+                    // Skip if assigned_days is not null and doesn't contain this day
+                    if ($assignedDays !== null && !in_array($dayName, $assignedDays, true)) {
+                        continue;
+                    }
+
+                    $line = $subjectName;
+                    $rowIndex = $teacherIndexMap[$teacherId];
+                    if (!in_array($line, $teacherRows[$rowIndex]['cells'][$slotKey], true)) {
+                        $teacherRows[$rowIndex]['cells'][$slotKey][] = $line;
+                    }
+                }
+            }
+        }
+
+        foreach ($teacherRows as $rowIndex => $teacherRow) {
+            foreach ($periodColumns as $column) {
+                $slotKey = $column['key'];
+                $teacherRows[$rowIndex]['cells'][$slotKey] = implode("\n", $teacherRows[$rowIndex]['cells'][$slotKey]);
+            }
+        }
+
+        return [
+            'dayHeaders' => $dayHeaders,
+            'periodColumns' => $periodColumns,
+            'breakExists' => $breakExists,
+            'breakLabel' => $breakLabel,
+            'breakInsertIndex' => $breakInsertIndex,
+            'teacherRows' => $teacherRows,
+        ];
+    }
+
+    private function resolveTeacherAssignmentScope(array $default = []): array
+    {
+        $classId = request()->filled('ta_class') ? (int)request()->query('ta_class') : ($default['class_id'] ?? null);
+        $sectionId = request()->filled('ta_section') ? (int)request()->query('ta_section') : ($default['section_id'] ?? null);
+        $groupId = request()->filled('ta_group') ? (int)request()->query('ta_group') : ($default['group_id'] ?? null);
+
+        if (old('ta_assignClass') !== null && old('ta_assignClass') !== '') {
+            $classId = (int)old('ta_assignClass');
+        }
+
+        if (old('ta_assignSection') !== null && old('ta_assignSection') !== '') {
+            $sectionId = (int)old('ta_assignSection');
+        } elseif (old('ta_assignSection') === '') {
+            $sectionId = null;
+        }
+
+        if (old('ta_assignDepartment') !== null && old('ta_assignDepartment') !== '') {
+            $groupId = (int)old('ta_assignDepartment');
+        } elseif (old('ta_assignDepartment') === '') {
+            $groupId = null;
+        }
+
+        return [
+            'class_id' => $classId ? (int)$classId : null,
+            'section_id' => $sectionId ? (int)$sectionId : null,
+            'group_id' => $groupId ? (int)$groupId : null,
+        ];
+    }
+
+    private function loadTeacherAssignmentData(?int $classId, ?int $sectionId, ?int $groupId): array
+    {
+        $teachers = CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)
+            ->orderBy('adminName', 'ASC')
+            ->get(['id', 'adminName']);
+
+        $assignments = collect();
+
+        if (!empty($classId)) {
+            $assignmentQuery = DB::table('teacher_class_subjects')->where('class_id', (int)$classId);
+
+            if (empty($sectionId)) {
+                $assignmentQuery->whereNull('section_id');
+            } else {
+                $assignmentQuery->where('section_id', (int)$sectionId);
+            }
+
+            if (empty($groupId)) {
+                $assignmentQuery->whereNull('group_id');
+            } else {
+                $assignmentQuery->where('group_id', (int)$groupId);
+            }
+
+            $assignments = $assignmentQuery
+                ->orderBy('teacher_id', 'ASC')
+                ->orderBy('subject_id', 'ASC')
+                ->get(['teacher_id', 'subject_id', 'assigned_days']);
+        }
+
+        return [
+            'teachers' => $teachers,
+            'assignments' => $assignments,
         ];
     }
 

@@ -31,7 +31,7 @@
     </li>
     @endif
     <li class="nav-item">
-        <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
+        <a href="{{ ($currentUser && $currentUser->isTeacher()) ? route('tuitionFee') : route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') || request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
     </li>
     @php
         $certRoutes = ['studentList','testimonials.*','tc.*'];

@@ -20,9 +20,13 @@ Tuition Fee List
                         <tr>
                         <th><input type="checkbox" id="selectAll"></th>
                         <th>Date</th>
+                        <th>Month</th>
                         <th>Student ID</th>
                         <th>Fees Type</th>
-                        <th>Amount</th>
+                        <th>Setup Amount</th>
+                        <th>Collected Amount</th>
+                        <th>Due Amount</th>
+                        <th>Status</th>
                         <th>Action</th>
                         </tr>
                     </thead>
@@ -40,9 +44,18 @@ Tuition Fee List
                         <tr>
                             <td><input type="checkbox" class="row-check" name="feeIds[]" value="{{ $tfdData->id }}"></td>
                             <td>{{ $tfdData->created_at->format('Y-m-d') }}</td>
+                            <td>{{ !empty($tfdData->fee_month) ? \Carbon\Carbon::parse($tfdData->fee_month)->format('M Y') : '-' }}</td>
                             <td>{{ $tfdData->stdId }}</td>
                             <td>{{ $feesName }}</td>
-                            <td>{{ $tfdData->amount }}</td>
+                            @php
+                                $dueAmount = (float)($tfdData->due_amount ?? $tfdData->amount ?? 0);
+                                $paidAmount = (float)($tfdData->paid_amount ?? $tfdData->amount ?? 0);
+                                $status = $tfdData->payment_status ?? ($paidAmount >= $dueAmount && $dueAmount > 0 ? 'paid' : ($paidAmount > 0 ? 'partial' : 'unpaid'));
+                            @endphp
+                            <td>{{ number_format($dueAmount, 2) }}</td>
+                            <td>{{ number_format($paidAmount, 2) }}</td>
+                            <td>{{ number_format(max(0, $dueAmount - $paidAmount), 2) }}</td>
+                            <td><span class="badge bg-{{ $status === 'paid' ? 'success' : ($status === 'partial' ? 'warning' : 'secondary') }}">{{ ucfirst($status) }}</span></td>
                             <td>
                                 <a href="{{route('tuitionReport',['id'=>$tfdData->id])}}"><i class="fa-duotone fa-solid fa-print mx-2" style="color:rgb(0 0 0 );"></i></a>
                                 <a href="{{route('tuitionFeeView',['id'=>$tfdData->id])}}"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>

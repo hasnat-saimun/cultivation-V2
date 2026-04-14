@@ -848,6 +848,16 @@ Route::middleware(['adminGuard'])->group (function(){
         'updateTuitionFee'
     ])->name('updateTuitionFee');
 
+    Route::get('/collect-tuition-due/{id}',[
+        tuitionController::class,
+        'collectDueForm'
+    ])->name('collectDueForm');
+
+    Route::post('/collect-tuition-due',[
+        tuitionController::class,
+        'collectDueSubmit'
+    ])->name('collectDueSubmit');
+
     Route::get('/delete-tuition-fee/{id}',[
         tuitionController::class,      // delete tuition free
         'dltTuitionFee'
@@ -862,6 +872,31 @@ Route::middleware(['adminGuard'])->group (function(){
         tuitionController::class, //edit Fees
         'feesReport'
     ])->name('feesReport');
+
+    Route::get('/student/fees/dues-dashboard',[
+        tuitionController::class,
+        'duesDashboard'
+    ])->name('duesDashboard');
+
+    Route::get('/student/fees/classwise-setup',[
+        tuitionController::class,
+        'classWiseFeeSetup'
+    ])->name('classWiseFeeSetup');
+
+    Route::post('/student/fees/classwise-setup/save',[
+        tuitionController::class,
+        'saveClassWiseFeeSetup'
+    ])->name('saveClassWiseFeeSetup');
+
+    Route::get('/student/fees/classwise-setup/data',[
+        tuitionController::class,
+        'getClassWiseFeeSetupData'
+    ])->name('getClassWiseFeeSetupData');
+
+    Route::get('/student/fees/classwise-setup/delete/{id}',[
+        tuitionController::class,
+        'deleteClassWiseFeeSetup'
+    ])->name('deleteClassWiseFeeSetup');
 
     Route::post('/student/fees/generate/report',[
         tuitionController::class, //update tuition free
@@ -1429,6 +1464,10 @@ Route::middleware(['adminGuard'])->group (function(){
         ExamController::class,
         'saveResultClassRoutine'
     ])->name('saveResultClassRoutine');
+    Route::post('/result/class-routine/teacher-assignment/save',[
+        ExamController::class,
+        'saveResultClassRoutineTeacherAssignments'
+    ])->name('saveResultClassRoutineTeacherAssignments');
     Route::get('/result/class-routine/edit/{id}',[
         ExamController::class,
         'editResultClassRoutine'
@@ -1449,6 +1488,18 @@ Route::middleware(['adminGuard'])->group (function(){
         ExamController::class,
         'downloadResultClassRoutinePdf'
     ])->name('downloadResultClassRoutinePdf');
+    Route::get('/result/class-routine/teacher-wise/view/{id}',[
+        ExamController::class,
+        'viewResultClassRoutineTeacherWise'
+    ])->name('viewResultClassRoutineTeacherWise');
+    Route::get('/result/class-routine/teacher-wise/print/{id}',[
+        ExamController::class,
+        'printResultClassRoutineTeacherWise'
+    ])->name('printResultClassRoutineTeacherWise');
+    Route::get('/result/class-routine/teacher-wise/pdf/{id}',[
+        ExamController::class,
+        'downloadResultClassRoutineTeacherWisePdf'
+    ])->name('downloadResultClassRoutineTeacherWisePdf');
 
     Route::get('/admit-card/creation',[
         ExamController::class,

@@ -21,6 +21,10 @@ Institute Info
                 
                     <tbody class="">
                         <tr>
+                            <th scope="col">Fee Month</th>
+                            <td>{{ !empty($singleView->fee_month) ? \Carbon\Carbon::parse($singleView->fee_month)->format('F Y') : '-' }}</td>
+                        </tr>
+                        <tr>
                             <th scope="col">Date</th>
                             <td>{{$singleView->created_at}}</td>
                         </tr>
@@ -59,8 +63,21 @@ Institute Info
                             <td>{{$stdData->rollNumber}}</td>
                         </tr>
                         <tr>
-                            <th scope="col">Amount</th>
-                            <td>{{$singleView->amount}}
+                            <th scope="col">Setup Amount</th>
+                            <td>{{ number_format((float)($singleView->due_amount ?? $singleView->amount ?? 0), 2) }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="col">Collected Amount</th>
+                            <td>{{ number_format((float)($singleView->paid_amount ?? $singleView->amount ?? 0), 2) }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="col">Due Amount</th>
+                            <td>{{ number_format(max(0, (float)($singleView->due_amount ?? $singleView->amount ?? 0) - (float)($singleView->paid_amount ?? $singleView->amount ?? 0)), 2) }}</td>
+                        </tr>
+                        <tr>
+                            <th scope="col">Status</th>
+                            <td>{{ ucfirst($singleView->payment_status ?? 'unpaid') }}</td>
+                        </tr>
                         
                     </tbody>
                 </table>

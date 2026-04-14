@@ -22,11 +22,14 @@
                </div>
                 <div class="sidebar-menu-content">
                     @php
+                        $adminId = session('cultivationAdmin');
+                        $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+
                         // Determine active routes for highlighting and keeping groups open
                         $isCultivationHome = request()->routeIs('cultivationIndex');
 
                         $studentFeesRoutes = [
-                            'tuitionFee','tuitionFeeList','feesReport','tuitionFeeView','editTuitionFee','tuitionReport'
+                            'tuitionFee','tuitionFeeList','feesReport','duesDashboard','classWiseFeeSetup','tuitionFeeView','editTuitionFee','tuitionReport'
                         ];
                         $cashRoutes = [
                             'cashCalculasView','reportListView','cashDateReport'
@@ -48,11 +51,19 @@
                                     <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="{{ route('tuitionFeeList') }}" class="nav-link {{ request()->routeIs('tuitionFeeList') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Single Fees Voucher</a>
+                                    <a href="{{ route('tuitionFeeList') }}" class="nav-link {{ request()->routeIs('tuitionFeeList') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Single Invoice</a>
                                 </li>
                                 <li class="nav-item">
                                     <a href="{{ route('feesReport') }}" class="nav-link {{ request()->routeIs('feesReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Genetrate Report</a>
                                 </li>
+                                <li class="nav-item">
+                                    <a href="{{ route('duesDashboard') }}" class="nav-link {{ request()->routeIs('duesDashboard') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Dues Dashboard</a>
+                                </li>
+                                @if(!$currentUser || !$currentUser->isTeacher())
+                                <li class="nav-item">
+                                    <a href="{{ route('classWiseFeeSetup') }}" class="nav-link {{ request()->routeIs('classWiseFeeSetup') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Classwise Fees Setup</a>
+                                </li>
+                                @endif
                             </ul>
                         </li>
                         <li class="nav-item sidebar-nav-item {{ $cashOpen ? 'open' : '' }}">
@@ -69,9 +80,11 @@
                                 </li>
                             </ul>
                         </li>
+                        @if(!$currentUser || !$currentUser->isTeacher())
                         <li class="nav-item ">
                             <a href="{{route('feesForm')}}" class="nav-link {{ $addFeesActive ? 'active' : '' }}"><i class="fa-thin fa-database"></i> <span>Add New Fees</span></a>
                         </li>
+                        @endif
                     </ul>
                 </div>
             </div>

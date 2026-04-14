@@ -30,7 +30,7 @@
                             <td>{{ $sessionData->session ?? '-' }}</td>
                             <td>{{ $sectionData->section ?? '-' }}</td>
                             <td>
-                                <button type="button" class="btn btn-sm btn-primary" onclick="selectStudent('{{ $stu->stdId }}')">Select</button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick='selectStudent(@json($stu->stdId), @json(trim(($stu->fullName ?? "")." ".($stu->sureName ?? ""))), @json((string)($stu->rollNumber ?? "")), @json($classData->className ?? "-"), @json($sessionData->session ?? "-"), @json($sectionData->section ?? "-"))'>Select</button>
                             </td>
                         </tr>
                         @endforeach

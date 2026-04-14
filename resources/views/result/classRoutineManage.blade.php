@@ -50,6 +50,31 @@ Class Routine Management
     })->values()->toArray();
 
     $dayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+
+    $teacherAssignmentScope = $teacherAssignmentScope ?? [
+        'class_id' => null,
+        'section_id' => null,
+        'group_id' => null,
+    ];
+
+    $teacherAssignmentData = $teacherAssignmentData ?? [
+        'teachers' => collect(),
+        'assignments' => collect(),
+    ];
+
+    $taAssignClass = old('ta_assignClass', $teacherAssignmentScope['class_id'] ?? $assignClass);
+    $taAssignSection = old('ta_assignSection', $teacherAssignmentScope['section_id'] ?? $assignSection);
+    $taAssignDepartment = old('ta_assignDepartment', $teacherAssignmentScope['group_id'] ?? $assignDepartment);
+
+    $teacherList = $teacherAssignmentData['teachers'] ?? collect();
+    $teacherAssignments = $teacherAssignmentData['assignments'] ?? collect();
+
+    if ($teacherAssignments->count() === 0) {
+        $teacherAssignments = collect([(object)[
+            'teacher_id' => '',
+            'subject_id' => '',
+        ]]);
+    }
 @endphp
 
 <div class="row gutters-20 mb-4">
@@ -99,6 +124,27 @@ Class Routine Management
                         font-size: 12px;
                         color: #4a4a4a;
                         margin-top: 8px;
+                    }
+                    .assign-grid-table th,
+                    .assign-grid-table td {
+                        vertical-align: middle;
+                        padding: 7px 8px;
+                    }
+
+                    .form-check-label {
+                        padding: 5px;
+                    }
+                    .form-check input[type="checkbox"] {
+                        cursor: pointer;
+                        position: absolute;
+                        /* color: #000; */
+                        width: 10px;
+                        height: 10px;
+                        top: 6px;
+                        left: -9px;
+                        margin: 5px;
+                        z-index: 1;
+                        opacity: 1;
                     }
                 </style>
 
@@ -250,6 +296,115 @@ Class Routine Management
                         <a class="btn btn-primary btn-lg mx-2" href="{{ route('resultClassRoutineManage') }}">Create New</a>
                     </div>
                 </form>
+
+                <hr class="my-4">
+
+                <div class="routine-builder mb-3">
+                    <div class="routine-builder-head">Teacher Wise Subject Assignment</div>
+                    <div class="routine-builder-body">
+                        <form action="{{ route('saveResultClassRoutineTeacherAssignments') }}" method="POST" id="teacher-assignment-form">
+                            @csrf
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="field-label">Class *</label>
+                                    <select name="ta_assignClass" id="ta-assign-class" class="form-select" required>
+                                        <option value="">Select Class</option>
+                                        @php $taClasses = \App\Models\classManage::orderBy('id','DESC')->get(); @endphp
+                                        @foreach($taClasses as $cls)
+                                            <option value="{{ $cls->id }}" {{ (string)$taAssignClass === (string)$cls->id ? 'selected' : '' }}>{{ $cls->className }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="field-label">Section/Group</label>
+                                    <select name="ta_assignSection" id="ta-assign-section" class="form-select">
+                                        <option value="">All/None</option>
+                                        @php $taSections = \App\Models\sectionManage::orderBy('id','DESC')->get(); @endphp
+                                        @foreach($taSections as $section)
+                                            <option value="{{ $section->id }}" {{ (string)$taAssignSection === (string)$section->id ? 'selected' : '' }}>{{ $section->section }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <label class="field-label">Department</label>
+                                    <select name="ta_assignDepartment" id="ta-assign-department" class="form-select">
+                                        <option value="">All/None</option>
+                                        @php $taDepartments = \App\Models\Department::orderBy('id','ASC')->get(); @endphp
+                                        @foreach($taDepartments as $dept)
+                                            <option value="{{ $dept->id }}" {{ (string)$taAssignDepartment === (string)$dept->id ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="mb-0 fw-bold">Teacher + Subject</label>
+                                <div class="d-flex align-items-center" style="gap:8px;">
+                                    <button type="button" class="btn btn-sm btn-secondary" onclick="reloadTeacherAssignmentScope()">Load Scope</button>
+                                    <button type="button" class="btn btn-sm btn-info" onclick="addTeacherAssignmentRow()">+ Add Row</button>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive">
+                                <table class="table table-bordered assign-grid-table" id="teacher-assignment-table">
+                                    <thead>
+                                        <tr class="routine-entry-head">
+                                            <th style="width:30%">Teacher</th>
+                                            <th style="width:25%">Subject</th>
+                                            <th style="width:35%">Assign Days</th>
+                                            <th style="width:50px">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="teacher-assignment-body">
+                                        @foreach($teacherAssignments as $ta)
+                                            @php
+                                                $assignedDays = [];
+                                                if (!empty($ta->assigned_days)) {
+                                                    $decoded = json_decode($ta->assigned_days, true);
+                                                    if (is_array($decoded)) {
+                                                        $assignedDays = $decoded;
+                                                    }
+                                                }
+                                            @endphp
+                                            <tr>
+                                                <td>
+                                                    <select name="ta_teacher_id[]" class="form-select ta-teacher-select">
+                                                        <option value="">Select Teacher</option>
+                                                        @foreach($teacherList as $teacher)
+                                                            <option value="{{ $teacher->id }}" {{ (string)($ta->teacher_id ?? '') === (string)$teacher->id ? 'selected' : '' }}>{{ $teacher->adminName }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <select name="ta_subject_id[]" class="form-select ta-subject-select" data-existing-subject-id="{{ $ta->subject_id ?? '' }}">
+                                                        <option value="">Select Subject</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex flex-wrap gap-2" style="gap:6px;">
+                                                        @foreach(['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'] as $day)
+                                                            <label class="form-check" style="margin-bottom:0; white-space:nowrap;">
+                                                                <input type="checkbox" class="form-check-input ta-day-checkbox" value="{{ $day }}" {{ in_array($day, $assignedDays) ? 'checked' : '' }} />
+                                                                <span class="form-check-label" style="margin-left:4px;">{{ substr($day, 0, 3) }}</span>
+                                                            </label>
+                                                        @endforeach
+                                                    </div>
+                                                    <input type="hidden" name="ta_assigned_days[]" class="ta-assigned-days-input" value="{{ json_encode($assignedDays) }}" />
+                                                </td>
+                                                <td class="text-center">
+                                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeTeacherAssignmentRow(this)">X</button>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <p class="routine-help mb-2">This assignment is used by Teacher Wise Routine format.</p>
+                            <button type="submit" class="btn btn-warning">Save Teacher Assignment</button>
+                        </form>
+                    </div>
+                </div>
             </div>
 
             <div class="card-header">Existing Class Routine</div>
@@ -282,6 +437,8 @@ Class Routine Management
                                     <td>
                                         <a href="{{ route('downloadResultClassRoutinePdf',['id'=>$item->id]) }}" title="Download PDF"><i class="fa-solid fa-file-pdf mx-2" style="color: #b9102b;"></i></a>
                                         <a href="{{ route('viewResultClassRoutine',['id'=>$item->id]) }}" title="View"><i class="fa-solid fa-eye mx-2" style="color: #12805c;"></i></a>
+                                        <a href="{{ route('viewResultClassRoutineTeacherWise',['id'=>$item->id]) }}" title="Teacher Wise View"><i class="fa-solid fa-chalkboard-user mx-2" style="color: #0b7285;"></i></a>
+                                        <a href="{{ route('downloadResultClassRoutineTeacherWisePdf',['id'=>$item->id]) }}" title="Teacher Wise PDF"><i class="fa-solid fa-file-circle-check mx-2" style="color: #7c2d12;"></i></a>
                                         <a href="{{ route('printResultClassRoutine',['id'=>$item->id]) }}" target="_blank" title="Print"><i class="fa-solid fa-print mx-2" style="color: #1666c1;"></i></a>
                                         <a href="{{ route('editResultClassRoutine',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
                                         <a href="{{ route('delResultClassRoutine',['id'=>$item->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
@@ -527,6 +684,129 @@ Class Routine Management
 
             sel.removeAttribute('data-existing-subject-id');
         });
+    }
+
+    function buildTeacherAssignmentSubjectOptions(currentValue) {
+        var classSelect = document.getElementById('ta-assign-class');
+        var classId = classSelect && classSelect.value ? parseInt(classSelect.value, 10) : 0;
+        var options = ['<option value="">Select Subject</option>'];
+        var orderedList = getOrderedSubjectList();
+
+        orderedList.forEach(function(subject) {
+            if (!isSubjectAllowedForClass(subject, classId)) {
+                return;
+            }
+
+            var selected = String(currentValue || '') === String(subject.id) ? ' selected' : '';
+            options.push('<option value="' + subject.id + '"' + selected + '>' + subject.name + '</option>');
+        });
+
+        return options.join('');
+    }
+
+    function refreshTeacherAssignmentSubjectDropdowns() {
+        var selects = Array.prototype.slice.call(document.querySelectorAll('select.ta-subject-select'));
+        selects.forEach(function(sel) {
+            var currentValue = sel.value || (sel.getAttribute('data-existing-subject-id') || '');
+            sel.innerHTML = buildTeacherAssignmentSubjectOptions(currentValue);
+            if (currentValue && sel.querySelector('option[value="' + currentValue + '"]')) {
+                sel.value = currentValue;
+            } else {
+                sel.value = '';
+            }
+            sel.removeAttribute('data-existing-subject-id');
+        });
+    }
+
+    function addTeacherAssignmentRow() {
+        var teacherOptions = ['<option value="">Select Teacher</option>'];
+        var teacherSelects = document.querySelectorAll('.ta-teacher-select option');
+        if (teacherSelects.length > 0) {
+            teacherSelects.forEach(function(option, idx) {
+                if (idx === 0) {
+                    return;
+                }
+                teacherOptions.push('<option value="' + option.value + '">' + option.text + '</option>');
+            });
+        }
+
+        var daysHtml = '';
+        var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
+        days.forEach(function(day) {
+            daysHtml += '<label class="form-check" style="margin-bottom:0; white-space:nowrap;">' +
+                '<input type="checkbox" class="form-check-input ta-day-checkbox" value="' + day + '" />' +
+                '<span class="form-check-label" style="margin-left:4px;">' + day.substring(0, 3) + '</span>' +
+                '</label> ';
+        });
+
+        var html = '' +
+            '<tr>' +
+                '<td><select name="ta_teacher_id[]" class="form-select ta-teacher-select">' + teacherOptions.join('') + '</select></td>' +
+                '<td><select name="ta_subject_id[]" class="form-select ta-subject-select" data-existing-subject-id=""><option value="">Select Subject</option></select></td>' +
+                '<td><div class="d-flex flex-wrap gap-2" style="gap:6px;">' + daysHtml + '</div><input type="hidden" name="ta_assigned_days[]" class="ta-assigned-days-input" value="[]" /></td>' +
+                '<td class="text-center"><button type="button" class="btn btn-sm btn-danger" onclick="removeTeacherAssignmentRow(this)">X</button></td>' +
+            '</tr>';
+
+        document.getElementById('teacher-assignment-body').insertAdjacentHTML('beforeend', html);
+        refreshTeacherAssignmentSubjectDropdowns();
+        attachDayCheckboxListeners();
+    }
+
+    function removeTeacherAssignmentRow(btn) {
+        var tbody = document.getElementById('teacher-assignment-body');
+        if (!tbody) {
+            return;
+        }
+
+        if (tbody.querySelectorAll('tr').length <= 1) {
+            return;
+        }
+
+        btn.closest('tr').remove();
+    }
+
+    function attachDayCheckboxListeners() {
+        var dayCheckboxes = document.querySelectorAll('.ta-day-checkbox');
+        dayCheckboxes.forEach(function(checkbox) {
+            checkbox.addEventListener('change', function() {
+                var row = this.closest('tr');
+                if (!row) return;
+                
+                var selectedDays = Array.prototype.filter.call(row.querySelectorAll('.ta-day-checkbox'), function(cb) { return cb.checked; })
+                    .map(function(cb) { return cb.value; });
+                var hiddenInput = row.querySelector('.ta-assigned-days-input');
+                if (hiddenInput) {
+                    hiddenInput.value = JSON.stringify(selectedDays);
+                }
+            });
+        });
+    }
+
+    function reloadTeacherAssignmentScope() {
+        var classSel = document.getElementById('ta-assign-class');
+        var sectionSel = document.getElementById('ta-assign-section');
+        var groupSel = document.getElementById('ta-assign-department');
+
+        var classId = classSel ? String(classSel.value || '').trim() : '';
+        var sectionId = sectionSel ? String(sectionSel.value || '').trim() : '';
+        var groupId = groupSel ? String(groupSel.value || '').trim() : '';
+
+        if (!classId) {
+            showValidationWarning('Please select class before loading assignment scope.');
+            return;
+        }
+
+        var baseUrl = '{{ route('resultClassRoutineManage') }}';
+        var params = new URLSearchParams();
+        params.set('ta_class', classId);
+        if (sectionId) {
+            params.set('ta_section', sectionId);
+        }
+        if (groupId) {
+            params.set('ta_group', groupId);
+        }
+
+        window.location.href = baseUrl + '?' + params.toString();
     }
 
     function addRoutineRow() {
@@ -1038,7 +1318,63 @@ Class Routine Management
             });
         }
 
+        var taClassSelect = document.getElementById('ta-assign-class');
+        if (taClassSelect) {
+            taClassSelect.addEventListener('change', refreshTeacherAssignmentSubjectDropdowns);
+        }
+
+        var taForm = document.getElementById('teacher-assignment-form');
+        if (taForm) {
+            taForm.addEventListener('submit', function(e) {
+                var taRows = Array.prototype.slice.call(document.querySelectorAll('#teacher-assignment-body tr'));
+                var hasAnyRow = false;
+
+                for (var i = 0; i < taRows.length; i++) {
+                    var row = taRows[i];
+                    var teacher = row.querySelector('select[name="ta_teacher_id[]"]');
+                    var subject = row.querySelector('select[name="ta_subject_id[]"]');
+                    var teacherVal = teacher ? String(teacher.value || '').trim() : '';
+                    var subjectVal = subject ? String(subject.value || '').trim() : '';
+
+                    if (!teacherVal && !subjectVal) {
+                        continue;
+                    }
+
+                    hasAnyRow = true;
+                    if (!teacherVal || !subjectVal) {
+                        e.preventDefault();
+                        showValidationWarning('Teacher and Subject are required for each assignment row.');
+                        return;
+                    }
+
+                    // Validate at least one day is selected
+                    var dayCheckboxes = row.querySelectorAll('.ta-day-checkbox');
+                    var anyDayChecked = Array.prototype.some.call(dayCheckboxes, function(cb) { return cb.checked; });
+                    if (!anyDayChecked) {
+                        e.preventDefault();
+                        showValidationWarning('Please select at least one day for each teacher-subject assignment.');
+                        return;
+                    }
+
+                    // Update the hidden input with selected days
+                    var selectedDays = Array.prototype.filter.call(dayCheckboxes, function(cb) { return cb.checked; })
+                        .map(function(cb) { return cb.value; });
+                    var hiddenInput = row.querySelector('.ta-assigned-days-input');
+                    if (hiddenInput) {
+                        hiddenInput.value = JSON.stringify(selectedDays);
+                    }
+                }
+
+                if (!hasAnyRow) {
+                    e.preventDefault();
+                    showValidationWarning('Please add at least one teacher assignment row.');
+                }
+            });
+        }
+
         refreshSubjectDropdowns();
+        refreshTeacherAssignmentSubjectDropdowns();
+        attachDayCheckboxListeners();
     });
 </script>
 @endsection
