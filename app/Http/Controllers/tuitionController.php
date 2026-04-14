@@ -104,6 +104,46 @@ class tuitionController extends Controller
         }
     }
 
+    private function teacherScopeSummary(?CultivationAdmin $user): array
+    {
+        if (!$user || !$user->isTeacher()) {
+            return [
+                'classNames' => [],
+                'sectionNames' => [],
+                'hasSectionRestriction' => false,
+            ];
+        }
+
+        $classIds = $this->allowedClassIds($user);
+        $sectionIds = $this->allowedSectionIds($user);
+
+        $classNames = [];
+        if (!empty($classIds)) {
+            $classNames = classManage::whereIn('id', $classIds)
+                ->orderBy('id', 'ASC')
+                ->pluck('className')
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        $sectionNames = [];
+        if (!empty($sectionIds)) {
+            $sectionNames = sectionManage::whereIn('id', $sectionIds)
+                ->orderBy('id', 'ASC')
+                ->pluck('section')
+                ->filter()
+                ->values()
+                ->toArray();
+        }
+
+        return [
+            'classNames' => $classNames,
+            'sectionNames' => $sectionNames,
+            'hasSectionRestriction' => !empty($sectionIds),
+        ];
+    }
+
     private function canCollectStudent(newAdmission $student, ?CultivationAdmin $user): bool
     {
         if (!$user || !$user->isTeacher()) {
@@ -141,6 +181,7 @@ class tuitionController extends Controller
     public function tuitionFee(){
         $user = $this->currentAdmin();
         $isTeacher = $user && $user->isTeacher();
+        $teacherScope = $this->teacherScopeSummary($user);
 
         if ($isTeacher) {
             $classIds = $this->allowedClassIds($user);
@@ -165,6 +206,7 @@ class tuitionController extends Controller
             'classData' => $classDetails,
             'sessionData' => $sessionDetails,
             'isTeacher' => $isTeacher,
+            'teacherScope' => $teacherScope,
         ]);
     }
 
@@ -526,9 +568,11 @@ class tuitionController extends Controller
     // tution Fee List
     public function tuitionFeeList(){
         $user = $this->currentAdmin();
+        $isTeacher = $user && $user->isTeacher();
+        $teacherScope = $this->teacherScopeSummary($user);
         $query = tuitionFee::query();
 
-        if ($user && $user->isTeacher()) {
+        if ($isTeacher) {
             $studentQuery = newAdmission::query()->select('stdId');
             $this->applyTeacherStudentScope($studentQuery, $user);
             $allowedStdIds = $studentQuery->pluck('stdId')->all();
@@ -541,7 +585,11 @@ class tuitionController extends Controller
         }
 
         $tutionfeeData = $query->orderBy('id', 'DESC')->get();
-        return view('account.tuition.tuitionFeesList',['tfd'=>$tutionfeeData]);
+        return view('account.tuition.tuitionFeesList',[
+            'tfd' => $tutionfeeData,
+            'isTeacher' => $isTeacher,
+            'teacherScope' => $teacherScope,
+        ]);
     }
 
     public function tuitionFeeView($id){
@@ -813,6 +861,7 @@ class tuitionController extends Controller
     public function feesReport(){
         $user = $this->currentAdmin();
         $isTeacher = $user && $user->isTeacher();
+        $teacherScope = $this->teacherScopeSummary($user);
 
         if ($isTeacher) {
             $classIds = $this->allowedClassIds($user);
@@ -837,6 +886,7 @@ class tuitionController extends Controller
             'sectionData' => $sectionDetails,
             'sessionData' => $sessionDetails,
             'isTeacher' => $isTeacher,
+            'teacherScope' => $teacherScope,
         ]);
     }
 
@@ -844,6 +894,7 @@ class tuitionController extends Controller
     {
         $user = $this->currentAdmin();
         $isTeacher = $user && $user->isTeacher();
+        $teacherScope = $this->teacherScopeSummary($user);
 
         if ($isTeacher) {
             $classIds = $this->allowedClassIds($user);
@@ -959,6 +1010,7 @@ class tuitionController extends Controller
             'sectionData' => $sectionDetails,
             'sessionData' => $sessionDetails,
             'isTeacher' => $isTeacher,
+            'teacherScope' => $teacherScope,
             'filters' => [
                 'classId' => $classId,
                 'sessionId' => $sessionId,

@@ -20,8 +20,20 @@ Report Into Date
                     </div>
                 @endif
                 @if(!empty($isTeacher) && $isTeacher)
-                    <div class="alert alert-info">
+                    <div class="p-2 alert-info">
                         Class teacher mode is active. You can search only your assigned class/section students.
+                        <div class="mt-2">
+                            <strong>Assigned Classes:</strong>
+                            {{ !empty($teacherScope['classNames']) ? implode(', ', $teacherScope['classNames']) : 'Not assigned' }}
+                        </div>
+                        <div>
+                            <strong>Assigned Sections:</strong>
+                            @if(!empty($teacherScope['hasSectionRestriction']))
+                                {{ !empty($teacherScope['sectionNames']) ? implode(', ', $teacherScope['sectionNames']) : 'Not assigned' }}
+                            @else
+                                All sections of assigned classes
+                            @endif
+                        </div>
                     </div>
                 @endif
                     <form method="POST" class="card-body form form-group" action="{{route('getFeesReport')}}">

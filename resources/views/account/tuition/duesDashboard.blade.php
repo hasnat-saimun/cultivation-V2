@@ -8,8 +8,20 @@ Student Dues Dashboard
         <div class="card card-body border">
             <h4 class="mb-3">Month-wise Student Dues Dashboard</h4>
             @if(!empty($isTeacher) && $isTeacher)
-            <div class="alert alert-info">
+            <div class="p-2 alert-info">
                 Class teacher mode is active. You are seeing only your assigned class/section students.
+                <div class="mt-2">
+                    <strong>Assigned Classes:</strong>
+                    {{ !empty($teacherScope['classNames']) ? implode(', ', $teacherScope['classNames']) : 'Not assigned' }}
+                </div>
+                <div>
+                    <strong>Assigned Sections:</strong>
+                    @if(!empty($teacherScope['hasSectionRestriction']))
+                        {{ !empty($teacherScope['sectionNames']) ? implode(', ', $teacherScope['sectionNames']) : 'Not assigned' }}
+                    @else
+                        All sections of assigned classes
+                    @endif
+                </div>
             </div>
             @endif
 

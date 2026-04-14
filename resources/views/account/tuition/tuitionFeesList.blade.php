@@ -7,6 +7,23 @@ Tuition Fee List
     <div class="col-10 mx-auto">
         <div class="row">
             <div class="card card-body  border  ">
+                @if(!empty($isTeacher) && $isTeacher)
+                <div class="p-2 alert-info">
+                    Class teacher mode is active. You are seeing invoices only for your assigned class/section students.
+                    <div class="mt-2">
+                        <strong>Assigned Classes:</strong>
+                        {{ !empty($teacherScope['classNames']) ? implode(', ', $teacherScope['classNames']) : 'Not assigned' }}
+                    </div>
+                    <div>
+                        <strong>Assigned Sections:</strong>
+                        @if(!empty($teacherScope['hasSectionRestriction']))
+                            {{ !empty($teacherScope['sectionNames']) ? implode(', ', $teacherScope['sectionNames']) : 'Not assigned' }}
+                        @else
+                            All sections of assigned classes
+                        @endif
+                    </div>
+                </div>
+                @endif
                 <form method="POST" action="{{ route('bulkDeleteTuitionFees') }}" id="bulkDeleteForm">
                     @csrf
                     <div class="d-flex justify-content-between mb-2">
