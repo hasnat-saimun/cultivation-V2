@@ -4,6 +4,8 @@
     $attendanceOpen = request()->routeIs($attendanceRoutes);
     $marksRoutes = ['addMarks'];
     $marksOpen = request()->routeIs($marksRoutes);
+    $studentFeesRoutes = ['tuitionFee','duesDashboard','feesReport','collectDueForm','tuitionFeeList','tuitionFeeView'];
+    $studentFeesOpen = request()->routeIs($studentFeesRoutes);
     $archiveRoutes = ['resultArchive'];
     $guideRoutes = ['userGuide.teacherAdmin'];
     $guideOpen = request()->routeIs($guideRoutes);
@@ -28,6 +30,23 @@
         <ul class="nav sub-group-menu{{ $marksOpen ? ' menu-open' : '' }}">
             <li class="nav-item">
                 <a href="{{ route('addMarks') }}" class="nav-link {{ request()->routeIs('addMarks') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Marks Entry</a>
+            </li>
+        </ul>
+    </li>
+    <li class="nav-item sidebar-nav-item {{ $studentFeesOpen ? 'open' : '' }}" data-group="teacher-student-fees">
+        <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i><span>Student Fees</span></a>
+        <ul class="nav sub-group-menu{{ $studentFeesOpen ? ' menu-open' : '' }}">
+            <li class="nav-item">
+                <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('tuitionFeeList') }}" class="nav-link {{ request()->routeIs('tuitionFeeList') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Single Invoice</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('duesDashboard') }}" class="nav-link {{ request()->routeIs('duesDashboard') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Dues Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('feesReport') }}" class="nav-link {{ request()->routeIs('feesReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Generate Report</a>
             </li>
         </ul>
     </li>

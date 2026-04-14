@@ -12,6 +12,7 @@ use App\Models\newAdmission;
 use App\Models\feesManager;
 use App\Models\ClassWiseFeeSetup;
 use App\Models\CultivationAdmin;
+use App\Models\TeacherClassSubject;
 use Carbon\Carbon;
 
 
@@ -30,11 +31,28 @@ class tuitionController extends Controller
             return [];
         }
 
+        $ids = [];
+
         if (!empty($user->primary_class_id)) {
-            return [(int) $user->primary_class_id];
+            $ids[] = (int) $user->primary_class_id;
         }
 
-        return array_map('intval', $user->access_class_array ?? []);
+        $ids = array_merge($ids, array_map('intval', $user->access_class_array ?? []));
+
+        $assignedClassIds = TeacherClassSubject::where('teacher_id', (int) $user->id)
+            ->whereNotNull('class_id')
+            ->pluck('class_id')
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->toArray();
+
+        $ids = array_merge($ids, $assignedClassIds);
+        $ids = array_values(array_unique(array_filter($ids, function ($id) {
+            return $id > 0;
+        })));
+
+        return $ids;
     }
 
     private function allowedSectionIds(?CultivationAdmin $user): array
@@ -43,11 +61,28 @@ class tuitionController extends Controller
             return [];
         }
 
+        $ids = [];
+
         if (!empty($user->primary_section_id)) {
-            return [(int) $user->primary_section_id];
+            $ids[] = (int) $user->primary_section_id;
         }
 
-        return array_map('intval', $user->access_section_array ?? []);
+        $ids = array_merge($ids, array_map('intval', $user->access_section_array ?? []));
+
+        $assignedSectionIds = TeacherClassSubject::where('teacher_id', (int) $user->id)
+            ->whereNotNull('section_id')
+            ->pluck('section_id')
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->toArray();
+
+        $ids = array_merge($ids, $assignedSectionIds);
+        $ids = array_values(array_unique(array_filter($ids, function ($id) {
+            return $id > 0;
+        })));
+
+        return $ids;
     }
 
     private function applyTeacherStudentScope($query, ?CultivationAdmin $user): void

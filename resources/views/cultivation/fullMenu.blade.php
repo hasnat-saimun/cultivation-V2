@@ -22,6 +22,8 @@
     @php
         $adminId = session('cultivationAdmin');
         $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+        $teacherFeeRoutes = ['tuitionFee','tuitionFeeList','feesReport','duesDashboard','tuitionFeeView','editTuitionFee','collectDueForm'];
+        $teacherFeesOpen = request()->routeIs($teacherFeeRoutes);
     @endphp
     @if($currentUser && $currentUser->isGeneral())
     <li class="nav-item">
@@ -30,9 +32,26 @@
         </a>
     </li>
     @endif
-    <li class="nav-item">
-        <a href="{{ ($currentUser && $currentUser->isTeacher()) ? route('tuitionFee') : route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') || request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
+    @if($currentUser && $currentUser->isTeacher())
+    <li class="nav-item sidebar-nav-item {{ $teacherFeesOpen ? 'open' : '' }}" data-group="teacher-student-fees">
+        <a href="#" class="nav-link {{ $teacherFeesOpen ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Student Fees</span></a>
+        <ul class="nav sub-group-menu{{ $teacherFeesOpen ? ' menu-open' : '' }}">
+            <li class="nav-item">
+                <a href="{{ route('tuitionFee') }}" class="nav-link {{ request()->routeIs('tuitionFee') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Fees Collection</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('duesDashboard') }}" class="nav-link {{ request()->routeIs('duesDashboard') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Dues Dashboard</a>
+            </li>
+            <li class="nav-item">
+                <a href="{{ route('feesReport') }}" class="nav-link {{ request()->routeIs('feesReport') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Generate Report</a>
+            </li>
+        </ul>
     </li>
+    @else
+    <li class="nav-item">
+        <a href="{{ route('accountPart') }}" class="nav-link {{ request()->routeIs('accountPart') ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i> <span>Accounts Management</span></a>
+    </li>
+    @endif
     @php
         $certRoutes = ['studentList','testimonials.*','tc.*'];
         $certOpen = request()->routeIs($certRoutes);
