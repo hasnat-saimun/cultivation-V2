@@ -214,6 +214,26 @@ Route::middleware(['adminGuard'])->group (function(){
         'cultivationIndex'
     ])->name('cultivationIndex');
 
+    Route::get('/admin-modern/dashboard', function (CultivationController $controller) {
+        $legacyResponse = $controller->cultivationIndex();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.dashboard', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernDashboard');
+
+    Route::get('/admin-modern/users', function (CultivationController $controller) {
+        $legacyResponse = $controller->userRegList();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.users.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernUsersIndex');
+
     Route::get('/profile',[
         CultivationController::class,
         'adminProfile'
