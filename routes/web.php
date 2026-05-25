@@ -294,6 +294,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicGradesIndex');
 
+    Route::get('/admin-modern/academic/exams', function (ExamController $controller) {
+        $legacyResponse = $controller->allExam();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.exams.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicExamsIndex');
+
     Route::get('/profile',[
         CultivationController::class,
         'adminProfile'

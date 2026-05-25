@@ -21,6 +21,7 @@
                 ['label' => 'Session List', 'route' => 'adminModernAcademicSessionsIndex'],
                 ['label' => 'Subject List', 'route' => 'adminModernAcademicSubjectsIndex'],
                 ['label' => 'Grade List', 'route' => 'adminModernAcademicGradesIndex'],
+                ['label' => 'Exam List', 'route' => 'adminModernAcademicExamsIndex'],
             ],
         ],
     ];
