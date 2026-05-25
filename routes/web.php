@@ -234,6 +234,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernUsersIndex');
 
+    Route::get('/admin-modern/users/create', function (CultivationController $controller) {
+        $legacyResponse = $controller->userType();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.users.create', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernUsersCreate');
+
     Route::get('/admin-modern/academic/classes', function (individualController $controller) {
         $legacyResponse = $controller->allClasses();
 

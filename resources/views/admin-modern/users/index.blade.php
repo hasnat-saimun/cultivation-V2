@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Registered Users">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('userType') }}" class="am-btn-primary">Add New User</a>
+            <a href="{{ route('adminModernUsersCreate') }}" class="am-btn-primary">Add New User</a>
         </div>
 
         <table class="am-table">
