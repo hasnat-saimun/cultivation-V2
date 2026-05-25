@@ -46,7 +46,7 @@
                         <td>{{ (int) $item->passingSystem === 1 ? 'Feature Wise' : 'Total Marks' }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editExam', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicExamsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delExam', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"

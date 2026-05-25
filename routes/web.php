@@ -434,6 +434,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicExamsCreate');
 
+    Route::get('/admin-modern/academic/exams/{itemId}/edit', function (ExamController $controller, $itemId) {
+        $legacyResponse = $controller->editExam($itemId);
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.exams.edit', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicExamsEdit');
+
     Route::get('/profile',[
         CultivationController::class,
         'adminProfile'
