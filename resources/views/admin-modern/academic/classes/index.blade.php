@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Class List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createClass') }}" class="am-btn-primary">Create Class</a>
+            <a href="{{ route('adminModernAcademicClassesCreate') }}" class="am-btn-primary">Create Class</a>
         </div>
 
         <table class="am-table">
@@ -29,7 +29,7 @@
                         <td>{{ $item->className }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editClass', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicClassesEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delClass', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
