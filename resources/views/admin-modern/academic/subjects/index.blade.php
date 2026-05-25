@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Subject List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createSubject') }}" class="am-btn-primary">Create Subject</a>
+            <a href="{{ route('adminModernAcademicSubjectsCreate') }}" class="am-btn-primary">Create Subject</a>
         </div>
 
         <table class="am-table">
