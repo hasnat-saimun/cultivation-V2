@@ -374,6 +374,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicSubjectsCreate');
 
+    Route::get('/admin-modern/academic/subjects/{itemId}/edit', function (SubjectController $controller, $itemId) {
+        $legacyResponse = $controller->editSubject($itemId);
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.subjects.edit', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSubjectsEdit');
+
     Route::get('/admin-modern/academic/grades', function (GradeListController $controller) {
         $legacyResponse = $controller->allGrade();
 

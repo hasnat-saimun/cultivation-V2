@@ -35,7 +35,7 @@
                         <td>{{ $item->Practical }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editSubject', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicSubjectsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delSubject', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
