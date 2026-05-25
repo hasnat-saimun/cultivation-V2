@@ -304,6 +304,26 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicSectionsIndex');
 
+    Route::get('/admin-modern/academic/sections/create', function (individualController $controller) {
+        $legacyResponse = $controller->createSection();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.sections.create', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSectionsCreate');
+
+    Route::get('/admin-modern/academic/sections/{itemId}/edit', function (individualController $controller, $itemId) {
+        $legacyResponse = $controller->editSection($itemId);
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.sections.edit', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSectionsEdit');
+
     Route::get('/admin-modern/academic/sessions', function (individualController $controller) {
         $legacyResponse = $controller->allSession();
 
