@@ -274,6 +274,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicSessionsIndex');
 
+    Route::get('/admin-modern/academic/subjects', function (SubjectController $controller) {
+        $legacyResponse = $controller->allSubject();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.subjects.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSubjectsIndex');
+
     Route::get('/profile',[
         CultivationController::class,
         'adminProfile'
