@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Department List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createDepartment') }}" class="am-btn-primary">Create Department</a>
+            <a href="{{ route('adminModernAcademicDepartmentsCreate') }}" class="am-btn-primary">Create Department</a>
         </div>
 
         <table class="am-table">
@@ -29,7 +29,7 @@
                         <td>{{ $item->departmentName }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editDepartment', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicDepartmentsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delDepartment', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
