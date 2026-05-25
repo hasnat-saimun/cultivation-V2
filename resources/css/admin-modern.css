@@ -86,6 +86,16 @@ body.am-body {
     gap: 0.35rem;
 }
 
+.am-nav-group-title {
+    margin: 0.4rem 0 0.15rem;
+    padding: 0 0.2rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--am-muted);
+}
+
 .am-nav-link {
     text-decoration: none;
     color: var(--am-text);

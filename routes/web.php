@@ -234,6 +234,46 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernUsersIndex');
 
+    Route::get('/admin-modern/academic/classes', function (individualController $controller) {
+        $legacyResponse = $controller->allClasses();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.classes.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicClassesIndex');
+
+    Route::get('/admin-modern/academic/departments', function (individualController $controller) {
+        $legacyResponse = $controller->allDepartment();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.departments.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicDepartmentsIndex');
+
+    Route::get('/admin-modern/academic/sections', function (individualController $controller) {
+        $legacyResponse = $controller->allSection();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.sections.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSectionsIndex');
+
+    Route::get('/admin-modern/academic/sessions', function (individualController $controller) {
+        $legacyResponse = $controller->allSession();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.sessions.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicSessionsIndex');
+
     Route::get('/profile',[
         CultivationController::class,
         'adminProfile'

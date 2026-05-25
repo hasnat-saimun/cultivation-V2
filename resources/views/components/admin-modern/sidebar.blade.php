@@ -1,12 +1,26 @@
 @php
-    $items = [
-        ['label' => 'Dashboard', 'route' => 'adminModernDashboard'],
-        ['label' => 'Users', 'route' => 'adminModernUsersIndex'],
-        ['label' => 'Attendance', 'route' => 'attendanceIndex'],
-        ['label' => 'Student List', 'route' => 'studentList'],
-        ['label' => 'Teacher List', 'route' => 'teacherList'],
-        ['label' => 'Staff List', 'route' => 'staffList'],
-        ['label' => 'Configuration', 'route' => 'serverConfig'],
+    $groups = [
+        [
+            'label' => 'Main',
+            'items' => [
+                ['label' => 'Dashboard', 'route' => 'adminModernDashboard'],
+                ['label' => 'Users', 'route' => 'adminModernUsersIndex'],
+                ['label' => 'Attendance', 'route' => 'attendanceIndex'],
+                ['label' => 'Student List', 'route' => 'studentList'],
+                ['label' => 'Teacher List', 'route' => 'teacherList'],
+                ['label' => 'Staff List', 'route' => 'staffList'],
+                ['label' => 'Configuration', 'route' => 'serverConfig'],
+            ],
+        ],
+        [
+            'label' => 'Academic',
+            'items' => [
+                ['label' => 'Class List', 'route' => 'adminModernAcademicClassesIndex'],
+                ['label' => 'Department List', 'route' => 'adminModernAcademicDepartmentsIndex'],
+                ['label' => 'Section List', 'route' => 'adminModernAcademicSectionsIndex'],
+                ['label' => 'Session List', 'route' => 'adminModernAcademicSessionsIndex'],
+            ],
+        ],
     ];
 @endphp
 
@@ -20,14 +34,17 @@
     </div>
 
     <nav class="am-nav">
-        @foreach($items as $item)
-            @php
-                $isActive = request()->routeIs($item['route']);
-                $href = route($item['route']);
-            @endphp
-            <a href="{{ $href }}" class="am-nav-link {{ $isActive ? 'is-active' : '' }}">
-                <span>{{ $item['label'] }}</span>
-            </a>
+        @foreach($groups as $group)
+            <div class="am-nav-group-title">{{ $group['label'] }}</div>
+            @foreach($group['items'] as $item)
+                @php
+                    $isActive = request()->routeIs($item['route']);
+                    $href = route($item['route']);
+                @endphp
+                <a href="{{ $href }}" class="am-nav-link {{ $isActive ? 'is-active' : '' }}">
+                    <span>{{ $item['label'] }}</span>
+                </a>
+            @endforeach
         @endforeach
     </nav>
 
