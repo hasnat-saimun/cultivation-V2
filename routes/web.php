@@ -374,6 +374,26 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAcademicGradesIndex');
 
+    Route::get('/admin-modern/academic/grades/create', function (GradeListController $controller) {
+        $legacyResponse = $controller->createGrade();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.grades.create', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicGradesCreate');
+
+    Route::get('/admin-modern/academic/grades/{itemId}/edit', function (GradeListController $controller, $itemId) {
+        $legacyResponse = $controller->editGrade($itemId);
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.academic.grades.edit', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAcademicGradesEdit');
+
     Route::get('/admin-modern/academic/exams', function (ExamController $controller) {
         $legacyResponse = $controller->allExam();
 

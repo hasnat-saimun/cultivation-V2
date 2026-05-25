@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Grade List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createGrade') }}" class="am-btn-primary">Create Grade</a>
+            <a href="{{ route('adminModernAcademicGradesCreate') }}" class="am-btn-primary">Create Grade</a>
         </div>
 
         <table class="am-table">
@@ -39,7 +39,7 @@
                         <td>{{ $item->maxGp }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editGrade', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicGradesEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delGrade', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
