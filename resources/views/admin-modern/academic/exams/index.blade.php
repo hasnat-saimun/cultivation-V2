@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Exam List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createExam') }}" class="am-btn-primary">Create Exam</a>
+            <a href="{{ route('adminModernAcademicExamsCreate') }}" class="am-btn-primary">Create Exam</a>
         </div>
 
         <table class="am-table">
