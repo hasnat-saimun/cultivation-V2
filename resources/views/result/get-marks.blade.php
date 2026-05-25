@@ -48,6 +48,40 @@ Get Mark
     endif;
 @endphp
 @section('backIndex')
+    <style>
+        .marks-table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .marks-entry-table {
+            min-width: 900px;
+        }
+
+        .marks-entry-table input.form-control {
+            min-width: 120px;
+        }
+
+        @media (max-width: 767px) {
+            .marks-entry-table {
+                min-width: 780px;
+            }
+
+            .marks-entry-table th,
+            .marks-entry-table td {
+                white-space: nowrap;
+                font-size: 13px;
+                padding: 0.45rem;
+            }
+
+            .marks-entry-table input.form-control {
+                min-width: 100px;
+                font-size: 12px;
+                padding: 0.3rem 0.45rem;
+            }
+        }
+    </style>
     @if($studentList->count()>0)
         <form method="POST" class="card-body form form-group" action="{{ route('confirmMarks') }}">
                 <div class="row">
@@ -70,7 +104,8 @@ Get Mark
                 <div class="alert alert-info mt-2">
                     <strong>Note:</strong> Marks entry is restricted to classes/sections/subjects assigned to the teacher via Admin Assign. The Primary Class/Section setting is used only for Attendance.
                 </div>
-                <table class="table table-bordered">
+                <div class="marks-table-wrap">
+                <table class="table table-bordered marks-entry-table">
                 @php
                     // Get available features for the subject
                     $showCQ         = optional($subjectData)->CQ;
@@ -223,6 +258,7 @@ Get Mark
                         @endif
                     </tbody>
                 </table>
+                </div>
             </form>
     @else
     <div class="alert alert-info">

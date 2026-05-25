@@ -1,3 +1,11 @@
+@php
+    $assetPath = static function (?string $path): string {
+        $path = ltrim((string) $path, '/');
+        $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+        return asset($path);
+    };
+@endphp
 @extends('cultivation.include')
 @section('backTitle')
 Edit Profile
@@ -63,7 +71,7 @@ Edit Profile
                         <div class="col-xl-3 col-lg-6 col-12 form-group mg-t-30">
                             @if(!empty($profileData->avatar))
                             <div class="avatar-upload">
-                                <div><img class="w-75" src="{{ asset('/public/upload/image/teacher/') }}/{{$profileData->avatar}}" alt="$profileData->insName" /><br /></div>
+                                    <div><img class="w-75" src="{{ $assetPath('upload/image/teacher/' . $profileData->avatar) }}" alt="$profileData->insName" /><br /></div>
                                 <a href="{{route('delTeacherPhoto',['profileId'=>$profileData->id])}}" class="mt-3 w-75 btn btn-danger btn-lg">Remove</a>
                             </div>
                             @else

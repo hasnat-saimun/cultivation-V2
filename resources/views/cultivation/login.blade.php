@@ -1,6 +1,12 @@
 @php
   $cfg = \App\Models\ServerConfig::first();
   $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false;
+  $assetPath = static function (?string $path): string {
+    $path = ltrim((string) $path, '/');
+    $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+    return asset($path);
+  };
   $appVersion = (function(){
     $candidates = [
       base_path('RELEASE_NOTES.md'),
@@ -50,7 +56,7 @@
         body{
             min-height:100vh;
             background-color:#f0f2f5;
-            background-image:url("{{ asset('public/loginPart/themeknit/images/240_F_572890162_r9rzijySPVmEGH5YsSVYJtMYJ6eTooXz.jpg') }}");
+          background-image:url("{{ $assetPath('loginPart/themeknit/images/240_F_572890162_r9rzijySPVmEGH5YsSVYJtMYJ6eTooXz.jpg') }}");
             background-repeat:no-repeat;
             background-position:100%;
             background-size:cover;
@@ -77,7 +83,7 @@
       .brand-pane,.form-pane{display:flex;flex-direction:column;justify-content:center;}
     </style>
         {{-- ...existing code... --}}
-    <link rel="icon" href="{{ $cfg && $cfg->favicon ? asset($cfg->favicon) : asset('public/favicon.ico') }}">
+    <link rel="icon" href="{{ $cfg && $cfg->favicon ? $assetPath($cfg->favicon) : $assetPath('favicon.ico') }}">
     <meta name="robots" content="noindex">
     <meta name="author" content="cultivationapp.com">
     <meta name="description" content="Secure login to Cultivation back office">
@@ -88,9 +94,9 @@
     <div class="row g-0 align-items-center">
         <div class="col-lg-5 d-none d-lg-block brand-pane">
         @if($cfg && $cfg->logo)
-            <img src="{{ asset('/public/') }}/upload/image/cultivation/{{ $cfg->logo }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
+          <img src="{{ $assetPath('upload/image/cultivation/' . $cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
         @else
-            <img src="{{ asset('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
+          <img src="{{ $assetPath('loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
         @endif
 
         <h4 class="mt-3 mb-1">

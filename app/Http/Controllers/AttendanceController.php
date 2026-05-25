@@ -11,21 +11,64 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Jobs\SendSmsJob;
 use App\Models\SmsSetting;
+use App\Models\TeacherClassSubject;
 use Illuminate\Support\Facades\Schema;
 
 class AttendanceController extends Controller
 {
+    private function teacherClassIds(?CultivationAdmin $user): array
+    {
+        if (!$user || !$user->isTeacher()) {
+            return [];
+        }
+
+        $ids = [];
+        if (!empty($user->primary_class_id)) {
+            $ids[] = (int) $user->primary_class_id;
+        }
+
+        $ids = array_merge($ids, array_map('intval', $user->access_class_array ?? []));
+
+        $pivotClassIds = TeacherClassSubject::where('teacher_id', (int) $user->id)
+            ->whereNotNull('class_id')
+            ->pluck('class_id')
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->toArray();
+
+        $ids = array_merge($ids, $pivotClassIds);
+        $ids = array_values(array_unique(array_filter($ids, function ($id) {
+            return $id > 0;
+        })));
+
+        return $ids;
+    }
+
+    private function ensureTeacherHasClassAssignment(?CultivationAdmin $user)
+    {
+        if ($user && $user->isTeacher() && empty($this->teacherClassIds($user))) {
+            return redirect()->route('cultivationIndex')
+                ->with('error', 'No class teacher assignment found. Attendance access is disabled.');
+        }
+        return null;
+    }
+
     public function index()
     {
     $adminId = session('cultivationAdmin');
     $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
+        $teacherClassIds = $this->teacherClassIds($user);
         // If teacher has a primary class (class teacher), restrict attendance classes to that one.
         if ($isTeacher && !empty($user->primary_class_id)) {
             $classes = classManage::where('id', (int)$user->primary_class_id)->get();
         } else {
             $classes = $isTeacher
-                ? classManage::whereIn('id', $user->access_class_array)->get()
+                ? classManage::whereIn('id', $teacherClassIds)->get()
                 : classManage::orderBy('id','ASC')->get();
         }
         // Sections: if class-teacher has a primary section, restrict to that section; otherwise fall back to assigned sections
@@ -55,9 +98,12 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
         if($isTeacher){
-            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+            if(!in_array((int)$requ->classId, $this->teacherClassIds($user), true)){
                 return back()->with('error','Unauthorized class');
             }
             // If teacher has a primary_section set, enforce it; otherwise enforce assigned sections
@@ -123,8 +169,11 @@ class AttendanceController extends Controller
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
         if(!$user){ return redirect()->route('adminLogin'); }
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         if($user->isTeacher()){
-            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+            if(!in_array((int)$requ->classId, $this->teacherClassIds($user), true)){
                 return back()->with('error','Unauthorized class');
             }
             if($requ->sectionId){
@@ -224,9 +273,13 @@ class AttendanceController extends Controller
     {
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
+        $teacherClassIds = $this->teacherClassIds($user);
         $classes = $isTeacher
-            ? classManage::whereIn('id', $user->access_class_array)->get()
+            ? classManage::whereIn('id', $teacherClassIds)->get()
             : classManage::orderBy('id','ASC')->get();
         $sections = sectionManage::orderBy('id','ASC')->get();
         $sessions = sessionManage::orderBy('id','ASC')->get();
@@ -246,7 +299,7 @@ class AttendanceController extends Controller
                 return view('attendance.report', compact('classes','sections','sessions','filters','records'))
                     ->with('error','Attendance table not migrated yet.');
             }
-            if($isTeacher && !in_array((int)$filters['classId'], $user->access_class_array) && (empty($user->primary_class_id) || (int)$filters['classId'] !== (int)$user->primary_class_id)){
+            if($isTeacher && !in_array((int)$filters['classId'], $teacherClassIds, true)){
                 return back()->with('error','Unauthorized class');
             }
             if($isTeacher && $filters['sectionId']){
@@ -293,8 +346,11 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         if($user && $user->isTeacher()){
-            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+            if(!in_array((int)$requ->classId, $this->teacherClassIds($user), true)){
                 return back()->with('error','Unauthorized class');
             }
             if($requ->sectionId){
@@ -358,8 +414,11 @@ class AttendanceController extends Controller
         ]);
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         if($user && $user->isTeacher()){
-            if(!in_array((int)$requ->classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$requ->classId !== (int)$user->primary_class_id)){
+            if(!in_array((int)$requ->classId, $this->teacherClassIds($user), true)){
                 return back()->with('error','Unauthorized class');
             }
             if($requ->sectionId){
@@ -431,10 +490,14 @@ class AttendanceController extends Controller
 
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
+        $teacherClassIds = $this->teacherClassIds($user);
 
         $classes = $isTeacher
-            ? classManage::whereIn('id', $user->access_class_array)->get()
+            ? classManage::whereIn('id', $teacherClassIds)->get()
             : classManage::orderBy('id','ASC')->get();
         $sections = sectionManage::orderBy('id','ASC')->get();
         $sessions = sessionManage::orderBy('id','ASC')->get();
@@ -461,7 +524,7 @@ class AttendanceController extends Controller
                 return view('attendance.monthly', compact('classes','sections','sessions','filters','daysInMonth','matrix','students'))
                     ->with('error','Attendance table not migrated yet.');
             }
-            if($isTeacher && !in_array((int)$classId, $user->access_class_array) && (empty($user->primary_class_id) || (int)$classId !== (int)$user->primary_class_id)){
+            if($isTeacher && !in_array((int)$classId, $teacherClassIds, true)){
                 return back()->with('error','Unauthorized class');
             }
             if($isTeacher && $sectionId){
@@ -533,12 +596,21 @@ class AttendanceController extends Controller
 
     public function monthlyExport(Request $requ)
     {
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
+
         $month = (int)($requ->query('month', date('m')));
         $year  = (int)($requ->query('year', date('Y')));
         $classId = $requ->query('classId');
         $sessionId = $requ->query('sessionId');
         $sectionId = $requ->query('sectionId');
         if(!$classId){ return back()->with('error','Class is required'); }
+        if($user && $user->isTeacher() && !in_array((int)$classId, $this->teacherClassIds($user), true)){
+            return back()->with('error','Unauthorized class');
+        }
         if(!Schema::hasTable('attendances')){ return back()->with('error','Attendance table not migrated yet.'); }
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $startDate = sprintf('%04d-%02d-01', $year, $month);
@@ -596,12 +668,21 @@ class AttendanceController extends Controller
 
     public function monthlyPrint(Request $requ)
     {
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? CultivationAdmin::find($adminId) : null;
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
+
         $month = (int)($requ->query('month', date('m')));
         $year  = (int)($requ->query('year', date('Y')));
         $classId = $requ->query('classId');
         $sessionId = $requ->query('sessionId');
         $sectionId = $requ->query('sectionId');
         if(!$classId){ return back()->with('error','Class is required'); }
+        if($user && $user->isTeacher() && !in_array((int)$classId, $this->teacherClassIds($user), true)){
+            return back()->with('error','Unauthorized class');
+        }
         if(!Schema::hasTable('attendances')){ return back()->with('error','Attendance table not migrated yet.'); }
         $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
         $startDate = sprintf('%04d-%02d-01', $year, $month);

@@ -4,8 +4,36 @@
     @include('cultivation.includeSection')
     {{-- Page-level stacked styles --}}
     @stack('styles')
+    <style>
+        .dashboard-content-one .table-responsive {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .dashboard-content-one table th,
+        .dashboard-content-one table td {
+            vertical-align: middle;
+            word-break: normal;
+        }
+
+        @media (max-width: 767px) {
+            .dashboard-content-one table th,
+            .dashboard-content-one table td {
+                font-size: 13px;
+                padding: 0.5rem 0.6rem;
+                white-space: nowrap;
+            }
+        }
+    </style>
 </head>
 <body>
+    @php
+        $assetPath = static function (?string $path): string {
+            $path = ltrim((string) $path, '/');
+            $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+            return asset($path);
+        };
+    @endphp
     <!-- Preloader Start Here -->
     <div id="preloader"></div>
     <!-- Preloader End Here -->
@@ -26,15 +54,23 @@
                     @php
                         // Get logged-in user info from session
                         $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
-                        $userType = $loginUser['userType'] ?? null;
+                        $userType = (int) ($loginUser->userType ?? 0);
+
+                        // Some legacy/super-admin records may not map to 1/2/3 cleanly.
+                        // Default to full menu to avoid an empty sidebar.
+                        if ($userType <= 0) {
+                            $userType = \App\Models\CultivationAdmin::ROLE_GENERAL;
+                        }
                     @endphp
 
-                    @if($userType == 3) {{-- General Admin: Full Menu --}}
+                    @if($userType >= \App\Models\CultivationAdmin::ROLE_GENERAL) {{-- General/Super Admin: Full Menu --}}
                         @include('cultivation.fullMenu')
-                    @elseif($userType == 2) {{-- Cash Admin: Only Accounts Management --}}
+                    @elseif($userType === \App\Models\CultivationAdmin::ROLE_CASH) {{-- Cash Admin --}}
                         @include('cultivation.cashMenu')
-                    @elseif($userType == 1) {{-- Teacher Admin: Only Result Management --}}
+                    @elseif($userType === \App\Models\CultivationAdmin::ROLE_TEACHER) {{-- Teacher Admin --}}
                         @include('cultivation.teacherMenu')
+                    @else
+                        @include('cultivation.fullMenu')
                     @endif
                 </div>
             </div>
@@ -70,6 +106,23 @@
             $(".alert").fadeTo(20000, 5000).slideUp(5000, function() {
                 $(".alert").slideUp(5000);
             });
+
+            function wrapResponsiveTables(rootSelector){
+                const root = document.querySelector(rootSelector);
+                if(!root) return;
+
+                root.querySelectorAll('table').forEach(function(table){
+                    if (table.closest('.table-responsive') || table.closest('.no-responsive-table')) {
+                        return;
+                    }
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'table-responsive';
+                    table.parentNode.insertBefore(wrapper, table);
+                    wrapper.appendChild(table);
+                });
+            }
+
+            wrapResponsiveTables('.dashboard-content-one');
             
             // Simple sidebar menu toggle: one open at a time
             const groups = document.querySelectorAll('.sidebar-menu-content li.sidebar-nav-item');
@@ -129,27 +182,27 @@
         })();
     </script>
     <!-- Plugins js -->
-    <script src="{{ asset('/public/back-office/') }}/js/plugins.js"></script>
+    <script src="{{ $assetPath('back-office/js/plugins.js') }}"></script>
     <!-- Popper js -->
-    <script src="{{ asset('/public/back-office/') }}/js/popper.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/popper.min.js') }}"></script>
     <!-- Bootstrap js -->
-    <script src="{{ asset('/public/back-office/') }}/js/bootstrap.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/bootstrap.min.js') }}"></script>
     <!-- Counterup Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/jquery.counterup.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/jquery.counterup.min.js') }}"></script>
     <!-- Moment Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/moment.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/moment.min.js') }}"></script>
     <!-- Waypoints Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/jquery.waypoints.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/jquery.waypoints.min.js') }}"></script>
     <!-- Scroll Up Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/jquery.scrollUp.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/jquery.scrollUp.min.js') }}"></script>
     <!-- Full Calender Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/fullcalendar.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/fullcalendar.min.js') }}"></script>
     <!-- Select 2 Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/select2.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/select2.min.js') }}"></script>
     <!-- Chart Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/Chart.min.js"></script>
+    <script src="{{ $assetPath('back-office/js/Chart.min.js') }}"></script>
     <!-- Custom Js -->
-    <script src="{{ asset('/public/back-office/') }}/js/main.js"></script>
+    <script src="{{ $assetPath('back-office/js/main.js') }}"></script>
 
     {{-- Stacked page scripts --}}
     @stack('scripts')

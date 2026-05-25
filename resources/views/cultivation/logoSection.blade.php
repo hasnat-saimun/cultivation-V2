@@ -1,4 +1,12 @@
 
                     <div class="header-logo">
-                        <a href="{{ route('academicPart') }}"><img src="{{ asset('/public/back-office/') }}/img/logo1.png" class="logosize" alt="logo"></a>
+                        @php
+                            $assetPath = static function (?string $path): string {
+                                $path = ltrim((string) $path, '/');
+                                $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+                                return asset($path);
+                            };
+                        @endphp
+                        <a href="{{ route('academicPart') }}"><img src="{{ $assetPath('back-office/img/logo1.png') }}" class="logosize" alt="logo"></a>
                     </div>

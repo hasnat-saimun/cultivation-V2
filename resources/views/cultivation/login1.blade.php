@@ -1,3 +1,11 @@
+@php
+    $assetPath = static function (?string $path): string {
+        $path = ltrim((string) $path, '/');
+        $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+        return asset($path);
+    };
+@endphp
 <!DOCTYPE html>
 <html lang="zxx">
     <!-- Mirrored from themeknit.com/demo/html/authfy/demo/login-07.html by HTTrack Website Copier/3.x [XR&CO'2014], Wed, 03 Sep 2025 06:30:00 GMT -->
@@ -18,10 +26,10 @@
         <title>Cultivation | Login</title>
 
         <!-- Favicon -->
-        <link rel="shortcut icon" type="image/icon" href="{{ asset('/public/loginPart/themeknit/images') }}/favicon-16x16.html" />
+        <link rel="shortcut icon" type="image/icon" href="{{ $assetPath('loginPart/themeknit/images/favicon-16x16.html') }}" />
 
         <!-- Main structure css file -->
-        <link rel="stylesheet" href="{{ asset('/public/loginPart/themeknit/css') }}/login7-style.css" />
+        <link rel="stylesheet" href="{{ $assetPath('loginPart/themeknit/css/login7-style.css') }}" />
 
         <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
         <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -61,7 +69,7 @@
                             <div class="headline">
                                 <!-- brand-logo start -->
                                 <div class="brand-logo">
-                                    <img src="{{ asset('/public/loginPart/themeknit/images') }}/logo1.png" width="150" alt="brand-logo" />
+                                    <img src="{{ $assetPath('loginPart/themeknit/images/logo1.png') }}" width="150" alt="brand-logo" />
                                 </div>
                                 <!-- ./brand-logo -->
                                 <p>Login using social media to get quick access</p>
@@ -210,13 +218,13 @@
         <!-- Javascript Files -->
 
         <!-- initialize jQuery Library -->
-        <script src="{{ asset('/public/loginPart/themeknit/js') }}/jquery-2.2.4.min.js"></script>
+        <script src="{{ $assetPath('loginPart/themeknit/js/jquery-2.2.4.min.js') }}"></script>
 
         <!-- for Bootstrap js -->
-        <script src="{{ asset('/public/loginPart/themeknit/js') }}/bootstrap.min.js"></script>
+        <script src="{{ $assetPath('loginPart/themeknit/js/bootstrap.min.js') }}"></script>
 
         <!-- Custom js-->
-        <script src="{{ asset('/public/loginPart/themeknit/js') }}/custom.js"></script>
+        <script src="{{ $assetPath('loginPart/themeknit/js/custom.js') }}"></script>
     </body>
 
     <!-- Mirrored from themeknit.com/demo/html/authfy/demo/login-07.html by HTTrack Website Copier/3.x [XR&CO'2014], Wed, 03 Sep 2025 06:30:03 GMT -->

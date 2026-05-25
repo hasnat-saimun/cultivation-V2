@@ -1,5 +1,34 @@
 
 @php
+    $adminId = session('cultivationAdmin');
+    $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+    $assignedClassIds = [];
+    $assignedSubjectIds = [];
+    if($currentUser && $currentUser->isTeacher()){
+        if(!empty($currentUser->primary_class_id)){
+            $assignedClassIds[] = (int)$currentUser->primary_class_id;
+        }
+        $assignedClassIds = array_merge($assignedClassIds, array_map('intval', $currentUser->access_class_array ?? []));
+        $pivotClassIds = \App\Models\TeacherClassSubject::where('teacher_id', (int)$currentUser->id)
+            ->whereNotNull('class_id')
+            ->pluck('class_id')
+            ->map(function($id){ return (int)$id; })
+            ->toArray();
+        $assignedClassIds = array_merge($assignedClassIds, $pivotClassIds);
+        $assignedClassIds = array_values(array_unique(array_filter($assignedClassIds, function($id){ return $id > 0; })));
+
+        $assignedSubjectIds = array_map('intval', $currentUser->access_subject_array ?? []);
+        $pivotSubjectIds = \App\Models\TeacherClassSubject::where('teacher_id', (int)$currentUser->id)
+            ->whereNotNull('subject_id')
+            ->pluck('subject_id')
+            ->map(function($id){ return (int)$id; })
+            ->toArray();
+        $assignedSubjectIds = array_merge($assignedSubjectIds, $pivotSubjectIds);
+        $assignedSubjectIds = array_values(array_unique(array_filter($assignedSubjectIds, function($id){ return $id > 0; })));
+    }
+    $hasClassTeacherAssignment = !$currentUser || !$currentUser->isTeacher() ? true : !empty($assignedClassIds);
+    $hasMarksAssignment = !$currentUser || !$currentUser->isTeacher() ? true : !empty($assignedSubjectIds);
+
     $attendanceRoutes = ['attendanceIndex','attendanceReport','attendanceMonthly'];
     $attendanceOpen = request()->routeIs($attendanceRoutes);
     $marksRoutes = ['addMarks'];
@@ -15,16 +44,13 @@
         <a href="{{ route('cultivationIndex') }}" class="nav-link {{ request()->routeIs('cultivationIndex') ? 'active' : '' }}"><i class="flaticon-dashboard"></i><span>Cultivation Admin</span></a>
     </li>
     <li class="nav-item">
-        @php
-            $adminId = session('cultivationAdmin');
-            $currentUser = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
-        @endphp
         @if($currentUser && $currentUser->isGeneral())
         <a href="{{ route('resultArchive') }}" class="nav-link {{ request()->routeIs('resultArchive') ? 'active' : '' }}">
             <i class="fa fa-archive"></i><span>Result Archive</span>
         </a>
         @endif
     </li>
+    @if($hasMarksAssignment)
     <li class="nav-item sidebar-nav-item {{ $marksOpen ? 'open' : '' }}" data-group="teacher-marks">
         <a href="#" class="nav-link {{ $marksOpen ? 'active' : '' }}"><i class="flaticon-books"></i><span>Marks Entry</span></a>
         <ul class="nav sub-group-menu{{ $marksOpen ? ' menu-open' : '' }}">
@@ -33,6 +59,8 @@
             </li>
         </ul>
     </li>
+    @endif
+    @if($hasClassTeacherAssignment)
     <li class="nav-item sidebar-nav-item {{ $studentFeesOpen ? 'open' : '' }}" data-group="teacher-student-fees">
         <a href="#" class="nav-link {{ $studentFeesOpen ? 'active' : '' }}"><i class="fa-solid fa-receipt"></i><span>Student Fees</span></a>
         <ul class="nav sub-group-menu{{ $studentFeesOpen ? ' menu-open' : '' }}">
@@ -50,6 +78,8 @@
             </li>
         </ul>
     </li>
+    @endif
+    @if($hasClassTeacherAssignment)
     <li class="nav-item sidebar-nav-item {{ $attendanceOpen ? 'open' : '' }}" data-group="teacher-attendance">
         <a href="#" class="nav-link {{ $attendanceOpen ? 'active' : '' }}"><i class="fa-regular fa-calendar-check"></i><span>Attendance Management</span></a>
         <ul class="nav sub-group-menu{{ $attendanceOpen ? ' menu-open' : '' }}">
@@ -64,6 +94,7 @@
             </li>
         </ul>
     </li>
+    @endif
     <li class="nav-item sidebar-nav-item {{ $guideOpen ? 'open' : '' }}" data-group="teacher-guides">
         <a href="#" class="nav-link {{ $guideOpen ? 'active' : '' }}"><i class="fa-regular fa-book"></i><span>User Guides</span></a>
         <ul class="nav sub-group-menu{{ $guideOpen ? ' menu-open' : '' }}">

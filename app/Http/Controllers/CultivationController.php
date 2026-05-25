@@ -220,9 +220,42 @@ class CultivationController extends Controller
             $server = ServerConfig::find($requ->serverId);
         endif;
 
+        if(empty($server)):
+            $server = new ServerConfig();
+        endif;
+
         $allowedSmsTypes = ['present_only','absent_only','both'];
         $smsTypeRaw = strtolower(trim((string)$requ->sms_type));
         $smsType = in_array($smsTypeRaw, $allowedSmsTypes, true) ? $smsTypeRaw : 'both';
+        $allowedInstituteTypes = ['kindergarten', 'high_school', 'college', 'university'];
+
+        $adminId = session('cultivationAdmin');
+        $currentAdmin = $adminId ? CultivationAdmin::find($adminId) : null;
+        $isSuperAdmin = $currentAdmin && ((int)($currentAdmin->userType ?? 0) > CultivationAdmin::ROLE_GENERAL);
+
+        $currentInstituteType = strtolower(trim((string)($server->institute_type ?? '')));
+        $requestedInstituteType = strtolower(trim((string)$requ->input('institute_type')));
+        $nextInstituteType = $currentInstituteType;
+
+        if($isSuperAdmin):
+            if($requestedInstituteType !== ''):
+                if(!in_array($requestedInstituteType, $allowedInstituteTypes, true)):
+                    return back()->with('error', 'Invalid institute type selected');
+                endif;
+                $nextInstituteType = $requestedInstituteType;
+            endif;
+        else:
+            if($requestedInstituteType !== '' && $requestedInstituteType !== $currentInstituteType):
+                Log::warning('Blocked non-super-admin institute_type update attempt', [
+                    'admin_id' => $adminId,
+                    'requested_institute_type' => $requestedInstituteType,
+                ]);
+            endif;
+        endif;
+
+        if($nextInstituteType === ''):
+            $nextInstituteType = 'high_school';
+        endif;
 
         $server->instituteName      = $requ->insName;
         $server->address            = $requ->insAddress;
@@ -246,6 +279,8 @@ class CultivationController extends Controller
         $server->sms_type           = $smsType;
         $server->sms_body_present   = $requ->sms_body_present;
         $server->sms_body_absent    = $requ->sms_body_absent;
+        $server->institute_type     = $nextInstituteType;
+        $server->active_theme       = $nextInstituteType;
 
         if(!empty($requ->insLogo)):
             $insLogo        = $requ->insLogo;

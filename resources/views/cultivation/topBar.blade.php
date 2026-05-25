@@ -1,8 +1,16 @@
 
+@php
+    $assetPath = static function (?string $path): string {
+        $path = ltrim((string) $path, '/');
+        $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+        return asset($path);
+    };
+@endphp
             <div class="nav-bar-header-one">
                 <div class="header-logo">
                     <a href="{{ route('cultivationIndex') }}">
-                        <img src="{{ asset('/public/back-office/') }}/img/logo.png" class="logosize" alt="logo">
+                        <img src="{{ $assetPath('back-office/img/logo.png') }}" class="logosize" alt="logo">
                     </a>
                 </div>
                  <div class="toggle-button sidebar-toggle">
@@ -56,8 +64,8 @@
                             $adminAvatar    =   '';
                         endif;
                         $adminAvatarUrl = !empty($adminAvatar)
-                            ? asset('public/upload/image/admin/'.$adminAvatar)
-                            : asset('/public/back-office/').'/img/figure/admin.jpg';
+                            ? $assetPath('upload/image/admin/'.$adminAvatar)
+                            : $assetPath('back-office/img/figure/admin.jpg');
                     @endphp
                     <li class="navbar-item dropdown header-admin">
                         <a class="navbar-nav-link dropdown-toggle" href="#" role="button" data-toggle="dropdown"
@@ -77,7 +85,9 @@
                             <div class="item-content">
                                 <ul class="settings-list">
                                     <li><a href="{{ route('adminProfile') }}"><i class="flaticon-user"></i>Profile</a></li>
+                                    @if(empty($cultivationAdmin) || !$cultivationAdmin->isTeacher())
                                     <li><a href="{{ route('serverConfig') }}"><i class="flaticon-gear-loading"></i>Configuration</a></li>
+                                    @endif
                                     <li><a href="{{ route('adminLogout') }}"><i class="flaticon-turn-off"></i>Log Out</a></li>
                                 </ul>
                             </div>

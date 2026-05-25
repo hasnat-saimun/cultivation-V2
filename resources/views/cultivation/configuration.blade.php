@@ -82,6 +82,15 @@ Configuration
 @php
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
     $teacherDesignations = \App\Models\Designation::teacherDesignations();
+    $currentAdminId = session('cultivationAdmin');
+    $currentAdmin = $currentAdminId ? \App\Models\CultivationAdmin::find($currentAdminId) : null;
+    $canChangeInstituteType = !empty($currentAdmin) && ((int)($currentAdmin->userType ?? 0) > \App\Models\CultivationAdmin::ROLE_GENERAL);
+    $allowedInstituteTypes = [
+        'kindergarten' => 'Primary / Kindergarten',
+        'high_school' => 'High School / Vocational',
+        'college' => 'College',
+        'university' => 'University',
+    ];
     if(!empty($serverData)):
         $validSmsTypes = ['present_only','absent_only','both'];
         $serverId               = $serverData->id;
@@ -110,6 +119,8 @@ Configuration
         $eduMinImg              = $serverData->eduMinImg;
         $boardChairmanImg       = $serverData->boardChairmanImg;
         $mapEmbed               = $serverData->mapEmbed;
+        $instituteTypeRaw       = strtolower(trim((string)($serverData->institute_type ?? '')));
+        $instituteType          = array_key_exists($instituteTypeRaw, $allowedInstituteTypes) ? $instituteTypeRaw : 'high_school';
         $smsTypeRaw             = strtolower(trim((string)($serverData->sms_type ?? '')));
         $smsType                = in_array($smsTypeRaw, $validSmsTypes, true) ? $smsTypeRaw : 'both';
         $smsBodyPresent          = $serverData->sms_body_present ?? config('sms.sms_message_present');
@@ -144,6 +155,7 @@ Configuration
         $eduMinImg              = "";
         $boardChairmanImg       = "";
         $mapEmbed               = "";
+        $instituteType          = 'high_school';
         $smsType                = 'both';
         $smsBodyPresent          = config('sms.sms_message_present');
         $smsBodyAbsent           = config('sms.sms_message_absent');
@@ -230,6 +242,22 @@ Configuration
                                         <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-map-marker-alt"></i></span></div>
                                         <input type="text" name="insAddress" class="form-control" id="insAddress" value="{{ $location }}" placeholder="Enter institute address" >
                                     </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 col-12">
+                                <div class="mb-3">
+                                    <label for="institute_type" class="form-label">Institute Type</label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-layer-group"></i></span></div>
+                                        <select name="institute_type" class="form-control" id="institute_type" {{ $canChangeInstituteType ? '' : 'disabled' }}>
+                                            @foreach($allowedInstituteTypes as $typeValue => $typeLabel)
+                                                <option value="{{ $typeValue }}" {{ $instituteType === $typeValue ? 'selected' : '' }}>{{ $typeLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @if(!$canChangeInstituteType)
+                                        <div class="form-hint">Only super admin can change institute type.</div>
+                                    @endif
                                 </div>
                             </div>
                         </div>

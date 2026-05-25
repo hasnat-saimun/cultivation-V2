@@ -166,6 +166,15 @@ class tuitionController extends Controller
         return true;
     }
 
+    private function ensureTeacherHasClassAssignment(?CultivationAdmin $user)
+    {
+        if ($user && $user->isTeacher() && empty($this->allowedClassIds($user))) {
+            return redirect()->route('cultivationIndex')
+                ->with('error', 'No class teacher assignment found. Fees access is disabled.');
+        }
+        return null;
+    }
+
     private function resolveStatus(float $due, float $paid): string
     {
         if ($paid <= 0) {
@@ -180,6 +189,9 @@ class tuitionController extends Controller
     // tuition form page
     public function tuitionFee(){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
         $teacherScope = $this->teacherScopeSummary($user);
 
@@ -213,6 +225,9 @@ class tuitionController extends Controller
     // get tution admission student on form page
     public function getStudentForTutionFee($stdId){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $studentQuery = newAdmission::where('stdId', $stdId);
         $this->applyTeacherStudentScope($studentQuery, $user);
         $studentList = $studentQuery->first();
@@ -407,6 +422,9 @@ class tuitionController extends Controller
 
     public function getStudentsForTutionFeeFilter(Request $requ){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $classId = $requ->input('classId');
         $sessionId = $requ->input('sessionId');
         $sectionId = $requ->input('sectionId');
@@ -441,6 +459,9 @@ class tuitionController extends Controller
         $user = $this->currentAdmin();
         if (!$user) {
             return redirect()->route('adminLogin')->with('error', 'Please login to continue');
+        }
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
         }
 
         $validated = $requ->validate([
@@ -568,6 +589,9 @@ class tuitionController extends Controller
     // tution Fee List
     public function tuitionFeeList(){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
         $teacherScope = $this->teacherScopeSummary($user);
         $query = tuitionFee::query();
@@ -594,6 +618,9 @@ class tuitionController extends Controller
 
     public function tuitionFeeView($id){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $singleData = tuitionFee::find($id);
 
         if (!$singleData) {
@@ -613,6 +640,9 @@ class tuitionController extends Controller
     //edit tiutionfee
     public function editTuitionFee($id){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $tuitionFeeData = tuitionFee::find($id);
         if(!$tuitionFeeData){
             return back()->with('error','Sorry! Tuition fee not found');
@@ -644,6 +674,9 @@ class tuitionController extends Controller
     //update tiutionfee 
     public function updateTuitionFee(Request $requ){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $id = $requ->input('tuitionFeeId');
         $updateData = tuitionFee::find($id);
         if(!$updateData){
@@ -715,6 +748,9 @@ class tuitionController extends Controller
     public function collectDueForm($id)
     {
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $feeData = tuitionFee::find($id);
         if (!$feeData) {
             return back()->with('error', 'Tuition fee record not found');
@@ -739,6 +775,9 @@ class tuitionController extends Controller
     public function collectDueSubmit(Request $requ)
     {
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $validated = $requ->validate([
             'tuitionFeeId' => 'required|integer|exists:tuition_fees,id',
             'collectAmount' => 'required|numeric|min:0.01',
@@ -790,6 +829,9 @@ class tuitionController extends Controller
     //delelte 
     public function dltTuitionFee($id){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $dltData = tuitionFee::find($id);
 
         if (!$dltData) {
@@ -814,6 +856,9 @@ class tuitionController extends Controller
      // bulk delete
      public function bulkDeleteTuitionFees(Request $requ){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $ids = $requ->input('feeIds', []);
         if(empty($ids) || !is_array($ids)){
             return back()->with('error','No items selected');
@@ -842,6 +887,9 @@ class tuitionController extends Controller
      
     public function tuitionReport($id){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $singleData = tuitionFee::find($id);
 
         if (!$singleData) {
@@ -860,6 +908,9 @@ class tuitionController extends Controller
 
     public function feesReport(){
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
         $teacherScope = $this->teacherScopeSummary($user);
 
@@ -893,6 +944,9 @@ class tuitionController extends Controller
     public function duesDashboard(Request $requ)
     {
         $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
         $isTeacher = $user && $user->isTeacher();
         $teacherScope = $this->teacherScopeSummary($user);
 
@@ -1029,6 +1083,11 @@ class tuitionController extends Controller
     public function getFeesReport(Request $requ){
         $reportType = $requ->input('reportType','monthly');
 
+        $user = $this->currentAdmin();
+        if ($guard = $this->ensureTeacherHasClassAssignment($user)) {
+            return $guard;
+        }
+
         // Basic validation for stdId
         $requ->validate([
             'stdId' => 'required'
@@ -1041,7 +1100,6 @@ class tuitionController extends Controller
 
         $feesQuery = tuitionFee::where('stdId', $requ->stdId)->orderBy('created_at', 'ASC');
 
-        $user = $this->currentAdmin();
         if ($user && $user->isTeacher()) {
             if (!$student || !$this->canCollectStudent($student, $user)) {
                 return back()->with('error', 'Unauthorized student for fee report');

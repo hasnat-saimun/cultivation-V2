@@ -39,6 +39,7 @@
                         $studentFeesOpen = request()->routeIs($studentFeesRoutes);
                         $cashOpen = request()->routeIs($cashRoutes);
                         $addFeesActive = request()->routeIs($addFeesRoutes);
+                        $canUseCashCalculas = $currentUser && ($currentUser->isCash() || $currentUser->isGeneral());
                     @endphp
                     <ul class="nav nav-sidebar-menu sidebar-toggle-view">
                         <li class="nav-item">
@@ -66,6 +67,7 @@
                                 @endif
                             </ul>
                         </li>
+                        @if($canUseCashCalculas)
                         <li class="nav-item sidebar-nav-item {{ $cashOpen ? 'open' : '' }}">
                             <a href="#" class="nav-link {{ $cashOpen ? 'active' : '' }}"><i class="fa-regular fa-book-open"></i> <span>Cash Calculas</span></a>
                             <ul class="nav sub-group-menu{{ $cashOpen ? ' menu-open' : '' }}">
@@ -80,6 +82,7 @@
                                 </li>
                             </ul>
                         </li>
+                        @endif
                         @if(!$currentUser || !$currentUser->isTeacher())
                         <li class="nav-item ">
                             <a href="{{route('feesForm')}}" class="nav-link {{ $addFeesActive ? 'active' : '' }}"><i class="fa-thin fa-database"></i> <span>Add New Fees</span></a>

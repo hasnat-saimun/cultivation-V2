@@ -1,3 +1,11 @@
+@php
+    $assetPath = static function (?string $path): string {
+        $path = ltrim((string) $path, '/');
+        $path = preg_replace('#^public/#', '', $path) ?? $path;
+
+        return asset($path);
+    };
+@endphp
 @extends('cultivation.include')
 @section('backTitle')
 {{$singleData->firstName}} Profile
@@ -67,7 +75,7 @@
                 <div class="col-lg-4">
                     <div class="card shadow-sm">
                     <div class="card-header bg-transparent text-center">
-                        <img class="rounded:100" style="width:150px;height:150px; border-radius: 80px ;" src="{{ asset('/public/upload/image/teacher/') }}/{{$singleData->avatar}}" alt="student">
+                                <img class="rounded:100" style="width:150px;height:150px; border-radius: 80px ;" src="{{ $assetPath('upload/image/teacher/' . $singleData->avatar) }}" alt="student">
                         <h3 class="mt-2">{{$singleData->firstName}}</h3>
                     </div>
                     <div class="card-body">

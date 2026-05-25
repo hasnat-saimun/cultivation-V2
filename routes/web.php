@@ -79,6 +79,87 @@ Route::get('/',[
     'adminLogin'
 ])->name('adminLogin');
 
+// Static asset compatibility routes for local Apache environments where
+// vhost static file resolution falls through to Laravel.
+if (! function_exists('servePublicAssetResponse')) {
+    function servePublicAssetResponse(string $file)
+    {
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+
+        $mime = match ($ext) {
+            'css' => 'text/css; charset=UTF-8',
+            'js' => 'application/javascript; charset=UTF-8',
+            'json' => 'application/json; charset=UTF-8',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            'ico' => 'image/x-icon',
+            'woff' => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf' => 'font/ttf',
+            'eot' => 'application/vnd.ms-fontobject',
+            'map' => 'application/json; charset=UTF-8',
+            default => mime_content_type($file) ?: 'application/octet-stream',
+        };
+
+        return response()->file($file, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+}
+
+Route::get('/favicon.ico', function () {
+    $file = public_path('favicon.ico');
+
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+});
+
+Route::get('/back-office/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path('back-office/' . $path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
+
+Route::get('/loginPart/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path('loginPart/' . $path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
+
+Route::get('/public/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path($path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
+
 // Public brochure pages (no login required)
 Route::get('/brochure', [DocsController::class, 'brochure'])->name('brochure');
 Route::get('/brochure/print', [DocsController::class, 'brochurePrint'])->name('brochure.print');
@@ -656,67 +737,67 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/configuration',[
         CultivationController::class ,
         'serverConfig'
-    ])->name('serverConfig');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('serverConfig');
     
     Route::post('/configuration/save',[
         CultivationController::class ,
         'saveConfig'
-    ])->name('saveConfig');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveConfig');
     Route::get('/sign/del/{id}',[
         CultivationController::class ,
         'delSign'
-    ])->name('delSign');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delSign');
     Route::post('/sign/save',[
         CultivationController::class,
         'saveSign'
-    ])->name('saveSign');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveSign');
     Route::get('/logo/del/{id}',[
         CultivationController::class ,
         'delLogo'
-    ])->name('delLogo');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delLogo');
     Route::post('/logo/save',[
         CultivationController::class ,
         'saveLogo'
-    ])->name('saveLogo');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveLogo');
 
     Route::post('/boardChairmanImg/save',[
         CultivationController::class ,
         'saveBoardChairmanImg'
-    ])->name('saveBoardChairmanImg');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveBoardChairmanImg');
 
     Route::post('/eduMinImg/save',[
         CultivationController::class ,
         'saveEduMinImg'
-    ])->name('saveEduMinImg');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveEduMinImg');
 
 
     Route::get('/favicon/del/{id}',[
         CultivationController::class ,
         'delFavicon'
-    ])->name('delFavicon');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delFavicon');
     Route::post('/favicon/save',[
         CultivationController::class ,
         'saveFavicon'
-    ])->name('saveFavicon');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveFavicon');
     
     Route::get('/boardChairmanImg/del/{id}',[
         CultivationController::class ,
         'delBoardChairmanImg'
-    ])->name('delBoardChairmanImg');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delBoardChairmanImg');
     
     Route::get('/eduMinImg/del/{id}',[
         CultivationController::class ,
         'delEduMinImg'
-    ])->name('delEduMinImg');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delEduMinImg');
 
     Route::get('/avatar/del/{id}',[
         CultivationController::class ,
         'delAvatar'
-    ])->name('delAvatar');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delAvatar');
     Route::post('/avatar/save',[
         CultivationController::class ,
         'saveAvatar'
-    ])->name('saveAvatar');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveAvatar');
 
     // Account Part (Cash Admin + General)
     Route::middleware(\App\Http\Middleware\Roles::class.':2')->group(function(){
