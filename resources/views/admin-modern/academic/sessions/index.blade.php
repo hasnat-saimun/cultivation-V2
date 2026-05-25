@@ -11,7 +11,7 @@
 
     <x-admin-modern.table-shell title="Session List">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('createSession') }}" class="am-btn-primary">Create Session</a>
+            <a href="{{ route('adminModernAcademicSessionsCreate') }}" class="am-btn-primary">Create Session</a>
         </div>
 
         <table class="am-table">
@@ -29,7 +29,7 @@
                         <td>{{ $item->session }}</td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editSession', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernAcademicSessionsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('delSession', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
