@@ -244,6 +244,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernUsersCreate');
 
+    Route::get('/admin-modern/users/{id}/edit', function (CultivationController $controller, $id) {
+        $legacyResponse = $controller->editUser($id);
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.users.edit', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernUsersEdit');
+
     Route::get('/admin-modern/academic/classes', function (individualController $controller) {
         $legacyResponse = $controller->allClasses();
 

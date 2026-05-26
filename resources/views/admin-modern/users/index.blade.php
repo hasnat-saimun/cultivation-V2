@@ -52,7 +52,7 @@
                         </td>
                         <td>
                             <div class="am-action-group">
-                                <a href="{{ route('editUser', $user->id) }}" class="am-action-btn is-edit">Edit</a>
+                                <a href="{{ route('adminModernUsersEdit', $user->id) }}" class="am-action-btn is-edit">Edit</a>
                                 <a
                                     href="{{ route('deleteUser', $user->id) }}"
                                     class="am-action-btn is-delete"
