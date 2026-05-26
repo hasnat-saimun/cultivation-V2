@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap");
 
 :root {
     --am-bg: #eef1f6;
@@ -14,7 +14,7 @@
     --am-shadow: 0 6px 18px rgba(9, 20, 40, 0.08);
 }
 
-html[data-theme='dark'] {
+html[data-theme="dark"] {
     --am-bg: #111827;
     --am-surface: #1f2937;
     --am-surface-2: #243044;
@@ -34,7 +34,7 @@ html[data-theme='dark'] {
 
 body.am-body {
     margin: 0;
-    font-family: 'Outfit', sans-serif;
+    font-family: "Outfit", sans-serif;
     color: var(--am-text);
     background: radial-gradient(circle at 0% 0%, #f8fbff 0%, var(--am-bg) 45%);
 }
@@ -47,7 +47,11 @@ body.am-body {
 
 .am-sidebar {
     border-right: 1px solid var(--am-border);
-    background: linear-gradient(180deg, var(--am-surface) 0%, var(--am-surface-2) 100%);
+    background: linear-gradient(
+        180deg,
+        var(--am-surface) 0%,
+        var(--am-surface-2) 100%
+    );
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -116,7 +120,7 @@ body.am-body {
     color: #123662;
 }
 
-html[data-theme='dark'] .am-nav-link.is-active {
+html[data-theme="dark"] .am-nav-link.is-active {
     background: #1f3655;
     border-color: #335c8e;
     color: #c9e1ff;
@@ -488,37 +492,37 @@ html[data-theme='dark'] .am-nav-link.is-active {
     background: #fee2e2;
 }
 
-html[data-theme='dark'] .am-badge.teacher {
+html[data-theme="dark"] .am-badge.teacher {
     color: #e0f2fe;
     background: #0c4a6e;
     border-color: #075985;
 }
 
-html[data-theme='dark'] .am-badge.cash {
+html[data-theme="dark"] .am-badge.cash {
     color: #fef3c7;
     background: #78350f;
     border-color: #92400e;
 }
 
-html[data-theme='dark'] .am-badge.general {
+html[data-theme="dark"] .am-badge.general {
     color: #dcfce7;
     background: #14532d;
     border-color: #166534;
 }
 
-html[data-theme='dark'] .am-badge.super {
+html[data-theme="dark"] .am-badge.super {
     color: #dbeafe;
     background: #1e3a8a;
     border-color: #1d4ed8;
 }
 
-html[data-theme='dark'] .am-action-btn.is-edit {
+html[data-theme="dark"] .am-action-btn.is-edit {
     color: #fed7aa;
     background: #7c2d12;
     border-color: #9a3412;
 }
 
-html[data-theme='dark'] .am-action-btn.is-delete {
+html[data-theme="dark"] .am-action-btn.is-delete {
     color: #fecaca;
     background: #7f1d1d;
     border-color: #991b1b;

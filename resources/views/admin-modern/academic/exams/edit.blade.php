@@ -9,18 +9,6 @@
         :breadcrumb="['Home', 'Academic', 'Exam List', 'Edit Exam']"
     />
 
-    @if(session()->has('success'))
-        <div class="am-flash is-success" role="status">
-            <span>{{ session()->get('success') }}</span>
-        </div>
-    @endif
-
-    @if(session()->has('error'))
-        <div class="am-flash is-error" role="alert">
-            <span>{{ session()->get('error') }}</span>
-        </div>
-    @endif
-
     <x-admin-modern.table-shell title="Update Exam">
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
             <a href="{{ route('adminModernAcademicExamsIndex') }}" class="am-btn-outline">Exam List</a>

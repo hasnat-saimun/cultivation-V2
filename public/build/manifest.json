@@ -1,0 +1,24 @@
+{
+  "resources/css/admin-modern.css": {
+    "file": "assets/admin-modern-C8PHukoo.css",
+    "src": "resources/css/admin-modern.css",
+    "isEntry": true
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-CZS7Ge89.css",
+    "src": "resources/css/app.css",
+    "isEntry": true
+  },
+  "resources/js/admin-modern.js": {
+    "file": "assets/admin-modern-CXUrkjwW.js",
+    "name": "admin-modern",
+    "src": "resources/js/admin-modern.js",
+    "isEntry": true
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-UyRVujZY.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  }
+}

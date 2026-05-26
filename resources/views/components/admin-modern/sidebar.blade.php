@@ -1,4 +1,14 @@
 @php
+    // Derive the active-group prefix from a route name.
+    // Strips the trailing 'Index' suffix so that related create/edit routes
+    // (which share the same root name) also highlight the parent nav item.
+    // e.g. 'adminModernUsersIndex' -> 'adminModernUsers'
+    //       str_starts_with('adminModernUsersCreate', 'adminModernUsers') = true
+    $amNavPrefix = fn(string $r): string =>
+        str_ends_with($r, 'Index') ? substr($r, 0, -5) : $r;
+
+    $currentRouteName = request()->route()?->getName() ?? '';
+
     $groups = [
         [
             'label' => 'Main',
@@ -41,8 +51,9 @@
             <div class="am-nav-group-title">{{ $group['label'] }}</div>
             @foreach($group['items'] as $item)
                 @php
-                    $isActive = request()->routeIs($item['route']);
-                    $href = route($item['route']);
+                    $prefix   = $amNavPrefix($item['route']);
+                    $isActive = str_starts_with($currentRouteName, $prefix);
+                    $href     = route($item['route']);
                 @endphp
                 <a href="{{ $href }}" class="am-nav-link {{ $isActive ? 'is-active' : '' }}">
                     <span>{{ $item['label'] }}</span>

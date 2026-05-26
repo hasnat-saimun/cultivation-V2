@@ -9,18 +9,6 @@
         :breadcrumb="['Home', 'Academic', 'Section List', 'Edit Section']"
     />
 
-    @if(session()->has('success'))
-        <div class="am-flash is-success" role="status">
-            <span>{{ session()->get('success') }}</span>
-        </div>
-    @endif
-
-    @if(session()->has('error'))
-        <div class="am-flash is-error" role="alert">
-            <span>{{ session()->get('error') }}</span>
-        </div>
-    @endif
-
     <x-admin-modern.table-shell title="Update Section">
         @if(isset($item))
             <form action="{{ route('updateSection') }}" method="POST">
