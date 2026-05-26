@@ -15,7 +15,7 @@
     @if(!empty($breadcrumb))
         <ol class="am-breadcrumb" aria-label="Breadcrumb">
             @foreach($breadcrumb as $crumb)
-                <li>{{ $crumb }}</li>
+                <li @if($loop->last) aria-current="page" @endif>{{ $crumb }}</li>
             @endforeach
         </ol>
     @endif

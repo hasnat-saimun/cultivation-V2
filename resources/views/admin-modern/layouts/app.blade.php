@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Modern') | Cultivation V2</title>
     @vite(['resources/css/admin-modern.css', 'resources/js/admin-modern.js'])
+    @stack('styles')
 </head>
 <body class="am-body">
     <div class="am-app" id="adminModernApp">
@@ -20,5 +21,6 @@
             </main>
         </div>
     </div>
+    @stack('scripts')
 </body>
 </html>

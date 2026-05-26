@@ -254,6 +254,36 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernUsersEdit');
 
+    Route::get('/admin-modern/students', function (admissionController $controller) {
+        $legacyResponse = $controller->studentList(request());
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.students.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernStudentsIndex');
+
+    Route::get('/admin-modern/staff', function (StaffController $controller) {
+        $legacyResponse = $controller->staffList();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.staff.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernStaffIndex');
+
+    Route::get('/admin-modern/teachers', function (TeacherController $controller) {
+        $legacyResponse = $controller->teacherList();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.teachers.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernTeachersIndex');
+
     Route::get('/admin-modern/academic/classes', function (individualController $controller) {
         $legacyResponse = $controller->allClasses();
 

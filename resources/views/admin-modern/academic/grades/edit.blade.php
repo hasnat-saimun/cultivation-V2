@@ -10,6 +10,10 @@
     />
 
     <x-admin-modern.table-shell title="Update Grade">
+        <div class="am-btn-row" style="margin-bottom: 0.7rem;">
+            <a href="{{ route('adminModernAcademicGradesIndex') }}" class="am-btn-outline">Back to List</a>
+        </div>
+
         @if(isset($item))
             <form action="{{ route('updateGrade') }}" method="POST" enctype="multipart/form-data">
                 @csrf

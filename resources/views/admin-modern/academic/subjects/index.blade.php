@@ -33,12 +33,13 @@
                         <td>{{ $item->CQ }}</td>
                         <td>{{ $item->MCQ }}</td>
                         <td>{{ $item->Practical }}</td>
-                        <td>
-                            <div class="am-action-group">
-                                <a href="{{ route('adminModernAcademicSubjectsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                        <td style="text-align:center; vertical-align:middle;">
+                            <div class="am-action-group" style="justify-content:center; gap:0.35rem; flex-wrap:wrap;" aria-label="Subject row actions">
+                                <a href="{{ route('adminModernAcademicSubjectsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit" title="Edit subject">Edit</a>
                                 <a
                                     href="{{ route('delSubject', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
+                                    title="Delete subject"
                                     onclick="return confirm('Are you sure you want to delete this item?');"
                                 >Delete</a>
                             </div>

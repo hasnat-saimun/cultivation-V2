@@ -27,12 +27,13 @@
                     <tr>
                         <td>{{ $key + 1 }}</td>
                         <td>{{ $item->session }}</td>
-                        <td>
-                            <div class="am-action-group">
-                                <a href="{{ route('adminModernAcademicSessionsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit">Edit</a>
+                        <td style="text-align:center; vertical-align:middle;">
+                            <div class="am-action-group" style="justify-content:center; gap:0.35rem; flex-wrap:wrap;" aria-label="Session row actions">
+                                <a href="{{ route('adminModernAcademicSessionsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit" title="Edit session">Edit</a>
                                 <a
                                     href="{{ route('delSession', ['itemId' => $item->id]) }}"
                                     class="am-action-btn is-delete"
+                                    title="Delete session"
                                     onclick="return confirm('Are you sure you want to delete this item?');"
                                 >Delete</a>
                             </div>
