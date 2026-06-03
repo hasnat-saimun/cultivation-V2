@@ -16,7 +16,7 @@
     </div>
 
     <x-admin-modern.table-shell title="Attendance - Select Filters">
-        <form method="POST" action="{{ route('attendanceFetch') }}">
+        <form method="POST" action="{{ route('adminModernAttendanceFetch') }}">
             @csrf
 
             <div class="am-grid am-grid-2" style="margin-bottom: 0.7rem;">

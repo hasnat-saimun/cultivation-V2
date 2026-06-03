@@ -234,6 +234,16 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernAttendanceIndex');
 
+    Route::post('/admin-modern/attendance/fetch', function (AttendanceController $controller) {
+        $legacyResponse = $controller->fetch(request());
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.attendance.mark', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAttendanceFetch');
+
     Route::get('/admin-modern/attendance/report', function (AttendanceController $controller) {
         $legacyResponse = $controller->report(request());
 
