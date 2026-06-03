@@ -180,9 +180,13 @@
         }
 
         document.addEventListener("DOMContentLoaded", function() {
-            if (document.getElementById("CQ").checked) cqMarks(document.getElementById("CQ"));
-            if (document.getElementById("MCQ").checked) mcqMarks(document.getElementById("MCQ"));
-            if (document.getElementById("Practical").checked) practicalMarks(document.getElementById("Practical"));
+            const cq = document.getElementById("CQ");
+            const mcq = document.getElementById("MCQ");
+            const practical = document.getElementById("Practical");
+
+            if (cq && cq.checked) cqMarks(cq);
+            if (mcq && mcq.checked) mcqMarks(mcq);
+            if (practical && practical.checked) practicalMarks(practical);
         });
     </script>
 @endsection

@@ -51,8 +51,9 @@
                 <h2>Quick Actions</h2>
             </div>
             <div class="am-btn-row" style="justify-content:flex-start; gap:0.5rem; flex-wrap:wrap;" aria-label="Quick action buttons">
-                <a href="{{ route('attendanceIndex') }}" class="am-btn-primary" title="Mark today's attendance">Mark Attendance</a>
-                <a href="{{ route('attendanceReport') }}" class="am-btn-outline" title="View attendance report">Attendance Report</a>
+                <a href="{{ route('adminModernAttendanceIndex') }}" class="am-btn-primary" title="Mark today's attendance">Mark Attendance</a>
+                <a href="{{ route('adminModernAttendanceReport') }}" class="am-btn-outline" title="View attendance report">Attendance Report</a>
+                <a href="{{ route('adminModernAttendanceMonthly') }}" class="am-btn-outline" title="View monthly attendance">Monthly Sheet</a>
                 <a href="{{ route('studentList') }}" class="am-btn-outline" title="View student list">Student List</a>
             </div>
             @if(!empty($isTeacher))

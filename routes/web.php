@@ -224,6 +224,36 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernDashboard');
 
+    Route::get('/admin-modern/attendance', function (AttendanceController $controller) {
+        $legacyResponse = $controller->index();
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.attendance.index', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAttendanceIndex');
+
+    Route::get('/admin-modern/attendance/report', function (AttendanceController $controller) {
+        $legacyResponse = $controller->report(request());
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.attendance.report', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAttendanceReport');
+
+    Route::get('/admin-modern/attendance/monthly', function (AttendanceController $controller) {
+        $legacyResponse = $controller->monthly(request());
+
+        if ($legacyResponse instanceof \Illuminate\View\View) {
+            return view('admin-modern.attendance.monthly', $legacyResponse->getData());
+        }
+
+        return $legacyResponse;
+    })->name('adminModernAttendanceMonthly');
+
     Route::get('/admin-modern/users', function (CultivationController $controller) {
         $legacyResponse = $controller->userRegList();
 
@@ -425,6 +455,14 @@ Route::middleware(['adminGuard'])->group (function(){
     })->name('adminModernAcademicSubjectsCreate');
 
     Route::get('/admin-modern/academic/subjects/{itemId}/edit', function (SubjectController $controller, $itemId) {
+        if (! \App\Models\Subject::find($itemId)) {
+            return view('admin-modern.academic.subjects.edit', [
+                'item' => null,
+                'classList' => collect([]),
+                'defaultClassIds' => [],
+            ]);
+        }
+
         $legacyResponse = $controller->editSubject($itemId);
 
         if ($legacyResponse instanceof \Illuminate\View\View) {
