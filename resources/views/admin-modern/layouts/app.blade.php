@@ -9,13 +9,14 @@
     @stack('styles')
 </head>
 <body class="am-body">
+    <a class="am-skip-link" href="#main-content">Skip to main content</a>
     <div class="am-app" id="adminModernApp">
         <x-admin-modern.sidebar />
 
         <div class="am-main-wrap">
             <x-admin-modern.navbar />
 
-            <main class="am-main" id="adminModernMain">
+            <main class="am-main" id="main-content" tabindex="-1">
                 <x-admin-modern.flash />
                 @yield('content')
             </main>

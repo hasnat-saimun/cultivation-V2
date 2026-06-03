@@ -39,6 +39,26 @@ body.am-body {
     background: radial-gradient(circle at 0% 0%, #f8fbff 0%, var(--am-bg) 45%);
 }
 
+.am-skip-link {
+    position: absolute;
+    top: -40px;
+    left: 1rem;
+    z-index: 1000;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    background: var(--am-primary);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.am-skip-link:focus,
+.am-skip-link:focus-visible {
+    top: 0.75rem;
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+
 .am-app {
     min-height: 100vh;
     display: grid;
