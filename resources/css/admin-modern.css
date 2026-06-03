@@ -225,6 +225,7 @@ html[data-theme="dark"] .am-nav-link.is-active {
     display: grid;
     align-content: start;
     gap: 1rem;
+    min-width: 0;
 }
 
 .am-flash {
@@ -352,6 +353,7 @@ html[data-theme="dark"] .am-nav-link.is-active {
 
 .am-panel {
     padding: 1rem;
+    min-width: 0;
 }
 
 .am-panel-head {
