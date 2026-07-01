@@ -27,8 +27,9 @@ New Profile
 </style>
 @endpush
 @php
+    $errors = $errors ?? new \Illuminate\Support\ViewErrorBag();
     $serverData = \App\Models\ServerConfig::orderBy('id','DESC')->limit(1)->first();
-    if($serverData->count() > 0):
+    if(!empty($serverData)):
         $serverId           = $serverData->id;
         $insName            = $serverData->institueName;
         $location           = $serverData->address;
