@@ -22,12 +22,12 @@ class DesignationController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|trim',
+            'name' => 'required|string|max:255',
             'type' => 'required|in:teacher,staff,committee',
         ]);
 
         // Normalize name and check for duplicates (case-insensitive)
-        $name = trim($request->input('name'));
+        $name = trim((string) $request->input('name'));
         $type = $request->input('type');
         
         $existing = Designation::whereRaw('LOWER(name) = ?', [strtolower($name)])
@@ -66,8 +66,11 @@ class DesignationController extends Controller
             'type' => 'required|in:teacher,staff,committee',
         ]);
 
-        $existing = Designation::where('name', $request->name)
-            ->where('type', $request->type)
+        $name = trim((string) $request->input('name'));
+        $type = $request->input('type');
+
+        $existing = Designation::whereRaw('LOWER(name) = ?', [strtolower($name)])
+            ->where('type', $type)
             ->where('id', '!=', $id)
             ->first();
 
@@ -76,8 +79,8 @@ class DesignationController extends Controller
         }
 
         $updateData = [
-            'name' => $request->input('name'),
-            'type' => $request->input('type'),
+            'name' => $name,
+            'type' => $type,
             'is_active' => $request->has('is_active') ? 1 : 0,
         ];
 
