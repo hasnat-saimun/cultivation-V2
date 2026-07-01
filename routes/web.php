@@ -318,7 +318,29 @@ Route::middleware(['adminGuard'])->group (function(){
         $legacyResponse = $controller->teacherList();
 
         if ($legacyResponse instanceof \Illuminate\View\View) {
-            return view('admin-modern.teachers.index', $legacyResponse->getData());
+            $viewData = $legacyResponse->getData();
+            $search = trim((string) request()->query('search', ''));
+
+            if ($search !== '' && isset($viewData['profileData'])) {
+                $needle = mb_strtolower($search);
+                $profileData = collect($viewData['profileData'])->filter(function ($teacher) use ($needle) {
+                    $teacherId = mb_strtolower((string) ($teacher->teacherId ?? ''));
+                    $firstName = mb_strtolower((string) ($teacher->firstName ?? ''));
+                    $lastName = mb_strtolower((string) ($teacher->lastName ?? ''));
+                    $mobile = mb_strtolower((string) ($teacher->mobile ?? ''));
+                    $email = mb_strtolower((string) ($teacher->email ?? ''));
+
+                    return str_contains($teacherId, $needle)
+                        || str_contains($firstName, $needle)
+                        || str_contains($lastName, $needle)
+                        || str_contains($mobile, $needle)
+                        || str_contains($email, $needle);
+                })->values();
+
+                $viewData['profileData'] = $profileData;
+            }
+
+            return view('admin-modern.teachers.index', $viewData);
         }
 
         return $legacyResponse;

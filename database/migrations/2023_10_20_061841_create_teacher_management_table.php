@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('gender')->nullable();
             $table->string('dob')->nullable();
             $table->string('designation')->nullable();
+            $table->string('designationId')->nullable();
             $table->string('blGroup')->nullable();
             $table->string('religion')->nullable();
             $table->string('email')->nullable();

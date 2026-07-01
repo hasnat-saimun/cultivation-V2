@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('dob')->nullable();
             $table->string('joinDate')->nullable();
             $table->string('designation')->nullable();
+            $table->string('designationId')->nullable();
             $table->string('position')->nullable();
             $table->string('profileId')->nullable();
             $table->string('email')->nullable();

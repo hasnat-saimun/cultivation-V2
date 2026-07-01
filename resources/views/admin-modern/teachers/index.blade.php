@@ -17,6 +17,24 @@
             <a href="{{ route('addTeacher') }}" class="am-btn-primary">Add Teacher</a>
         </div>
 
+        <form method="GET" class="am-btn-row" style="margin-bottom: 0.9rem; gap: 0.6rem; align-items: flex-end;">
+            <div>
+                <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Search</label>
+                <input
+                    name="search"
+                    type="text"
+                    class="form-control"
+                    value="{{ request()->query('search') }}"
+                    placeholder="Name / Teacher ID / Mobile / Email"
+                >
+            </div>
+
+            <div class="am-btn-row" style="margin-bottom: 0; gap: 0.5rem;">
+                <button type="submit" class="am-btn-primary">Filter</button>
+                <a href="{{ route('adminModernTeachersIndex') }}" class="am-btn-outline">Reset</a>
+            </div>
+        </form>
+
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
             <button type="button" class="am-btn-outline" id="bulkDeleteBtn" style="display:none;">Delete Selected (<span id="selectedCount">0</span>)</button>
         </div>
