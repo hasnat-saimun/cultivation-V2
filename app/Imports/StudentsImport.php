@@ -58,9 +58,9 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
             'sectionName' => $this->getSectionId($this->nv($row, 'section')),
             'fourthSubjectId' => $this->getOptionalSubjectId($fourthSubRaw),
             'rollNumber' => $roll,
-            'guardianName' => $guardian,
-            'guardianPhone' => $guardianPhone,
-            'relationGuardian' => $this->getRelationValue($relation),
+            'gurdianName' => $guardian,
+            'gurdianMobile' => $guardianPhone,
+            'relationGurdian' => $this->getRelationValue($relation),
             'created_at' => now(),
             'updated_at' => now(),
         ]);

@@ -46,8 +46,8 @@ class newAdmission extends Model
         'religiousSubjectId',
         'fourthSubjectId',
         'rollNumber',
-        'guardianName',
-        'guardianPhone',
-        'relationGuardian',
+        'gurdianName',
+        'gurdianMobile',
+        'relationGurdian',
     ];
 }
