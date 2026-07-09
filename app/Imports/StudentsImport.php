@@ -14,15 +14,15 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
         // Get the last record ID to generate new student ID
         $lastRecord = newAdmission::latest('id')->first();
         $nextId = $lastRecord ? ($lastRecord->id + 1) : 1;
-        $currentYear = date('Y');
+        $currentYear = date('y');
         $sixDigitId = str_pad($nextId, 6, "0", STR_PAD_LEFT);
         $stdId = $currentYear . $sixDigitId;
 
         // Normalize all incoming values; blank/whitespace becomes null
         $fullName   = $this->nv($row, 'full_name');
         $sureName   = $this->nv($row, 'sure_name');
-        $fatherName = $this->nv($row, 'father_name');
-        $motherName = $this->nv($row, 'mother_name');
+        $fatherName = $this->nv($row, 'father');
+        $motherName = $this->nv($row, 'mother');
         $dobRaw     = $this->nv($row, 'dob');
         $mail       = $this->nv($row, 'email');
         $phone      = $this->nv($row, 'phone');
@@ -71,8 +71,8 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
         return [
             // Make all fields nullable so blank cells import as null
             'full_name' => 'nullable|string',
-            'father_name' => 'nullable|string',
-            'mother_name' => 'nullable|string',
+            'father' => 'nullable|string',
+            'mother' => 'nullable|string',
             'gender' => 'nullable|string',
             'religion' => 'nullable|string',
             '4th_subject' => 'nullable|string',

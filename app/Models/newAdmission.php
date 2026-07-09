@@ -30,8 +30,8 @@ class newAdmission extends Model
         'stdId',
         'fullName',
         'sureName',
-        'fatherName',
-        'motherName',
+        'father',
+        'mother',
         'gender',
         'dob',
         'blGroup',
@@ -46,8 +46,8 @@ class newAdmission extends Model
         'religiousSubjectId',
         'fourthSubjectId',
         'rollNumber',
-        'gurdian',
-        'gurdianPhone',
-        'relationWithStd',
+        'guardianName',
+        'guardianPhone',
+        'relationGuardian',
     ];
 }
