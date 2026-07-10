@@ -6,6 +6,7 @@ use App\Models\newAdmission;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class StudentsImport implements ToModel, WithHeadingRow, WithValidation
 {
@@ -33,11 +34,7 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
         $guardianPhone = $this->nv($row, 'guardian_phone');
         $relation   = $this->nv($row, 'relation');
 
-        $dob = null;
-        if ($dobRaw) {
-            $ts = strtotime($dobRaw);
-            $dob = $ts ? date('Y-m-d', $ts) : null;
-        }
+        $dob = $this->parseDate($dobRaw);
 
         return new newAdmission([
             'stdId' => $stdId,
@@ -220,6 +217,28 @@ class StudentsImport implements ToModel, WithHeadingRow, WithValidation
             return $v === '' ? null : $v;
         }
         return $value === '' ? null : $value;
+    }
+
+    private function parseDate($raw)
+    {
+        $value = $this->nvRaw($raw);
+        if($value === null){ return null; }
+
+        if($value instanceof \DateTimeInterface){
+            return $value->format('Y-m-d');
+        }
+
+        // Excel often stores dates as serial numbers (e.g. 45234) in xlsx cells.
+        if(is_numeric($value)){
+            try {
+                return ExcelDate::excelToDateTimeObject((float)$value)->format('Y-m-d');
+            } catch (\Throwable $e) {
+                // Fallback to string parsing below.
+            }
+        }
+
+        $ts = strtotime((string)$value);
+        return $ts !== false ? date('Y-m-d', $ts) : null;
     }
 
     // Build a canonical slug for class names so "Six", "Class six", "6", "VI" all match
