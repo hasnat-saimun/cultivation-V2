@@ -5,6 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Marksheet;
+use App\Models\classManage;
+use App\Models\sectionManage;
+use App\Models\sessionManage;
+use App\Models\Department;
 
 class newAdmission extends Model
 {
@@ -16,6 +20,26 @@ class newAdmission extends Model
         return $this->hasMany(Marksheet::class, 'studentId', 'id');
     }
 
+    public function classInfo()
+    {
+        return $this->belongsTo(classManage::class, 'className', 'id');
+    }
+
+    public function sectionInfo()
+    {
+        return $this->belongsTo(sectionManage::class, 'sectionName', 'id');
+    }
+
+    public function sessionInfo()
+    {
+        return $this->belongsTo(sessionManage::class, 'sessName', 'id');
+    }
+
+    public function departmentInfo()
+    {
+        return $this->belongsTo(Department::class, 'departmentName', 'id');
+    }
+
     public function getRollNumberAttribute($value)
     {
         if ($value === null || $value === '') {
@@ -24,6 +48,12 @@ class newAdmission extends Model
         return is_numeric($value)
             ? str_pad((string)((int)$value), 2, '0', STR_PAD_LEFT)
             : $value;
+    }
+
+    public function getStudentNameAttribute(): string
+    {
+        $name = trim(((string) ($this->fullName ?? '')) . ' ' . ((string) ($this->sureName ?? '')));
+        return $name !== '' ? preg_replace('/\s+/', ' ', $name) : 'N/A';
     }
 
     protected $fillable = [

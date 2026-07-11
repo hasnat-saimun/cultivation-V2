@@ -10,8 +10,18 @@ Student List
                             <div class="card-header bg-gradient-info text-white d-flex justify-content-between align-items-center flex-wrap gap-3">
                                 <h3 class="mb-0"><i class="fa-solid fa-graduation-cap"></i> Student List</h3>
                                 <div class="d-flex gap-3 flex-wrap">
-                                    <a href="{{ route('student.export.pdf') }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
-                                        <a href="{{ route('studentBulkUpdate') }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
+                                    @php
+                                        $exportParams = array_filter([
+                                            'classId' => request()->get('classId'),
+                                            'sessionId' => request()->get('sessionId'),
+                                            'sectionId' => request()->get('sectionId'),
+                                            'departmentId' => request()->get('departmentId'),
+                                            'search' => request()->get('search'),
+                                        ], function ($v) { return $v !== null && $v !== ''; });
+                                    @endphp
+                                    <a href="{{ route('student.export.pdf', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
+                                    <a href="{{ route('student.export.excel', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
+                                    <a href="{{ route('studentBulkUpdate') }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
                                     <a href="{{route('admitStudent')}}" class="btn btn-success btn-sm"><i class="fa-solid fa-user-plus"></i> New Admission</a>
                                 </div>
                             </div>
@@ -32,12 +42,6 @@ Student List
                                 @endif
                                 <div class="mb-3">
                                     <form method="GET" class="row g-2 align-items-end">
-                                        @php
-                                            $classes = \App\Models\classManage::orderBy('id')->get();
-                                            $sessions = \App\Models\sessionManage::orderBy('id')->get();
-                                            $sections = \App\Models\sectionManage::orderBy('id')->get();
-                                            $departments = \App\Models\Department::orderBy('id')->get();
-                                        @endphp
                                         <div class="col-auto">
                                             <label class="form-label">Class</label>
                                             <select name="classId" class="form-control">
@@ -117,12 +121,10 @@ Student List
                                     <tbody>
                                         @if(!empty($studentData))
                                         @foreach($studentData as $std)
-                                        @php 
-                                            $sessionDetails = \App\Models\sessionManage::all();
-                                            $sessionData  = \App\Models\sessionManage::find($std->sessName);
-                                            $classData  = \App\Models\classManage::find($std->className);
-                                            $sectionData  = \App\Models\sectionManage::find($std->sectionName);
-                                            $departmentData  = \App\Models\Department::find($std->departmentName);
+                                        @php
+                                            $classNameText = optional($std->classInfo)->className;
+                                            $existingTestimonialId = $latestTestimonialIds[$std->id] ?? null;
+                                            $existingTcId = $latestTransferCertificateIds[$std->id] ?? null;
                                         @endphp
                                         <tr class="data-row">
                                             <td>
@@ -134,34 +136,17 @@ Student List
                                             @else
                                             <td>-</td>
                                             @endif
-                                            <td>{{ $std->fullName." ".$std->sureName }}</td>
-                                            @if(!empty($sessionData))
-                                            <td>{{$sessionData->session}}</td>
-                                            @else
-                                            <td>-</td>
-                                            @endif
-                                            @if(!empty($classData))
-                                            <td>{{$classData->className}}</td>
-                                            @else
-                                            <td>-</td>
-                                            @endif
-                                            @if(!empty($departmentData))
-                                            <td>{{$departmentData->departmentName}}</td>
-                                            @else
-                                            <td>-</td>
-                                            @endif
-                                            @if(!empty($sectionData))
-                                            <td>{{$sectionData->section}}</td>
-                                            @else
-                                            <td>-</td>
-                                            @endif
+                                            <td>{{ $std->student_name }}</td>
+                                            <td>{{ optional($std->sessionInfo)->session ?? '-' }}</td>
+                                            <td>{{ optional($std->classInfo)->className ?? '-' }}</td>
+                                            <td>{{ optional($std->departmentInfo)->departmentName ?? '-' }}</td>
+                                            <td>{{ optional($std->sectionInfo)->section ?? '-' }}</td>
                                             <td>{{ $std->phone }}</td>
                                             <td class="text-center"><a href="{{ route('stdIdCard',['stdId'=>$std->id]) }}" class="btn btn-sm btn-success" title="ID Card"><i class="fa-solid fa-id-card"></i></a></td>
                                             @php 
-                                                $existingT = \App\Models\Testimonial::where('admission_id', $std->id)->latest('id')->first();
                                                 $eligible = false;
-                                                if(!empty($classData) && !empty($classData->className)){
-                                                    $cn = strtolower(trim($classData->className));
+                                                if(!empty($classNameText)){
+                                                    $cn = strtolower(trim($classNameText));
                                                     $eligible = (
                                                         $cn === 'five' || $cn === 'ten' || $cn === 'twelve' ||
                                                         $cn === '5' || $cn === '10' || $cn === '12' ||
@@ -171,10 +156,10 @@ Student List
                                             @endphp
                                             <td class="text-center">
                                                 @if($eligible)
-                                                    @if($existingT)
+                                                    @if($existingTestimonialId)
                                                         <div class="badge bg-success mb-1">Created</div>
-                                                        <div><a href="{{ route('testimonials.show', $existingT->id) }}" class="btn btn-sm btn-info" title="View Testimonial"><i class="fa-solid fa-certificate"></i></a>
-                                                        <a href="{{ route('testimonials.print', $existingT->id) }}" class="btn btn-sm btn-primary" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print"></i></a></div>
+                                                        <div><a href="{{ route('testimonials.show', $existingTestimonialId) }}" class="btn btn-sm btn-info" title="View Testimonial"><i class="fa-solid fa-certificate"></i></a>
+                                                        <a href="{{ route('testimonials.print', $existingTestimonialId) }}" class="btn btn-sm btn-primary" title="Print Testimonial" target="_blank"><i class="fa-solid fa-print"></i></a></div>
                                                     @else
                                                         <div class="badge bg-warning mb-1">Not Created</div>
                                                         <div><a href="{{ route('testimonials.create', ['admission' => $std->id]) }}" class="btn btn-sm btn-success" title="Create Testimonial"><i class="fa-solid fa-certificate"></i></a></div>
@@ -184,14 +169,11 @@ Student List
                                                     <i class="fa-solid fa-circle-info" title="Testimonial available only for Class Five, Ten & Twelve" style="color:#9aa0a6;"></i>
                                                 @endif
                                             </td>
-                                            @php
-                                                $existingTC = \App\Models\TransferCertificate::where('admission_id', $std->id)->latest('id')->first();
-                                            @endphp
                                             <td class="text-center">
-                                                @if($existingTC)
+                                                @if($existingTcId)
                                                     <div class="badge bg-success mb-1">Created</div>
-                                                    <div><a href="{{ route('tc.show', $existingTC->id) }}" class="btn btn-sm btn-info" title="View TC"><i class="fa-solid fa-award"></i></a>
-                                                    <a href="{{ route('tc.print', $existingTC->id) }}" class="btn btn-sm btn-primary" title="Print TC" target="_blank"><i class="fa-solid fa-print"></i></a></div>
+                                                    <div><a href="{{ route('tc.show', $existingTcId) }}" class="btn btn-sm btn-info" title="View TC"><i class="fa-solid fa-award"></i></a>
+                                                    <a href="{{ route('tc.print', $existingTcId) }}" class="btn btn-sm btn-primary" title="Print TC" target="_blank"><i class="fa-solid fa-print"></i></a></div>
                                                 @else
                                                     <div class="badge bg-warning mb-1">Not Created</div>
                                                     <div><a href="{{ route('tc.create', ['admission' => $std->id]) }}" class="btn btn-sm btn-success" title="Create Transfer Certificate"><i class="fa-solid fa-award"></i></a></div>

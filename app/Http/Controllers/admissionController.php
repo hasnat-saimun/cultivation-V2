@@ -8,8 +8,13 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Department;
 use App\Models\Subject;
+use App\Models\Testimonial;
+use App\Models\TransferCertificate;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Validator;
 use File;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\StudentsExport;
 
 
 class AdmissionController extends Controller
@@ -152,45 +157,132 @@ class AdmissionController extends Controller
     // }
 
     public function studentList(Request $request){
-        // Build query with optional filters from GET params
-        $q = newAdmission::query();
-        if ($request->filled('classId')) {
-            $q->where('className', $request->get('classId'));
-        }
-        if ($request->filled('sessionId')) {
-            $q->where('sessName', $request->get('sessionId'));
-        }
-        if ($request->filled('sectionId')) {
-            $q->where('sectionName', $request->get('sectionId'));
-        }
-        if ($request->filled('departmentId')) {
-            $q->where('departmentName', $request->get('departmentId'));
-        }
-        if ($request->filled('search')) {
-            $s = $request->get('search');
-            $q->where(function($w) use ($s){
-                $w->where('fullName','like','%'.$s.'%')
-                  ->orWhere('sureName','like','%'.$s.'%')
-                  ->orWhere('stdId','like','%'.$s.'%')
-                  ->orWhere('phone','like','%'.$s.'%');
-            });
+        $filters = $this->sanitizeStudentFilters($request);
+        $stdData = $this->buildStudentListQuery($filters)->get();
+
+        $studentIds = $stdData->pluck('id')->all();
+        $latestTestimonialIds = [];
+        $latestTransferCertificateIds = [];
+
+        if (!empty($studentIds)) {
+            $latestTestimonialIds = Testimonial::query()
+                ->whereIn('admission_id', $studentIds)
+                ->selectRaw('admission_id, MAX(id) as latest_id')
+                ->groupBy('admission_id')
+                ->pluck('latest_id', 'admission_id')
+                ->toArray();
+
+            $latestTransferCertificateIds = TransferCertificate::query()
+                ->whereIn('admission_id', $studentIds)
+                ->selectRaw('admission_id, MAX(id) as latest_id')
+                ->groupBy('admission_id')
+                ->pluck('latest_id', 'admission_id')
+                ->toArray();
         }
 
-        // Order by numeric roll ascending, then by full name
-        $stdData = $q->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-                ->orderBy('fullName','asc')
-                ->get();
-        return view('cultivation.studentList',['studentData'=>$stdData]);
+        return view('cultivation.studentList', [
+            'studentData' => $stdData,
+            'classes' => classManage::query()->orderBy('id')->get(['id', 'className']),
+            'sessions' => sessionManage::query()->orderBy('id')->get(['id', 'session']),
+            'sections' => sectionManage::query()->orderBy('id')->get(['id', 'section']),
+            'departments' => Department::query()->orderBy('id')->get(['id', 'departmentName']),
+            'latestTestimonialIds' => $latestTestimonialIds,
+            'latestTransferCertificateIds' => $latestTransferCertificateIds,
+        ]);
     }
 
     /**
      * Export student list as PDF
      */
-    public function exportStudentPDF()
+    public function exportStudentPDF(Request $request)
     {
-        $students = newAdmission::orderBy('id')->get();
-        $pdf = \PDF::loadView('exports.student-list-pdf', ['students' => $students]);
+        $filters = $this->sanitizeStudentFilters($request);
+        $students = $this->buildStudentListQuery($filters)->get();
+        $instituteName = \App\Models\ServerConfig::query()->value('instituteName') ?: 'Institute';
+
+        $pdf = \PDF::loadView('exports.student-list-pdf', [
+            'students' => $students,
+            'instituteName' => $instituteName,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
+
         return $pdf->download('student-list-' . date('Y-m-d') . '.pdf');
+    }
+
+    public function exportStudentExcel(Request $request)
+    {
+        $filters = $this->sanitizeStudentFilters($request);
+        $studentsQuery = $this->buildStudentListQuery($filters);
+        $filename = 'students-' . date('Y-m-d') . '.xlsx';
+
+        return Excel::download(new StudentsExport($studentsQuery), $filename);
+    }
+
+    private function buildStudentListQuery(array $filters)
+    {
+        $q = newAdmission::query()
+            ->with([
+                'classInfo:id,className',
+                'sectionInfo:id,section',
+                'sessionInfo:id,session',
+                'departmentInfo:id,departmentName',
+            ])
+            ->leftJoin('session_manages as sm', 'sm.id', '=', 'new_admissions.sessName')
+            ->leftJoin('class_manages as cm', 'cm.id', '=', 'new_admissions.className')
+            ->leftJoin('section_manages as secm', 'secm.id', '=', 'new_admissions.sectionName')
+            ->leftJoin('departments as dpm', 'dpm.id', '=', 'new_admissions.departmentName')
+            ->select('new_admissions.*');
+
+        if (!empty($filters['classId'])) {
+            $q->where('new_admissions.className', $filters['classId']);
+        }
+        if (!empty($filters['sessionId'])) {
+            $q->where('new_admissions.sessName', $filters['sessionId']);
+        }
+        if (!empty($filters['sectionId'])) {
+            $q->where('new_admissions.sectionName', $filters['sectionId']);
+        }
+        if (!empty($filters['departmentId'])) {
+            $q->where('new_admissions.departmentName', $filters['departmentId']);
+        }
+        if (!empty($filters['search'])) {
+            $s = $filters['search'];
+            $q->where(function($w) use ($s){
+                $w->where('new_admissions.fullName', 'like', '%' . $s . '%')
+                    ->orWhere('new_admissions.sureName', 'like', '%' . $s . '%')
+                    ->orWhere('new_admissions.stdId', 'like', '%' . $s . '%')
+                    ->orWhere('new_admissions.phone', 'like', '%' . $s . '%');
+            });
+        }
+
+        return $q
+            ->orderByRaw('COALESCE(sm.session, "") ASC')
+            ->orderByRaw('COALESCE(cm.className, "") ASC')
+            ->orderByRaw('COALESCE(secm.section, "") ASC')
+            ->orderByRaw('CAST(NULLIF(new_admissions.rollNumber, "") AS UNSIGNED) ASC')
+            ->orderByRaw('CAST(NULLIF(new_admissions.stdId, "") AS UNSIGNED) ASC')
+            ->orderBy('new_admissions.stdId', 'asc');
+    }
+
+    private function sanitizeStudentFilters(Request $request): array
+    {
+        $validator = Validator::make($request->all(), [
+            'classId' => 'nullable|integer|min:1',
+            'sessionId' => 'nullable|integer|min:1',
+            'sectionId' => 'nullable|integer|min:1',
+            'departmentId' => 'nullable|integer|min:1',
+            'search' => 'nullable|string|max:100',
+        ]);
+
+        $safe = $validator->valid();
+
+        return [
+            'classId' => isset($safe['classId']) ? (int) $safe['classId'] : null,
+            'sessionId' => isset($safe['sessionId']) ? (int) $safe['sessionId'] : null,
+            'sectionId' => isset($safe['sectionId']) ? (int) $safe['sectionId'] : null,
+            'departmentId' => isset($safe['departmentId']) ? (int) $safe['departmentId'] : null,
+            'search' => isset($safe['search']) ? trim((string) $safe['search']) : null,
+        ];
     }
 
     public function bulkPhotoForm(Request $request)

@@ -10,20 +10,23 @@
     />
 
     <x-admin-modern.table-shell title="All Students">
+        @php
+            $exportParams = array_filter([
+                'classId' => request()->get('classId'),
+                'sessionId' => request()->get('sessionId'),
+                'sectionId' => request()->get('sectionId'),
+                'departmentId' => request()->get('departmentId'),
+                'search' => request()->get('search'),
+            ], function ($v) { return $v !== null && $v !== ''; });
+        @endphp
         <div class="am-btn-row" style="margin-bottom: 0.7rem;">
-            <a href="{{ route('student.export.pdf') }}" class="am-btn-outline">Export PDF</a>
+            <a href="{{ route('student.export.pdf', $exportParams) }}" class="am-btn-outline">Export PDF</a>
+            <a href="{{ route('student.export.excel', $exportParams) }}" class="am-btn-outline">Export Excel</a>
             <a href="{{ route('studentBulkUpdate') }}" class="am-btn-outline">Bulk Update</a>
             <a href="{{ route('admitStudent') }}" class="am-btn-primary">New Admission</a>
         </div>
 
         <form method="GET" class="am-btn-row" style="margin-bottom: 0.9rem; gap: 0.6rem; align-items: flex-end;">
-            @php
-                $classes = \App\Models\classManage::orderBy('id')->get();
-                $sessions = \App\Models\sessionManage::orderBy('id')->get();
-                $sections = \App\Models\sectionManage::orderBy('id')->get();
-                $departments = \App\Models\Department::orderBy('id')->get();
-            @endphp
-
             <div>
                 <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Class</label>
                 <select name="classId" class="form-control">
@@ -114,10 +117,9 @@
             <tbody>
                 @forelse($studentData as $std)
                     @php
-                        $sessionData = \App\Models\sessionManage::find($std->sessName);
-                        $classData = \App\Models\classManage::find($std->className);
-                        $sectionData = \App\Models\sectionManage::find($std->sectionName);
-                        $departmentData = \App\Models\Department::find($std->departmentName);
+                        $classNameText = optional($std->classInfo)->className;
+                        $existingTestimonialId = $latestTestimonialIds[$std->id] ?? null;
+                        $existingTcId = $latestTransferCertificateIds[$std->id] ?? null;
                     @endphp
                     <tr>
                         <td>
@@ -125,21 +127,20 @@
                         </td>
                         <td>{{ $std->stdId }}</td>
                         <td>{{ !empty($std->rollNumber) ? $std->rollNumber : '-' }}</td>
-                        <td>{{ $std->fullName . ' ' . $std->sureName }}</td>
-                        <td>{{ !empty($sessionData) ? $sessionData->session : '-' }}</td>
-                        <td>{{ !empty($classData) ? $classData->className : '-' }}</td>
-                        <td>{{ !empty($departmentData) ? $departmentData->departmentName : '-' }}</td>
-                        <td>{{ !empty($sectionData) ? $sectionData->section : '-' }}</td>
+                        <td>{{ $std->student_name }}</td>
+                        <td>{{ optional($std->sessionInfo)->session ?? '-' }}</td>
+                        <td>{{ optional($std->classInfo)->className ?? '-' }}</td>
+                        <td>{{ optional($std->departmentInfo)->departmentName ?? '-' }}</td>
+                        <td>{{ optional($std->sectionInfo)->section ?? '-' }}</td>
                         <td>{{ $std->phone }}</td>
                         <td style="text-align:center;">
                             <a href="{{ route('stdIdCard', ['stdId' => $std->id]) }}" class="am-action-btn" style="display:inline-flex;">ID</a>
                         </td>
 
                         @php
-                            $existingT = \App\Models\Testimonial::where('admission_id', $std->id)->latest('id')->first();
                             $eligible = false;
-                            if (!empty($classData) && !empty($classData->className)) {
-                                $cn = strtolower(trim($classData->className));
+                            if (!empty($classNameText)) {
+                                $cn = strtolower(trim($classNameText));
                                 $eligible = (
                                     $cn === 'five' || $cn === 'ten' || $cn === 'twelve' ||
                                     $cn === '5' || $cn === '10' || $cn === '12' ||
@@ -150,11 +151,11 @@
                         <td style="text-align:center; vertical-align:middle;">
                             <div style="display:flex; flex-direction:column; align-items:center; gap:0.35rem;">
                                 @if($eligible)
-                                    @if($existingT)
+                                    @if($existingTestimonialId)
                                         <span class="am-badge super" title="Testimonial already created">Created</span>
                                         <div class="am-action-group" style="justify-content:center;" aria-label="Testimonial actions">
-                                            <a href="{{ route('testimonials.show', $existingT->id) }}" class="am-action-btn" style="display:inline-flex;" title="View testimonial">View</a>
-                                            <a href="{{ route('testimonials.print', $existingT->id) }}" class="am-action-btn" target="_blank" style="display:inline-flex;" title="Print testimonial">Print</a>
+                                            <a href="{{ route('testimonials.show', $existingTestimonialId) }}" class="am-action-btn" style="display:inline-flex;" title="View testimonial">View</a>
+                                            <a href="{{ route('testimonials.print', $existingTestimonialId) }}" class="am-action-btn" target="_blank" style="display:inline-flex;" title="Print testimonial">Print</a>
                                         </div>
                                     @else
                                         <span class="am-badge cash" title="Testimonial not created yet">Not Created</span>
@@ -169,16 +170,13 @@
                             </div>
                         </td>
 
-                        @php
-                            $existingTC = \App\Models\TransferCertificate::where('admission_id', $std->id)->latest('id')->first();
-                        @endphp
                         <td style="text-align:center; vertical-align:middle;">
                             <div style="display:flex; flex-direction:column; align-items:center; gap:0.35rem;">
-                                @if($existingTC)
+                                @if($existingTcId)
                                     <span class="am-badge super" title="Transfer certificate already created">Created</span>
                                     <div class="am-action-group" style="justify-content:center;" aria-label="Transfer certificate actions">
-                                        <a href="{{ route('tc.show', $existingTC->id) }}" class="am-action-btn" style="display:inline-flex;" title="View transfer certificate">View</a>
-                                        <a href="{{ route('tc.print', $existingTC->id) }}" class="am-action-btn" target="_blank" style="display:inline-flex;" title="Print transfer certificate">Print</a>
+                                        <a href="{{ route('tc.show', $existingTcId) }}" class="am-action-btn" style="display:inline-flex;" title="View transfer certificate">View</a>
+                                        <a href="{{ route('tc.print', $existingTcId) }}" class="am-action-btn" target="_blank" style="display:inline-flex;" title="Print transfer certificate">Print</a>
                                     </div>
                                 @else
                                     <span class="am-badge cash" title="Transfer certificate not created yet">Not Created</span>

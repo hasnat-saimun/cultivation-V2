@@ -1406,6 +1406,10 @@ Route::middleware(['adminGuard'])->group (function(){
         AdmissionController::class,
         'exportStudentPDF'
     ])->name('student.export.pdf');
+    Route::get('/student/export/excel',[
+        AdmissionController::class,
+        'exportStudentExcel'
+    ])->name('student.export.excel');
 
     // Bulk Student ID Cards (professional format)
     Route::get('/student/idcards/bulk', [
