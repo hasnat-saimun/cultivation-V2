@@ -25,11 +25,34 @@ Get Promotional Student Data
 @section('backIndex')
     @if($studentList->count()>0)
         <form method="POST" class="card-body form form-group" action="{{ route('confirmPromotData') }}">
+                @if($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0">
+                            @foreach($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
                 <div class="row">
                     <div class="col-12"><h1>Manage the promotion of student from the list</h1></div>
                     <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ isset($type) && $type==='classwise' ? 'All Sections' : $sectionName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Current Class:</b>  {{ $className }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Session:</b> {{ $session_name }}</div>
+                    <div class="col-12 form-group">
+                        <label>Promoted Session *</label>
+                        <select class="select2" name="promotSession" required>
+                            <option value="">Select *</option>
+                            @php
+                                $sessions = \App\Models\sessionManage::orderBy('id','DESC')->get();
+                            @endphp
+                            @if(!empty($sessions))
+                                @foreach($sessions as $sess)
+                                <option value="{{ $sess->id }}">{{ $sess->session }}</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
                     <div class="col-12 form-group">
                         <label>Promoted Class *</label>
                         <select class="select2" name="promotId" required>
@@ -45,9 +68,9 @@ Get Promotional Student Data
                         </select>
                     </div>
                     <div class="col-12 form-group">
-                        <label>Promoted Section</label>
-                        <select class="select2" name="promotSection">
-                            <option value="">Keep current / Select new</option>
+                        <label>Promoted Section *</label>
+                        <select class="select2" name="promotSection" required>
+                            <option value="">Select *</option>
                             @php
                                 $sections = \App\Models\sectionManage::orderBy('id','DESC')->get();
                             @endphp
@@ -64,6 +87,7 @@ Get Promotional Student Data
                     <div class="col-12">Promot All <input type="checkbox" name="select-all" id="select-all" /></div>
                 </div>
                 @csrf
+                <input type="hidden" name="submit_token" value="{{ $submitToken ?? '' }}">
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -81,15 +105,14 @@ Get Promotional Student Data
                         <input type="hidden" name="groupId" value="{{ $groupId }}">
                         <input type="hidden" name="type" value="{{ $type ?? 'sectionwise' }}">
                         @foreach($studentList as $std)
-                        <input type="hidden" name="studentId[]" value="{{ $std->stdId }}">
                         <tr>
                             <td>
-                                <input type="checkbox" name="checkbox[]" id="checkbox-{{ $std->id }}" value="{{ $std->stdId }}" /> <b class="eligible">Yes</b>
+                                <input type="checkbox" class="student-checkbox" name="selected_students[]" id="checkbox-{{ $std->id }}" value="{{ $std->id }}" /> <b class="eligible">Yes</b>
                             </td>
                             <td>{{ $std->stdId }}</td>
                             <td>{{ $std->rollNumber }}</td>
                             <td width="9%">
-                                <input type="rollNum" class="form-control" id="rollNum" name="rollNum[]"/>
+                                <input type="text" class="form-control" name="roll_numbers[{{ $std->id }}]"/>
                             </td>
                             <td>
                                 {{ $std->fullName.' '.$std->sureName }}
@@ -105,7 +128,7 @@ Get Promotional Student Data
                             </td>
                         </tr>
                         @endforeach
-                        <div class="mb-4"><input type="submit" value="Save" class="btn btn-success"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
+                        <div class="mb-4"><input type="submit" value="Save" class="btn btn-success js-confirm-promotion-btn"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
                         @else
                         <tr>
                             <td colspan="5">Sorry! No data found</td>
@@ -113,7 +136,7 @@ Get Promotional Student Data
                         @endif
                     </tbody>
                 </table>
-                <div class="mb-4"><input type="submit" value="Save" class="btn btn-success"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
+                <div class="mb-4"><input type="submit" value="Save" class="btn btn-success js-confirm-promotion-btn"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
             </form>
     @else
     <div class="alert alert-info">
@@ -122,18 +145,28 @@ Get Promotional Student Data
     <div class="mb-4"> <a href="{{ route('studentPromotion') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
     @endif
     <script>
-        // Listen for click on toggle checkbox
-        $('#select-all').click(function(event) {   
-            if(this.checked) {
-                // Iterate each checkbox
-                $(':checkbox').each(function() {
-                    this.checked = true;                      
-                });
-            } else {
-                $(':checkbox').each(function() {
-                    this.checked = false;                       
-                });
+        // Toggle only student checkboxes, not every checkbox on the page.
+        $('#select-all').on('change', function() {
+            $('.student-checkbox:visible').prop('checked', this.checked);
+        });
+
+        // At least one selected student is required before submit.
+        var isPromotionSubmitting = false;
+        $('form[action="{{ route('confirmPromotData') }}"]').on('submit', function(e) {
+            if (isPromotionSubmitting) {
+                e.preventDefault();
+                return;
             }
-        }); 
+
+            if ($('.student-checkbox:checked').length < 1) {
+                e.preventDefault();
+                alert('Please select at least one student to promote.');
+                return;
+            }
+
+            isPromotionSubmitting = true;
+            var $btns = $(this).find('.js-confirm-promotion-btn');
+            $btns.prop('disabled', true).val('Processing...');
+        });
     </script>
 @endsection

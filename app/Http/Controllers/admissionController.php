@@ -12,6 +12,8 @@ use App\Models\Testimonial;
 use App\Models\TransferCertificate;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use File;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentsExport;
@@ -366,119 +368,257 @@ class AdmissionController extends Controller
     }
 
     public function confirmPromotData(Request $requ){
-        
-        $studentId = $requ->checkbox;
-        $totalData = count($studentId);
-        $x = 0;
-        $skippedRolls = [];
-        while($x<$totalData){
-            $update = newAdmission::where(['stdId'=>$requ->studentId[$x]])->first();
-            if ($update) {
-                // Determine target values for class/section/roll (new roll if provided, otherwise current roll)
-                $newRoll = !empty($requ->rollNum[$x]) ? $requ->rollNum[$x] : $update->rollNumber;
-                // If a promoted section is provided use it, otherwise keep current section for duplicate check
-                $targetSection = $requ->filled('promotSection') ? $requ->promotSection : $update->sectionName;
-                $duplicate = newAdmission::where([
-                    'className'   => $requ->promotId,
-                    'sessName'    => $update->sessName,
-                    'sectionName' => $targetSection,
-                    'rollNumber'  => $newRoll,
-                ])->where('id', '!=', $update->id)->first();
-                if ($duplicate) {
-                    $skippedRolls[] = $newRoll;
-                    $x++;
-                    continue;
+        $validated = $requ->validate([
+            'sessionId' => 'required|integer|exists:session_manages,id',
+            'classId' => 'required|integer|exists:class_manages,id',
+            'groupId' => 'nullable|integer|exists:section_manages,id',
+            'type' => 'required|in:sectionwise,classwise',
+            'promotSession' => 'required|integer|exists:session_manages,id',
+            'promotId' => 'required|integer|exists:class_manages,id',
+            'promotSection' => 'required|integer|exists:section_manages,id',
+            'selected_students' => 'required|array|min:1',
+            'selected_students.*' => 'integer|distinct|exists:new_admissions,id',
+            'roll_numbers' => 'nullable|array',
+            'submit_token' => 'required|string',
+        ]);
+
+        $sessionToken = (string) session('promotion_submit_token', '');
+        if ($sessionToken === '' || !hash_equals($sessionToken, (string) $validated['submit_token'])) {
+            return redirect(route('studentPromotion'))->with('error', 'Promotion request is invalid or expired. Please load the student list again.');
+        }
+
+        // Mark this token as consumed in session so browser refresh/back cannot replay it.
+        session()->forget('promotion_submit_token');
+
+        // Prevent duplicate submissions from retries/double-click across concurrent requests.
+        $requestLockKey = 'promotion_submit:' . sha1((string) $validated['submit_token']);
+        if (!Cache::add($requestLockKey, 1, now()->addMinutes(10))) {
+            return redirect(route('studentPromotion'))->with('error', 'Promotion request is already being processed or was processed recently.');
+        }
+
+        $selectedIds = array_values(array_unique(array_map('intval', $validated['selected_students'] ?? [])));
+        sort($selectedIds);
+        $selectedCount = count($selectedIds);
+        if ($selectedCount < 1) {
+            return back()->withErrors(['selected_students' => 'Please select at least one student.'])->withInput();
+        }
+
+        $sourceSession = (int) $validated['sessionId'];
+        $sourceClass = (int) $validated['classId'];
+        $sourceSection = isset($validated['groupId']) ? (int) $validated['groupId'] : null;
+        $sourceType = $validated['type'];
+
+        $targetSession = (int) $validated['promotSession'];
+        $targetClass = (int) $validated['promotId'];
+        $targetSection = (int) $validated['promotSection'];
+
+        $rollNumbers = $validated['roll_numbers'] ?? [];
+        $promotionId = (string) Str::uuid();
+        $promoted = 0;
+        $skipped = 0;
+        $failed = 0;
+        $messages = [];
+
+        try {
+            DB::transaction(function () use (
+                $selectedIds,
+                $sourceSession,
+                $sourceClass,
+                $sourceSection,
+                $sourceType,
+                $targetSession,
+                $targetClass,
+                $targetSection,
+                $rollNumbers,
+                $promotionId,
+                &$promoted,
+                &$skipped,
+                &$failed,
+                &$messages
+            ) {
+                $students = newAdmission::whereIn('id', $selectedIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
+
+                if ($students->count() !== count($selectedIds)) {
+                    throw new \RuntimeException('One or more selected students were not found.');
                 }
-                // Archive current result before promotion with proper pair subject handling
-                $marks = \App\Models\Marksheet::where('studentId', $update->id)->get();
-                if ($marks->count() > 0) {
-                    // Get all subjects and detect pairs
-                    $subjectIds = $marks->pluck('subjectId')->unique();
-                    $allSubjects = \App\Models\Subject::whereIn('id', $subjectIds)->get();
-            
-                    // Import MarksheetController methods (detectSubjectPairs, mergeSubjectsForRow)
-                    $marksheetCtrl = app(\App\Http\Controllers\MarksheetController::class);
-            
-                    // Build per-subject output
-                    $perSubjectOutput = [];
-                    $subjectCache = [];
-                    foreach ($marks as $mark) {
-                        $subject = optional(\App\Models\Subject::find($mark->subjectId));
-                        $subjectName = $subject->subjectName ?? ('Subject-'.$mark->subjectId);
-                        if($subject) { $subjectCache[$subject->id] = $subject; }
-                
-                        $perSubjectOutput[] = [
-                            'id' => $mark->subjectId,
-                            'name' => $subjectName,
-                            'cq' => $mark->subjectMarks ?? 0,
-                            'mcq' => $mark->objectMarks ?? 0,
-                            'practical' => $mark->practicalMarks ?? 0,
-                            'total' => $mark->totalMarks ?? 0,
-                            'grade' => $mark->laterGrade ?? 'N/A',
-                            'gradePoint' => $mark->gradePoint ?? 0,
-                            'type' => $subject->subjectType ?? 'Main',
-                            'cqGrade' => '-',
-                            'mcqGrade' => '-',
-                            'prGrade' => '-',
+
+                // Track requested destination roll numbers in-memory to avoid duplicate roll assignment in one batch.
+                $batchRollMap = [];
+
+                foreach ($selectedIds as $studentId) {
+                    /** @var \App\Models\newAdmission $student */
+                    $student = $students->get($studentId);
+                    if (!$student) {
+                        $failed++;
+                        $messages[] = "Student ID {$studentId} not found.";
+                        continue;
+                    }
+
+                    if ((int)$student->sessName !== $sourceSession || (int)$student->className !== $sourceClass) {
+                        $skipped++;
+                        $messages[] = "Skipped {$student->stdId}: source class/session does not match current record.";
+                        continue;
+                    }
+                    if ($sourceType === 'sectionwise' && $sourceSection !== null && (int)$student->sectionName !== $sourceSection) {
+                        $skipped++;
+                        $messages[] = "Skipped {$student->stdId}: source section does not match current record.";
+                        continue;
+                    }
+
+                    if ((int)$student->sessName === $targetSession && (int)$student->className === $targetClass && (int)$student->sectionName === $targetSection) {
+                        $skipped++;
+                        $messages[] = "Skipped {$student->stdId}: already in the target session/class/section.";
+                        continue;
+                    }
+
+                    $rawRoll = $rollNumbers[$student->id] ?? null;
+                    $newRoll = is_string($rawRoll) ? trim($rawRoll) : $rawRoll;
+                    if ($newRoll === null || $newRoll === '') {
+                        $newRoll = $student->getAttributes()['rollNumber'] ?? $student->rollNumber;
+                    }
+
+                    if ($newRoll !== null && $newRoll !== '') {
+                        $rollKey = $targetSession . '|' . $targetClass . '|' . $targetSection . '|' . strtolower((string)$newRoll);
+                        if (isset($batchRollMap[$rollKey]) && (int)$batchRollMap[$rollKey] !== (int)$student->id) {
+                            $skipped++;
+                            $messages[] = "Skipped {$student->stdId}: duplicate destination roll {$newRoll} in selected list.";
+                            continue;
+                        }
+                        $batchRollMap[$rollKey] = (int)$student->id;
+
+                        $rollConflict = newAdmission::where('sessName', $targetSession)
+                            ->where('className', $targetClass)
+                            ->where('sectionName', $targetSection)
+                            ->where('rollNumber', $newRoll)
+                            ->where('id', '!=', $student->id)
+                            ->lockForUpdate()
+                            ->exists();
+
+                        if ($rollConflict) {
+                            $skipped++;
+                            $messages[] = "Skipped {$student->stdId}: destination roll {$newRoll} already exists.";
+                            continue;
+                        }
+                    }
+
+                    // Archive current result snapshot before changing academic assignment.
+                    $marks = \App\Models\Marksheet::where('studentId', $student->id)->get();
+                    if ($marks->count() > 0) {
+                        $subjectIds = $marks->pluck('subjectId')->unique();
+                        $allSubjects = \App\Models\Subject::whereIn('id', $subjectIds)->get()->keyBy('id');
+                        $marksheetCtrl = app(\App\Http\Controllers\MarksheetController::class);
+
+                        $perSubjectOutput = [];
+                        $subjectCache = [];
+                        foreach ($marks as $mark) {
+                            $subject = $allSubjects->get((int) $mark->subjectId);
+                            $subjectName = optional($subject)->subjectName ?? ('Subject-' . $mark->subjectId);
+                            if ($subject) {
+                                $subjectCache[$subject->id] = $subject;
+                            }
+
+                            $perSubjectOutput[] = [
+                                'id' => $mark->subjectId,
+                                'name' => $subjectName,
+                                'cq' => $mark->subjectMarks ?? 0,
+                                'mcq' => $mark->objectMarks ?? 0,
+                                'practical' => $mark->practicalMarks ?? 0,
+                                'total' => $mark->totalMarks ?? 0,
+                                'grade' => $mark->laterGrade ?? 'N/A',
+                                'gradePoint' => $mark->gradePoint ?? 0,
+                                'type' => $subject->subjectType ?? 'Main',
+                                'cqGrade' => '-',
+                                'mcqGrade' => '-',
+                                'prGrade' => '-',
+                            ];
+                        }
+
+                        $pairGroups = $marksheetCtrl->detectSubjectPairs($allSubjects->values());
+                        $mergedSubjects = $marksheetCtrl->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, false);
+
+                        $totalMarks = 0;
+                        $mainGradePoints = [];
+                        $hasFailure = false;
+
+                        foreach ($mergedSubjects as $subj) {
+                            if (is_numeric($subj['total'])) {
+                                $totalMarks += (float)$subj['total'];
+                            }
+                            if (($subj['grade'] ?? '-') === 'F') {
+                                $hasFailure = true;
+                            }
+                            $gp = ($subj['grade'] === 'F') ? 0.0 : (is_numeric($subj['gradePoint']) ? (float)$subj['gradePoint'] : null);
+                            if ($gp !== null && ($subj['type'] ?? 'Main') === 'Main') {
+                                $mainGradePoints[] = $gp;
+                            }
+                        }
+
+                        $finalGpa = count($mainGradePoints) > 0 ? round(array_sum($mainGradePoints) / count($mainGradePoints), 2) : 0;
+                        $finalResult = $hasFailure ? 'Fail' : 'Pass';
+
+                        $resultData = [
+                            'subjects' => $mergedSubjects,
+                            'total_marks' => $totalMarks,
+                            'gpa' => $finalGpa,
+                            'result' => $finalResult,
                         ];
+
+                        \App\Models\ResultArchive::firstOrCreate(
+                            [
+                                'student_id' => $student->id,
+                                'old_class' => $student->className,
+                                'old_roll' => $student->getAttributes()['rollNumber'] ?? $student->rollNumber,
+                                'old_session' => $student->sessName,
+                                'old_section' => $student->sectionName,
+                            ],
+                            [
+                                'result_data' => $resultData,
+                            ]
+                        );
                     }
-            
-                    // Detect and merge pair subjects
-                    $pairGroups = $marksheetCtrl->detectSubjectPairs($allSubjects);
-                    $mergedSubjects = $marksheetCtrl->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, false);
-            
-                    // Calculate final GPA and result from merged subjects
-                    $totalMarks = 0;
-                    $mainGradePoints = [];
-                    $hasFailure = false;
-            
-                    foreach ($mergedSubjects as $subj) {
-                        if(is_numeric($subj['total'])){ $totalMarks += (float)$subj['total']; }
-                        if(($subj['grade'] ?? '-') === 'F'){ $hasFailure = true; }
-                        $gp = ($subj['grade'] === 'F') ? 0.0 : (is_numeric($subj['gradePoint']) ? (float)$subj['gradePoint'] : null);
-                        if($gp !== null && ($subj['type'] ?? 'Main') === 'Main'){ $mainGradePoints[] = $gp; }
-                    }
-            
-                    $finalGpa = count($mainGradePoints) > 0 ? round(array_sum($mainGradePoints) / count($mainGradePoints), 2) : 0;
-                    $finalResult = $hasFailure ? 'Fail' : 'Pass';
-            
-                    $resultData = [
-                        'subjects' => $mergedSubjects,
-                        'total_marks' => $totalMarks,
-                        'gpa' => $finalGpa,
-                        'result' => $finalResult,
-                    ];
-            
-                    $archiveData = [
-                        'student_id' => $update->id,
-                        'old_class' => $update->className,
-                        'old_roll' => $update->rollNumber,
-                        'old_session' => $update->sessName,
-                        'old_section' => $update->sectionName,
-                        'result_data' => $resultData,
-                    ];
-                    \App\Models\ResultArchive::create($archiveData);
+
+                    $oldSessionValue = $student->sessName;
+                    $oldClassValue = $student->className;
+                    $oldSectionValue = $student->sectionName;
+                    $oldRollValue = $student->getAttributes()['rollNumber'] ?? $student->rollNumber;
+
+                    $student->sessName = $targetSession;
+                    $student->className = $targetClass;
+                    $student->sectionName = $targetSection;
+                    $student->rollNumber = $newRoll;
+                    $student->save();
+
+                    \App\Models\PromotionAuditLog::create([
+                        'promotion_id' => $promotionId,
+                        'student_id' => $student->id,
+                        'old_session' => $oldSessionValue,
+                        'old_class' => $oldClassValue,
+                        'old_section' => $oldSectionValue,
+                        'old_roll' => $oldRollValue,
+                        'new_session' => $targetSession,
+                        'new_class' => $targetClass,
+                        'new_section' => $targetSection,
+                        'new_roll' => $newRoll,
+                        'performed_by' => optional(auth()->user())->id,
+                        'ip_address' => request()->ip(),
+                    ]);
+
+                    $promoted++;
                 }
-                // Apply promotion: class, optionally section, and new roll
-                $update->className = $requ->promotId;
-                if ($requ->filled('promotSection')) {
-                    $update->sectionName = $requ->promotSection;
-                }
-                $update->rollNumber = $newRoll;
-                $update->save();
-            }
-            $x++;
+            }, 3);
+        } catch (\Throwable $e) {
+            return redirect(route('studentPromotion'))->with('error', 'Promotion failed. No changes were saved. Error: ' . $e->getMessage());
         }
-        if($x>=$totalData){
-            if(count($skippedRolls) > 0){
-                $msg = 'Student profile promoted successfully. Skipped roll(s) due to duplicate: ' . implode(', ', $skippedRolls);
-                return redirect(route('studentPromotion'))->with('error', $msg);
-            } else {
-                return redirect(route('studentPromotion'))->with('success','Student profile promoted successfully');
-            }
-        }else{
-            return redirect(route('studentPromotion'))->with('error','Student profile promoted failed');
+
+        $summary = "Promotion completed. Selected: {$selectedCount}, Promoted: {$promoted}, Skipped: {$skipped}, Failed: {$failed}.";
+        if (!empty($messages)) {
+            $summary .= ' Details: ' . implode(' | ', $messages);
         }
+
+        return redirect(route('studentPromotion'))->with($failed > 0 ? 'error' : 'success', $summary);
     }
 
     public function getPromotionData(Request $requ){
@@ -499,6 +639,8 @@ class AdmissionController extends Controller
 
         $studentList = $q->get();
         $groupId = $requ->filled('groupId') ? $requ->groupId : null;
+        $submitToken = (string) Str::uuid();
+        session()->put('promotion_submit_token', $submitToken);
 
         return view('cultivation.promotData',[
             'studentList'=>$studentList,
@@ -506,6 +648,7 @@ class AdmissionController extends Controller
             'classId'=>$requ->classId ?? null,
             'sessionId'=>$requ->sessionId ?? null,
             'type' => $type,
+            'submitToken' => $submitToken,
         ]);
     }
     
