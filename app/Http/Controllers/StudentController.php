@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\StudentsImport;
 use App\Exports\StudentTemplateExport;
@@ -13,15 +14,22 @@ class StudentController extends Controller
     public function bulkUploadStudents(Request $request)
     {
         $request->validate([
-            'student_file' => 'required|mimes:csv,xlsx,xls|max:2048'
+            'student_file' => 'required_without:file|mimes:csv,xlsx,xls|max:2048',
+            'file' => 'required_without:student_file|mimes:csv,xlsx,xls|max:2048'
         ]);
 
         try {
-            Excel::import(new StudentsImport, $request->file('student_file'));
+            $upload = $request->file('file') ?? $request->file('student_file');
+            Excel::import(new StudentsImport(), $upload);
             
             return redirect()->back()->with('success', 'Students uploaded successfully!');
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error uploading file: ' . $e->getMessage());
+            Log::error('Student import failed', [
+                'message' => $e->getMessage(),
+                'exception' => $e,
+            ]);
+
+            return redirect()->back()->with('error', 'Student import failed. Please try again or contact support.');
         }
     }
 

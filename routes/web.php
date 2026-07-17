@@ -36,7 +36,7 @@ use App\Http\Controllers\PlacementCellController;
 use App\Http\Controllers\individualController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StudentController;
-use App\Http\Controllers\admissionController;
+use App\Http\Controllers\AdmissionController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\cashCalculasController;
@@ -294,7 +294,7 @@ Route::middleware(['adminGuard'])->group (function(){
         return $legacyResponse;
     })->name('adminModernUsersEdit');
 
-    Route::get('/admin-modern/students', function (admissionController $controller) {
+    Route::get('/admin-modern/students', function (AdmissionController $controller) {
         $legacyResponse = $controller->studentList(request());
 
         if ($legacyResponse instanceof \Illuminate\View\View) {
@@ -620,7 +620,7 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('delNotice');
 
     // Promotion revert (restore previous class/section/roll from archive)
-    Route::post('/promotion/revert/{stdId}', [\App\Http\Controllers\admissionController::class, 'revertPromotion'])->name('promotion.revert');
+    Route::post('/promotion/revert/{stdId}', [AdmissionController::class, 'revertPromotion'])->name('promotion.revert');
 
     Route::get('/notice/preview/{id}',[
         NoticeController::class ,
