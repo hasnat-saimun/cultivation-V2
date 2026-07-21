@@ -13,28 +13,28 @@
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="{{ $assetPath('back-office/img/favicon.png') }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ $assetPath('public/back-office/img/favicon.png') }}">
     <!-- Normalize CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/normalize.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/normalize.css') }}">
     <!-- Main CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/main.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/main.css') }}">
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/bootstrap.min.css') }}">
     <!-- Fontawesome CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/all.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/all.min.css') }}">
     <!-- Select 2 CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/select2.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/select2.min.css') }}">
     <!-- Flaticon CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/fonts/flaticon.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/fonts/flaticon.css') }}">
     <script src="https://kit.fontawesome.com/163dbb3d41.js" crossorigin="anonymous"></script>
     <!-- Full Calender CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/fullcalendar.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/fullcalendar.min.css') }}">
     <!-- Animate CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/css/animate.min.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/css/animate.min.css') }}">
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="{{ $assetPath('back-office/style.css') }}">
+    <link rel="stylesheet" href="{{ $assetPath('public/back-office/style.css') }}">
     <!-- Modernize js -->
-    <script src="{{ $assetPath('back-office/js/modernizr-3.6.0.min.js') }}"></script>
+    <script src="{{ $assetPath('public/back-office/js/modernizr-3.6.0.min.js') }}"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css" />
 	<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-3.7.0.js"></script>
 	<script type="text/javascript" language="javascript" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
@@ -116,14 +116,14 @@
               p.bodyText {font-family:georgia, times, serif;}
             
             .id-bg{
-                background:url({{ $assetPath('back-office/img/idBg3.png') }}) !important;
+                background:url({{ $assetPath('public/back-office/img/idBg3.png') }}) !important;
                 
             }
             .id-bg1{
-                background:url({{ $assetPath('back-office/img/idBg.png') }}) !important;
+                background:url({{ $assetPath('public/back-office/img/idBg.png') }}) !important;
             }
             .id-bg2{
-                background:url({{ $assetPath('back-office/img/idBg2.png') }}) !important;                
+                background:url({{ $assetPath('public/back-office/img/idBg2.png') }}) !important;                
             }
             .id-bg,.id-bg1,.id-bg2{
                 height: 100%;
@@ -143,14 +143,14 @@
                 padding: 2.5rem 0.5rem;
             }
             .id-bg{
-                background:url({{ $assetPath('back-office/img/idBg3.png') }});
+                background:url({{ $assetPath('public/back-office/img/idBg3.png') }});
                 
             }
             .id-bg1{
-                background:url({{ $assetPath('back-office/img/idBg.png') }});
+                background:url({{ $assetPath('public/back-office/img/idBg.png') }});
             }
             .id-bg2{
-                background:url({{ $assetPath('back-office/img/idBg2.png') }});                
+                background:url({{ $assetPath('public/back-office/img/idBg2.png') }});                
             }
             .id-bg p,.id-bg1 p,.id-bg2 p{
                 color: #000 !important;

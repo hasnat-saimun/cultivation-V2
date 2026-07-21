@@ -94,9 +94,9 @@
     <div class="row g-0 align-items-center">
         <div class="col-lg-5 d-none d-lg-block brand-pane">
         @if($cfg && $cfg->logo)
-          <img src="{{ $assetPath('upload/image/cultivation/' . $cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
+          <img src="{{ $assetPath('public/upload/image/cultivation/' . $cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
         @else
-          <img src="{{ $assetPath('loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
+          <img src="{{ $assetPath('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
         @endif
 
         <h4 class="mt-3 mb-1">
