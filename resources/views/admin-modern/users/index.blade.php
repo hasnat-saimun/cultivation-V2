@@ -14,13 +14,16 @@
             <a href="{{ route('adminModernUsersCreate') }}" class="am-btn-primary">Add New User</a>
         </div>
 
-        <table class="am-table">
+        <div class="am-table-wrap" style="overflow-x:auto;">
+        <table class="am-table" id="adminModernUsersTable">
             <thead>
                 <tr>
                     <th>#</th>
                     <th>Admin Name</th>
                     <th>User Mobile</th>
                     <th>User Email</th>
+                    <th>Assigned Subjects</th>
+                    <th>Attendance Class</th>
                     <th>User Type</th>
                     <th>Action</th>
                 </tr>
@@ -30,6 +33,10 @@
                     @php
                         $roleLabel = 'Super Admin';
                         $roleClass = 'super';
+                        $subjectNames = $user->subjects->pluck('subjectName')->filter()->implode(', ');
+                        $attendanceClass = $user->primaryClass
+                            ? trim($user->primaryClass->className . ($user->primarySection ? ' / ' . $user->primarySection->section : ''))
+                            : 'None';
 
                         if ((int)$user->userType === 1) {
                             $roleLabel = 'Teacher Admin';
@@ -47,6 +54,8 @@
                         <td>{{ $user->adminName }}</td>
                         <td>{{ $user->adminMobile }}</td>
                         <td>{{ $user->adminMail }}</td>
+                        <td>{{ $subjectNames !== '' ? $subjectNames : 'None' }}</td>
+                        <td>{{ $attendanceClass !== '' ? $attendanceClass : 'None' }}</td>
                         <td>
                             <span class="am-badge {{ $roleClass }}">{{ $roleLabel }}</span>
                         </td>
@@ -63,10 +72,61 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center">No users found.</td>
+                        <td colspan="8" class="text-center">No users found.</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        </div>
     </x-admin-modern.table-shell>
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.css" />
+@endpush
+
+@push('scripts')
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script>
+(function(){
+    function initAdminModernUsersTable(){
+        if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) { return false; }
+        var $ = jQuery;
+        var $table = $('#adminModernUsersTable');
+        if (!$table.length || $.fn.dataTable.isDataTable($table)) {
+            return true;
+        }
+
+        var table = $table.DataTable({
+            pageLength: 10,
+            lengthMenu: [10, 25, 50, 100],
+            order: [[1, 'asc']],
+            columnDefs: [
+                { targets: 0, orderable: false, searchable: false },
+                { targets: 7, orderable: false, searchable: false }
+            ],
+            language: {
+                emptyTable: 'No users found.',
+                search: 'Search:',
+                lengthMenu: 'Show _MENU_ entries'
+            },
+            drawCallback: function(){
+                var api = this.api();
+                var pageInfo = api.page.info();
+                api.column(0, { page: 'current' }).nodes().each(function(cell, index){
+                    cell.innerHTML = pageInfo.start + index + 1;
+                });
+            }
+        });
+
+        table.draw(false);
+        return true;
+    }
+
+    if (!initAdminModernUsersTable()) {
+        document.addEventListener('DOMContentLoaded', initAdminModernUsersTable);
+    }
+})();
+</script>
+@endpush

@@ -22,6 +22,15 @@
                 <span>{{ $message }}</span>
             </div>
         @enderror
+        @if($errors->any())
+            <div class="am-flash is-error" role="alert" style="margin-bottom: 0.9rem;">
+                <ul style="margin:0; padding-left:1rem;">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         <form action="{{ route('saveUser') }}" method="POST" enctype="multipart/form-data">
             @csrf
@@ -124,14 +133,19 @@
                             </div>
                             <div class="mb-2">
                                 <select id="assign_subject_select" class="form-select mt-2 d-none">
-                                    <option value="">Select subject</option>
-                                    @if($subjectList)
+                                    @if($subjectList->isEmpty())
+                                        <option value="">No unassigned subjects available</option>
+                                    @else
+                                        <option value="">Select subject</option>
                                         @foreach($subjectList as $sub)
                                             <option value="{{ $sub->id }}" data-assign-class="{{ $sub->assign_class ?? '' }}">{{ $sub->subjectName }} ({{ $sub->subjectType }})</option>
                                         @endforeach
                                     @endif
                                 </select>
                             </div>
+                            @error('subject')
+                                <div class="am-flash is-error" role="alert" style="margin-bottom:0.7rem;"><span>{{ $message }}</span></div>
+                            @enderror
                             <div class="mb-2">
                                 <button type="button" id="assign_btn" class="btn btn-success btn-sm d-none">Assign</button>
                             </div>
@@ -220,11 +234,18 @@
                             <div class="mb-3">
                                 <label class="form-label">Primary Class</label>
                                 <select name="primaryClass" class="form-select">
-                                    <option value="">-- None --</option>
-                                    @foreach($classList as $cls)
-                                        <option value="{{ $cls->id }}" {{ (old('primaryClass') == $cls->id || (isset($user) && $user->primary_class_id == $cls->id)) ? 'selected' : '' }}>{{ $cls->className }}</option>
-                                    @endforeach
+                                    @if(($attendanceClassList ?? collect())->isEmpty())
+                                        <option value="">No attendance classes available</option>
+                                    @else
+                                        <option value="">-- None --</option>
+                                        @foreach($attendanceClassList as $cls)
+                                            <option value="{{ $cls->id }}" {{ (old('primaryClass') == $cls->id || (isset($user) && $user->primary_class_id == $cls->id)) ? 'selected' : '' }}>{{ $cls->className }}</option>
+                                        @endforeach
+                                    @endif
                                 </select>
+                                @error('primaryClass')
+                                    <div style="color:#b42318; font-size:0.875rem; margin-top:0.35rem;">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Primary Section</label>
@@ -236,6 +257,9 @@
                                         @endforeach
                                     @endif
                                 </select>
+                                @error('primarySection')
+                                    <div style="color:#b42318; font-size:0.875rem; margin-top:0.35rem;">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="small text-muted">Selecting a primary class does not grant marks-entry rights — use the Assign panel for that.</div>
                         </div>
@@ -253,9 +277,9 @@
         function userSelect() {
             var str = document.getElementById('userType').value;
             if(str == "1") {
-                $("#accessBox").removeClass("d-none");
+                document.getElementById('accessBox')?.classList.remove('d-none');
             } else {
-                $("#accessBox").addClass("d-none");
+                document.getElementById('accessBox')?.classList.add('d-none');
             }
         }
 
@@ -263,14 +287,12 @@
             console.log('hasnat')
             var str   = document.getElementById('classType').value;
             if(str == "") {
-                $("#subjectBox").addClass("d-none");
-                document.getElementById("subjectBox").classList.add = "d-none";
+                document.getElementById('subjectBox')?.classList.add('d-none');
             }
             if(str == 1) {
-                $("#subjectBox").removeClass("d-none");
+                document.getElementById('subjectBox')?.classList.remove('d-none');
             }else{
-                $("#subjectBox").addClass("d-none");
-                document.getElementById("subjectBox").classList.add = "d-none";
+                document.getElementById('subjectBox')?.classList.add('d-none');
             }
         }
 
@@ -282,6 +304,14 @@
             const subjectSelect = document.getElementById('assign_subject_select');
             const assignBtn = document.getElementById('assign_btn');
             const assignTableBody = document.querySelector('#assign_table tbody');
+            const primaryClassSelect = document.querySelector('select[name="primaryClass"]');
+            const primarySectionSelect = document.querySelector('select[name="primarySection"]');
+            const attendanceTakenMap = @json($attendanceTakenMap ?? []);
+            const primarySectionOptionSnapshot = primarySectionSelect
+                ? Array.from(primarySectionSelect.options).map(function(option){
+                    return { value: option.value, text: option.text, selected: option.selected };
+                })
+                : [];
 
             // helper to show/hide
             function show(el){ el.classList.remove('d-none'); }
@@ -390,6 +420,39 @@
             });
 
             // Existing assignments are rendered server-side in the table; no JS prepopulate needed.
+
+            function syncPrimarySectionOptions() {
+                if (!primaryClassSelect || !primarySectionSelect) {
+                    return;
+                }
+
+                const selectedClassId = primaryClassSelect.value;
+                const takenSections = selectedClassId ? (attendanceTakenMap[selectedClassId] || []) : [];
+                const currentValue = primarySectionSelect.value;
+
+                primarySectionSelect.innerHTML = '';
+                primarySectionOptionSnapshot.forEach(function(optionData) {
+                    const sectionKey = optionData.value === '' ? '__none__' : optionData.value;
+                    if (takenSections.includes(sectionKey)) {
+                        return;
+                    }
+
+                    const option = document.createElement('option');
+                    option.value = optionData.value;
+                    option.text = optionData.text;
+                    if (optionData.value === currentValue) {
+                        option.selected = true;
+                    }
+                    primarySectionSelect.appendChild(option);
+                });
+
+                if (!primarySectionSelect.value && primarySectionSelect.options.length > 0) {
+                    primarySectionSelect.selectedIndex = 0;
+                }
+            }
+
+            primaryClassSelect && primaryClassSelect.addEventListener('change', syncPrimarySectionOptions);
+            syncPrimarySectionOptions();
         });
     </script>
 @endsection

@@ -11,13 +11,86 @@ use App\Models\sessionManage;
 use App\Models\ResultPublish;
 use App\Models\Subject;
 use App\Models\Exam;
+use App\Models\classManage;
 use App\Models\ReligiousSubjectDefault;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class MarksheetController extends Controller
 {
+    private function classRequiresOptionalGroup(?string $className): bool
+    {
+        if ($className === null || trim($className) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($className));
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized);
+        $normalized = trim((string) $normalized);
+
+        if (preg_match('/\b(9|10)\b/', $normalized)) {
+            return true;
+        }
+
+        return preg_match('/\b(ix|x)\b/', $normalized) === 1;
+    }
+
+    private function classGroupRequirementMap($classes): array
+    {
+        $map = [];
+        foreach ($classes as $class) {
+            $map[(string) $class->id] = $this->classRequiresOptionalGroup((string) $class->className);
+        }
+
+        return $map;
+    }
+
+    private function validatedGenderValue(Request $request): string
+    {
+        $gender = (string) ($request->input('gender', 'all'));
+        if ($gender === '') {
+            $gender = 'all';
+        }
+
+        $allowed = ['all', '1', '2', '3'];
+        if (!in_array($gender, $allowed, true)) {
+            throw ValidationException::withMessages([
+                'gender' => ['Invalid gender selection.'],
+            ]);
+        }
+
+        return $gender;
+    }
+
+    private function normalizeOptionalGroupSelection(Request $request): array
+    {
+        $classId = (int) $request->input('classId');
+        $class = classManage::find($classId);
+        if (!$class) {
+            throw ValidationException::withMessages([
+                'classId' => ['Selected class is invalid.'],
+            ]);
+        }
+
+        $requiresOptionalGroup = $this->classRequiresOptionalGroup((string) $class->className);
+        $optionalGroupId = $request->input('optionalGroupId');
+        $optionalGroupId = ($optionalGroupId === null || $optionalGroupId === '') ? null : (int) $optionalGroupId;
+
+        if ($requiresOptionalGroup && !$optionalGroupId) {
+            throw ValidationException::withMessages([
+                'optionalGroupId' => ['Group is required for class 9 and class 10.'],
+            ]);
+        }
+
+        if (!$requiresOptionalGroup) {
+            $optionalGroupId = null;
+        }
+
+        return [$class, $requiresOptionalGroup, $optionalGroupId];
+    }
+
     private function resolveSessionIdFromValue($sessionValue): ?int
     {
         if ($sessionValue === null || $sessionValue === '') {
@@ -54,19 +127,41 @@ class MarksheetController extends Controller
         // marks entry should use assigned classes array.
         $classIds = $isTeacher ? $user->access_class_array : [];
         $subjectIds = $isTeacher ? $user->access_subject_array : [];
+
+        if ($isTeacher) {
+            $classes = classManage::whereIn('id', $classIds)->orderBy('id', 'DESC')->get();
+        } else {
+            $classes = classManage::orderBy('id', 'DESC')->get();
+        }
+
+        $classGroupRequirementMap = $this->classGroupRequirementMap($classes);
+
         return view('result.add-marks', [
             'restrictedClassIds' => $classIds,
             'restrictedSubjectIds' => $subjectIds,
             'isTeacherAdmin' => $isTeacher,
+            'classes' => $classes,
+            'classGroupRequirementMap' => $classGroupRequirementMap,
         ]);
     }
     public function getMarks(Request $requ){
+        $requ->validate([
+            'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'subjectId' => 'required|integer',
+            'sessionId' => 'nullable',
+            'groupId' => 'nullable|integer',
+            'optionalGroupId' => 'nullable|integer',
+        ]);
+
+        [$class, $requiresOptionalGroup, $optionalGroupId] = $this->normalizeOptionalGroupSelection($requ);
+        $gender = $this->validatedGenderValue($requ);
+
         $subjectId = (int)$requ->subjectId;
         $subject = Subject::find($subjectId);
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $groupId = $requ->groupId ?: null;
-        $optionalGroupId = $requ->optionalGroupId ?: null;
 
         $studentBaseQuery = newAdmission::where('className', (int)$requ->classId)
             ->when($groupId, function($q) use ($groupId){
@@ -74,6 +169,9 @@ class MarksheetController extends Controller
             })
             ->when($optionalGroupId, function($q) use ($optionalGroupId){
                 return $q->where('departmentName', (int)$optionalGroupId);
+            })
+            ->when($gender !== 'all', function($q) use ($gender){
+                return $q->where('gender', $gender);
             })
             ->when($isOptionalSubject, function($q) use ($subjectId){
                 return $q->where(function($qq) use ($subjectId){
@@ -133,6 +231,8 @@ class MarksheetController extends Controller
             'studentList'=>$studentList,
             'groupId'=>$groupId,
             'optionalGroupId'=>$optionalGroupId,
+            'gender'=>$gender,
+            'classRequiresOptionalGroup'=>$requiresOptionalGroup,
             'classId'=>$requ->classId,
             'sessionId'=>$sessionId,
             'examId'=>$requ->examId,
@@ -143,6 +243,17 @@ class MarksheetController extends Controller
     }
 
     public function confirmMarks(Request $requ){
+        $requ->validate([
+            'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'subjectId' => 'required|integer',
+            'sessionId' => 'nullable',
+            'groupId' => 'nullable|integer',
+            'optionalGroupId' => 'nullable|integer',
+        ]);
+
+        [, , $optionalGroupId] = $this->normalizeOptionalGroupSelection($requ);
+
         $subjectId = (int)$requ->subjectId;
         $subject = Subject::find($subjectId);
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
@@ -169,7 +280,6 @@ class MarksheetController extends Controller
         }
         $sessionText = sessionManage::where('id', (int)$sessionId)->value('session');
         $groupId = $requ->groupId ?: null;
-        $optionalGroupId = $requ->optionalGroupId ?: null;
         // Enforce teacher role restrictions before saving
         $adminId = session('cultivationAdmin');
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;

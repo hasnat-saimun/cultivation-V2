@@ -21,9 +21,305 @@ use File;
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class CultivationController extends Controller
 {
+    private function buildAdminFormData(?CultivationAdmin $user = null): array
+    {
+        $sectionList = SectionModel::orderBy('id', 'ASC')->get();
+        $attendanceTakenMap = $this->attendanceTakenMap($user);
+
+        return [
+            'subjectList' => $this->availableAdminSubjects($user),
+            'classList' => ClassModel::orderBy('id', 'ASC')->get(),
+            'sectionList' => $sectionList,
+            'groupList' => Department::orderBy('id', 'ASC')->get(),
+            'attendanceClassList' => $this->availableAttendanceClasses($user, $sectionList, $attendanceTakenMap),
+            'attendanceTakenMap' => $attendanceTakenMap,
+        ];
+    }
+
+    private function availableAdminSubjects(?CultivationAdmin $user = null)
+    {
+        $adminId = $user?->id;
+
+        return Subject::query()
+            ->where(function ($query) use ($adminId) {
+                if ($adminId) {
+                    $query->whereDoesntHave('teachers', function ($teacherQuery) use ($adminId) {
+                        $teacherQuery->where('cultivation_admins.id', '!=', $adminId);
+                    })->orWhereHas('teachers', function ($teacherQuery) use ($adminId) {
+                        $teacherQuery->where('cultivation_admins.id', $adminId);
+                    });
+
+                    return;
+                }
+
+                $query->whereDoesntHave('teachers');
+            })
+            ->orderBy('id', 'ASC')
+            ->get();
+    }
+
+    private function attendanceTakenMap(?CultivationAdmin $user = null): array
+    {
+        $claims = CultivationAdmin::query()
+            ->select('primary_class_id', 'primary_section_id')
+            ->whereNotNull('primary_class_id')
+            ->when($user?->id, function ($query, $adminId) {
+                $query->where('id', '!=', $adminId);
+            })
+            ->get();
+
+        $takenMap = [];
+        foreach ($claims as $claim) {
+            $classId = (int) $claim->primary_class_id;
+            $sectionKey = $claim->primary_section_id === null ? '__none__' : (string) $claim->primary_section_id;
+            $takenMap[$classId][] = $sectionKey;
+        }
+
+        foreach ($takenMap as $classId => $sectionKeys) {
+            $takenMap[$classId] = array_values(array_unique($sectionKeys));
+        }
+
+        return $takenMap;
+    }
+
+    private function availableAttendanceClasses(?CultivationAdmin $user, $sectionList, array $attendanceTakenMap)
+    {
+        $availableSectionKeys = ['__none__'];
+        foreach ($sectionList as $section) {
+            $availableSectionKeys[] = (string) $section->id;
+        }
+
+        $currentClassId = $user && $user->primary_class_id ? (int) $user->primary_class_id : null;
+
+        return ClassModel::query()
+            ->orderBy('id', 'ASC')
+            ->get()
+            ->filter(function ($class) use ($availableSectionKeys, $attendanceTakenMap, $currentClassId) {
+                $classId = (int) $class->id;
+                if ($currentClassId === $classId) {
+                    return true;
+                }
+
+                $takenForClass = $attendanceTakenMap[$classId] ?? [];
+
+                return count(array_diff($availableSectionKeys, $takenForClass)) > 0;
+            })
+            ->values();
+    }
+
+    private function parseTeacherAssignmentPayload(Request $requ): array
+    {
+        $rawCls = $requ->input('className', []);
+        $rawSec = $requ->input('section', []);
+        $rawSub = $requ->input('subject', []);
+        $rawGrp = $requ->input('optionalGroup', []);
+
+        $sectionIds = SectionModel::pluck('id')->map(function ($id) {
+            return (int) $id;
+        })->toArray();
+
+        $classIds = [];
+        $subjectIds = [];
+        $sectionIdPool = [];
+        $assignmentRows = [];
+
+        for ($i = 0; $i < count($rawCls); $i++) {
+            $classValue = $rawCls[$i] ?? null;
+            if (!is_numeric($classValue)) {
+                continue;
+            }
+
+            $classId = (int) $classValue;
+            $classIds[] = $classId;
+
+            $subjectValue = $rawSub[$i] ?? null;
+            $subjectId = is_numeric($subjectValue) ? (int) $subjectValue : null;
+            if ($subjectId) {
+                $subjectIds[] = $subjectId;
+            }
+
+            $sectionValue = $rawSec[$i] ?? null;
+            $groupValue = $rawGrp[$i] ?? null;
+            $groupId = is_numeric($groupValue) ? (int) $groupValue : null;
+
+            if ($sectionValue === 'all') {
+                foreach ($sectionIds as $sectionId) {
+                    $sectionIdPool[] = $sectionId;
+                    $assignmentRows[] = [
+                        'class_id' => $classId,
+                        'section_id' => $sectionId,
+                        'group_id' => $groupId,
+                        'subject_id' => $subjectId,
+                    ];
+                }
+                continue;
+            }
+
+            $normalizedSectionId = null;
+            if ($sectionValue !== 'none' && $sectionValue !== null && $sectionValue !== '' && is_numeric($sectionValue)) {
+                $normalizedSectionId = (int) $sectionValue;
+                $sectionIdPool[] = $normalizedSectionId;
+            }
+
+            $assignmentRows[] = [
+                'class_id' => $classId,
+                'section_id' => $normalizedSectionId,
+                'group_id' => $groupId,
+                'subject_id' => $subjectId,
+            ];
+        }
+
+        $dedupedRows = [];
+        $seenKeys = [];
+        foreach ($assignmentRows as $row) {
+            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n');
+            if (isset($seenKeys[$key])) {
+                continue;
+            }
+            $seenKeys[$key] = true;
+            $dedupedRows[] = $row;
+        }
+
+        return [
+            'class_ids' => array_values(array_unique($classIds)),
+            'subject_ids' => array_values(array_unique(array_filter($subjectIds))),
+            'section_ids' => array_values(array_unique(array_filter($sectionIdPool))),
+            'assignment_rows' => $dedupedRows,
+        ];
+    }
+
+    private function ensureSubjectAssignmentsAvailable(array $subjectIds, ?int $ignoreAdminId = null): void
+    {
+        $subjectIds = array_values(array_unique(array_filter(array_map('intval', $subjectIds))));
+        if (empty($subjectIds)) {
+            return;
+        }
+
+        Subject::query()->whereIn('id', $subjectIds)->lockForUpdate()->get(['id']);
+
+        $conflict = DB::table('teacher_subjects')
+            ->join('subjects', 'subjects.id', '=', 'teacher_subjects.subject_id')
+            ->whereIn('teacher_subjects.subject_id', $subjectIds)
+            ->when($ignoreAdminId, function ($query, $adminId) {
+                $query->where('teacher_subjects.teacher_id', '!=', $adminId);
+            })
+            ->select('teacher_subjects.subject_id', 'subjects.subjectName')
+            ->first();
+
+        if ($conflict) {
+            throw ValidationException::withMessages([
+                'subject' => ['This subject is already assigned to another admin.'],
+            ]);
+        }
+    }
+
+    private function ensureAttendanceAssignmentAvailable(?int $classId, ?int $sectionId, ?int $ignoreAdminId = null): void
+    {
+        if (!$classId) {
+            return;
+        }
+
+        ClassModel::query()->whereKey($classId)->lockForUpdate()->get(['id']);
+        if ($sectionId) {
+            SectionModel::query()->whereKey($sectionId)->lockForUpdate()->get(['id']);
+        }
+
+        $conflict = CultivationAdmin::query()
+            ->where('primary_class_id', $classId)
+            ->when($sectionId === null, function ($query) {
+                $query->whereNull('primary_section_id');
+            }, function ($query) use ($sectionId) {
+                $query->where('primary_section_id', $sectionId);
+            })
+            ->when($ignoreAdminId, function ($query, $adminId) {
+                $query->where('id', '!=', $adminId);
+            })
+            ->lockForUpdate()
+            ->first();
+
+        if ($conflict) {
+            throw ValidationException::withMessages([
+                'primaryClass' => ['This attendance class is already assigned to another admin.'],
+            ]);
+        }
+    }
+
+    private function syncTeacherClassSubjectRows(CultivationAdmin $cultivation, array $assignmentRows): void
+    {
+        $existingRows = DB::table('teacher_class_subjects')
+            ->where('teacher_id', $cultivation->id)
+            ->get();
+
+        $existingMap = [];
+        foreach ($existingRows as $row) {
+            $key = $row->class_id.'-'.($row->section_id ?? 'n').'-'.($row->group_id ?? 'n').'-'.($row->subject_id ?? 'n');
+            $existingMap[$key] = $row;
+        }
+
+        $desiredMap = [];
+        foreach ($assignmentRows as $row) {
+            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n');
+            $desiredMap[$key] = $row;
+        }
+
+        foreach ($existingMap as $key => $existingRow) {
+            if (isset($desiredMap[$key])) {
+                continue;
+            }
+
+            DB::table('teacher_class_subjects')
+                ->where('teacher_id', $cultivation->id)
+                ->where('class_id', $existingRow->class_id)
+                ->where(function ($query) use ($existingRow) {
+                    if ($existingRow->section_id === null) {
+                        $query->whereNull('section_id');
+                    } else {
+                        $query->where('section_id', $existingRow->section_id);
+                    }
+                })
+                ->where(function ($query) use ($existingRow) {
+                    if ($existingRow->group_id === null) {
+                        $query->whereNull('group_id');
+                    } else {
+                        $query->where('group_id', $existingRow->group_id);
+                    }
+                })
+                ->where(function ($query) use ($existingRow) {
+                    if ($existingRow->subject_id === null) {
+                        $query->whereNull('subject_id');
+                    } else {
+                        $query->where('subject_id', $existingRow->subject_id);
+                    }
+                })
+                ->delete();
+        }
+
+        $toInsert = [];
+        foreach ($desiredMap as $key => $row) {
+            if (isset($existingMap[$key])) {
+                continue;
+            }
+
+            $toInsert[] = [
+                'teacher_id' => $cultivation->id,
+                'class_id' => $row['class_id'],
+                'section_id' => $row['section_id'],
+                'group_id' => $row['group_id'],
+                'subject_id' => $row['subject_id'],
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+        }
+
+        if (!empty($toInsert)) {
+            DB::table('teacher_class_subjects')->insert($toInsert);
+        }
+    }
+
     public function cultivationIndex(){
         $adminId = session('cultivationAdmin');
         $user = $adminId ? CultivationAdmin::find($adminId) : null;
@@ -673,11 +969,7 @@ class CultivationController extends Controller
     }
 
      public function userType(){
-        $subjectList = Subject::orderBy('id','ASC')->get();
-        $classList   = ClassModel::orderBy('id','ASC')->get();
-        $sectionList = SectionModel::orderBy('id','ASC')->get();
-        $groupList   = Department::orderBy('id','ASC')->get();
-        return view('userPanal.userRegister',compact('subjectList','classList','sectionList','groupList'));
+        return view('userPanal.userRegister', $this->buildAdminFormData());
     }
 
      public function editUser($id){
@@ -685,226 +977,131 @@ class CultivationController extends Controller
         if(empty($user)){
             return back()->with('error','Sorry! No data found');
         }
-        $subjectList = Subject::orderBy('id','ASC')->get();
-        $classList   = ClassModel::orderBy('id','ASC')->get();
-        $sectionList = SectionModel::orderBy('id','ASC')->get();
-        $groupList   = Department::orderBy('id','ASC')->get();
-        return view('userPanal.userRegister',compact('subjectList','classList','sectionList','groupList','user'));
+        return view('userPanal.userRegister', array_merge($this->buildAdminFormData($user), [
+            'user' => $user,
+        ]));
     }
 
      public function saveUser(Request $requ){
-        if($requ->filled('userId')) {
-            $cultivation = CultivationAdmin::find($requ->userId);
-            if(!$cultivation) {
-                return back()->with('error', 'User not found for update');
+        $validated = $requ->validate([
+            'adminName' => 'required|string|max:255',
+            'userName' => 'required|string|max:255',
+            'userMobile' => 'required|string|max:255',
+            'userMail' => 'required|string|email|max:255',
+            'userType' => 'required|integer|in:1,2,3',
+            'pass' => $requ->filled('userId') ? 'nullable|string|min:1' : 'required|string|min:1',
+            'confirmPass' => $requ->filled('userId') ? 'nullable|string' : 'required|string',
+            'primaryClass' => 'nullable|integer|exists:class_manages,id',
+            'primarySection' => 'nullable|integer|exists:section_manages,id',
+            'className' => 'array',
+            'className.*' => 'nullable|integer|exists:class_manages,id',
+            'section' => 'array',
+            'section.*' => 'nullable',
+            'optionalGroup' => 'array',
+            'optionalGroup.*' => 'nullable|integer|exists:departments,id',
+            'subject' => 'array',
+            'subject.*' => 'nullable|integer|exists:subjects,id',
+        ]);
+
+        if(!$requ->filled('userId') && $requ->pass !== $requ->confirmPass) {
+            throw ValidationException::withMessages([
+                'confirmPass' => ['Password and Confirm Password do not match'],
+            ]);
+        }
+
+        $existingUser = $requ->filled('userId') ? CultivationAdmin::find($requ->userId) : null;
+        if($requ->filled('userId') && !$existingUser) {
+            return back()->with('error', 'User not found for update');
+        }
+
+        $teacherPayload = (int) $requ->userType === CultivationAdmin::ROLE_TEACHER
+            ? $this->parseTeacherAssignmentPayload($requ)
+            : ['class_ids' => [], 'subject_ids' => [], 'section_ids' => [], 'assignment_rows' => []];
+
+        DB::transaction(function () use ($requ, $existingUser, $teacherPayload) {
+            $ignoreAdminId = $existingUser?->id;
+
+            if (!$existingUser) {
+                $duplicateUser = CultivationAdmin::query()
+                    ->where(function ($query) use ($requ) {
+                        $query->where('adminUser', $requ->userName)
+                            ->orWhere('adminMail', $requ->userMail);
+                    })
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($duplicateUser) {
+                    throw ValidationException::withMessages([
+                        'userName' => ['User already exists with this user name or email address.'],
+                    ]);
+                }
             }
-            if($requ->filled('pass')) {
+
+            $primaryClassId = $requ->filled('primaryClass') ? (int) $requ->primaryClass : null;
+            $primarySectionId = $requ->filled('primarySection') ? (int) $requ->primarySection : null;
+
+            $currentSubjectIds = $ignoreAdminId
+                ? DB::table('teacher_subjects')->where('teacher_id', $ignoreAdminId)->pluck('subject_id')->map(function ($id) {
+                    return (int) $id;
+                })->toArray()
+                : [];
+            $newSubjectClaims = array_values(array_diff($teacherPayload['subject_ids'], $currentSubjectIds));
+            $this->ensureSubjectAssignmentsAvailable($newSubjectClaims, $ignoreAdminId);
+
+            $isNewAttendanceClaim = !$existingUser
+                || (int) ($existingUser->primary_class_id ?? 0) !== (int) ($primaryClassId ?? 0)
+                || (int) ($existingUser->primary_section_id ?? 0) !== (int) ($primarySectionId ?? 0);
+            if ($isNewAttendanceClaim) {
+                $this->ensureAttendanceAssignmentAvailable($primaryClassId, $primarySectionId, $ignoreAdminId);
+            }
+
+            $cultivation = $existingUser
+                ? CultivationAdmin::query()->lockForUpdate()->find($existingUser->id)
+                : new CultivationAdmin();
+
+            if ($requ->filled('pass')) {
                 $cultivation->loginPassword = Hash::make($requ->pass);
             }
-        } else {
-            if($requ->pass !== $requ->confirmPass) {
-                return back()->with('error', 'Password and Confirm Password do not match');
+
+            if (!$existingUser) {
+                $cultivation->adminUser = $requ->userName;
+                $cultivation->adminMail = $requ->userMail;
             }
 
-            $cultivation = CultivationAdmin::where('adminUser',$requ->userName)->orWhere('adminMail',$requ->userMail)->first();
-            if($cultivation) {
-                return back()->with('error', 'User already exists with this ID('.$requ->userName.') or Email('.$requ->userMail.')');
-            }
-            $cultivation = new CultivationAdmin;
-            $cultivation->loginPassword = Hash::make($requ->pass);
-            $cultivation->adminUser     = $requ->userName;
-            $cultivation->adminMail     = $requ->userMail;
-        }
+            $cultivation->adminName = $requ->adminName;
+            $cultivation->adminMobile = $requ->userMobile;
+            $cultivation->userType = $requ->userType;
+            $cultivation->primary_class_id = $primaryClassId;
+            $cultivation->primary_section_id = $primarySectionId;
+            $cultivation->save();
 
-        $cultivation->adminName     = $requ->adminName;
-        $cultivation->adminMobile   = $requ->userMobile;
-        $cultivation->userType      = $requ->userType;
-
-        if ($requ->filled('primaryClass')) {
-            $cultivation->primary_class_id = (int)$requ->primaryClass;
-        } else {
-            $cultivation->primary_class_id = null;
-        }
-        if ($requ->filled('primarySection')) {
-            $cultivation->primary_section_id = (int)$requ->primarySection;
-        } else {
-            $cultivation->primary_section_id = null;
-        }
-
-        if($cultivation->save()):
-            if ((int)$requ->userType === \App\Models\CultivationAdmin::ROLE_TEACHER) {
-                $rawCls = $requ->input('className', []);
-                $rawSec = $requ->input('section', []);
-                $rawSub = $requ->input('subject', []);
-                $rawGrp = $requ->input('optionalGroup', []);
-
-                $clsIds = [];
-                $subIds = [];
-                $secIds = [];
-
-                if(is_array($rawCls) && count($rawCls)>0){
-                    for($i=0;$i<count($rawCls);$i++){
-                        $c = $rawCls[$i] ?? null;
-                        if(!$c) continue;
-                        $cId = (int)$c;
-                        $clsIds[] = $cId;
-
-                        $sVal = $rawSub[$i] ?? null;
-                        if(is_numeric($sVal)) $subIds[] = (int)$sVal;
-
-                        $secVal = $rawSec[$i] ?? null;
-                        if($secVal === 'all'){
-                            $allSections = SectionModel::pluck('id')->toArray();
-                            $secIds = array_merge($secIds, $allSections);
-                        } elseif($secVal === 'none' || $secVal === null || $secVal === ''){
-                        } elseif(is_numeric($secVal)){
-                            $secIds[] = (int)$secVal;
-                        }
-                    }
-                } else {
-                    if(is_array($rawCls)) $clsIds = array_map('intval', array_filter($rawCls, fn($v)=>is_numeric($v)));
-                    if(is_array($rawSub)) $subIds = array_map('intval', array_filter($rawSub, fn($v)=>is_numeric($v)));
-                    if(is_array($rawSec)) $secIds = array_map('intval', array_filter($rawSec, fn($v)=>is_numeric($v)));
-                }
-
-                $clsIds = array_values(array_unique(array_filter($clsIds)));
-                $subIds = array_values(array_unique(array_filter($subIds)));
-                $secIds = array_values(array_unique(array_filter($secIds)));
-
-                $cultivation->classes()->sync($clsIds);
-                $cultivation->subjects()->sync($subIds);
-                $cultivation->sections()->sync($secIds);
-
-                $assignRows = [];
-                for($i=0;$i<count($rawCls);$i++){
-                    $c = $rawCls[$i] ?? null; if(!$c) continue;
-                    $cId = (int)$c;
-                    $sVal = $rawSub[$i] ?? null;
-                    $secVal = $rawSec[$i] ?? null;
-                    $grpVal = $rawGrp[$i] ?? null;
-                    $grpId = is_numeric($grpVal) ? (int)$grpVal : null;
-
-                    if($secVal === 'all'){
-                        $allSections = SectionModel::pluck('id')->toArray();
-                        foreach($allSections as $secId){
-                            $assignRows[] = [
-                                'teacher_id' => $cultivation->id,
-                                'class_id' => $cId,
-                                'section_id' => $secId,
-                                'group_id' => $grpId,
-                                'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
-                                'created_at' => now(), 'updated_at' => now()
-                            ];
-                        }
-                    } elseif($secVal === 'none' || $secVal === null || $secVal === ''){
-                        $assignRows[] = [
-                            'teacher_id' => $cultivation->id,
-                            'class_id' => $cId,
-                            'section_id' => null,
-                            'group_id' => $grpId,
-                            'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
-                            'created_at' => now(), 'updated_at' => now()
-                        ];
-                    } elseif(is_numeric($secVal)){
-                        $assignRows[] = [
-                            'teacher_id' => $cultivation->id,
-                            'class_id' => $cId,
-                            'section_id' => (int)$secVal,
-                            'group_id' => $grpId,
-                            'subject_id' => is_numeric($sVal) ? (int)$sVal : null,
-                            'created_at' => now(), 'updated_at' => now()
-                        ];
-                    }
-                }
-
-                $unique = [];
-                $rowsToInsert = [];
-                foreach($assignRows as $r){
-                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['group_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
-                    if(isset($unique[$k])) continue;
-                    $unique[$k]=true;
-                    $rowsToInsert[] = $r;
-                }
-
-                $existing = \Illuminate\Support\Facades\DB::table('teacher_class_subjects')
-                    ->where('teacher_id', $cultivation->id)->get();
-                $existingMap = [];
-                foreach($existing as $er){
-                    $k = $er->teacher_id."-".$er->class_id."-".($er->section_id ?? 'n')."-".($er->group_id ?? 'n')."-".($er->subject_id ?? 'n');
-                    $existingMap[$k] = (array)$er;
-                }
-
-                $desiredMap = [];
-                foreach($rowsToInsert as $r){
-                    $k = $r['teacher_id']."-".$r['class_id']."-".($r['section_id'] ?? 'n')."-".($r['group_id'] ?? 'n')."-".($r['subject_id'] ?? 'n');
-                    $desiredMap[$k] = $r;
-                }
-
-                $toInsert = [];
-                $skipped = [];
-                foreach($desiredMap as $k=>$r){
-                    if(isset($existingMap[$k])){
-                        $skipped[$k] = $r;
-                    } else {
-                        $toInsert[] = $r;
-                    }
-                }
-
-                $toDeleteKeys = [];
-                foreach($existingMap as $k=>$er){
-                    if(!isset($desiredMap[$k])) $toDeleteKeys[] = $k;
-                }
-
-                if(!empty($toDeleteKeys)){
-                    foreach($toDeleteKeys as $k){
-                        $parts = explode('-', $k);
-                        $tId = $parts[0];
-                        $cId = $parts[1];
-                        $secId = $parts[2] === 'n' ? null : $parts[2];
-                        $grpId = $parts[3] === 'n' ? null : $parts[3];
-                        $subId = $parts[4] === 'n' ? null : $parts[4];
-                        \Illuminate\Support\Facades\DB::table('teacher_class_subjects')
-                            ->where('teacher_id', $tId)
-                            ->where('class_id', $cId)
-                            ->where(function($q) use ($secId){ if($secId === null) $q->whereNull('section_id'); else $q->where('section_id', $secId); })
-                            ->where(function($qg) use ($grpId){ if($grpId === null) $qg->whereNull('group_id'); else $qg->where('group_id', $grpId); })
-                            ->where(function($q2) use ($subId){ if($subId === null) $q2->whereNull('subject_id'); else $q2->where('subject_id', $subId); })
-                            ->delete();
-                    }
-                }
-
-                if(!empty($toInsert)){
-                    \Illuminate\Support\Facades\DB::table('teacher_class_subjects')->insert($toInsert);
-                }
-
-                if(!empty($skipped)){
-                    $readable = [];
-                    foreach($skipped as $k=>$r){
-                        $cls = \App\Models\classManage::find($r['class_id']);
-                        $sec = $r['section_id'] ? \App\Models\sectionManage::find($r['section_id']) : null;
-                        $grp = $r['group_id'] ? \App\Models\Department::find($r['group_id']) : null;
-                        $sub = $r['subject_id'] ? \App\Models\Subject::find($r['subject_id']) : null;
-                        $readable[] = trim(($cls?$cls->className:$r['class_id']).' / '.($sec?$sec->section:($r['section_id']===null?'No Section':'All Sections')).' / '.($grp?$grp->departmentName:'All Groups').' / '.($sub?$sub->subjectName: 'No Subject'));
-                    }
-                    $msg = 'Some assignments were already present and skipped: '.implode('; ', $readable);
-                    return back()->with('warning', $msg);
-                }
+            if ((int)$requ->userType === CultivationAdmin::ROLE_TEACHER) {
+                $cultivation->classes()->sync($teacherPayload['class_ids']);
+                $cultivation->subjects()->sync($teacherPayload['subject_ids']);
+                $cultivation->sections()->sync($teacherPayload['section_ids']);
+                $this->syncTeacherClassSubjectRows($cultivation, $teacherPayload['assignment_rows']);
             } else {
                 $cultivation->classes()->sync([]);
                 $cultivation->subjects()->sync([]);
                 $cultivation->sections()->sync([]);
+                DB::table('teacher_class_subjects')->where('teacher_id', $cultivation->id)->delete();
             }
-            $msg = $requ->filled('userId') ? 'Success! Admin profile updated successfully' : 'Success! Admin profile created successfully';
-            return back()->with('success', $msg);
-        else:
-            return back()->with('success','error! There was an error. Please try later');
-        endif;
+        });
+
+        $msg = $requ->filled('userId') ? 'Success! Admin profile updated successfully' : 'Success! Admin profile created successfully';
+        return back()->with('success', $msg);
     }
 
     public function userRegList(){
         $currentUserId = session('cultivationAdmin');
-        $userList = CultivationAdmin::where('id', '!=', $currentUserId)
-            ->orderBy('id','ASC')->get();
+        $userList = CultivationAdmin::with([
+                'subjects:id,subjectName',
+                'primaryClass:id,className',
+                'primarySection:id,section',
+            ])
+            ->where('id', '!=', $currentUserId)
+            ->orderBy('id','ASC')
+            ->get();
         return view('userPanal.userList',compact('userList'));
     }
     public function deleteUser($id)

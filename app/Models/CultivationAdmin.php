@@ -27,6 +27,12 @@ class CultivationAdmin extends Model
     public function sections() {
         return $this->belongsToMany(SectionManage::class, 'teacher_sections', 'teacher_id', 'section_id');
     }
+    public function primaryClass() {
+        return $this->belongsTo(ClassManage::class, 'primary_class_id');
+    }
+    public function primarySection() {
+        return $this->belongsTo(SectionManage::class, 'primary_section_id');
+    }
     public function getAccessClassArrayAttribute(){
         // Prefer pivot if exists, fallback to legacy comma field
         $ids = $this->classes()->pluck('class_id')->toArray();

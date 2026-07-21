@@ -272,7 +272,7 @@ Route::middleware(['adminGuard'])->group (function(){
         }
 
         return $legacyResponse;
-    })->name('adminModernUsersIndex');
+    })->middleware(\App\Http\Middleware\Roles::class.':3')->name('adminModernUsersIndex');
 
     Route::get('/admin-modern/users/create', function (CultivationController $controller) {
         $legacyResponse = $controller->userType();
@@ -282,7 +282,7 @@ Route::middleware(['adminGuard'])->group (function(){
         }
 
         return $legacyResponse;
-    })->name('adminModernUsersCreate');
+    })->middleware(\App\Http\Middleware\Roles::class.':3')->name('adminModernUsersCreate');
 
     Route::get('/admin-modern/users/{id}/edit', function (CultivationController $controller, $id) {
         $legacyResponse = $controller->editUser($id);
@@ -292,7 +292,7 @@ Route::middleware(['adminGuard'])->group (function(){
         }
 
         return $legacyResponse;
-    })->name('adminModernUsersEdit');
+    })->middleware(\App\Http\Middleware\Roles::class.':3')->name('adminModernUsersEdit');
 
     Route::get('/admin-modern/students', function (AdmissionController $controller) {
         $legacyResponse = $controller->studentList(request());
@@ -2179,22 +2179,22 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/admin/creation',[
         CultivationController::class,
         'userType'
-    ])->name('userType');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('userType');
     
     Route::get('/admin/edit/{id}',[
         CultivationController::class,
         'editUser'
-    ])->name('editUser'); 
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('editUser'); 
 
     Route::get('/admin/delete/{id}',[
         CultivationController::class,
         'deleteUser'
-    ])->name('deleteUser');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('deleteUser');
 
     Route::post('/save/admin',[
         CultivationController::class,
         'saveUser'
-    ])->name('saveUser');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveUser');
 
     // AJAX: fetch allowed subjects for teacher per class/section
     Route::post('/api/teacher/subjects', [
@@ -2208,7 +2208,7 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/admin/list',[
         CultivationController::class,
         'userRegList'
-    ])->name('userRegList');
+    ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('userRegList');
 
     // API endpoints for bulk photo uploads
     Route::get('/api/teachers/list', [
