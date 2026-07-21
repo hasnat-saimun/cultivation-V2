@@ -13,16 +13,26 @@ use App\Models\feesManager;
 use App\Models\ClassWiseFeeSetup;
 use App\Models\CultivationAdmin;
 use App\Models\TeacherClassSubject;
+use App\Services\CultivationAdminResolver;
+use App\Services\TeacherAuthorizationService;
 use Carbon\Carbon;
 
 
 
 class tuitionController extends Controller
 {
+    private CultivationAdminResolver $adminResolver;
+    private TeacherAuthorizationService $teacherAuth;
+
+    public function __construct(CultivationAdminResolver $adminResolver, TeacherAuthorizationService $teacherAuth)
+    {
+        $this->adminResolver = $adminResolver;
+        $this->teacherAuth = $teacherAuth;
+    }
+
     private function currentAdmin(): ?CultivationAdmin
     {
-        $adminId = session('cultivationAdmin');
-        return $adminId ? CultivationAdmin::find($adminId) : null;
+        return $this->adminResolver->current();
     }
 
     private function allowedClassIds(?CultivationAdmin $user): array
@@ -31,28 +41,7 @@ class tuitionController extends Controller
             return [];
         }
 
-        $ids = [];
-
-        if (!empty($user->primary_class_id)) {
-            $ids[] = (int) $user->primary_class_id;
-        }
-
-        $ids = array_merge($ids, array_map('intval', $user->access_class_array ?? []));
-
-        $assignedClassIds = TeacherClassSubject::where('teacher_id', (int) $user->id)
-            ->whereNotNull('class_id')
-            ->pluck('class_id')
-            ->map(function ($id) {
-                return (int) $id;
-            })
-            ->toArray();
-
-        $ids = array_merge($ids, $assignedClassIds);
-        $ids = array_values(array_unique(array_filter($ids, function ($id) {
-            return $id > 0;
-        })));
-
-        return $ids;
+        return $this->teacherAuth->assignedClassTeacherClassIds($user);
     }
 
     private function allowedSectionIds(?CultivationAdmin $user): array
@@ -61,28 +50,7 @@ class tuitionController extends Controller
             return [];
         }
 
-        $ids = [];
-
-        if (!empty($user->primary_section_id)) {
-            $ids[] = (int) $user->primary_section_id;
-        }
-
-        $ids = array_merge($ids, array_map('intval', $user->access_section_array ?? []));
-
-        $assignedSectionIds = TeacherClassSubject::where('teacher_id', (int) $user->id)
-            ->whereNotNull('section_id')
-            ->pluck('section_id')
-            ->map(function ($id) {
-                return (int) $id;
-            })
-            ->toArray();
-
-        $ids = array_merge($ids, $assignedSectionIds);
-        $ids = array_values(array_unique(array_filter($ids, function ($id) {
-            return $id > 0;
-        })));
-
-        return $ids;
+        return $this->teacherAuth->assignedClassTeacherSectionIds($user);
     }
 
     private function applyTeacherStudentScope($query, ?CultivationAdmin $user): void
@@ -168,7 +136,7 @@ class tuitionController extends Controller
 
     private function ensureTeacherHasClassAssignment(?CultivationAdmin $user)
     {
-        if ($user && $user->isTeacher() && empty($this->allowedClassIds($user))) {
+        if ($user && $user->isTeacher() && !$this->teacherAuth->isAssignedClassTeacher($user)) {
             return redirect()->route('cultivationIndex')
                 ->with('error', 'No class teacher assignment found. Fees access is disabled.');
         }

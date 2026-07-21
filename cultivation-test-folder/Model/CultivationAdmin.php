@@ -55,33 +55,6 @@ class CultivationAdmin extends Model
     public function isTeacher(): bool { return (int)($this->userType ?? 0) === self::ROLE_TEACHER; }
     public function isCash(): bool { return (int)($this->userType ?? 0) === self::ROLE_CASH; }
     public function isGeneral(): bool { return (int)($this->userType ?? 0) === self::ROLE_GENERAL; }
-
-    public function getUserTypeLabelAttribute(): string
-    {
-        if ($this->userType === null || $this->userType === '') {
-            return 'Unknown';
-        }
-
-        $userType = (int) $this->userType;
-
-        if ($userType === self::ROLE_TEACHER) {
-            return 'Teacher Admin';
-        }
-
-        if ($userType === self::ROLE_CASH) {
-            return 'Cash Admin';
-        }
-
-        if ($userType === self::ROLE_GENERAL) {
-            return 'General Admin';
-        }
-
-        if ($userType > self::ROLE_GENERAL) {
-            return 'Super Admin';
-        }
-
-        return 'Unknown';
-    }
     
     use HasFactory;
 

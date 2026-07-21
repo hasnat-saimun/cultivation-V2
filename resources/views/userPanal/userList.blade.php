@@ -36,7 +36,7 @@ User List
 @endpush
 <!-- Dashboard summary Start Here -->
 <div class="row gutters-20 mb-4">
-	<div class="col-md-10 col-12 mx-auto">
+	<div class="col-md-11 col-12 mx-auto">
 		<div class="card">
 			<div class="card-header bg-light">
 				<a href="{{ route('userType') }}" class="btn btn-primary"> Add New User</a>
@@ -62,6 +62,7 @@ User List
 								<th>#</th>
 								<th>Name</th>
 								<th>Username</th>
+								<th>Type of User</th>
 								<th>Assigned Subjects by Class</th>
 								<th>Assigned Attendance Class with Section</th>
 								<th>Action</th>
@@ -86,6 +87,7 @@ User List
 									<td>{{ $key+1 }}</td>
 									<td>{{ $user->adminName }}</td>
 									<td>{{ $user->adminUser }}</td>
+									<td>{{ $user->user_type_label }}</td>
 									<td data-export="{{ $assignmentExportText !== '' ? $assignmentExportText : 'None' }}">
 										@if($subjectAssignments->isNotEmpty())
 											@foreach($subjectAssignments as $assignment)
@@ -110,7 +112,7 @@ User List
 								</tr>
 							@empty
 								<tr>
-									<td colspan="6" class="text-center">No users found.</td>
+									<td colspan="7" class="text-center">No users found.</td>
 								</tr>
 							@endforelse
 						</tbody>
@@ -145,7 +147,7 @@ User List
 					extend: 'print',
 					text: 'Print',
 					exportOptions: {
-						columns: [0,1,2,3,4],
+						columns: [0,1,2,3,4,5],
 						format: {
 							body: function (data, row, column, node) {
 								if (node && node.dataset && node.dataset.export) {
@@ -160,7 +162,7 @@ User List
 					extend: 'pdfHtml5',
 					text: 'PDF',
 					exportOptions: {
-						columns: [0,1,2,3,4],
+						columns: [0,1,2,3,4,5],
 						format: {
 							body: function (data, row, column, node) {
 								if (node && node.dataset && node.dataset.export) {
@@ -175,7 +177,7 @@ User List
 					extend: 'excelHtml5',
 					text: 'Excel',
 					exportOptions: {
-						columns: [0,1,2,3,4],
+						columns: [0,1,2,3,4,5],
 						format: {
 							body: function (data, row, column, node) {
 								if (node && node.dataset && node.dataset.export) {
@@ -192,7 +194,7 @@ User List
 			order: [[1, 'asc']],
 			columnDefs: [
 				{ targets: 0, orderable: false, searchable: false },
-				{ targets: 5, orderable: false, searchable: false }
+				{ targets: 6, orderable: false, searchable: false }
 			],
 			language: {
 				emptyTable: 'No users found.',

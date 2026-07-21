@@ -40,7 +40,19 @@ class MarksheetController extends Controller
 
     private function classRequiresOptionalGroup(?string $className): bool
     {
-        return $this->marksContext->classRequiresOptionalGroup($className);
+        if ($className === null || trim($className) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($className));
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized);
+        $normalized = trim((string) $normalized);
+
+        if (preg_match('/\b(9|10)\b/', $normalized)) {
+            return true;
+        }
+
+        return preg_match('/\b(ix|x)\b/', $normalized) === 1;
     }
 
     private function validatedGenderValue(Request $request): string
@@ -71,14 +83,15 @@ class MarksheetController extends Controller
         }
 
         $requiresOptionalGroup = $this->classRequiresOptionalGroup((string) $class->className);
-        $optionalGroupRaw = $request->input('optionalGroupId', 0);
-        $optionalGroupId = ($optionalGroupRaw === null || $optionalGroupRaw === '' ||
-            $optionalGroupRaw === 'all' || (int) $optionalGroupRaw === 0)
-            ? null
-            : (int) $optionalGroupRaw;
+        $optionalGroupId = $request->input('optionalGroupId');
+        $optionalGroupId = ($optionalGroupId === null || $optionalGroupId === '') ? null : (int) $optionalGroupId;
 
-        // For Class 9 and above, null means "All Departments/Groups".
-        // For lower classes the field is inactive and any stale value is ignored.
+        if ($requiresOptionalGroup && !$optionalGroupId) {
+            throw ValidationException::withMessages([
+                'optionalGroupId' => ['Group is required for class 9 and class 10.'],
+            ]);
+        }
+
         if (!$requiresOptionalGroup) {
             $optionalGroupId = null;
         }
@@ -122,7 +135,11 @@ class MarksheetController extends Controller
             }
         }
 
-        if ($requiresOptionalGroup && $optionalGroupId !== null) {
+        if ($requiresOptionalGroup) {
+            if ($optionalGroupId === null) {
+                return redirect()->route('addMarks')->with('error', 'Group is required for class 9 and class 10');
+            }
+
             if ($isTeacher) {
                 $allowedGroups = collect($this->marksContext->groupsForContext($user, $classId, $sectionId, $sessionId))
                     ->pluck('id')
@@ -182,39 +199,6 @@ class MarksheetController extends Controller
             'sessions' => $sessions,
             'classGroupRequirementMap' => $classGroupRequirementMap,
         ]);
-    }
-
-    public function marksEntryClasses(Request $request)
-    {
-        $validated = $request->validate([
-            'exam_id' => 'nullable|integer',
-            'examId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
-        ]);
-
-        $examId = (int) ($request->input('exam_id', $request->input('examId', 0)));
-        $sessionId = (int) ($request->input('session_id', $request->input('sessionId', 0)));
-
-        if ($examId <= 0 || $sessionId <= 0
-            || !Exam::whereKey($examId)->exists()
-            || !sessionManage::whereKey($sessionId)->exists()) {
-            return response()->json(['classes' => []]);
-        }
-
-        $classes = $this->marksContext
-            ->classesForContext($this->adminResolver->current())
-            ->map(function ($class) {
-                return [
-                    'id' => (int) $class->id,
-                    'name' => (string) $class->className,
-                    'requiresOptionalGroup' => $this->marksContext
-                        ->classRequiresOptionalGroup((string) $class->className),
-                ];
-            })
-            ->values();
-
-        return response()->json(['classes' => $classes]);
     }
 
     public function marksEntrySections(Request $request)
@@ -599,9 +583,7 @@ class MarksheetController extends Controller
         $sessionRaw = $request->input('session_id', $request->input('sessionId'));
 
         $sectionId = ($sectionRaw === null || $sectionRaw === '') ? null : (int) $sectionRaw;
-        $optionalGroupId = ($groupRaw === null || $groupRaw === '' || $groupRaw === 'all' || (int) $groupRaw === 0)
-            ? null
-            : (int) $groupRaw;
+        $optionalGroupId = ($groupRaw === null || $groupRaw === '') ? null : (int) $groupRaw;
         $sessionId = ($sessionRaw === null || $sessionRaw === '') ? null : (int) $sessionRaw;
 
         $user = $this->adminResolver->current();

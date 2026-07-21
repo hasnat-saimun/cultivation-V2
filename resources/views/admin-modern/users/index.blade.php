@@ -24,29 +24,28 @@
                     <th>User Email</th>
                     <th>Assigned Subjects</th>
                     <th>Attendance Class</th>
-                    <th>User Type</th>
+                    <th>Type of User</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($userList as $key => $user)
                     @php
-                        $roleLabel = 'Super Admin';
-                        $roleClass = 'super';
                         $subjectNames = $user->subjects->pluck('subjectName')->filter()->implode(', ');
                         $attendanceClass = $user->primaryClass
                             ? trim($user->primaryClass->className . ($user->primarySection ? ' / ' . $user->primarySection->section : ''))
                             : 'None';
 
-                        if ((int)$user->userType === 1) {
-                            $roleLabel = 'Teacher Admin';
+                        $roleLabel = $user->user_type_label;
+                        $roleClass = 'unknown';
+                        if ($roleLabel === 'Teacher Admin') {
                             $roleClass = 'teacher';
-                        } elseif ((int)$user->userType === 2) {
-                            $roleLabel = 'Cash Admin';
+                        } elseif ($roleLabel === 'Cash Admin') {
                             $roleClass = 'cash';
-                        } elseif ((int)$user->userType === 3) {
-                            $roleLabel = 'General Admin';
+                        } elseif ($roleLabel === 'General Admin') {
                             $roleClass = 'general';
+                        } elseif ($roleLabel === 'Super Admin') {
+                            $roleClass = 'super';
                         }
                     @endphp
                     <tr>

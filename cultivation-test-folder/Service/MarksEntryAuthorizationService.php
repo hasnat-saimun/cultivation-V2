@@ -60,11 +60,12 @@ class MarksEntryAuthorizationService
         ?CultivationAdmin $user,
         int $classId,
         ?int $sectionId = null,
-        ?int $optionalGroupId = null,
-        ?int $sessionId = null
+        ?int $optionalGroupId = null
     ): Collection {
         if (!$user || !$user->isTeacher()) {
-            return collect();
+            return Subject::query()
+                ->orderBy('subjectName')
+                ->get(['id', 'subjectName']);
         }
 
         $allowedClassIds = $this->authorizedClassIds($user);
@@ -75,58 +76,50 @@ class MarksEntryAuthorizationService
         $subjectIds = [];
         $compositeCount = 0;
         $legacyCount = 0;
+        $hasAnyCompositeAssignments = false;
 
         if (Schema::hasTable('teacher_class_subjects')) {
-            $compositeQuery = DB::table('teacher_class_subjects as tcs')
-                ->join('subjects as s', 's.id', '=', 'tcs.subject_id')
-                ->join('class_manages as cm', 'cm.id', '=', 'tcs.class_id')
-                ->leftJoin('section_manages as sm', 'sm.id', '=', 'tcs.section_id')
-                ->leftJoin('departments as d', 'd.id', '=', 'tcs.group_id')
-                ->where('tcs.teacher_id', (int) $user->id)
-                ->where('tcs.class_id', $classId)
-                ->whereNotNull('tcs.subject_id')
-                ->where(function ($query) {
-                    // Ignore stale section references (non-null section must exist).
-                    $query->whereNull('tcs.section_id')->orWhereNotNull('sm.id');
-                })
-                ->where(function ($query) {
-                    // Ignore stale group references (non-null group must exist).
-                    $query->whereNull('tcs.group_id')->orWhereNotNull('d.id');
-                })
+            $hasAnyCompositeAssignments = DB::table('teacher_class_subjects')
+                ->where('teacher_id', (int) $user->id)
+                ->exists();
+
+            $compositeQuery = DB::table('teacher_class_subjects')
+                ->where('teacher_id', (int) $user->id)
+                ->where('class_id', $classId)
                 ->where(function ($query) use ($sectionId) {
                     if ($sectionId === null) {
-                        $query->whereNull('tcs.section_id')->orWhereNotNull('sm.id');
+                        $query->whereNull('section_id')->orWhereNotNull('section_id');
                         return;
                     }
 
-                    $query->whereNull('tcs.section_id')->orWhere('tcs.section_id', $sectionId);
+                    $query->whereNull('section_id')->orWhere('section_id', $sectionId);
                 })
                 ->where(function ($query) use ($optionalGroupId) {
                     if ($optionalGroupId === null) {
-                        $query->whereNull('tcs.group_id')->orWhereNotNull('d.id');
+                        $query->whereNull('group_id')->orWhereNotNull('group_id');
                         return;
                     }
 
-                    $query->whereNull('tcs.group_id')->orWhere('tcs.group_id', $optionalGroupId);
-                });
+                    $query->whereNull('group_id')->orWhere('group_id', $optionalGroupId);
+                })
+                ->whereNotNull('subject_id');
+
+            $compositeCount = (int) (clone $compositeQuery)->count();
 
             $compositeSubjectIds = $compositeQuery
                 ->distinct()
-                ->pluck('tcs.subject_id')
+                ->pluck('subject_id')
                 ->map(function ($id) {
                     return (int) $id;
                 })
                 ->toArray();
-
-            $compositeCount = count($compositeSubjectIds);
 
             if (!empty($compositeSubjectIds)) {
                 $subjectIds = array_merge($subjectIds, $compositeSubjectIds);
             }
         }
 
-        // Composite precedence is evaluated for the selected context only.
-        if (empty($subjectIds) && Schema::hasTable('teacher_subjects')) {
+        if (!$hasAnyCompositeAssignments && Schema::hasTable('teacher_subjects')) {
             $legacyQuery = DB::table('teacher_subjects as ts')
                 ->join('subjects as s', 's.id', '=', 'ts.subject_id')
                 ->where('ts.teacher_id', (int) $user->id)
@@ -156,26 +149,16 @@ class MarksEntryAuthorizationService
             }
 
             if ($sectionId !== null && Schema::hasTable('teacher_sections')) {
-                $hasAnyTeacherSectionRows = DB::table('teacher_sections as tsec')
-                    ->where('tsec.teacher_id', (int) $user->id)
-                    ->where(function ($scope) use ($classId) {
-                        $scope->whereNull('tsec.class_id')->orWhere('tsec.class_id', $classId);
-                    })
-                    ->exists();
-
-                if ($hasAnyTeacherSectionRows) {
-                    $legacyQuery->whereExists(function ($query) use ($user, $sectionId, $classId) {
-                        $query->selectRaw('1')
-                            ->from('teacher_sections as tsec')
-                            ->join('section_manages as sm2', 'sm2.id', '=', 'tsec.section_id')
-                            ->whereColumn('tsec.teacher_id', 'ts.teacher_id')
-                            ->where(function ($scope) use ($classId) {
-                                $scope->whereNull('tsec.class_id')->orWhere('tsec.class_id', $classId);
-                            })
-                            ->where('tsec.section_id', $sectionId)
-                            ->where('tsec.teacher_id', (int) $user->id);
-                    });
-                }
+                $legacyQuery->whereExists(function ($query) use ($user, $sectionId) {
+                    $query->selectRaw('1')
+                        ->from('teacher_sections as tsec')
+                        ->whereColumn('tsec.teacher_id', 'ts.teacher_id')
+                        ->where(function ($scope) {
+                            $scope->whereNull('tsec.class_id')->orWhereNotNull('tsec.class_id');
+                        })
+                        ->where('tsec.section_id', $sectionId)
+                        ->where('tsec.teacher_id', (int) $user->id);
+                });
             }
 
             $legacyRows = $legacyQuery
@@ -220,14 +203,13 @@ class MarksEntryAuthorizationService
         int $classId,
         int $subjectId,
         ?int $sectionId = null,
-        ?int $optionalGroupId = null,
-        ?int $sessionId = null
+        ?int $optionalGroupId = null
     ): bool {
         if (!$user || !$user->isTeacher()) {
             return true;
         }
 
-        $allowed = $this->authorizedSubjectsForMarks($user, $classId, $sectionId, $optionalGroupId, $sessionId);
+        $allowed = $this->authorizedSubjectsForMarks($user, $classId, $sectionId, $optionalGroupId);
 
         return $allowed->pluck('id')->contains($subjectId);
     }

@@ -257,6 +257,48 @@ class AdminManagementTest extends TestCase
         $this->assertStringContainsString('List Class', $html);
     }
 
+    public function test_admin_list_shows_type_of_user_column_and_labels(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacherAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER, 'adminName' => 'Teacher Listed']);
+        $cashAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_CASH, 'adminName' => 'Cash Listed']);
+        $unknownAdmin = $this->createAdmin(['userType' => null, 'adminName' => 'Unknown Listed']);
+
+        Session::put('cultivationAdmin', $generalAdmin->id);
+        $response = app(CultivationController::class)->userRegList();
+
+        $this->assertInstanceOf(View::class, $response);
+        $html = $response->render();
+        $this->assertStringContainsString('Type of User', $html);
+        $this->assertStringContainsString('Teacher Admin', $html);
+        $this->assertStringContainsString('Cash Admin', $html);
+        $this->assertStringContainsString('General Admin', $html);
+        $this->assertStringContainsString('Unknown', $html);
+        $this->assertStringContainsString('columns: [0,1,2,3,4,5]', $html);
+        $this->assertStringContainsString('{ targets: 6, orderable: false, searchable: false }', $html);
+    }
+
+    public function test_admin_modern_user_list_shows_type_of_user_labels_from_model_accessor(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER, 'adminName' => 'Modern Teacher']);
+        $this->createAdmin(['userType' => CultivationAdmin::ROLE_CASH, 'adminName' => 'Modern Cash']);
+        $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL, 'adminName' => 'Modern General']);
+        $this->createAdmin(['userType' => null, 'adminName' => 'Modern Unknown']);
+
+        $response = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('adminModernUsersIndex'));
+
+        $response->assertOk();
+        $response->assertSee('Type of User');
+        $response->assertSee('Teacher Admin');
+        $response->assertSee('Cash Admin');
+        $response->assertSee('General Admin');
+        $response->assertSee('Unknown');
+        $response->assertSee('Search:');
+    }
+
     public function test_general_admin_can_delete_admin(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
@@ -381,7 +423,9 @@ class AdminManagementTest extends TestCase
         $admin = new CultivationAdmin();
         $admin->adminName = $attributes['adminName'] ?? 'Admin '.uniqid();
         $admin->adminUser = $attributes['adminUser'] ?? 'user_'.uniqid();
-        $admin->userType = $attributes['userType'] ?? CultivationAdmin::ROLE_GENERAL;
+        $admin->userType = array_key_exists('userType', $attributes)
+            ? $attributes['userType']
+            : CultivationAdmin::ROLE_GENERAL;
         $admin->loginPassword = Hash::make('secret123');
         $admin->adminMobile = $attributes['adminMobile'] ?? '017'.str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
         $admin->adminMail = $attributes['adminMail'] ?? uniqid('admin_', true).'@example.test';

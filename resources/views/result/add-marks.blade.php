@@ -5,8 +5,6 @@ Add New Marks
 @section('backIndex')
 @php
     use App\Models\Exam;
-    use App\Models\sectionManage;
-    use App\Models\Department;
 
     $adminId = session('cultivationAdmin'); // or your custom session key
     $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
@@ -16,7 +14,7 @@ Add New Marks
     $selectedClassRequiresGroup = !empty($selectedClassId)
         ? !empty($classGroupRequirementMap[(string)$selectedClassId])
         : false;
-    $selectedOptionalGroupId = $selectedClassRequiresGroup ? old('optionalGroupId') : null;
+    $selectedOptionalGroupId = $selectedClassRequiresGroup ? old('optionalGroupId', '0') : null;
     $selectedGender = old('gender', 'all');
 @endphp
                 <!-- Dashboard summery Start Here -->
@@ -48,7 +46,7 @@ Add New Marks
                                 <div class="row">
                                     <div class="col-12 form-group">
                                         <label>Exam *</label>
-                                        <select class="select2" name="examId" required>
+                                        <select class="select2" name="examId" id="marks_exam_select" required>
                                             <option value="">Select *</option>
                                             @php
                                                 $examList = Exam::orderBy('id','DESC')->get();
@@ -61,43 +59,41 @@ Add New Marks
                                         </select>
                                     </div><!-- Class Dropdown -->
                                     <div class="col-12 form-group">
-                                        <label>Class *</label>
-                                        <select class="select2" name="classId" id="marks_class_select" required>
+                                        <label>Session *</label>
+                                        <select class="select2" name="sessionId" id="marks_session_select" required>
                                             <option value="">Select *</option>
-                                            @foreach($classes as $cls)
-                                                <option value="{{ $cls->id }}" {{ old('classId') == $cls->id ? 'selected' : '' }}>{{ $cls->className }}</option>
+                                            @foreach(($sessions ?? []) as $session)
+                                                <option value="{{ $session->id }}" {{ (string) old('sessionId') === (string) $session->id ? 'selected' : '' }}>{{ $session->session }}</option>
                                             @endforeach
                                         </select>
                                     </div>
 
-                                    <input type="hidden" name="sessionId" value="">
+                                    <div class="col-12 form-group">
+                                        <label>Class *</label>
+                                        <select class="select2" name="classId" id="marks_class_select" required disabled>
+                                            <option value="">Select exam and session first</option>
+                                        </select>
+                                    </div>
+
                                     <div class="col-12 form-group">
                                         <label>Section/Group</label>
                                         <select class="select2" name="groupId" id="marks_section_select">
                                             <option value="">Select (optional)</option>
-                                            @php
-                                                $department = sectionManage::orderBy('id','DESC')->get();
-                                            @endphp
-                                            @if(!empty($department))
-                                                @foreach($department as $dept)
-                                                <option value="{{ $dept->id }}" {{ old('groupId') == $dept->id ? 'selected' : '' }}>{{ $dept->section }}</option>
-                                                @endforeach
-                                            @endif
                                         </select>
                                     </div>
 
                                     <div class="col-12 form-group {{ $selectedClassRequiresGroup ? '' : 'd-none' }}" id="optional_group_wrapper">
-                                        <label>Group (Optional)</label>
+                                        <label>Department/Group (Optional)</label>
                                         <select class="select2" name="optionalGroupId" id="marks_optional_group_select" {{ $selectedClassRequiresGroup ? '' : 'disabled' }}>
-                                            <option value="">Select (optional)</option>
-                                            @php
-                                                $optionalGroups = Department::orderBy('id','ASC')->get();
-                                            @endphp
-                                            @if(!empty($optionalGroups))
-                                                @foreach($optionalGroups as $grp)
-                                                <option value="{{ $grp->id }}" {{ (string)$selectedOptionalGroupId === (string)$grp->id ? 'selected' : '' }}>{{ $grp->departmentName }}</option>
-                                                @endforeach
-                                            @endif
+                                            <option value="0" selected>All Departments/Groups</option>
+                                        </select>
+                                    </div>
+
+                                    <!-- Subject Dropdown (dynamically loaded per class+section) -->
+                                    <div class="col-12 form-group">
+                                        <label>Subject *</label>
+                                        <select class="select2" id="subject_select" name="subjectId" required disabled>
+                                            <option value="">No assigned subject found for the selected criteria.</option>
                                         </select>
                                     </div>
 
@@ -110,16 +106,8 @@ Add New Marks
                                             <option value="3" {{ $selectedGender === '3' ? 'selected' : '' }}>Others</option>
                                         </select>
                                     </div>
-                                    
-                                    <!-- Subject Dropdown (dynamically loaded per class+section) -->
-                                    <div class="col-12 form-group">
-                                        <label>Subject *</label>
-                                        <select class="select2" id="subject_select" name="subjectId" required>
-                                            <option value="">No assigned subject found for the selected criteria.</option>
-                                        </select>
-                                    </div>
                                     <div class="col-12 form-group mg-t-8">
-                                        <button type="submit" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark">Get Data</button>
+                                        <button type="submit" id="marks_get_data_button" class="btn-fill-lg btn-gradient-yellow btn-hover-bluedark" disabled>Get Data</button>
                                     </div>
                                 </div>
                             </form>
@@ -127,92 +115,328 @@ Add New Marks
                     </div>
                 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function(){
+    document.addEventListener('DOMContentLoaded', function () {
+        const examSelect = document.getElementById('marks_exam_select');
+        const sessionSelect = document.getElementById('marks_session_select');
         const classSelect = document.getElementById('marks_class_select');
         const sectionSelect = document.getElementById('marks_section_select');
         const optionalGroupSelect = document.getElementById('marks_optional_group_select');
         const optionalGroupWrapper = document.getElementById('optional_group_wrapper');
         const subjectSelect = document.getElementById('subject_select');
-        const classGroupRequirementMap = @json($classGroupRequirementMap ?? []);
+        const getDataButton = document.getElementById('marks_get_data_button');
 
-        function classNeedsOptionalGroup(classId){
-            return !!classGroupRequirementMap[String(classId)];
+        const classEndpoint = @json(route('api.marks.classes', [], false));
+        const sectionEndpoint = @json(route('api.marks.sections', [], false));
+        const groupEndpoint = @json(route('api.marks.groups', [], false));
+        const subjectEndpoint = @json(route('api.marks.subjects', [], false));
+        const csrfToken = @json(csrf_token());
+
+        const oldValues = {
+            examId: @json((string) old('examId', '')),
+            sessionId: @json((string) old('sessionId', '')),
+            classId: @json((string) old('classId', '')),
+            sectionId: @json((string) old('groupId', '')),
+            optionalGroupId: @json((string) old('optionalGroupId', '0')),
+            subjectId: @json((string) old('subjectId', ''))
+        };
+
+        let classRequirementMap = {};
+        let sectionRequired = false;
+        let requestVersion = 0;
+
+        if (!examSelect || !sessionSelect || !classSelect || !sectionSelect ||
+            !optionalGroupSelect || !subjectSelect || !getDataButton) {
+            return;
         }
 
-        function syncOptionalGroupVisibility(){
-            if(!classSelect || !optionalGroupSelect || !optionalGroupWrapper){
+        function refreshSelect2(element) {
+            if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                window.jQuery(element).trigger('change.select2');
+            }
+        }
+
+        function replaceOptions(element, placeholder, disabled = true) {
+            element.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = placeholder;
+            element.appendChild(option);
+            element.disabled = disabled;
+            refreshSelect2(element);
+        }
+
+        function addOptions(element, rows, selectedValue = '') {
+            rows.forEach(function (row) {
+                const option = document.createElement('option');
+                option.value = String(row.id);
+                option.textContent = row.name || row.subjectName || '';
+                element.appendChild(option);
+            });
+
+            if (selectedValue && Array.from(element.options).some(option => option.value === String(selectedValue))) {
+                element.value = String(selectedValue);
+            }
+
+            refreshSelect2(element);
+        }
+
+        async function postJson(url, payload) {
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken,
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                throw new Error('Request failed with status ' + response.status);
+            }
+
+            return response.json();
+        }
+
+        function classNeedsOptionalGroup() {
+            return Boolean(classRequirementMap[String(classSelect.value || '')]);
+        }
+
+        function syncOptionalGroupVisibility() {
+            const visible = classNeedsOptionalGroup();
+            optionalGroupWrapper.classList.toggle('d-none', !visible);
+            optionalGroupSelect.disabled = !visible;
+
+            if (!visible) {
+                optionalGroupSelect.value = '';
+                refreshSelect2(optionalGroupSelect);
+            }
+        }
+
+        function updateSubmitState() {
+            const basicReady = Boolean(
+                examSelect.value &&
+                sessionSelect.value &&
+                classSelect.value &&
+                subjectSelect.value
+            );
+            const sectionReady = !sectionRequired || Boolean(sectionSelect.value);
+            getDataButton.disabled = !(basicReady && sectionReady);
+        }
+
+        function resetAfterSession() {
+            classRequirementMap = {};
+            sectionRequired = false;
+            replaceOptions(classSelect, 'Select exam and session first', true);
+            replaceOptions(sectionSelect, 'Select class first', true);
+            replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
+            replaceOptions(subjectSelect, 'Select section first', true);
+            syncOptionalGroupVisibility();
+            updateSubmitState();
+        }
+
+        function resetAfterClass() {
+            sectionRequired = false;
+            replaceOptions(sectionSelect, 'Select class first', true);
+            replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
+            replaceOptions(subjectSelect, 'Select section first', true);
+            syncOptionalGroupVisibility();
+            updateSubmitState();
+        }
+
+        function resetAfterSection() {
+            replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
+            replaceOptions(subjectSelect, 'Select section first', true);
+            syncOptionalGroupVisibility();
+            updateSubmitState();
+        }
+
+        async function loadClasses(restoreOld = false) {
+            const examId = examSelect.value || '';
+            const sessionId = sessionSelect.value || '';
+            const version = ++requestVersion;
+
+            resetAfterSession();
+
+            if (!examId || !sessionId) {
                 return;
             }
 
-            const shouldShow = classNeedsOptionalGroup(classSelect.value || '');
-            optionalGroupWrapper.classList.toggle('d-none', !shouldShow);
-            optionalGroupSelect.disabled = !shouldShow;
+            replaceOptions(classSelect, 'Loading classes...', true);
 
-            if(!shouldShow){
-                optionalGroupSelect.value = '';
-                try{
-                    if(window.jQuery){
-                        window.jQuery(optionalGroupSelect).val('').trigger('change.select2');
-                    }
-                }catch(e){ /* ignore */ }
-            }
-        }
+            try {
+                const json = await postJson(classEndpoint, { examId, sessionId });
+                if (version !== requestVersion) return;
 
-        async function loadSubjects(){
-            const classId = classSelect.value; const sectionId = sectionSelect.value || ''; const optionalGroupId = optionalGroupSelect.value || '';
-            if(!classId) { subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>'; return; }
-            try{
-                const res = await fetch("{{ route('api.marks.subjects') }}", {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: JSON.stringify({ classId: classId, sectionId: sectionId, optionalGroupId: optionalGroupId })
+                const rows = Array.isArray(json?.classes) ? json.classes : [];
+                replaceOptions(classSelect, rows.length ? 'Select *' : 'No assigned class found', rows.length === 0);
+
+                rows.forEach(row => {
+                    classRequirementMap[String(row.id)] = Boolean(row.requiresOptionalGroup);
                 });
-                if(!res.ok) throw new Error('Request failed');
-                const json = await res.json();
-                subjectSelect.innerHTML = '<option value="">Select *</option>';
-                if(Array.isArray(json)){
-                    json.forEach(s => {
-                        const opt = document.createElement('option'); opt.value = s.id; opt.textContent = s.subjectName || s.name || s.subject || s.title || s;
-                        subjectSelect.appendChild(opt);
-                    });
-                } else if(json && Array.isArray(json.subjectIds)){
-                    // fallback: if server returned subjectIds only, create options with ids as both value and label
-                    json.subjectIds.forEach(id => {
-                        const opt = document.createElement('option'); opt.value = id; opt.textContent = 'Subject '+id; subjectSelect.appendChild(opt);
-                    });
+                addOptions(classSelect, rows, restoreOld ? oldValues.classId : '');
+
+                if (restoreOld && classSelect.value) {
+                    await loadSections(true);
+                }
+            } catch (error) {
+                if (version !== requestVersion) return;
+                replaceOptions(classSelect, 'Unable to load classes', true);
+            }
+
+            updateSubmitState();
+        }
+
+        async function loadSections(restoreOld = false) {
+            const classId = classSelect.value || '';
+            const sessionId = sessionSelect.value || '';
+            const version = ++requestVersion;
+
+            resetAfterClass();
+            syncOptionalGroupVisibility();
+
+            if (!classId || !sessionId) return;
+
+            replaceOptions(sectionSelect, 'Loading sections...', true);
+
+            try {
+                const json = await postJson(sectionEndpoint, { classId, sessionId });
+                if (version !== requestVersion) return;
+
+                const rows = Array.isArray(json?.sections) ? json.sections : [];
+                sectionRequired = rows.length > 0;
+                replaceOptions(
+                    sectionSelect,
+                    rows.length ? 'Select *' : 'No section assigned (class-wide)',
+                    false
+                );
+                addOptions(sectionSelect, rows, restoreOld ? oldValues.sectionId : '');
+
+                if (rows.length === 0) {
+                    await loadGroups(restoreOld);
+                } else if (restoreOld && sectionSelect.value) {
+                    await loadGroups(true);
+                }
+            } catch (error) {
+                if (version !== requestVersion) return;
+                replaceOptions(sectionSelect, 'Unable to load sections', true);
+            }
+
+            updateSubmitState();
+        }
+
+        async function loadGroups(restoreOld = false) {
+            const classId = classSelect.value || '';
+            const sectionId = sectionSelect.value || '';
+            const sessionId = sessionSelect.value || '';
+            const version = ++requestVersion;
+
+            resetAfterSection();
+            syncOptionalGroupVisibility();
+
+            if (!classId || !sessionId || (sectionRequired && !sectionId)) return;
+
+            if (!classNeedsOptionalGroup()) {
+                await loadSubjects(restoreOld);
+                return;
+            }
+
+            replaceOptions(optionalGroupSelect, 'Loading groups...', true);
+
+            try {
+                const json = await postJson(groupEndpoint, { classId, sectionId, sessionId });
+                if (version !== requestVersion) return;
+
+                const rows = Array.isArray(json?.groups) ? json.groups : [];
+                replaceOptions(optionalGroupSelect, 'All Departments/Groups', false);
+                optionalGroupSelect.options[0].value = '0';
+                addOptions(optionalGroupSelect, rows, restoreOld ? oldValues.optionalGroupId : '0');
+
+                if (!optionalGroupSelect.value) {
+                    optionalGroupSelect.value = '0';
+                    refreshSelect2(optionalGroupSelect);
                 }
 
-                if (subjectSelect.options.length <= 1) {
-                    subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>';
-                }
+                await loadSubjects(restoreOld);
+            } catch (error) {
+                if (version !== requestVersion) return;
+                replaceOptions(optionalGroupSelect, 'Unable to load groups', true);
+            }
 
-                // If select2 is active, trigger change so UI refreshes
-                try{
-                    if(window.jQuery && typeof $(subjectSelect).trigger === 'function'){
-                        $(subjectSelect).trigger('change');
-                    }
-                }catch(e){ /* ignore */ }
-            }catch(e){
-                subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>';
+            updateSubmitState();
+        }
+
+        async function loadSubjects(restoreOld = false) {
+            const classId = classSelect.value || '';
+            const sectionId = sectionSelect.value || '';
+            const optionalGroupId = optionalGroupSelect.value || '';
+            const sessionId = sessionSelect.value || '';
+            const version = ++requestVersion;
+
+            replaceOptions(subjectSelect, 'Select section first', true);
+
+            if (!classId || !sessionId || (sectionRequired && !sectionId)) {
+                updateSubmitState();
+                return;
+            }
+
+            replaceOptions(subjectSelect, 'Loading subjects...', true);
+
+            try {
+                const json = await postJson(subjectEndpoint, {
+                    classId,
+                    sectionId,
+                    optionalGroupId,
+                    sessionId,
+                    examId: examSelect.value || ''
+                });
+                if (version !== requestVersion) return;
+
+                const rows = Array.isArray(json) ? json.map(row => ({
+                    id: row.id,
+                    name: row.subjectName || row.name || row.subject || row.title || ''
+                })) : [];
+
+                replaceOptions(subjectSelect, rows.length ? 'Select *' : 'No assigned subject found', rows.length === 0);
+                addOptions(subjectSelect, rows, restoreOld ? oldValues.subjectId : '');
+            } catch (error) {
+                if (version !== requestVersion) return;
+                replaceOptions(subjectSelect, 'Unable to load subjects', true);
+            }
+
+            updateSubmitState();
+        }
+
+        function bindChange(element, handler) {
+            if (window.jQuery) {
+                window.jQuery(element).off('.marksEntry').on('change.marksEntry', handler);
+            } else {
+                element.addEventListener('change', handler);
             }
         }
 
-        function onSelectionChanged(){
-            syncOptionalGroupVisibility();
-            loadSubjects();
-        }
+        bindChange(examSelect, function () { loadClasses(false); });
+        bindChange(sessionSelect, function () { loadClasses(false); });
+        bindChange(classSelect, function () { loadSections(false); });
+        bindChange(sectionSelect, function () { loadGroups(false); });
+        bindChange(optionalGroupSelect, function () { loadSubjects(false); });
+        bindChange(subjectSelect, updateSubmitState);
 
-        if(classSelect) classSelect.addEventListener('change', onSelectionChanged);
-        if(sectionSelect) sectionSelect.addEventListener('change', loadSubjects);
-        if(optionalGroupSelect) optionalGroupSelect.addEventListener('change', loadSubjects);
+        (async function initialize() {
+            resetAfterSession();
 
-        syncOptionalGroupVisibility();
+            if (oldValues.examId) examSelect.value = oldValues.examId;
+            if (oldValues.sessionId) sessionSelect.value = oldValues.sessionId;
+            refreshSelect2(examSelect);
+            refreshSelect2(sessionSelect);
 
-        // If a class is already selected (e.g., page reload), load subjects on start
-        if(classSelect && classSelect.value){
-            loadSubjects();
-        }
+            if (examSelect.value && sessionSelect.value) {
+                await loadClasses(true);
+            }
+
+            updateSubmitState();
+        })();
     });
 </script>
 @endsection

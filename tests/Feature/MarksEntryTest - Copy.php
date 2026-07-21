@@ -50,13 +50,11 @@ class MarksEntryTest extends TestCase
         $this->assertStringContainsString('<option value="all" selected>All</option>', $html);
     }
 
-    public function test_class_nine_and_above_are_marked_as_group_classes(): void
+    public function test_class_nine_and_ten_are_marked_as_group_classes(): void
     {
         $this->createSession();
         $classNine = $this->createClass('Class IX');
         $classTen = $this->createClass('10');
-        $classEleven = $this->createClass('Class XI');
-        $classTwelve = $this->createClass('দ্বাদশ শ্রেণি');
         $classEight = $this->createClass('Class 8');
 
         $response = app(MarksheetController::class)->addMarks();
@@ -66,40 +64,32 @@ class MarksEntryTest extends TestCase
 
         $this->assertTrue($groupMap[(string) $classNine->id]);
         $this->assertTrue($groupMap[(string) $classTen->id]);
-        $this->assertTrue($groupMap[(string) $classEleven->id]);
-        $this->assertTrue($groupMap[(string) $classTwelve->id]);
         $this->assertFalse($groupMap[(string) $classEight->id]);
     }
 
-    public function test_all_departments_loads_students_from_every_department_for_group_classes(): void
+    public function test_optional_group_is_required_for_group_classes(): void
     {
         $session = $this->createSession();
         $classNine = $this->createClass('Class 9');
         $section = $this->createSection('A');
-        $science = $this->createDepartment('Science');
-        $business = $this->createDepartment('Business Studies');
         $exam = $this->createExam('Annual');
         $subject = $this->createSubject('Bangla');
 
-        $scienceStudent = $this->createStudent($session, $classNine, $section, $science, '1', '01');
-        $businessStudent = $this->createStudent($session, $classNine, $section, $business, '2', '02');
-
-        $response = app(MarksheetController::class)->getMarks($this->marksRequest([
+        $request = Request::create('/marks/add/getData', 'POST', [
             'sessionId' => $session->id,
             'classId' => $classNine->id,
             'groupId' => $section->id,
-            'optionalGroupId' => 0,
             'gender' => 'all',
             'examId' => $exam->id,
             'subjectId' => $subject->id,
-        ]));
+        ]);
 
-        $viewData = $response->getData();
-        $this->assertNull($viewData['optionalGroupId']);
-        $this->assertSame(
-            [$scienceStudent->id, $businessStudent->id],
-            $viewData['studentList']->pluck('id')->all()
-        );
+        try {
+            app(MarksheetController::class)->getMarks($request);
+            $this->fail('Expected optional group validation to fail for Class 9.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('optionalGroupId', $exception->errors());
+        }
     }
 
     public function test_gender_all_returns_male_and_female_students(): void
@@ -476,42 +466,6 @@ class MarksEntryTest extends TestCase
         $response->assertOk();
         $ids = collect($response->json())->pluck('id')->map(fn ($v) => (int) $v)->all();
         $this->assertSame([$legacySubject->id], $ids);
-    }
-
-    public function test_classes_endpoint_returns_all_classes_for_admin_and_only_assigned_classes_for_teacher(): void
-    {
-        $session = $this->createSession();
-        $exam = $this->createExam('Annual');
-        $classA = $this->createClass('Class 8');
-        $classB = $this->createClass('Class 9');
-
-        $admin = $this->createAdmin(CultivationAdmin::ROLE_GENERAL);
-        Session::put('cultivationAdmin', $admin->id);
-
-        $adminResponse = $this->postJson(route('api.marks.classes'), [
-            'examId' => $exam->id,
-            'sessionId' => $session->id,
-        ]);
-        $adminResponse->assertOk();
-        $adminIds = collect($adminResponse->json('classes'))->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $this->assertEqualsCanonicalizing([$classA->id, $classB->id], $adminIds);
-
-        $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
-        DB::table('teacher_classes')->insert([
-            'teacher_id' => $teacher->id,
-            'class_id' => $classA->id,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
-        Session::put('cultivationAdmin', $teacher->id);
-
-        $teacherResponse = $this->postJson(route('api.marks.classes'), [
-            'examId' => $exam->id,
-            'sessionId' => $session->id,
-        ]);
-        $teacherResponse->assertOk();
-        $teacherIds = collect($teacherResponse->json('classes'))->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $this->assertSame([$classA->id], $teacherIds);
     }
 
     public function test_sections_endpoint_returns_only_teacher_context_sections(): void

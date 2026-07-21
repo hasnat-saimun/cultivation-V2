@@ -1816,10 +1816,6 @@ Route::middleware(['adminGuard'])->group (function(){
             MarksheetController::class ,
             'addMarks'
         ])->name('addMarks');
-        Route::post('/marks/add/classes',[
-            MarksheetController::class ,
-            'marksEntryClasses'
-        ])->name('api.marks.classes');
         Route::post('/marks/add/subjects',[
             MarksheetController::class ,
             'marksEntrySubjects'

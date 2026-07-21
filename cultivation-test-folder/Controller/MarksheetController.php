@@ -15,7 +15,6 @@ use App\Models\classManage;
 use App\Models\ReligiousSubjectDefault;
 use App\Services\CultivationAdminResolver;
 use App\Services\MarksEntryAuthorizationService;
-use App\Services\MarksEntryContextService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -25,22 +24,38 @@ class MarksheetController extends Controller
 {
     private CultivationAdminResolver $adminResolver;
     private MarksEntryAuthorizationService $marksAuth;
-    private MarksEntryContextService $marksContext;
 
-    public function __construct(
-        CultivationAdminResolver $adminResolver,
-        MarksEntryAuthorizationService $marksAuth,
-        MarksEntryContextService $marksContext
-    )
+    public function __construct(CultivationAdminResolver $adminResolver, MarksEntryAuthorizationService $marksAuth)
     {
         $this->adminResolver = $adminResolver;
         $this->marksAuth = $marksAuth;
-        $this->marksContext = $marksContext;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
     {
-        return $this->marksContext->classRequiresOptionalGroup($className);
+        if ($className === null || trim($className) === '') {
+            return false;
+        }
+
+        $normalized = strtolower(trim($className));
+        $normalized = preg_replace('/[^a-z0-9]+/', ' ', $normalized);
+        $normalized = trim((string) $normalized);
+
+        if (preg_match('/\b(9|10)\b/', $normalized)) {
+            return true;
+        }
+
+        return preg_match('/\b(ix|x)\b/', $normalized) === 1;
+    }
+
+    private function classGroupRequirementMap($classes): array
+    {
+        $map = [];
+        foreach ($classes as $class) {
+            $map[(string) $class->id] = $this->classRequiresOptionalGroup((string) $class->className);
+        }
+
+        return $map;
     }
 
     private function validatedGenderValue(Request $request): string
@@ -71,14 +86,15 @@ class MarksheetController extends Controller
         }
 
         $requiresOptionalGroup = $this->classRequiresOptionalGroup((string) $class->className);
-        $optionalGroupRaw = $request->input('optionalGroupId', 0);
-        $optionalGroupId = ($optionalGroupRaw === null || $optionalGroupRaw === '' ||
-            $optionalGroupRaw === 'all' || (int) $optionalGroupRaw === 0)
-            ? null
-            : (int) $optionalGroupRaw;
+        $optionalGroupId = $request->input('optionalGroupId');
+        $optionalGroupId = ($optionalGroupId === null || $optionalGroupId === '') ? null : (int) $optionalGroupId;
 
-        // For Class 9 and above, null means "All Departments/Groups".
-        // For lower classes the field is inactive and any stale value is ignored.
+        if ($requiresOptionalGroup && !$optionalGroupId) {
+            throw ValidationException::withMessages([
+                'optionalGroupId' => ['Group is required for class 9 and class 10.'],
+            ]);
+        }
+
         if (!$requiresOptionalGroup) {
             $optionalGroupId = null;
         }
@@ -86,67 +102,18 @@ class MarksheetController extends Controller
         return [$class, $requiresOptionalGroup, $optionalGroupId];
     }
 
-    private function validatedSelectionContext(
-        $user,
-        int $classId,
-        ?int $sectionId,
-        ?int $optionalGroupId,
-        int $sessionId,
-        int $subjectId,
-        bool $requiresOptionalGroup
-    ) {
-        $isTeacher = $user && $user->isTeacher();
-
-        if ($isTeacher) {
-            $classIds = $this->marksContext->teacherAndAdminClassIds($user);
-            if (!in_array($classId, $classIds, true)) {
-                return redirect()->route('addMarks')->with('error', 'Unauthorized class selection');
-            }
-        } else {
-            if (!classManage::where('id', $classId)->exists()) {
-                return redirect()->route('addMarks')->with('error', 'Invalid class selection');
-            }
+    private function resolveSessionIdFromValue($sessionValue): ?int
+    {
+        if ($sessionValue === null || $sessionValue === '') {
+            return null;
         }
 
-        if ($sessionId <= 0 || !sessionManage::where('id', $sessionId)->exists()) {
-            return redirect()->route('addMarks')->with('error', 'Session not found');
+        if (is_numeric($sessionValue)) {
+            return (int)$sessionValue;
         }
 
-        if ($isTeacher) {
-            $allowedSections = collect($this->marksContext->sectionsForContext($user, $classId, $sessionId))
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-            if ($sectionId !== null && !in_array($sectionId, $allowedSections, true)) {
-                return redirect()->route('addMarks')->with('error', 'Unauthorized section selection');
-            }
-        }
-
-        if ($requiresOptionalGroup && $optionalGroupId !== null) {
-            if ($isTeacher) {
-                $allowedGroups = collect($this->marksContext->groupsForContext($user, $classId, $sectionId, $sessionId))
-                    ->pluck('id')
-                    ->map(fn ($id) => (int) $id)
-                    ->all();
-
-                if (!in_array((int) $optionalGroupId, $allowedGroups, true)) {
-                    return redirect()->route('addMarks')->with('error', 'Unauthorized group selection');
-                }
-            }
-        }
-
-        if ($isTeacher) {
-            $allowedSubjectIds = $this->marksContext->subjectsForContext($user, $classId, $sectionId, $optionalGroupId, $sessionId)
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-
-            if (!in_array($subjectId, $allowedSubjectIds, true)) {
-                return redirect()->route('addMarks')->with('error', 'Unauthorized subject selection');
-            }
-        }
-
-        return true;
+        $mappedId = sessionManage::where('session', (string)$sessionValue)->value('id');
+        return $mappedId ? (int)$mappedId : null;
     }
 
     private function isResultPublished(int $examId, int $sessionId, int $classId, $groupId = null): bool
@@ -163,9 +130,13 @@ class MarksheetController extends Controller
             ->exists();
     }
     public function addMarks(){
+        // Restrict visible classes & subjects if teacher
         $user = $this->adminResolver->current();
         $isTeacher = $user && $user->isTeacher();
+        // For general teachers (marks entry) allow multiple classes; class-teacher can still have primary class but
+        // marks entry should use assigned classes array.
         $classIds = $isTeacher ? $this->marksAuth->authorizedClassIds($user) : [];
+        $subjectIds = $isTeacher ? $user->access_subject_array : [];
 
         if ($isTeacher) {
             $classes = classManage::whereIn('id', $classIds)->orderBy('id', 'DESC')->get();
@@ -173,99 +144,14 @@ class MarksheetController extends Controller
             $classes = classManage::orderBy('id', 'DESC')->get();
         }
 
-        $classGroupRequirementMap = $this->marksContext->classGroupRequirementMap($classes);
-        $sessions = sessionManage::orderBy('id', 'DESC')->get(['id', 'session']);
+        $classGroupRequirementMap = $this->classGroupRequirementMap($classes);
 
         return view('result.add-marks', [
+            'restrictedClassIds' => $classIds,
+            'restrictedSubjectIds' => $subjectIds,
             'isTeacherAdmin' => $isTeacher,
             'classes' => $classes,
-            'sessions' => $sessions,
             'classGroupRequirementMap' => $classGroupRequirementMap,
-        ]);
-    }
-
-    public function marksEntryClasses(Request $request)
-    {
-        $validated = $request->validate([
-            'exam_id' => 'nullable|integer',
-            'examId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
-        ]);
-
-        $examId = (int) ($request->input('exam_id', $request->input('examId', 0)));
-        $sessionId = (int) ($request->input('session_id', $request->input('sessionId', 0)));
-
-        if ($examId <= 0 || $sessionId <= 0
-            || !Exam::whereKey($examId)->exists()
-            || !sessionManage::whereKey($sessionId)->exists()) {
-            return response()->json(['classes' => []]);
-        }
-
-        $classes = $this->marksContext
-            ->classesForContext($this->adminResolver->current())
-            ->map(function ($class) {
-                return [
-                    'id' => (int) $class->id,
-                    'name' => (string) $class->className,
-                    'requiresOptionalGroup' => $this->marksContext
-                        ->classRequiresOptionalGroup((string) $class->className),
-                ];
-            })
-            ->values();
-
-        return response()->json(['classes' => $classes]);
-    }
-
-    public function marksEntrySections(Request $request)
-    {
-        $request->validate([
-            'class_id' => 'nullable|integer',
-            'classId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
-        ]);
-
-        $classId = (int) ($request->input('class_id', $request->input('classId', 0)));
-        $sessionId = (int) ($request->input('session_id', $request->input('sessionId', 0)));
-        $sessionId = $sessionId > 0 ? $sessionId : null;
-
-        if ($classId <= 0) {
-            return response()->json(['sections' => []]);
-        }
-
-        $sections = $this->marksContext->sectionsForContext($this->adminResolver->current(), $classId, $sessionId);
-
-        return response()->json([
-            'sections' => $sections,
-        ]);
-    }
-
-    public function marksEntryGroups(Request $request)
-    {
-        $request->validate([
-            'class_id' => 'nullable|integer',
-            'classId' => 'nullable|integer',
-            'section_id' => 'nullable|integer',
-            'sectionId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
-        ]);
-
-        $classId = (int) ($request->input('class_id', $request->input('classId', 0)));
-        $sectionRaw = $request->input('section_id', $request->input('sectionId'));
-        $sectionId = ($sectionRaw === null || $sectionRaw === '') ? null : (int) $sectionRaw;
-        $sessionId = (int) ($request->input('session_id', $request->input('sessionId', 0)));
-        $sessionId = $sessionId > 0 ? $sessionId : null;
-
-        if ($classId <= 0) {
-            return response()->json(['groups' => []]);
-        }
-
-        $groups = $this->marksContext->groupsForContext($this->adminResolver->current(), $classId, $sectionId, $sessionId);
-
-        return response()->json([
-            'groups' => $groups,
         ]);
     }
     public function getMarks(Request $requ){
@@ -273,7 +159,7 @@ class MarksheetController extends Controller
             'examId' => 'required|integer',
             'classId' => 'required|integer',
             'subjectId' => 'required|integer',
-            'sessionId' => 'required|integer',
+            'sessionId' => 'nullable',
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
         ]);
@@ -286,21 +172,6 @@ class MarksheetController extends Controller
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $groupId = $requ->groupId ?: null;
-        $sessionId = (int) $requ->sessionId;
-
-        $user = $this->adminResolver->current();
-        $selection = $this->validatedSelectionContext(
-            $user,
-            (int) $requ->classId,
-            $groupId ? (int) $groupId : null,
-            $optionalGroupId,
-            $sessionId,
-            $subjectId,
-            $requiresOptionalGroup
-        );
-        if ($selection instanceof \Illuminate\Http\RedirectResponse) {
-            return $selection;
-        }
 
         $studentBaseQuery = newAdmission::where('className', (int)$requ->classId)
             ->when($groupId, function($q) use ($groupId){
@@ -320,24 +191,31 @@ class MarksheetController extends Controller
                 });
             });
 
-        $studentSessionValue = (string) $sessionId;
-        $sessionText = sessionManage::where('id', $sessionId)->value('session');
+        $studentSessionValue = $requ->sessionId ?: (clone $studentBaseQuery)->orderBy('id','DESC')->value('sessName');
+        $sessionId = $this->resolveSessionIdFromValue($studentSessionValue);
+        $sessionId = $sessionId ?: (int)sessionManage::orderBy('id','DESC')->value('id');
+
+        if (!$studentSessionValue && $sessionId) {
+            $studentSessionValue = (string)$sessionId;
+        }
 
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
         }
         $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
+        // Server-side enforcement of teacher's assigned class & subject
+        $user = $this->adminResolver->current();
         $isTeacherAdmin = $user && $user->isTeacher();
+        if($user && $user->isTeacher()){
+            if(!$this->marksAuth->canEnterMarksFor($user, (int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId)){
+                return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
+            }
+        }
 
         // Fetch students class-wise along with session and section filters
         $studentQuery = clone $studentBaseQuery;
         if($studentSessionValue){
-            $studentQuery->where(function ($q) use ($studentSessionValue, $sessionText) {
-                $q->where('sessName', $studentSessionValue);
-                if (!empty($sessionText)) {
-                    $q->orWhere('sessName', (string) $sessionText);
-                }
-            });
+            $studentQuery->where('sessName', $studentSessionValue);
         }
 
         $studentList = $studentQuery
@@ -377,7 +255,7 @@ class MarksheetController extends Controller
             'examId' => 'required|integer',
             'classId' => 'required|integer',
             'subjectId' => 'required|integer',
-            'sessionId' => 'required|integer',
+            'sessionId' => 'nullable',
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
         ]);
@@ -388,7 +266,23 @@ class MarksheetController extends Controller
         $subject = Subject::find($subjectId);
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
-        $sessionId = (int) $requ->sessionId;
+        $sessionId = $this->resolveSessionIdFromValue($requ->sessionId);
+        if(!$sessionId){
+            $sessionCandidate = newAdmission::where('className', (int)$requ->classId)
+                ->when($requ->groupId, function($q) use ($requ){
+                    return $q->where('sectionName', (int)$requ->groupId);
+                })
+                ->when($requ->optionalGroupId, function($q) use ($requ){
+                    return $q->where('departmentName', (int)$requ->optionalGroupId);
+                })
+                ->when($isOptionalSubject, function($q) use ($subjectId){
+                    return $q->where('fourthSubjectId', $subjectId);
+                })
+                ->orderBy('id','DESC')
+                ->value('sessName');
+            $sessionId = $this->resolveSessionIdFromValue($sessionCandidate);
+        }
+        $sessionId = $sessionId ?: (int)sessionManage::orderBy('id','DESC')->value('id');
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
         }
@@ -397,24 +291,14 @@ class MarksheetController extends Controller
         // Enforce teacher role restrictions before saving
         $user = $this->adminResolver->current();
         $isTeacherAdmin = $user && $user->isTeacher();
-
-        $requiresOptionalGroup = $this->classRequiresOptionalGroup((string) optional(classManage::find((int) $requ->classId))->className);
-        $selection = $this->validatedSelectionContext(
-            $user,
-            (int) $requ->classId,
-            $groupId ? (int) $groupId : null,
-            $optionalGroupId,
-            $sessionId,
-            (int) $requ->subjectId,
-            $requiresOptionalGroup
-        );
-        if ($selection instanceof \Illuminate\Http\RedirectResponse) {
-            return $selection;
-        }
-
         $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
         if($isTeacherAdmin && $isFinalPublished){
             return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
+        }
+        if($user && $user->isTeacher()){
+            if(!$this->marksAuth->canEnterMarksFor($user, (int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId)){
+                return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
+            }
         }
 
         $allowedOptionalStudentIds = [];
@@ -585,8 +469,6 @@ class MarksheetController extends Controller
             'sectionId' => 'nullable|integer',
             'optional_group_id' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
         ]);
 
         $classId = (int) ($request->input('class_id', $request->input('classId', 0)));
@@ -596,18 +478,14 @@ class MarksheetController extends Controller
 
         $sectionRaw = $request->input('section_id', $request->input('sectionId'));
         $groupRaw = $request->input('optional_group_id', $request->input('optionalGroupId'));
-        $sessionRaw = $request->input('session_id', $request->input('sessionId'));
 
         $sectionId = ($sectionRaw === null || $sectionRaw === '') ? null : (int) $sectionRaw;
-        $optionalGroupId = ($groupRaw === null || $groupRaw === '' || $groupRaw === 'all' || (int) $groupRaw === 0)
-            ? null
-            : (int) $groupRaw;
-        $sessionId = ($sessionRaw === null || $sessionRaw === '') ? null : (int) $sessionRaw;
+        $optionalGroupId = ($groupRaw === null || $groupRaw === '') ? null : (int) $groupRaw;
 
         $user = $this->adminResolver->current();
 
-        $subjects = $this->marksContext
-            ->subjectsForContext($user, $classId, $sectionId, $optionalGroupId, $sessionId)
+        $subjects = $this->marksAuth
+            ->authorizedSubjectsForMarks($user, $classId, $sectionId, $optionalGroupId)
             ->map(function ($subject) {
                 return [
                     'id' => (int) $subject->id,
