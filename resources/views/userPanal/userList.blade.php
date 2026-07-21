@@ -3,6 +3,37 @@
 User List
 @endsection
 @section('backIndex')
+@push('styles')
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.dataTables.min.css" />
+<style>
+	#registeredUsersTable thead th {
+		background: #1f3c88;
+		color: #ffffff;
+	}
+
+	#registeredUsersTable.dataTable thead .sorting:before,
+	#registeredUsersTable.dataTable thead .sorting:after,
+	#registeredUsersTable.dataTable thead .sorting_asc:before,
+	#registeredUsersTable.dataTable thead .sorting_asc:after,
+	#registeredUsersTable.dataTable thead .sorting_desc:before,
+	#registeredUsersTable.dataTable thead .sorting_desc:after {
+		color: #ffffff;
+		opacity: 1;
+	}
+
+	.assignment-item {
+		margin-bottom: 0.25rem;
+	}
+
+	.assignment-item:last-child {
+		margin-bottom: 0;
+	}
+
+	.assignment-label {
+		font-weight: 700;
+	}
+</style>
+@endpush
 <!-- Dashboard summary Start Here -->
 <div class="row gutters-20 mb-4">
 	<div class="col-md-10 col-12 mx-auto">
@@ -29,41 +60,45 @@ User List
 						<thead class="thead-dark">
 							<tr>
 								<th>#</th>
-								<th>Admin Name</th>
-								<th>User Mobile</th>
-								<th>User Email</th>
-								<th>Assigned Subjects</th>
-								<th>Attendance Class</th>
-								<th>User Type</th>
+								<th>Name</th>
+								<th>Username</th>
+								<th>Assigned Subjects by Class</th>
+								<th>Assigned Attendance Class with Section</th>
 								<th>Action</th>
 							</tr>
 						</thead>
 						<tbody>
 							@forelse($userList as $key => $user)
 								@php
-									$subjectNames = $user->subjects->pluck('subjectName')->filter()->implode(', ');
+									$subjectAssignments = collect($user->subject_assignment_summary ?? []);
 									$attendanceClass = $user->primaryClass
 										? trim($user->primaryClass->className . ($user->primarySection ? ' / ' . $user->primarySection->section : ''))
 										: 'None';
+									$assignmentExportText = $subjectAssignments
+										->map(function ($item) {
+											$subjects = implode(', ', (array) ($item['subjects'] ?? []));
+											return trim((string) ($item['label'] ?? '')) . ': ' . $subjects;
+										})
+										->filter()
+										->implode(' | ');
 								@endphp
 								<tr>
 									<td>{{ $key+1 }}</td>
 									<td>{{ $user->adminName }}</td>
-									<td>{{ $user->adminMobile }}</td>
-									<td>{{ $user->adminMail }}</td>
-									<td>{{ $subjectNames !== '' ? $subjectNames : 'None' }}</td>
-									<td>{{ $attendanceClass !== '' ? $attendanceClass : 'None' }}</td>
-									<td>
-										@if($user->userType == 1)
-											Teacher Admin
-										@elseif($user->userType == 2)
-											Cash Admin
-										@elseif($user->userType == 3)
-											General Admin
+									<td>{{ $user->adminUser }}</td>
+									<td data-export="{{ $assignmentExportText !== '' ? $assignmentExportText : 'None' }}">
+										@if($subjectAssignments->isNotEmpty())
+											@foreach($subjectAssignments as $assignment)
+												<div class="assignment-item">
+													<span class="assignment-label">{{ $assignment['label'] ?? 'Assignment' }}:</span>
+													{{ implode(', ', (array) ($assignment['subjects'] ?? [])) }}
+												</div>
+											@endforeach
 										@else
-											Super Admin
+											None
 										@endif
 									</td>
+									<td>{{ $attendanceClass !== '' ? $attendanceClass : 'None' }}</td>
 									<td>
 										<a href="{{ route('editUser', $user->id) }}" class="btn btn-sm btn-warning">Edit</a>
 										<form action="{{ route('deleteUser', $user->id) }}" method="get" style="display:inline-block;">
@@ -75,7 +110,7 @@ User List
 								</tr>
 							@empty
 								<tr>
-									<td colspan="8" class="text-center">No users found.</td>
+									<td colspan="6" class="text-center">No users found.</td>
 								</tr>
 							@endforelse
 						</tbody>
@@ -87,6 +122,12 @@ User List
 </div>
 <!-- Dashboard summary End Here -->
 @push('scripts')
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
 <script>
 (function(){
 	function initRegisteredUsersTable(){
@@ -98,12 +139,60 @@ User List
 		}
 
 		var table = $table.DataTable({
+			dom: 'Bfrtip',
+			buttons: [
+				{
+					extend: 'print',
+					text: 'Print',
+					exportOptions: {
+						columns: [0,1,2,3,4],
+						format: {
+							body: function (data, row, column, node) {
+								if (node && node.dataset && node.dataset.export) {
+									return node.dataset.export;
+								}
+								return typeof data === 'string' ? data.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : data;
+							}
+						}
+					}
+				},
+				{
+					extend: 'pdfHtml5',
+					text: 'PDF',
+					exportOptions: {
+						columns: [0,1,2,3,4],
+						format: {
+							body: function (data, row, column, node) {
+								if (node && node.dataset && node.dataset.export) {
+									return node.dataset.export;
+								}
+								return typeof data === 'string' ? data.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : data;
+							}
+						}
+					}
+				},
+				{
+					extend: 'excelHtml5',
+					text: 'Excel',
+					exportOptions: {
+						columns: [0,1,2,3,4],
+						format: {
+							body: function (data, row, column, node) {
+								if (node && node.dataset && node.dataset.export) {
+									return node.dataset.export;
+								}
+								return typeof data === 'string' ? data.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : data;
+							}
+						}
+					}
+				}
+			],
 			pageLength: 10,
 			lengthMenu: [10, 25, 50, 100],
 			order: [[1, 'asc']],
 			columnDefs: [
 				{ targets: 0, orderable: false, searchable: false },
-				{ targets: 7, orderable: false, searchable: false }
+				{ targets: 5, orderable: false, searchable: false }
 			],
 			language: {
 				emptyTable: 'No users found.',

@@ -1096,12 +1096,96 @@ class CultivationController extends Controller
         $currentUserId = session('cultivationAdmin');
         $userList = CultivationAdmin::with([
                 'subjects:id,subjectName',
+                'classes:id,className',
+                'sections:id,section',
                 'primaryClass:id,className',
                 'primarySection:id,section',
             ])
             ->where('id', '!=', $currentUserId)
             ->orderBy('id','ASC')
             ->get();
+
+        $teacherIds = $userList
+            ->where('userType', CultivationAdmin::ROLE_TEACHER)
+            ->pluck('id')
+            ->map(function ($id) {
+                return (int) $id;
+            })
+            ->values()
+            ->all();
+
+        $compositeRows = collect();
+        if (!empty($teacherIds) && Schema::hasTable('teacher_class_subjects')) {
+            $compositeRows = DB::table('teacher_class_subjects')
+                ->whereIn('teacher_id', $teacherIds)
+                ->get(['teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id']);
+        }
+
+        $classNames = ClassModel::query()->pluck('className', 'id');
+        $sectionNames = SectionModel::query()->pluck('section', 'id');
+        $groupNames = Department::query()->pluck('departmentName', 'id');
+        $subjectNames = Subject::query()->pluck('subjectName', 'id');
+
+        $assignmentBuckets = [];
+        foreach ($compositeRows as $row) {
+            $teacherId = (int) $row->teacher_id;
+            $className = $classNames[(int) $row->class_id] ?? ('Class '.$row->class_id);
+            $sectionName = $row->section_id ? ($sectionNames[(int) $row->section_id] ?? ('Section '.$row->section_id)) : null;
+            $groupName = $row->group_id ? ($groupNames[(int) $row->group_id] ?? ('Group '.$row->group_id)) : null;
+
+            $label = $className;
+            if ($sectionName) {
+                $label .= ' / '.$sectionName;
+            }
+            if ($groupName) {
+                $label .= ' / '.$groupName;
+            }
+
+            $subjectName = $row->subject_id ? ($subjectNames[(int) $row->subject_id] ?? ('Subject '.$row->subject_id)) : null;
+            if (!$subjectName) {
+                continue;
+            }
+
+            $assignmentBuckets[$teacherId][$label][] = $subjectName;
+        }
+
+        foreach ($userList as $user) {
+            $teacherId = (int) $user->id;
+            $summary = [];
+
+            if (isset($assignmentBuckets[$teacherId])) {
+                foreach ($assignmentBuckets[$teacherId] as $label => $subjects) {
+                    $subjects = array_values(array_unique(array_filter($subjects)));
+                    sort($subjects);
+                    $summary[] = [
+                        'label' => $label,
+                        'subjects' => $subjects,
+                    ];
+                }
+            }
+
+            if (empty($summary) && (int) $user->userType === CultivationAdmin::ROLE_TEACHER) {
+                $legacyClasses = $user->classes->pluck('className')->filter()->values()->all();
+                $legacySubjects = $user->subjects->pluck('subjectName')->filter()->unique()->values()->all();
+
+                if (!empty($legacyClasses) && !empty($legacySubjects)) {
+                    foreach ($legacyClasses as $legacyClassName) {
+                        $summary[] = [
+                            'label' => $legacyClassName,
+                            'subjects' => $legacySubjects,
+                        ];
+                    }
+                } elseif (!empty($legacySubjects)) {
+                    $summary[] = [
+                        'label' => 'General Assignment',
+                        'subjects' => $legacySubjects,
+                    ];
+                }
+            }
+
+            $user->setAttribute('subject_assignment_summary', $summary);
+        }
+
         return view('userPanal.userList',compact('userList'));
     }
     public function deleteUser($id)

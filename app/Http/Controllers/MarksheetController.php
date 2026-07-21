@@ -13,6 +13,7 @@ use App\Models\Subject;
 use App\Models\Exam;
 use App\Models\classManage;
 use App\Models\ReligiousSubjectDefault;
+use App\Services\MarksEntryAuthorizationService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,13 @@ use Illuminate\Validation\ValidationException;
 
 class MarksheetController extends Controller
 {
+    private MarksEntryAuthorizationService $marksAuth;
+
+    public function __construct(MarksEntryAuthorizationService $marksAuth)
+    {
+        $this->marksAuth = $marksAuth;
+    }
+
     private function classRequiresOptionalGroup(?string $className): bool
     {
         if ($className === null || trim($className) === '') {
@@ -125,7 +133,7 @@ class MarksheetController extends Controller
         $isTeacher = $user && $user->isTeacher();
         // For general teachers (marks entry) allow multiple classes; class-teacher can still have primary class but
         // marks entry should use assigned classes array.
-        $classIds = $isTeacher ? $user->access_class_array : [];
+        $classIds = $isTeacher ? $this->marksAuth->authorizedClassIds($user) : [];
         $subjectIds = $isTeacher ? $user->access_subject_array : [];
 
         if ($isTeacher) {
@@ -198,8 +206,7 @@ class MarksheetController extends Controller
         $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
         $isTeacherAdmin = $user && $user->isTeacher();
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId);
-            if(!$allowed){
+            if(!$this->marksAuth->canEnterMarksFor($user, (int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId)){
                 return redirect()->route('addMarks')->with('error','Unauthorized class or subject selection');
             }
         }
@@ -289,8 +296,7 @@ class MarksheetController extends Controller
             return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
         }
         if($user && $user->isTeacher()){
-            $allowed = $user->canTeachClassSubject((int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId);
-            if(!$allowed){
+            if(!$this->marksAuth->canEnterMarksFor($user, (int)$requ->classId, (int)$requ->subjectId, $groupId, $optionalGroupId)){
                 return redirect()->route('addMarks')->with('error','Unauthorized attempt to submit marks for this class/subject');
             }
         }
@@ -452,6 +458,44 @@ class MarksheetController extends Controller
         }
 
         return redirect(route('addMarks'))->with('error', 'No marks were updated. Please verify filters/session/student mapping.'.($skipped > 0 ? ' Skipped: '.$skipped : ''));
+    }
+
+    public function marksEntrySubjects(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'nullable|integer',
+            'classId' => 'nullable|integer',
+            'section_id' => 'nullable|integer',
+            'sectionId' => 'nullable|integer',
+            'optional_group_id' => 'nullable|integer',
+            'optionalGroupId' => 'nullable|integer',
+        ]);
+
+        $classId = (int) ($request->input('class_id', $request->input('classId', 0)));
+        if ($classId <= 0) {
+            return response()->json([], 200);
+        }
+
+        $sectionRaw = $request->input('section_id', $request->input('sectionId'));
+        $groupRaw = $request->input('optional_group_id', $request->input('optionalGroupId'));
+
+        $sectionId = ($sectionRaw === null || $sectionRaw === '') ? null : (int) $sectionRaw;
+        $optionalGroupId = ($groupRaw === null || $groupRaw === '') ? null : (int) $groupRaw;
+
+        $adminId = session('cultivationAdmin');
+        $user = $adminId ? \App\Models\CultivationAdmin::find($adminId) : null;
+
+        $subjects = $this->marksAuth
+            ->authorizedSubjectsForMarks($user, $classId, $sectionId, $optionalGroupId)
+            ->map(function ($subject) {
+                return [
+                    'id' => (int) $subject->id,
+                    'subjectName' => (string) $subject->subjectName,
+                ];
+            })
+            ->values();
+
+        return response()->json($subjects);
     }
 
     public function createMarksheet(){

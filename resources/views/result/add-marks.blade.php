@@ -115,7 +115,7 @@ Add New Marks
                                     <div class="col-12 form-group">
                                         <label>Subject *</label>
                                         <select class="select2" id="subject_select" name="subjectId" required>
-                                            <option value="">Select class first</option>
+                                            <option value="">No assigned subject found for the selected criteria.</option>
                                         </select>
                                     </div>
                                     <div class="col-12 form-group mg-t-8">
@@ -160,9 +160,9 @@ Add New Marks
 
         async function loadSubjects(){
             const classId = classSelect.value; const sectionId = sectionSelect.value || ''; const optionalGroupId = optionalGroupSelect.value || '';
-            if(!classId) { subjectSelect.innerHTML = '<option value="">Select class and section first</option>'; return; }
+            if(!classId) { subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>'; return; }
             try{
-                const res = await fetch("{{ route('api.teacher.subjects') }}", {
+                const res = await fetch("{{ route('api.marks.subjects') }}", {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type':'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
@@ -183,6 +183,10 @@ Add New Marks
                     });
                 }
 
+                if (subjectSelect.options.length <= 1) {
+                    subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>';
+                }
+
                 // If select2 is active, trigger change so UI refreshes
                 try{
                     if(window.jQuery && typeof $(subjectSelect).trigger === 'function'){
@@ -190,7 +194,7 @@ Add New Marks
                     }
                 }catch(e){ /* ignore */ }
             }catch(e){
-                subjectSelect.innerHTML = '<option value="">Error loading subjects</option>';
+                subjectSelect.innerHTML = '<option value="">No assigned subject found for the selected criteria.</option>';
             }
         }
 

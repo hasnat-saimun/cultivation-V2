@@ -1816,6 +1816,10 @@ Route::middleware(['adminGuard'])->group (function(){
             MarksheetController::class ,
             'addMarks'
         ])->name('addMarks');
+        Route::post('/marks/add/subjects',[
+            MarksheetController::class ,
+            'marksEntrySubjects'
+        ])->name('api.marks.subjects');
         Route::post('/marks/add/getData',[
             MarksheetController::class ,
             'getMarks'
