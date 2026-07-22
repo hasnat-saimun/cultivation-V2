@@ -7,6 +7,9 @@
 
     return asset($path);
   };
+  $loginLogoUrl = $cfg && $cfg->logo
+    ? asset('public/upload/image/cultivation/' . ltrim($cfg->logo, '/'))
+    : $assetPath('loginPart/themeknit/images/logo1.png');
   $appVersion = (function(){
     $candidates = [
       base_path('RELEASE_NOTES.md'),
@@ -65,6 +68,7 @@
           .auth-card{max-width:980px;margin:48px auto;border:none;box-shadow:0 12px 40px rgba(2,6,23,.08);border-radius:16px;overflow:hidden;background:#fff;}
         .brand-pane{background:linear-gradient(180deg,#0e56a9 0%, #0a2f62 100%);color:#fff;position:relative;padding:28px 28px 32px 28px;}
         .brand-pane .logo{height:42px;width:auto;}
+        .mobile-logo{max-height:52px;max-width:180px;width:auto;object-fit:contain;}
         .brand-pane h4{font-weight:700;margin-top:18px;}
         .brand-pane p{color:#dbeafe;margin-bottom:0}
         .form-pane{padding:28px 28px 24px 28px}
@@ -93,11 +97,7 @@
   <div class="card auth-card w-100">
     <div class="row g-0 align-items-center">
         <div class="col-lg-5 d-none d-lg-block brand-pane">
-        @if($cfg && $cfg->logo)
-          <img src="{{ $assetPath('public/upload/image/cultivation/' . $cfg->logo) }}" alt="{{ $cfg->instituteName ?? 'Institute Logo' }}" class="logo">
-        @else
-          <img src="{{ $assetPath('public/loginPart/themeknit/images/logo1.png') }}" alt="Cultivation" class="logo">
-        @endif
+          <img src="{{ $loginLogoUrl }}" alt="{{ $cfg->instituteName ?? 'Cultivation' }}" class="logo">
 
         <h4 class="mt-3 mb-1">
             {{ $cfg && $cfg->instituteName ? $cfg->instituteName : 'Welcome back' }}
@@ -134,6 +134,7 @@
           $isDemo = strpos(config('app.url'), 'demoadmin.cultivationapp.com') !== false;
         @endphp
         <div class="form-header mb-3">
+            <img src="{{ $loginLogoUrl }}" alt="{{ $cfg->instituteName ?? 'Cultivation' }}" class="mobile-logo d-lg-none mb-3">
             <div class="accent-bar"></div>
             <h4 class="form-title mb-1">Admin Portal</h4>
             <p class="form-text mb-0">Secure access for {{ ($cfg && $cfg->instituteName) ? $cfg->instituteName : 'Cultivation' }}</p>
