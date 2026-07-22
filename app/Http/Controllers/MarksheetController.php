@@ -14,6 +14,7 @@ use App\Models\Exam;
 use App\Models\classManage;
 use App\Models\ReligiousSubjectDefault;
 use App\Services\CultivationAdminResolver;
+use App\Services\FourthSubjectAssignmentResolver;
 use App\Services\MarksEntryAuthorizationService;
 use App\Services\MarksEntryContextService;
 use App\Services\ReligiousSubjectAssignmentResolver;
@@ -25,18 +26,21 @@ use Illuminate\Validation\ValidationException;
 class MarksheetController extends Controller
 {
     private CultivationAdminResolver $adminResolver;
+    private FourthSubjectAssignmentResolver $fourthSubjectResolver;
     private MarksEntryAuthorizationService $marksAuth;
     private MarksEntryContextService $marksContext;
     private ReligiousSubjectAssignmentResolver $religiousSubjectResolver;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
+        FourthSubjectAssignmentResolver $fourthSubjectResolver,
         MarksEntryAuthorizationService $marksAuth,
         MarksEntryContextService $marksContext,
         ReligiousSubjectAssignmentResolver $religiousSubjectResolver
     )
     {
         $this->adminResolver = $adminResolver;
+        $this->fourthSubjectResolver = $fourthSubjectResolver;
         $this->marksAuth = $marksAuth;
         $this->marksContext = $marksContext;
         $this->religiousSubjectResolver = $religiousSubjectResolver;
@@ -304,12 +308,17 @@ class MarksheetController extends Controller
         if (!$subject) {
             return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
         }
-        $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $groupId = $requ->groupId ?: null;
         $sessionId = (int) $requ->sessionId;
         $user = $this->adminResolver->current();
         $isTeacherAdmin = $user && $user->isTeacher();
+        $academicContext = [
+            'class_id' => (int) $requ->classId,
+            'section_id' => $groupId ? (int) $groupId : null,
+            'department_id' => $optionalGroupId,
+            'session_id' => $sessionId,
+        ];
 
         $selection = $this->validatedSelectionContext(
             $user,
@@ -331,16 +340,10 @@ class MarksheetController extends Controller
             })
             ->when($optionalGroupId, function($q) use ($optionalGroupId){
                 return $q->where('departmentName', (int)$optionalGroupId);
-            })
-            ->when($isOptionalSubject, function($q) use ($subjectId){
-                return $q->where(function($qq) use ($subjectId){
-                    $qq->where('fourthSubjectId', $subjectId)
-                        ->orWhereNull('fourthSubjectId')
-                        ->orWhere('fourthSubjectId', 0);
-                });
             });
 
         $this->religiousSubjectResolver->applyStudentReligiousSubjectFilter($studentBaseQuery, $subject);
+        $this->fourthSubjectResolver->applyStudentFourthSubjectFilter($studentBaseQuery, $subject, $academicContext);
 
         if ($isTeacherAdmin) {
             $authorized = $this->marksAuth->applyTeacherStudentAuthorizationFilters(
@@ -429,7 +432,6 @@ class MarksheetController extends Controller
         if (!$subject) {
             return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
         }
-        $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $sessionId = (int) $requ->sessionId;
         if(!$sessionId){
@@ -437,6 +439,12 @@ class MarksheetController extends Controller
         }
         $sessionText = sessionManage::where('id', (int)$sessionId)->value('session');
         $groupId = $requ->groupId ?: null;
+        $academicContext = [
+            'class_id' => (int) $requ->classId,
+            'section_id' => $groupId ? (int) $groupId : null,
+            'department_id' => $optionalGroupId,
+            'session_id' => $sessionId,
+        ];
         // Enforce teacher role restrictions before saving
         $user = $this->adminResolver->current();
         $isTeacherAdmin = $user && $user->isTeacher();
@@ -461,32 +469,6 @@ class MarksheetController extends Controller
             return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
         }
 
-        $allowedOptionalStudentIds = [];
-        if($isOptionalSubject){
-            $allowedOptionalStudentIds = newAdmission::where('className', (int)$requ->classId)
-                ->where(function($q) use ($sessionId, $sessionText){
-                    $q->where('sessName', (string)$sessionId);
-                    if(!empty($sessionText)){
-                        $q->orWhere('sessName', (string)$sessionText);
-                    }
-                })
-                ->when($groupId, function($q) use ($groupId){
-                    return $q->where('sectionName', (int)$groupId);
-                })
-                ->when($optionalGroupId, function($q) use ($optionalGroupId){
-                    return $q->where('departmentName', (int)$optionalGroupId);
-                })
-                ->where(function($q) use ($subjectId){
-                    $q->where('fourthSubjectId', $subjectId)
-                        ->orWhereNull('fourthSubjectId')
-                        ->orWhere('fourthSubjectId', 0);
-                })
-                ->pluck('id')
-                ->map(fn($v) => (int)$v)
-                ->all();
-            $allowedOptionalStudentIds = array_fill_keys($allowedOptionalStudentIds, true);
-        }
-
         $authorizedStudentQuery = newAdmission::query()
             ->where('className', (int) $requ->classId)
             ->when($groupId, function ($q) use ($groupId) {
@@ -503,6 +485,7 @@ class MarksheetController extends Controller
             });
 
         $this->religiousSubjectResolver->applyStudentReligiousSubjectFilter($authorizedStudentQuery, $subject);
+        $this->fourthSubjectResolver->applyStudentFourthSubjectFilter($authorizedStudentQuery, $subject, $academicContext);
 
         if ($isTeacherAdmin) {
             $authorized = $this->marksAuth->applyTeacherStudentAuthorizationFilters(
@@ -534,13 +517,7 @@ class MarksheetController extends Controller
         $actorId = $user ? (int)$user->id : null;
         $actorRole = ($user && $user->isTeacher()) ? 'teacher' : 'admin';
         while($x<$totalData){
-            if($isTeacherAdmin && ($authorizedStudentIds === null || !isset($authorizedStudentIds[(int)$requ->studentId[$x]]))){
-                $skipped++;
-                $x++;
-                continue;
-            }
-
-            if($isOptionalSubject && !isset($allowedOptionalStudentIds[(int)$requ->studentId[$x]])){
+            if($authorizedStudentIds === null || !isset($authorizedStudentIds[(int)$requ->studentId[$x]])){
                 $skipped++;
                 $x++;
                 continue;

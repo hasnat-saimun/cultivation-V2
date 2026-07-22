@@ -46,6 +46,11 @@ class newAdmission extends Model
         return $this->belongsTo(Subject::class, 'religiousSubjectId', 'id');
     }
 
+    public function fourthSubject()
+    {
+        return $this->belongsTo(Subject::class, 'fourthSubjectId', 'id');
+    }
+
     public function getRollNumberAttribute($value)
     {
         if ($value === null || $value === '') {
