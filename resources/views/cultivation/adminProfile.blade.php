@@ -64,7 +64,9 @@ Admin Profile
                 <div class="profile-header p-3 p-md-4 mb-4">
                     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center">
                         @php
-                            $avatarPath = !empty($adminAvatar) ? $assetPath('upload/image/admin/'.$adminAvatar) : $assetPath('back-office/img/figure/admin.jpg');
+                            $avatarPath = !empty($adminAvatar)
+                                ? asset('public/upload/image/admin/'.ltrim($adminAvatar, '/'))
+                                : $assetPath('back-office/img/figure/admin.jpg');
                         @endphp
                         <img src="{{ $avatarPath }}" alt="{{ $adminName }}" class="profile-avatar">
                         <div class="flex-grow-1 ml-md-3 mt-3 mt-md-0">

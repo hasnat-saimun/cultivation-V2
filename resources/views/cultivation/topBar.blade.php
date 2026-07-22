@@ -64,7 +64,7 @@
                             $adminAvatar    =   '';
                         endif;
                         $adminAvatarUrl = !empty($adminAvatar)
-                            ? $assetPath('upload/image/admin/'.$adminAvatar)
+                            ? asset('public/upload/image/admin/'.ltrim($adminAvatar, '/'))
                             : $assetPath('back-office/img/figure/admin.jpg');
                     @endphp
                     <li class="navbar-item dropdown header-admin">
