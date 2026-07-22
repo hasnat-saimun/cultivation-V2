@@ -12,6 +12,17 @@ class TeacherClassSubject extends Model
     protected $table = 'teacher_class_subjects';
 
     protected $fillable = [
-        'teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id'
+        'teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id', 'gender_scope'
     ];
+
+    public function getGenderScopeLabelAttribute(): string
+    {
+        $scope = strtolower(trim((string) ($this->gender_scope ?? 'all')));
+
+        return match ($scope) {
+            'male' => 'Male',
+            'female' => 'Female',
+            default => 'All',
+        };
+    }
 }

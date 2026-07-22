@@ -31,7 +31,14 @@
             <tbody>
                 @forelse($userList as $key => $user)
                     @php
-                        $subjectNames = $user->subjects->pluck('subjectName')->filter()->implode(', ');
+                        $subjectAssignments = collect($user->subject_assignment_summary ?? []);
+                        $subjectNames = $subjectAssignments
+                            ->map(function ($item) {
+                                $subjects = implode(', ', (array) ($item['subjects'] ?? []));
+                                return trim((string) ($item['label'] ?? '')) . ': ' . $subjects;
+                            })
+                            ->filter()
+                            ->implode(' | ');
                         $attendanceClass = $user->primaryClass
                             ? trim($user->primaryClass->className . ($user->primarySection ? ' / ' . $user->primarySection->section : ''))
                             : 'None';

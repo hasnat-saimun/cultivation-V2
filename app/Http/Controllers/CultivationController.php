@@ -21,6 +21,7 @@ use File;
 use Intervention\Image\Laravel\Facades\Image;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CultivationController extends Controller
@@ -117,6 +118,7 @@ class CultivationController extends Controller
         $rawSec = $requ->input('section', []);
         $rawSub = $requ->input('subject', []);
         $rawGrp = $requ->input('optionalGroup', []);
+        $rawGenderScope = $requ->input('genderScope', []);
 
         $sectionIds = SectionModel::pluck('id')->map(function ($id) {
             return (int) $id;
@@ -145,6 +147,7 @@ class CultivationController extends Controller
             $sectionValue = $rawSec[$i] ?? null;
             $groupValue = $rawGrp[$i] ?? null;
             $groupId = is_numeric($groupValue) ? (int) $groupValue : null;
+            $genderScope = $this->normalizeGenderScopeValue($rawGenderScope[$i] ?? 'all');
 
             if ($sectionValue === 'all') {
                 foreach ($sectionIds as $sectionId) {
@@ -154,6 +157,7 @@ class CultivationController extends Controller
                         'section_id' => $sectionId,
                         'group_id' => $groupId,
                         'subject_id' => $subjectId,
+                        'gender_scope' => $genderScope,
                     ];
                 }
                 continue;
@@ -170,13 +174,14 @@ class CultivationController extends Controller
                 'section_id' => $normalizedSectionId,
                 'group_id' => $groupId,
                 'subject_id' => $subjectId,
+                'gender_scope' => $genderScope,
             ];
         }
 
         $dedupedRows = [];
         $seenKeys = [];
         foreach ($assignmentRows as $row) {
-            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n');
+            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n').'-'.($row['gender_scope'] ?? 'all');
             if (isset($seenKeys[$key])) {
                 continue;
             }
@@ -190,6 +195,13 @@ class CultivationController extends Controller
             'section_ids' => array_values(array_unique(array_filter($sectionIdPool))),
             'assignment_rows' => $dedupedRows,
         ];
+    }
+
+    private function normalizeGenderScopeValue($value): string
+    {
+        $scope = strtolower(trim((string) $value));
+
+        return in_array($scope, ['all', 'male', 'female'], true) ? $scope : 'all';
     }
 
     private function ensureSubjectAssignmentsAvailable(array $subjectIds, ?int $ignoreAdminId = null): void
@@ -256,13 +268,14 @@ class CultivationController extends Controller
 
         $existingMap = [];
         foreach ($existingRows as $row) {
-            $key = $row->class_id.'-'.($row->section_id ?? 'n').'-'.($row->group_id ?? 'n').'-'.($row->subject_id ?? 'n');
+            $genderScope = $this->normalizeGenderScopeValue($row->gender_scope ?? 'all');
+            $key = $row->class_id.'-'.($row->section_id ?? 'n').'-'.($row->group_id ?? 'n').'-'.($row->subject_id ?? 'n').'-'.$genderScope;
             $existingMap[$key] = $row;
         }
 
         $desiredMap = [];
         foreach ($assignmentRows as $row) {
-            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n');
+            $key = $row['class_id'].'-'.($row['section_id'] ?? 'n').'-'.($row['group_id'] ?? 'n').'-'.($row['subject_id'] ?? 'n').'-'.$this->normalizeGenderScopeValue($row['gender_scope'] ?? 'all');
             $desiredMap[$key] = $row;
         }
 
@@ -295,6 +308,12 @@ class CultivationController extends Controller
                         $query->where('subject_id', $existingRow->subject_id);
                     }
                 })
+                ->where(function ($query) use ($existingRow) {
+                    $genderScope = $this->normalizeGenderScopeValue($existingRow->gender_scope ?? 'all');
+                    $query->whereNull('gender_scope')
+                        ->orWhere('gender_scope', '')
+                        ->orWhere('gender_scope', $genderScope);
+                })
                 ->delete();
         }
 
@@ -309,6 +328,7 @@ class CultivationController extends Controller
                 'class_id' => $row['class_id'],
                 'section_id' => $row['section_id'],
                 'group_id' => $row['group_id'],
+                'gender_scope' => $this->normalizeGenderScopeValue($row['gender_scope'] ?? 'all'),
                 'subject_id' => $row['subject_id'],
                 'created_at' => now(),
                 'updated_at' => now(),
@@ -999,6 +1019,8 @@ class CultivationController extends Controller
             'section.*' => 'nullable',
             'optionalGroup' => 'array',
             'optionalGroup.*' => 'nullable|integer|exists:departments,id',
+            'genderScope' => 'array',
+            'genderScope.*' => ['nullable', Rule::in(['all', 'male', 'female'])],
             'subject' => 'array',
             'subject.*' => 'nullable|integer|exists:subjects,id',
         ]);
@@ -1118,7 +1140,7 @@ class CultivationController extends Controller
         if (!empty($teacherIds) && Schema::hasTable('teacher_class_subjects')) {
             $compositeRows = DB::table('teacher_class_subjects')
                 ->whereIn('teacher_id', $teacherIds)
-                ->get(['teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id']);
+                ->get(['teacher_id', 'class_id', 'section_id', 'group_id', 'subject_id', 'gender_scope']);
         }
 
         $classNames = ClassModel::query()->pluck('className', 'id');
@@ -1132,6 +1154,8 @@ class CultivationController extends Controller
             $className = $classNames[(int) $row->class_id] ?? ('Class '.$row->class_id);
             $sectionName = $row->section_id ? ($sectionNames[(int) $row->section_id] ?? ('Section '.$row->section_id)) : null;
             $groupName = $row->group_id ? ($groupNames[(int) $row->group_id] ?? ('Group '.$row->group_id)) : null;
+            $genderScope = $this->normalizeGenderScopeValue($row->gender_scope ?? 'all');
+            $genderLabel = (new \App\Models\TeacherClassSubject(['gender_scope' => $genderScope]))->gender_scope_label;
 
             $label = $className;
             if ($sectionName) {
@@ -1140,6 +1164,7 @@ class CultivationController extends Controller
             if ($groupName) {
                 $label .= ' / '.$groupName;
             }
+            $label .= ' / Gender: '.$genderLabel;
 
             $subjectName = $row->subject_id ? ($subjectNames[(int) $row->subject_id] ?? ('Subject '.$row->subject_id)) : null;
             if (!$subjectName) {

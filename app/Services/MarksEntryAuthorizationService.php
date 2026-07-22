@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\CultivationAdmin;
 use App\Models\Subject;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +12,115 @@ use Illuminate\Support\Facades\Schema;
 
 class MarksEntryAuthorizationService
 {
+    public function normalizeGenderScope(?string $scope): ?string
+    {
+        if ($scope === null) {
+            return 'all';
+        }
+
+        $normalized = strtolower(trim((string) $scope));
+        if ($normalized === '') {
+            return 'all';
+        }
+
+        return in_array($normalized, ['all', 'male', 'female'], true) ? $normalized : null;
+    }
+
+    public function teacherCanSelectGender(
+        ?CultivationAdmin $user,
+        int $classId,
+        ?int $sectionId,
+        ?int $optionalGroupId,
+        ?int $subjectId,
+        string $requestedGender
+    ): bool {
+        if (!$user || !$user->isTeacher()) {
+            return true;
+        }
+
+        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId);
+        if (!$map['has_assignments']) {
+            return false;
+        }
+
+        if ($requestedGender === 'all') {
+            return true;
+        }
+
+        $requestedScope = $this->requestedGenderToScope($requestedGender);
+        if ($requestedScope === null) {
+            return $map['wildcard_all'];
+        }
+
+        if ($map['wildcard_all']) {
+            return true;
+        }
+
+        return in_array($requestedScope, $map['all_scopes'], true);
+    }
+
+    public function applyTeacherStudentAuthorizationFilters(
+        Builder $query,
+        ?CultivationAdmin $user,
+        int $classId,
+        ?int $sectionId,
+        ?int $optionalGroupId,
+        ?int $subjectId,
+        string $requestedGender = 'all'
+    ): bool {
+        if (!$user || !$user->isTeacher()) {
+            return true;
+        }
+
+        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId);
+        if (!$map['has_assignments']) {
+            return false;
+        }
+
+        if ($optionalGroupId !== null) {
+            $this->applyScopedGenderFilter($query, $map['all_scopes'], $requestedGender);
+            return true;
+        }
+
+        if ($map['wildcard_all']) {
+            return true;
+        }
+
+        $wildcardScopes = $map['wildcard_scopes'];
+        $departmentScopes = $map['department_scopes'];
+
+        $query->where(function (Builder $outer) use ($wildcardScopes, $departmentScopes, $requestedGender) {
+            $hasAnyClause = false;
+
+            if (!empty($wildcardScopes)) {
+                $hasAnyClause = true;
+                $outer->where(function (Builder $clause) use ($wildcardScopes, $requestedGender) {
+                    $this->applyScopedGenderFilter($clause, $wildcardScopes, $requestedGender);
+                });
+            }
+
+            foreach ($departmentScopes as $departmentId => $scopes) {
+                if (empty($scopes)) {
+                    continue;
+                }
+
+                $method = $hasAnyClause ? 'orWhere' : 'where';
+                $hasAnyClause = true;
+
+                $outer->{$method}(function (Builder $clause) use ($departmentId, $scopes, $requestedGender) {
+                    $clause->where('departmentName', (int) $departmentId);
+                    $this->applyScopedGenderFilter($clause, $scopes, $requestedGender);
+                });
+            }
+
+            if (!$hasAnyClause) {
+                $outer->whereRaw('1 = 0');
+            }
+        });
+
+        return true;
+    }
+
     public function authorizedClassIds(?CultivationAdmin $user): array
     {
         if (!$user || !$user->isTeacher()) {
@@ -281,5 +391,175 @@ class MarksEntryAuthorizationService
             'legacy_assignment_count' => $legacyCount,
             'authorized_subject_count' => $authorizedCount,
         ]);
+    }
+
+    private function teacherDepartmentGenderMap(
+        CultivationAdmin $user,
+        int $classId,
+        ?int $sectionId,
+        ?int $optionalGroupId,
+        ?int $subjectId
+    ): array {
+        $rows = collect();
+
+        if (Schema::hasTable('teacher_class_subjects')) {
+            $rows = DB::table('teacher_class_subjects as tcs')
+                ->leftJoin('section_manages as sm', 'sm.id', '=', 'tcs.section_id')
+                ->leftJoin('departments as d', 'd.id', '=', 'tcs.group_id')
+                ->where('tcs.teacher_id', (int) $user->id)
+                ->where('tcs.class_id', $classId)
+                ->where(function ($query) use ($subjectId) {
+                    if ($subjectId === null) {
+                        $query->whereNull('tcs.subject_id')->orWhereNotNull('tcs.subject_id');
+                        return;
+                    }
+
+                    $query->whereNull('tcs.subject_id')->orWhere('tcs.subject_id', $subjectId);
+                })
+                ->where(function ($query) use ($sectionId) {
+                    if ($sectionId === null) {
+                        $query->whereNull('tcs.section_id')->orWhereNotNull('sm.id');
+                        return;
+                    }
+
+                    $query->whereNull('tcs.section_id')->orWhere('tcs.section_id', $sectionId);
+                })
+                ->where(function ($query) use ($optionalGroupId) {
+                    if ($optionalGroupId === null) {
+                        $query->whereNull('tcs.group_id')->orWhereNotNull('d.id');
+                        return;
+                    }
+
+                    $query->whereNull('tcs.group_id')->orWhere('tcs.group_id', $optionalGroupId);
+                })
+                ->select('tcs.group_id', 'tcs.gender_scope')
+                ->get();
+        }
+
+        $wildcardScopes = [];
+        $departmentScopes = [];
+        foreach ($rows as $row) {
+            $scope = $this->normalizeGenderScope($row->gender_scope);
+            if ($scope === null) {
+                continue;
+            }
+
+            $groupId = $row->group_id !== null ? (int) $row->group_id : null;
+
+            if ($groupId === null) {
+                $wildcardScopes[] = $scope;
+                continue;
+            }
+
+            $departmentScopes[$groupId] = $departmentScopes[$groupId] ?? [];
+            $departmentScopes[$groupId][] = $scope;
+        }
+
+        $wildcardScopes = $this->reduceScopes($wildcardScopes);
+        foreach ($departmentScopes as $departmentId => $scopes) {
+            $departmentScopes[$departmentId] = $this->reduceScopes($scopes);
+        }
+
+        $allScopes = $this->reduceScopes($wildcardScopes);
+        foreach ($departmentScopes as $scopes) {
+            $allScopes = $this->reduceScopes(array_merge($allScopes, $scopes));
+        }
+
+        $wildcardAll = in_array('all', $wildcardScopes, true);
+
+        if ($optionalGroupId !== null) {
+            $groupScopes = $departmentScopes[(int) $optionalGroupId] ?? [];
+            $allScopes = $this->reduceScopes(array_merge($wildcardScopes, $groupScopes));
+            $wildcardAll = in_array('all', $allScopes, true);
+        }
+
+        return [
+            'has_assignments' => !empty($wildcardScopes) || !empty($departmentScopes),
+            'wildcard_scopes' => $wildcardScopes,
+            'department_scopes' => $departmentScopes,
+            'all_scopes' => $allScopes,
+            'wildcard_all' => $wildcardAll,
+        ];
+    }
+
+    private function reduceScopes(array $scopes): array
+    {
+        $normalized = [];
+        foreach ($scopes as $scope) {
+            $resolved = $this->normalizeGenderScope($scope === null ? null : (string) $scope);
+            if ($resolved === null) {
+                continue;
+            }
+
+            $normalized[] = $resolved;
+        }
+
+        $normalized = array_values(array_unique($normalized));
+
+        if (in_array('all', $normalized, true)) {
+            return ['all'];
+        }
+
+        $ordered = [];
+        if (in_array('male', $normalized, true)) {
+            $ordered[] = 'male';
+        }
+        if (in_array('female', $normalized, true)) {
+            $ordered[] = 'female';
+        }
+
+        return $ordered;
+    }
+
+    private function requestedGenderToScope(string $requestedGender): ?string
+    {
+        $value = strtolower(trim($requestedGender));
+
+        if (in_array($value, ['1', 'male', 'm'], true)) {
+            return 'male';
+        }
+
+        if (in_array($value, ['2', 'female', 'f'], true)) {
+            return 'female';
+        }
+
+        return null;
+    }
+
+    private function applyScopedGenderFilter(Builder $query, array $authorizedScopes, string $requestedGender): void
+    {
+        $authorizedScopes = $this->reduceScopes($authorizedScopes);
+        if (in_array('all', $authorizedScopes, true)) {
+            return;
+        }
+
+        $requestedScope = $this->requestedGenderToScope($requestedGender);
+        $effectiveScopes = $authorizedScopes;
+
+        if ($requestedScope !== null) {
+            if (in_array($requestedScope, $authorizedScopes, true)) {
+                $effectiveScopes = [$requestedScope];
+            } else {
+                $query->whereRaw('1 = 0');
+                return;
+            }
+        }
+
+        $allowedValues = [];
+        foreach ($effectiveScopes as $scope) {
+            if ($scope === 'male') {
+                $allowedValues = array_merge($allowedValues, ['1', 'male', 'Male', 'm', 'M']);
+            } elseif ($scope === 'female') {
+                $allowedValues = array_merge($allowedValues, ['2', 'female', 'Female', 'f', 'F']);
+            }
+        }
+
+        $allowedValues = array_values(array_unique($allowedValues));
+        if (empty($allowedValues)) {
+            $query->whereRaw('1 = 0');
+            return;
+        }
+
+        $query->whereIn('gender', $allowedValues);
     }
 }

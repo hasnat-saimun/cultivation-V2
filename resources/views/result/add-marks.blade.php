@@ -273,7 +273,10 @@ Add New Marks
                 replaceOptions(classSelect, rows.length ? 'Select *' : 'No assigned class found', rows.length === 0);
 
                 rows.forEach(row => {
-                    classRequirementMap[String(row.id)] = Boolean(row.requiresOptionalGroup);
+                    const requiresDepartment = Object.prototype.hasOwnProperty.call(row, 'requires_department')
+                        ? row.requires_department
+                        : row.requiresOptionalGroup;
+                    classRequirementMap[String(row.id)] = Boolean(requiresDepartment);
                 });
                 addOptions(classSelect, rows, restoreOld ? oldValues.classId : '');
 

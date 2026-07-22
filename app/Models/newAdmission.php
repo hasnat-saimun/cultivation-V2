@@ -9,6 +9,7 @@ use App\Models\classManage;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Department;
+use App\Models\Subject;
 
 class newAdmission extends Model
 {
@@ -38,6 +39,11 @@ class newAdmission extends Model
     public function departmentInfo()
     {
         return $this->belongsTo(Department::class, 'departmentName', 'id');
+    }
+
+    public function religiousSubject()
+    {
+        return $this->belongsTo(Subject::class, 'religiousSubjectId', 'id');
     }
 
     public function getRollNumberAttribute($value)

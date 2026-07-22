@@ -9,6 +9,7 @@ use App\Models\classManage;
 use App\Models\CultivationAdmin;
 use App\Models\sectionManage;
 use App\Models\Subject;
+use App\Models\TeacherClassSubject;
 use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -374,6 +375,7 @@ class AdminManagementTest extends TestCase
             'className' => [$class->id],
             'section' => [$section->id],
             'optionalGroup' => [''],
+            'genderScope' => ['all'],
             'subject' => [$subject->id],
         ];
 
@@ -391,12 +393,87 @@ class AdminManagementTest extends TestCase
 
         $uniqueCount = DB::table('teacher_class_subjects')
             ->where('teacher_id', $teacher->id)
-            ->selectRaw('COUNT(DISTINCT CONCAT(class_id, ":", COALESCE(section_id, "n"), ":", COALESCE(group_id, "n"), ":", COALESCE(subject_id, "n"))) as total')
+            ->selectRaw('COUNT(DISTINCT CONCAT(class_id, ":", COALESCE(section_id, "n"), ":", COALESCE(group_id, "n"), ":", COALESCE(subject_id, "n"), ":", COALESCE(gender_scope, "all"))) as total')
             ->value('total');
 
         $this->assertSame(1, $firstCount);
         $this->assertSame($firstCount, $secondCount);
         $this->assertSame($secondCount, (int) $uniqueCount);
+    }
+
+    public function test_new_teacher_assignment_defaults_gender_scope_to_all(): void
+    {
+        $class = $this->createClass('Scope Class');
+        $section = $this->createSection('A');
+        $subject = $this->createSubject('Scope Subject');
+
+        $request = Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'scope-default-teacher',
+            'userMail' => 'scope-default-teacher@example.test',
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'subject' => [$subject->id],
+        ]));
+
+        app(CultivationController::class)->saveUser($request);
+
+        $teacherId = CultivationAdmin::where('adminUser', 'scope-default-teacher')->value('id');
+        $this->assertNotNull($teacherId);
+        $this->assertDatabaseHas('teacher_class_subjects', [
+            'teacher_id' => $teacherId,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'subject_id' => $subject->id,
+            'gender_scope' => 'all',
+        ]);
+    }
+
+    public function test_teacher_assignment_gender_scope_stores_male_and_female_values(): void
+    {
+        $class = $this->createClass('Gender Scope Class');
+        $section = $this->createSection('B');
+        $subjectMale = $this->createSubject('Male Scope Subject');
+        $subjectFemale = $this->createSubject('Female Scope Subject');
+
+        $request = Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'scope-gender-teacher',
+            'userMail' => 'scope-gender-teacher@example.test',
+            'className' => [$class->id, $class->id],
+            'section' => [$section->id, $section->id],
+            'optionalGroup' => ['', ''],
+            'genderScope' => ['male', 'female'],
+            'subject' => [$subjectMale->id, $subjectFemale->id],
+        ]));
+
+        app(CultivationController::class)->saveUser($request);
+
+        $teacherId = CultivationAdmin::where('adminUser', 'scope-gender-teacher')->value('id');
+        $this->assertNotNull($teacherId);
+
+        $this->assertDatabaseHas('teacher_class_subjects', [
+            'teacher_id' => $teacherId,
+            'subject_id' => $subjectMale->id,
+            'gender_scope' => 'male',
+        ]);
+        $this->assertDatabaseHas('teacher_class_subjects', [
+            'teacher_id' => $teacherId,
+            'subject_id' => $subjectFemale->id,
+            'gender_scope' => 'female',
+        ]);
+    }
+
+    public function test_gender_scope_label_accessor_defaults_unknown_values_to_all(): void
+    {
+        $row = new TeacherClassSubject();
+        $row->gender_scope = null;
+        $this->assertSame('All', $row->gender_scope_label);
+
+        $row->gender_scope = 'male';
+        $this->assertSame('Male', $row->gender_scope_label);
+
+        $row->gender_scope = 'female';
+        $this->assertSame('Female', $row->gender_scope_label);
     }
 
     private function teacherPayload(array $overrides = []): array
@@ -414,6 +491,7 @@ class AdminManagementTest extends TestCase
             'className' => [],
             'section' => [],
             'optionalGroup' => [],
+            'genderScope' => [],
             'subject' => [],
         ], $overrides);
     }

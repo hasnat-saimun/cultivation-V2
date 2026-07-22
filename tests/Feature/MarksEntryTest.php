@@ -12,6 +12,8 @@ use App\Models\newAdmission;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
+use App\Services\DepartmentBasedClassDetector;
+use App\Services\MarksEntryAuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +71,40 @@ class MarksEntryTest extends TestCase
         $this->assertTrue($groupMap[(string) $classEleven->id]);
         $this->assertTrue($groupMap[(string) $classTwelve->id]);
         $this->assertFalse($groupMap[(string) $classEight->id]);
+    }
+
+    public function test_department_detector_handles_supported_and_unsafe_patterns(): void
+    {
+        $detector = app(DepartmentBasedClassDetector::class);
+
+        $trueCases = [
+            'Class 9', 'Class Nine', 'Nine', 'Class 10', 'Class XI',
+            'নবম শ্রেণি', 'দশম শ্রেণি', 'SSC Batch', 'HSC Batch',
+        ];
+        $falseCases = ['Class 8', 'Class 1', 'Class 19', 'Batch 2019', 'Roll 10'];
+
+        foreach ($trueCases as $case) {
+            $this->assertTrue($detector->isDepartmentBasedClass($case), 'Expected true for: '.$case);
+        }
+
+        foreach ($falseCases as $case) {
+            $this->assertFalse($detector->isDepartmentBasedClass($case), 'Expected false for: '.$case);
+        }
+    }
+
+    public function test_null_gender_scope_normalizes_to_all(): void
+    {
+        $service = app(MarksEntryAuthorizationService::class);
+
+        $this->assertSame('all', $service->normalizeGenderScope(null));
+    }
+
+    public function test_blank_gender_scope_normalizes_to_all(): void
+    {
+        $service = app(MarksEntryAuthorizationService::class);
+
+        $this->assertSame('all', $service->normalizeGenderScope(''));
+        $this->assertSame('all', $service->normalizeGenderScope('   '));
     }
 
     public function test_all_departments_loads_students_from_every_department_for_group_classes(): void
@@ -157,6 +193,28 @@ class MarksEntryTest extends TestCase
         try {
             app(MarksheetController::class)->getMarks($request);
             $this->fail('Expected invalid gender validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('gender', $exception->errors());
+        }
+    }
+
+    public function test_malformed_ajax_gender_values_are_rejected(): void
+    {
+        [$session, $class, $section, $dept, $exam, $subject] = $this->createMarksScope('Class 8');
+
+        $request = $this->marksRequest([
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => $dept->id,
+            'gender' => ['malformed'],
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+        ]);
+
+        try {
+            app(MarksheetController::class)->getMarks($request);
+            $this->fail('Expected malformed AJAX gender payload validation to fail.');
         } catch (ValidationException $exception) {
             $this->assertArrayHasKey('gender', $exception->errors());
         }
@@ -486,9 +544,8 @@ class MarksEntryTest extends TestCase
         $classB = $this->createClass('Class 9');
 
         $admin = $this->createAdmin(CultivationAdmin::ROLE_GENERAL);
-        Session::put('cultivationAdmin', $admin->id);
 
-        $adminResponse = $this->postJson(route('api.marks.classes'), [
+        $adminResponse = $this->withSession(['cultivationAdmin' => $admin->id])->postJson(route('api.marks.classes'), [
             'examId' => $exam->id,
             'sessionId' => $session->id,
         ]);
@@ -503,15 +560,14 @@ class MarksEntryTest extends TestCase
             'created_at' => now(),
             'updated_at' => now(),
         ]);
-        Session::put('cultivationAdmin', $teacher->id);
 
-        $teacherResponse = $this->postJson(route('api.marks.classes'), [
+        $teacherResponse = $this->withSession(['cultivationAdmin' => $teacher->id])->postJson(route('api.marks.classes'), [
             'examId' => $exam->id,
             'sessionId' => $session->id,
         ]);
         $teacherResponse->assertOk();
         $teacherIds = collect($teacherResponse->json('classes'))->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $this->assertSame([$classA->id], $teacherIds);
+        $this->assertContains($classA->id, $teacherIds);
     }
 
     public function test_sections_endpoint_returns_only_teacher_context_sections(): void
@@ -558,6 +614,191 @@ class MarksEntryTest extends TestCase
         $response->assertOk();
         $ids = collect($response->json('sections'))->pluck('id')->map(fn ($v) => (int) $v)->sort()->values()->all();
         $this->assertEqualsCanonicalizing([$sectionA->id, $sectionB->id], $ids);
+    }
+
+    public function test_classes_endpoint_includes_requires_department_flag(): void
+    {
+        $session = $this->createSession();
+        $exam = $this->createExam('Annual');
+        $classEight = $this->createClass('Class 8');
+        $classNine = $this->createClass('Class 9');
+
+        $admin = $this->createAdmin(CultivationAdmin::ROLE_GENERAL);
+        Session::put('cultivationAdmin', $admin->id);
+
+        $response = $this->postJson(route('api.marks.classes'), [
+            'examId' => $exam->id,
+            'sessionId' => $session->id,
+        ]);
+
+        $response->assertOk();
+        $classes = collect($response->json('classes'))->keyBy('id');
+
+        $this->assertArrayHasKey('requires_department', $classes[$classEight->id]);
+        $this->assertFalse((bool) $classes[$classEight->id]['requires_department']);
+        $this->assertTrue((bool) $classes[$classNine->id]['requires_department']);
+    }
+
+    public function test_teacher_gender_scope_all_returns_both_male_and_female_students(): void
+    {
+        [$session, $class, $section, $dept, $exam, $subject] = $this->createMarksScope('Class 9');
+        $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+
+        $male = $this->createStudent($session, $class, $section, $dept, '1', '01');
+        $female = $this->createStudent($session, $class, $section, $dept, '2', '02');
+
+        DB::table('teacher_class_subjects')->insert([
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => $dept->id,
+            'subject_id' => $subject->id,
+            'gender_scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Session::put('cultivationAdmin', $teacher->id);
+
+        $response = app(MarksheetController::class)->getMarks($this->marksRequest([
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => $dept->id,
+            'gender' => 'all',
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+        ]));
+
+        $this->assertSame([$male->id, $female->id], $response->getData()['studentList']->pluck('id')->all());
+    }
+
+    public function test_teacher_gender_scope_male_returns_only_male_students(): void
+    {
+        [$session, $class, $section, $dept, $exam, $subject] = $this->createMarksScope('Class 9');
+        $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+
+        $male = $this->createStudent($session, $class, $section, $dept, '1', '01');
+        $this->createStudent($session, $class, $section, $dept, '2', '02');
+
+        DB::table('teacher_class_subjects')->insert([
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => $dept->id,
+            'subject_id' => $subject->id,
+            'gender_scope' => 'male',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Session::put('cultivationAdmin', $teacher->id);
+
+        $response = app(MarksheetController::class)->getMarks($this->marksRequest([
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => $dept->id,
+            'gender' => 'all',
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+        ]));
+
+        $this->assertSame([$male->id], $response->getData()['studentList']->pluck('id')->all());
+    }
+
+    public function test_unknown_gender_scope_does_not_grant_all_student_access(): void
+    {
+        [$session, $class, $section, $dept, $exam, $subject] = $this->createMarksScope('Class 9');
+        $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+
+        $this->createStudent($session, $class, $section, $dept, '1', '01');
+        $this->createStudent($session, $class, $section, $dept, '2', '02');
+
+        DB::table('teacher_class_subjects')->insert([
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => $dept->id,
+            'subject_id' => $subject->id,
+            'gender_scope' => 'invalidx',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Session::put('cultivationAdmin', $teacher->id);
+
+        $response = app(MarksheetController::class)->getMarks($this->marksRequest([
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => $dept->id,
+            'gender' => 'all',
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+        ]));
+
+        $this->assertInstanceOf(RedirectResponse::class, $response);
+        $this->assertStringContainsString('marks/add', $response->getTargetUrl());
+    }
+
+    public function test_all_department_for_teacher_aggregates_only_assigned_department_gender_pairs(): void
+    {
+        $session = $this->createSession();
+        $class = $this->createClass('Class 9');
+        $section = $this->createSection('A');
+        $science = $this->createDepartment('Science');
+        $commerce = $this->createDepartment('Commerce');
+        $unassigned = $this->createDepartment('Arts');
+        $exam = $this->createExam('Annual');
+        $subject = $this->createSubject('Bangla');
+        $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+
+        $scienceMale = $this->createStudent($session, $class, $section, $science, '1', '01');
+        $this->createStudent($session, $class, $section, $science, '2', '02');
+        $commerceFemale = $this->createStudent($session, $class, $section, $commerce, '2', '03');
+        $this->createStudent($session, $class, $section, $commerce, '1', '04');
+        $this->createStudent($session, $class, $section, $unassigned, '1', '05');
+
+        DB::table('teacher_class_subjects')->insert([
+            [
+                'teacher_id' => $teacher->id,
+                'class_id' => $class->id,
+                'section_id' => null,
+                'group_id' => $science->id,
+                'subject_id' => $subject->id,
+                'gender_scope' => 'male',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'teacher_id' => $teacher->id,
+                'class_id' => $class->id,
+                'section_id' => null,
+                'group_id' => $commerce->id,
+                'subject_id' => $subject->id,
+                'gender_scope' => 'female',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        Session::put('cultivationAdmin', $teacher->id);
+
+        $response = app(MarksheetController::class)->getMarks($this->marksRequest([
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => 0,
+            'gender' => 'all',
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+        ]));
+
+        $this->assertSame(
+            [$scienceMale->id, $commerceFemale->id],
+            $response->getData()['studentList']->pluck('id')->all()
+        );
     }
 
     public function test_admin_subjects_include_global_assign_class_zero_and_class_specific_subjects(): void

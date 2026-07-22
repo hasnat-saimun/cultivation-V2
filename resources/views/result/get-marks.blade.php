@@ -135,6 +135,7 @@ Get Mark
                         <input type="hidden" name="examId" value="{{ $examIdSafe }}">
                         <input type="hidden" name="groupId" value="{{ $groupIdSafe }}">
                         <input type="hidden" name="optionalGroupId" value="{{ $optionalGroupIdSafe }}">
+                        <input type="hidden" name="gender" value="{{ $gender ?? 'all' }}">
                         <input type="hidden" name="subjectId" value="{{ $subjectIdSafe }}">
                          @foreach($studentList as $std)
                         @php

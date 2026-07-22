@@ -15,10 +15,15 @@ use Illuminate\Support\Facades\DB;
 class MarksEntryContextService
 {
     private MarksEntryAuthorizationService $marksAuth;
+    private DepartmentBasedClassDetector $departmentBasedClassDetector;
 
-    public function __construct(MarksEntryAuthorizationService $marksAuth)
+    public function __construct(
+        MarksEntryAuthorizationService $marksAuth,
+        DepartmentBasedClassDetector $departmentBasedClassDetector
+    )
     {
         $this->marksAuth = $marksAuth;
+        $this->departmentBasedClassDetector = $departmentBasedClassDetector;
     }
 
     public function classGroupRequirementMap(Collection $classes): array
@@ -33,25 +38,7 @@ class MarksEntryContextService
 
     public function classRequiresOptionalGroup(?string $className): bool
     {
-        if ($className === null || trim($className) === '') {
-            return false;
-        }
-
-        $raw = mb_strtolower(trim($className));
-        $raw = strtr($raw, [
-            '০' => '0', '১' => '1', '২' => '2', '৩' => '3', '৪' => '4',
-            '৫' => '5', '৬' => '6', '৭' => '7', '৮' => '8', '৯' => '9',
-        ]);
-
-        if (preg_match('/\b(\d{1,2})\b/u', $raw, $matches)) {
-            return (int) $matches[1] >= 9;
-        }
-
-        if (preg_match('/\b(ix|x|xi|xii)\b/i', $raw)) {
-            return true;
-        }
-
-        return preg_match('/(নবম|দশম|একাদশ|দ্বাদশ)/u', $raw) === 1;
+        return $this->departmentBasedClassDetector->isDepartmentBasedClass($className);
     }
 
     public function teacherAndAdminClassIds(?CultivationAdmin $user): array

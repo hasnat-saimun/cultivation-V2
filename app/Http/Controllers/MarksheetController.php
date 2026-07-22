@@ -16,6 +16,7 @@ use App\Models\ReligiousSubjectDefault;
 use App\Services\CultivationAdminResolver;
 use App\Services\MarksEntryAuthorizationService;
 use App\Services\MarksEntryContextService;
+use App\Services\ReligiousSubjectAssignmentResolver;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -26,16 +27,19 @@ class MarksheetController extends Controller
     private CultivationAdminResolver $adminResolver;
     private MarksEntryAuthorizationService $marksAuth;
     private MarksEntryContextService $marksContext;
+    private ReligiousSubjectAssignmentResolver $religiousSubjectResolver;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
         MarksEntryAuthorizationService $marksAuth,
-        MarksEntryContextService $marksContext
+        MarksEntryContextService $marksContext,
+        ReligiousSubjectAssignmentResolver $religiousSubjectResolver
     )
     {
         $this->adminResolver = $adminResolver;
         $this->marksAuth = $marksAuth;
         $this->marksContext = $marksContext;
+        $this->religiousSubjectResolver = $religiousSubjectResolver;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -45,7 +49,14 @@ class MarksheetController extends Controller
 
     private function validatedGenderValue(Request $request): string
     {
-        $gender = (string) ($request->input('gender', 'all'));
+        $rawGender = $request->input('gender', 'all');
+        if (is_array($rawGender) || is_object($rawGender)) {
+            throw ValidationException::withMessages([
+                'gender' => ['Invalid gender selection.'],
+            ]);
+        }
+
+        $gender = (string) $rawGender;
         if ($gender === '') {
             $gender = 'all';
         }
@@ -93,7 +104,8 @@ class MarksheetController extends Controller
         ?int $optionalGroupId,
         int $sessionId,
         int $subjectId,
-        bool $requiresOptionalGroup
+        bool $requiresOptionalGroup,
+        string $gender = 'all'
     ) {
         $isTeacher = $user && $user->isTeacher();
 
@@ -143,6 +155,10 @@ class MarksheetController extends Controller
 
             if (!in_array($subjectId, $allowedSubjectIds, true)) {
                 return redirect()->route('addMarks')->with('error', 'Unauthorized subject selection');
+            }
+
+            if (!$this->marksAuth->teacherCanSelectGender($user, $classId, $sectionId, $optionalGroupId, $subjectId, $gender)) {
+                return redirect()->route('addMarks')->with('error', 'Unauthorized gender selection');
             }
         }
 
@@ -208,6 +224,8 @@ class MarksheetController extends Controller
                 return [
                     'id' => (int) $class->id,
                     'name' => (string) $class->className,
+                    'requires_department' => $this->marksContext
+                        ->classRequiresOptionalGroup((string) $class->className),
                     'requiresOptionalGroup' => $this->marksContext
                         ->classRequiresOptionalGroup((string) $class->className),
                 ];
@@ -272,7 +290,7 @@ class MarksheetController extends Controller
         $requ->validate([
             'examId' => 'required|integer',
             'classId' => 'required|integer',
-            'subjectId' => 'required|integer',
+            'subjectId' => 'required|integer|exists:subjects,id',
             'sessionId' => 'required|integer',
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
@@ -283,12 +301,16 @@ class MarksheetController extends Controller
 
         $subjectId = (int)$requ->subjectId;
         $subject = Subject::find($subjectId);
+        if (!$subject) {
+            return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
+        }
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $groupId = $requ->groupId ?: null;
         $sessionId = (int) $requ->sessionId;
-
         $user = $this->adminResolver->current();
+        $isTeacherAdmin = $user && $user->isTeacher();
+
         $selection = $this->validatedSelectionContext(
             $user,
             (int) $requ->classId,
@@ -296,7 +318,8 @@ class MarksheetController extends Controller
             $optionalGroupId,
             $sessionId,
             $subjectId,
-            $requiresOptionalGroup
+            $requiresOptionalGroup,
+            $gender
         );
         if ($selection instanceof \Illuminate\Http\RedirectResponse) {
             return $selection;
@@ -309,9 +332,6 @@ class MarksheetController extends Controller
             ->when($optionalGroupId, function($q) use ($optionalGroupId){
                 return $q->where('departmentName', (int)$optionalGroupId);
             })
-            ->when($gender !== 'all', function($q) use ($gender){
-                return $q->where('gender', $gender);
-            })
             ->when($isOptionalSubject, function($q) use ($subjectId){
                 return $q->where(function($qq) use ($subjectId){
                     $qq->where('fourthSubjectId', $subjectId)
@@ -320,6 +340,26 @@ class MarksheetController extends Controller
                 });
             });
 
+        $this->religiousSubjectResolver->applyStudentReligiousSubjectFilter($studentBaseQuery, $subject);
+
+        if ($isTeacherAdmin) {
+            $authorized = $this->marksAuth->applyTeacherStudentAuthorizationFilters(
+                $studentBaseQuery,
+                $user,
+                (int) $requ->classId,
+                $groupId ? (int) $groupId : null,
+                $optionalGroupId,
+                $subjectId,
+                $gender
+            );
+
+            if (!$authorized) {
+                return redirect()->route('addMarks')->with('error', 'No authorized student scope found for this assignment');
+            }
+        } elseif ($gender !== 'all') {
+            $studentBaseQuery->where('gender', $gender);
+        }
+
         $studentSessionValue = (string) $sessionId;
         $sessionText = sessionManage::where('id', $sessionId)->value('session');
 
@@ -327,8 +367,6 @@ class MarksheetController extends Controller
             return redirect()->route('addMarks')->with('error','Session not found');
         }
         $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
-        $isTeacherAdmin = $user && $user->isTeacher();
-
         // Fetch students class-wise along with session and section filters
         $studentQuery = clone $studentBaseQuery;
         if($studentSessionValue){
@@ -376,16 +414,21 @@ class MarksheetController extends Controller
         $requ->validate([
             'examId' => 'required|integer',
             'classId' => 'required|integer',
-            'subjectId' => 'required|integer',
+            'subjectId' => 'required|integer|exists:subjects,id',
             'sessionId' => 'required|integer',
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
+            'gender' => 'nullable|string',
         ]);
 
         [, , $optionalGroupId] = $this->normalizeOptionalGroupSelection($requ);
+        $gender = $this->validatedGenderValue($requ);
 
         $subjectId = (int)$requ->subjectId;
         $subject = Subject::find($subjectId);
+        if (!$subject) {
+            return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
+        }
         $isOptionalSubject = $subject && strcasecmp((string)$subject->subjectType, 'Optional') === 0;
 
         $sessionId = (int) $requ->sessionId;
@@ -406,7 +449,8 @@ class MarksheetController extends Controller
             $optionalGroupId,
             $sessionId,
             (int) $requ->subjectId,
-            $requiresOptionalGroup
+            $requiresOptionalGroup,
+            $gender
         );
         if ($selection instanceof \Illuminate\Http\RedirectResponse) {
             return $selection;
@@ -443,6 +487,45 @@ class MarksheetController extends Controller
             $allowedOptionalStudentIds = array_fill_keys($allowedOptionalStudentIds, true);
         }
 
+        $authorizedStudentQuery = newAdmission::query()
+            ->where('className', (int) $requ->classId)
+            ->when($groupId, function ($q) use ($groupId) {
+                return $q->where('sectionName', (int) $groupId);
+            })
+            ->when($optionalGroupId, function ($q) use ($optionalGroupId) {
+                return $q->where('departmentName', (int) $optionalGroupId);
+            })
+            ->where(function ($q) use ($sessionId, $sessionText) {
+                $q->where('sessName', (string) $sessionId);
+                if (!empty($sessionText)) {
+                    $q->orWhere('sessName', (string) $sessionText);
+                }
+            });
+
+        $this->religiousSubjectResolver->applyStudentReligiousSubjectFilter($authorizedStudentQuery, $subject);
+
+        if ($isTeacherAdmin) {
+            $authorized = $this->marksAuth->applyTeacherStudentAuthorizationFilters(
+                $authorizedStudentQuery,
+                $user,
+                (int) $requ->classId,
+                $groupId ? (int) $groupId : null,
+                $optionalGroupId,
+                (int) $requ->subjectId,
+                $gender
+            );
+
+            if (!$authorized) {
+                return redirect()->route('addMarks')->with('error', 'Unauthorized student scope');
+            }
+        }
+
+        $authorizedStudentIds = $authorizedStudentQuery
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $authorizedStudentIds = array_fill_keys($authorizedStudentIds, true);
+
         $studentId = $requ->studentId;
         $totalData = count($studentId);
         $x = 0;
@@ -451,6 +534,12 @@ class MarksheetController extends Controller
         $actorId = $user ? (int)$user->id : null;
         $actorRole = ($user && $user->isTeacher()) ? 'teacher' : 'admin';
         while($x<$totalData){
+            if($isTeacherAdmin && ($authorizedStudentIds === null || !isset($authorizedStudentIds[(int)$requ->studentId[$x]]))){
+                $skipped++;
+                $x++;
+                continue;
+            }
+
             if($isOptionalSubject && !isset($allowedOptionalStudentIds[(int)$requ->studentId[$x]])){
                 $skipped++;
                 $x++;
