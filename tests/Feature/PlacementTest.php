@@ -25,7 +25,7 @@ class PlacementTest extends TestCase
         }
 
         // Give Bob higher total marks on tiebreak
-        Marksheet::where('studentId', '2')->update(['totalMarks' => 95]);
+        Marksheet::where('studentId', (string) $s2->id)->update(['totalMarks' => 95]);
 
         $resp = $this->post(route('placements.recalculate'), [
             'sessionId' => '2025',
@@ -37,7 +37,7 @@ class PlacementTest extends TestCase
         $this->assertDatabaseCount('exam_placements', 2);
 
         $top = Placement::orderBy('position')->first();
-        $this->assertEquals('2', $top->studentId); // Bob wins on marks tiebreak
+        $this->assertEquals((string) $s2->id, $top->studentId); // Bob wins on marks tiebreak
         $this->assertEquals(2, $top->subjectsCount);
         $this->assertEquals(4.50, (float) $top->gpa);
     }

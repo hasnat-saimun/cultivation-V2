@@ -249,6 +249,9 @@ All Marksheet
                 // Determine which subjects have at least one mark across all students
                 $visibleSubjects = $subjects ?? [];
                 try {
+                    if(!empty($usingCentralizedTabulation)){
+                        $visibleSubjects = $subjects ?? [];
+                    } else {
                     $visibleSubjects = [];
                     $allResults = array_merge($passResults ?? [], $failResults ?? [], $incompleteResults ?? []);
                     foreach(($subjects ?? []) as $sub){
@@ -263,6 +266,7 @@ All Marksheet
                             }
                         }
                         if($hasData){ $visibleSubjects[] = $sub; }
+                    }
                     }
                 } catch (\Throwable $e) {
                     // Fallback to all subjects if any unexpected structure
@@ -411,7 +415,7 @@ All Marksheet
                                     @endforeach
                                     @php
                                         $fails = (int)($res['subjectFails'] ?? 0);
-                                        if($fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
+                                        if(empty($usingCentralizedTabulation) && $fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
                                             foreach($res['subjects'] as $sr){
                                                 $l = $sr['grade'] ?? null;
                                                 $gp = $sr['gradePoint'] ?? null;
@@ -477,7 +481,7 @@ All Marksheet
                                             @endforeach
                                             @php
                                                 $fails = (int)($res['subjectFails'] ?? 0);
-                                                if($fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
+                                                if(empty($usingCentralizedTabulation) && $fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
                                                     foreach($res['subjects'] as $sr){
                                                         $l = $sr['grade'] ?? null;
                                                         $gp = $sr['gradePoint'] ?? null;
@@ -606,7 +610,7 @@ All Marksheet
                                         @endforeach
                                         @php
                                             $fails = (int)($res['subjectFails'] ?? 0);
-                                            if($fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
+                                            if(empty($usingCentralizedTabulation) && $fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
                                                 foreach($res['subjects'] as $sr){
                                                     $l = $sr['grade'] ?? null;
                                                     $gp = $sr['gradePoint'] ?? null;
@@ -691,7 +695,7 @@ All Marksheet
                                                 @endforeach
                                                 @php
                                                     $fails = (int)($res['subjectFails'] ?? 0);
-                                                    if($fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
+                                                    if(empty($usingCentralizedTabulation) && $fails === 0 && isset($res['subjects']) && is_array($res['subjects'])){
                                                         foreach($res['subjects'] as $sr){
                                                             $l = $sr['grade'] ?? null;
                                                             $gp = $sr['gradePoint'] ?? null;

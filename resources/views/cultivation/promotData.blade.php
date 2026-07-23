@@ -36,6 +36,18 @@ Get Promotional Student Data
                 @endif
                 <div class="row">
                     <div class="col-12"><h1>Manage the promotion of student from the list</h1></div>
+                    @if(config('result_engine.promotion_enabled'))
+                    <div class="col-12 form-group">
+                        <label>Controlling Exam *</label>
+                        <select class="select2" name="examId" required>
+                            <option value="">Select *</option>
+                            @foreach(($promotionExamList ?? collect()) as $exam)
+                                <option value="{{ $exam->id }}" {{ (string)old('examId') === (string)$exam->id ? 'selected' : '' }}>{{ $exam->examName }}</option>
+                            @endforeach
+                        </select>
+                        <small class="form-text text-muted">Only this published exam controls eligibility and the centralized archive.</small>
+                    </div>
+                    @endif
                     <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ isset($type) && $type==='classwise' ? 'All Sections' : $sectionName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Current Class:</b>  {{ $className }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Session:</b> {{ $session_name }}</div>
@@ -117,8 +129,20 @@ Get Promotional Student Data
                             <td>
                                 {{ $std->fullName.' '.$std->sureName }}
                                 <div class="mt-2">
-                                    @php $lastArchive = \App\Models\ResultArchive::where('student_id',$std->id)->orderBy('created_at','desc')->first(); @endphp
-                                    @if($lastArchive)
+                                    @if(config('result_engine.promotion_revert_enabled') && ($activeAudit = ($activePromotionAudits ?? collect())->get($std->id)))
+                                    <div class="small text-muted mb-1">
+                                        Exam {{ $activeAudit->exam_id }};
+                                        {{ $activeAudit->old_session }}/{{ $activeAudit->old_class }}/{{ $activeAudit->old_section ?? '-' }}
+                                        → {{ $activeAudit->new_session }}/{{ $activeAudit->new_class }}/{{ $activeAudit->new_section ?? '-' }};
+                                        cycle students {{ ($promotionCycleCounts ?? collect())->get($activeAudit->promotion_cycle_id, 1) }}
+                                    </div>
+                                    <form method="POST" action="{{ route('promotion.revert.centralized', ['promotionCycleId'=>$activeAudit->promotion_cycle_id]) }}" style="display:inline" onsubmit="return confirm('Revert this exact centralized promotion cycle for this student?');">
+                                        @csrf
+                                        <input type="hidden" name="student_id" value="{{ $std->id }}">
+                                        <input type="hidden" name="confirm_cycle" value="{{ $activeAudit->promotion_cycle_id }}">
+                                        <button type="submit" class="btn btn-sm btn-warning">Centralized Revert</button>
+                                    </form>
+                                    @elseif(!config('result_engine.promotion_revert_enabled') && ($lastArchive = \App\Models\ResultArchive::where('student_id',$std->id)->orderBy('created_at','desc')->first()))
                                     <form method="POST" action="{{ route('promotion.revert', ['stdId'=>$std->id]) }}" style="display:inline" onsubmit="return confirm('Revert this student to previous class/section?');">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-warning">Revert</button>

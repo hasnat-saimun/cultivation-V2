@@ -16,6 +16,7 @@ class ResultArchive extends Model
         'old_session',
         'old_section',
         'exam_id',
+        'promotion_cycle_id',
         'result_data',
     ];
 

@@ -156,11 +156,14 @@ Configuration
         $boardChairmanImg       = "";
         $mapEmbed               = "";
         $instituteType          = 'high_school';
+        $rankingMethod          = 'grading';
         $smsType                = 'both';
         $smsBodyPresent          = config('sms.sms_message_present');
         $smsBodyAbsent           = config('sms.sms_message_absent');
         $smsEnabled              = true;
     endif;
+    $rankingMethodRaw = strtolower(trim((string)old('ranking_method', $serverData->ranking_method ?? $rankingMethod ?? 'grading')));
+    $rankingMethod = in_array($rankingMethodRaw, ['grading', 'total_marks'], true) ? $rankingMethodRaw : 'grading';
 @endphp
 <!-- Dashboard summery Start Here -->
 <div class="row gutters-20 mb-4">
@@ -258,6 +261,28 @@ Configuration
                                     @if(!$canChangeInstituteType)
                                         <div class="form-hint">Only super admin can change institute type.</div>
                                     @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <div class="config-section-header">
+                            <span class="section-title">Result & Merit Settings</span>
+                            <span class="config-badge">Ranking</span>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 col-12">
+                                <div class="mb-3">
+                                    <label for="ranking_method" class="form-label">Merit Ranking Method</label>
+                                    <select name="ranking_method" id="ranking_method" class="form-select">
+                                        <option value="grading" {{ $rankingMethod === 'grading' ? 'selected' : '' }}>Grading Method</option>
+                                        <option value="total_marks" {{ $rankingMethod === 'total_marks' ? 'selected' : '' }}>Total Marks Method</option>
+                                    </select>
+                                    <div class="form-hint">Grading Method prioritizes GPA. Total Marks Method prioritizes obtained marks.</div>
+                                    @error('ranking_method')
+                                        <div class="text-danger mt-1">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                         </div>

@@ -6,6 +6,8 @@ use App\Models\Marksheet;
 use App\Models\Placement;
 use App\Models\newAdmission;
 use Illuminate\Http\Request;
+use App\Services\ResultCalculation\CentralizedPlacementRecalculator;
+use App\Services\ResultCalculation\PlacementRecalculationException;
 
 class PlacementController extends Controller
 {
@@ -37,7 +39,7 @@ class PlacementController extends Controller
         return view('placement.index', compact('placements', 'filters'));
     }
 
-    public function recalculate(Request $request)
+    public function recalculate(Request $request, CentralizedPlacementRecalculator $centralized)
     {
         $request->validate([
             'sessionId' => 'required',
@@ -45,6 +47,7 @@ class PlacementController extends Controller
             'examId' => 'required',
             'groupId' => 'nullable',
             'departmentId' => 'nullable',
+            'force' => 'nullable|boolean',
         ]);
 
         $sessionId = (string) $request->input('sessionId');
@@ -52,6 +55,22 @@ class PlacementController extends Controller
         $groupId = $request->input('groupId') ? (string) $request->input('groupId') : null;
         $examId = (string) $request->input('examId');
         $departmentId = $request->input('departmentId') ? (int)$request->input('departmentId') : null;
+
+        if (config('result_engine.placement_enabled', false)) {
+            try {
+                $report = $centralized->recalculate(
+                    (int) $examId, (int) $classId, (int) $sessionId, $groupId === null ? null : (int) $groupId,
+                    $departmentId, false, $request->boolean('force'), session('cultivationAdmin'),
+                );
+                return redirect()->route('placements.index', [
+                    'sessionId' => $sessionId, 'classId' => $classId, 'groupId' => $groupId,
+                    'examId' => $examId, 'departmentId' => $departmentId,
+                ])->with('success', "Centralized placements recalculated using {$report['rankingMethod']}: {$report['rowsInserted']} rows inserted.");
+            } catch (PlacementRecalculationException $exception) {
+                $first = $exception->report['blockingErrors'][0]['message'] ?? $exception->getMessage();
+                return back()->withInput()->with('error', $first);
+            }
+        }
 
         $marksQuery = Marksheet::query()
             ->where('sessionId', $sessionId)

@@ -41,6 +41,7 @@
 <body>
 @php
     $num = function($v){ return is_numeric($v) ? (float)$v : 0.0; };
+    $gradeScale = $gradeScale ?? \App\Models\GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
 @endphp
 
 @foreach($transcripts as $i => $t)
@@ -52,6 +53,8 @@
         $maxMarkedSubjects = (int)($t['maxMarkedSubjects'] ?? 0);
         $studentMarkedSubjects = (int)($t['studentMarkedSubjects'] ?? 0);
         $hideForMaxRule = !empty($t['hideForMaxRule']);
+        $usingBulkResultEngine = !empty($t['usingBulkResultEngine']) && is_array($t['result'] ?? null);
+        $bulkResult = $usingBulkResultEngine ? $t['result'] : null;
 
         if($studentDetails){
             $adminId = $studentDetails->stdId ?? ($studentDetails->id ?? null);
@@ -60,8 +63,8 @@
             $fName = $studentDetails->fatherName ?? ($studentDetails->father ?? '');
             $mName = $studentDetails->motherName ?? ($studentDetails->mother ?? '');
 
-            $sessionName = '-';
-            if(!empty($studentDetails->sessName)){
+            $sessionName = $usingBulkResultEngine ? ($t['metadata']['sessionName'] ?? '-') : '-';
+            if(!$usingBulkResultEngine && !empty($studentDetails->sessName)){
                 if(is_numeric($studentDetails->sessName)){
                     $sessModel = \App\Models\sessionManage::find((int)$studentDetails->sessName);
                     $sessionName = $sessModel ? ($sessModel->session ?? ('Session-'.$sessModel->id)) : '-';
@@ -72,9 +75,9 @@
                 }
             }
 
-            $className = '-';
+            $className = $usingBulkResultEngine ? ($t['metadata']['className'] ?? '-') : '-';
             $classIdCandidates = [];
-            if(isset($studentDetails->className) && is_numeric($studentDetails->className)) $classIdCandidates[] = (int)$studentDetails->className;
+            if(!$usingBulkResultEngine && isset($studentDetails->className) && is_numeric($studentDetails->className)) $classIdCandidates[] = (int)$studentDetails->className;
             $classModel = null;
             foreach($classIdCandidates as $cid){
                 $classModel = \App\Models\classManage::find($cid);
@@ -83,14 +86,14 @@
             }
             if($classModel){
                 $className = $classModel->className ?? ('Class-'.$classModel->id);
-            } elseif(is_string($studentDetails->className) && trim($studentDetails->className) !== '') {
+            } elseif(!$usingBulkResultEngine && is_string($studentDetails->className) && trim($studentDetails->className) !== '') {
                 $className = (string)$studentDetails->className;
             }
 
-            $sectionName = '-';
+            $sectionName = $usingBulkResultEngine ? ($t['metadata']['sectionName'] ?? '-') : '-';
             $secCandidates = [];
-            if(isset($studentDetails->sectionName) && is_numeric($studentDetails->sectionName)) $secCandidates[] = (int)$studentDetails->sectionName;
-            if(isset($studentDetails->sectionId) && is_numeric($studentDetails->sectionId)) $secCandidates[] = (int)$studentDetails->sectionId;
+            if(!$usingBulkResultEngine && isset($studentDetails->sectionName) && is_numeric($studentDetails->sectionName)) $secCandidates[] = (int)$studentDetails->sectionName;
+            if(!$usingBulkResultEngine && isset($studentDetails->sectionId) && is_numeric($studentDetails->sectionId)) $secCandidates[] = (int)$studentDetails->sectionId;
             $secModel = null;
             foreach($secCandidates as $sid){
                 $secModel = \App\Models\sectionManage::find($sid);
@@ -98,14 +101,14 @@
             }
             if($secModel){
                 $sectionName = $secModel->section ?? ('Section-'.$secModel->id);
-            } elseif(isset($studentDetails->sectionName) && is_string($studentDetails->sectionName) && trim($studentDetails->sectionName) !== '') {
+            } elseif(!$usingBulkResultEngine && isset($studentDetails->sectionName) && is_string($studentDetails->sectionName) && trim($studentDetails->sectionName) !== '') {
                 $sectionName = (string)$studentDetails->sectionName;
             }
 
-            $departmentName = '-';
+            $departmentName = $usingBulkResultEngine ? ($t['metadata']['departmentName'] ?? '-') : '-';
             $deptCandidates = [];
-            if(isset($studentDetails->departmentName) && is_numeric($studentDetails->departmentName)) $deptCandidates[] = (int)$studentDetails->departmentName;
-            if(isset($studentDetails->departmentId) && is_numeric($studentDetails->departmentId)) $deptCandidates[] = (int)$studentDetails->departmentId;
+            if(!$usingBulkResultEngine && isset($studentDetails->departmentName) && is_numeric($studentDetails->departmentName)) $deptCandidates[] = (int)$studentDetails->departmentName;
+            if(!$usingBulkResultEngine && isset($studentDetails->departmentId) && is_numeric($studentDetails->departmentId)) $deptCandidates[] = (int)$studentDetails->departmentId;
             $deptModel = null;
             foreach($deptCandidates as $did){
                 $deptModel = \App\Models\Department::find($did);
@@ -113,7 +116,7 @@
             }
             if($deptModel){
                 $departmentName = $deptModel->departmentName ?? ('Department-'.$deptModel->id);
-            } elseif(isset($studentDetails->departmentName) && is_string($studentDetails->departmentName) && trim($studentDetails->departmentName) !== '') {
+            } elseif(!$usingBulkResultEngine && isset($studentDetails->departmentName) && is_string($studentDetails->departmentName) && trim($studentDetails->departmentName) !== '') {
                 $departmentName = (string)$studentDetails->departmentName;
             }
         } else {
@@ -128,13 +131,13 @@
             $departmentName = '-';
         }
 
-        $subtotalMarks = 0;
+        $subtotalMarks = $usingBulkResultEngine ? ($bulkResult['totalMarks'] ?? 0) : 0;
         $selectedReligiousId = (int) ($studentDetails->religiousSubjectId ?? 0);
         $selectedFourthSubjectId = (int) ($studentDetails->fourthSubjectId ?? 0);
         $classIdForResolve = (int) ($studentDetails->className ?? 0);
-        $map = \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first();
+        $map = !$usingBulkResultEngine ? \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first() : null;
         $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : ($map ? (int)$map->subjectId : 0);
-        if($effectiveReligiousId === 0){
+        if(!$usingBulkResultEngine && $effectiveReligiousId === 0){
             $islamPreferred = \App\Models\Subject::where('isReligious', true)
                 ->where(function($q){
                     $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
@@ -162,9 +165,6 @@
                 <p>{{ $examName }}</p>
             </div>
 
-            @php
-                $gradeScale = \App\Models\GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
-            @endphp
             <table class="meta-wrap">
                 <tr>
                     <td class="meta-left">
@@ -214,6 +214,49 @@
                 </tr>
             </table>
 
+            @if($usingBulkResultEngine)
+            @php
+                $subtotalMarks = $bulkResult['totalMarks'];
+                $finalLetterGrade = $bulkResult['letterGrade'];
+                $finalGradePoint = $bulkResult['gpa'] === null ? 'Incomplete' : number_format((float)$bulkResult['gpa'], 2);
+                $failedSubjectsAll = $bulkResult['failedSubjects'];
+                $failedCount = count($failedSubjectsAll);
+                $principalSignSrc = null;
+                if(!empty($config?->principalSign)){
+                    $signBase = rtrim(config('app.url'), '/').'/public';
+                    $principalSignSrc = preg_match('~^https?://~i', $config->principalSign)
+                        ? $config->principalSign : $signBase.'/upload/image/cultivation/'.$config->principalSign;
+                }
+            @endphp
+
+            <div class="section-title">Main Subject</div>
+            <table>
+                <thead><tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr></thead>
+                <tbody>
+                    @forelse($bulkResult['mainRows'] as $row)
+                        <tr><td>{{ $row['name'] }}</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td><td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td></tr>
+                    @empty
+                        <tr><td colspan="7">No main subjects</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            <div class="section-title">Optional Subject</div>
+            <table>
+                <thead><tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr></thead>
+                <tbody>
+                    @forelse($bulkResult['optionalRows'] as $row)
+                        <tr><td>{{ $row['name'] }} (4th)</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td><td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td></tr>
+                    @empty
+                        <tr><td colspan="7">No selected 4th subject data found</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+
+            @if(count($bulkResult['missingSubjects']) > 0)
+                <div class="small">Incomplete: missing marks for {{ implode(', ', $bulkResult['missingSubjects']) }}.</div>
+            @endif
+            @else
             @php
                 $isFeatureWise = isset($exam) && $exam->passingSystem == 1;
                 $finalLetterGrade = '-';
@@ -561,6 +604,7 @@
                         : $signBase.'/upload/image/cultivation/'.$config->principalSign;
                 }
             @endphp
+            @endif
 
             <table style="margin-top:10px;">
                 <thead>
@@ -568,7 +612,7 @@
                         <th width="20%">Total Marks: {{ $subtotalMarks }}</th>
                         <th width="20%">Letter Grade: {{ $finalLetterGrade }}</th>
                         <th width="20%">Grade Point: {{ $finalGradePoint }}</th>
-                        <th>Remark-</th>
+                        <th>Remark-{{ $usingBulkResultEngine ? ' '.($bulkResult['status'] ?? '') : '' }}</th>
                     </tr>
                 </thead>
             </table>

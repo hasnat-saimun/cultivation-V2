@@ -111,6 +111,9 @@ class AdmissionController extends Controller
      */
     public function revertPromotion(Request $request, $stdId)
     {
+        if (config('result_engine.promotion_revert_enabled', false)) {
+            return back()->with('error', 'Legacy revert is disabled while centralized revert is enabled. Use an exact centralized promotion cycle.');
+        }
         $student = newAdmission::find($stdId);
         if (!$student) {
             return back()->with('error', 'Student not found');
@@ -145,6 +148,34 @@ class AdmissionController extends Controller
         }
 
         return back()->with('success', 'Student reverted to previous class/section/roll successfully');
+    }
+
+    public function revertCentralizedPromotion(Request $request, string $promotionCycleId)
+    {
+        $validated = $request->validate([
+            'student_id' => 'required|integer|exists:new_admissions,id',
+            'reason' => 'nullable|string|max:255',
+            'confirm_cycle' => 'required|string|in:'.$promotionCycleId,
+        ]);
+
+        try {
+            $report = app(\App\Services\ResultCalculation\CentralizedPromotionReverter::class)->process(
+                $promotionCycleId,
+                [(int)$validated['student_id']],
+                false,
+                false,
+                session('cultivationAdmin'),
+                $validated['reason'] ?? null,
+            );
+            return back()->with(
+                'success',
+                "Centralized promotion reverted. Revert cycle: {$report['revertCycleId']}."
+            );
+        } catch (\App\Services\ResultCalculation\PromotionRevertException $exception) {
+            $issues = collect($exception->report['blockingErrors'])->take(5)
+                ->map(fn ($issue) => $issue['code'].': '.$issue['message'])->implode(' | ');
+            return back()->with('error', $issues ?: 'Centralized revert was blocked. No records were modified.');
+        }
     }
     public function admitStudent(){
         $classDetails = classManage::all();
@@ -379,6 +410,9 @@ class AdmissionController extends Controller
             'selected_students' => 'required|array|min:1',
             'selected_students.*' => 'integer|distinct|exists:new_admissions,id',
             'roll_numbers' => 'nullable|array',
+            'examId' => config('result_engine.promotion_enabled', false)
+                ? 'required|integer|exists:exams,id'
+                : 'nullable|integer|exists:exams,id',
             'submit_token' => 'required|string',
         ]);
 
@@ -418,6 +452,24 @@ class AdmissionController extends Controller
         $skipped = 0;
         $failed = 0;
         $messages = [];
+
+        if (config('result_engine.promotion_enabled', false)) {
+            try {
+                $report = app(\App\Services\ResultCalculation\CentralizedPromotionProcessor::class)->process(
+                    (int)$validated['examId'], $sourceClass, $sourceSession, $targetClass, $targetSession, $targetSection,
+                    $sourceSection, null, null, $selectedIds, $rollNumbers, false,
+                    session('cultivationAdmin')
+                );
+                return redirect(route('studentPromotion'))->with(
+                    'success',
+                    "Centralized promotion completed. Cycle: {$report['promotionCycleId']}; promoted: {$report['studentsPromoted']}; archives: {$report['archivesCreated']}; audits: {$report['auditsCreated']}."
+                );
+            } catch (\App\Services\ResultCalculation\PromotionProcessingException $exception) {
+                $issues = collect($exception->report['blockingErrors'])->take(5)
+                    ->map(fn ($issue) => $issue['code'].': '.$issue['message'])->implode(' | ');
+                return back()->withInput()->with('error', $issues ?: 'Centralized promotion was blocked. No records were modified.');
+            }
+        }
 
         try {
             DB::transaction(function () use (
@@ -641,6 +693,22 @@ class AdmissionController extends Controller
         $groupId = $requ->filled('groupId') ? $requ->groupId : null;
         $submitToken = (string) Str::uuid();
         session()->put('promotion_submit_token', $submitToken);
+        $promotionExamList = config('result_engine.promotion_enabled', false)
+            ? \App\Models\Exam::orderBy('id', 'DESC')->get()
+            : collect();
+        $activePromotionAudits = collect();
+        $promotionCycleCounts = collect();
+        if (config('result_engine.promotion_revert_enabled', false) && $studentList->isNotEmpty()) {
+            $activePromotionAudits = \App\Models\PromotionAuditLog::query()
+                ->whereIn('student_id', $studentList->pluck('id'))
+                ->where('engine', 'centralized')->whereNotNull('promotion_cycle_id')
+                ->whereNull('reverted_at')->latest('id')->get()->unique('student_id')->keyBy('student_id');
+            $promotionCycleCounts = \App\Models\PromotionAuditLog::query()
+                ->whereIn('promotion_cycle_id', $activePromotionAudits->pluck('promotion_cycle_id'))
+                ->where('engine', 'centralized')->whereNull('reverted_at')
+                ->selectRaw('promotion_cycle_id, COUNT(*) as aggregate')
+                ->groupBy('promotion_cycle_id')->pluck('aggregate', 'promotion_cycle_id');
+        }
 
         return view('cultivation.promotData',[
             'studentList'=>$studentList,
@@ -649,6 +717,9 @@ class AdmissionController extends Controller
             'sessionId'=>$requ->sessionId ?? null,
             'type' => $type,
             'submitToken' => $submitToken,
+            'promotionExamList' => $promotionExamList,
+            'activePromotionAudits' => $activePromotionAudits,
+            'promotionCycleCounts' => $promotionCycleCounts,
         ]);
     }
     

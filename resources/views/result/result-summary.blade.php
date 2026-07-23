@@ -114,8 +114,9 @@ Result summary
                     $present = (int)($overallSummary['present'] ?? 0);
                     $pass = (int)($overallSummary['pass'] ?? 0);
                     $fail = (int)($overallSummary['fail'] ?? 0);
-                    $passRate = $present > 0 ? round(($pass / $present) * 100, 2) : 0;
-                    $failRate = $present > 0 ? round(($fail / $present) * 100, 2) : 0;
+                    $passRate = !empty($usingCentralizedSummary) ? (float)($overallSummary['passPercentage'] ?? 0) : ($present > 0 ? round(($pass / $present) * 100, 2) : 0);
+                    $failRate = !empty($usingCentralizedSummary) ? (float)($overallSummary['failPercentage'] ?? 0) : ($present > 0 ? round(($fail / $present) * 100, 2) : 0);
+                    $incompleteRate = !empty($usingCentralizedSummary) ? (float)($overallSummary['incompletePercentage'] ?? 0) : 0;
 
                     $subjectRowsPerPage = 22;
                     $subjectPages = array_chunk($subjectStats ?? [], $subjectRowsPerPage);
@@ -154,7 +155,7 @@ Result summary
                                             <th>Exam</th>
                                             <th>Total Student</th>
                                             <th>Present</th>
-                                            <th>Absent</th>
+                                            <th>{{ !empty($usingCentralizedSummary) ? 'Absent / Incomplete' : 'Absent' }}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -180,6 +181,7 @@ Result summary
                                             <th>Incomplete</th>
                                             <th>Pass Rate (%)</th>
                                             <th>Fail Rate (%)</th>
+                                            @if(!empty($usingCentralizedSummary))<th>Incomplete Rate (%)</th>@endif
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -189,6 +191,7 @@ Result summary
                                             <td>{{ $overallSummary['incomplete'] ?? 0 }}</td>
                                             <td>{{ number_format($passRate, 2) }}</td>
                                             <td>{{ number_format($failRate, 2) }}</td>
+                                            @if(!empty($usingCentralizedSummary))<td>{{ number_format($incompleteRate, 2) }}</td>@endif
                                         </tr>
                                     </tbody>
                                 </table>
@@ -268,12 +271,13 @@ Result summary
                                 <tr>
                                     <th>Total Student</th>
                                     <th>Present</th>
-                                    <th>Absent</th>
+                                    <th>{{ !empty($usingCentralizedSummary) ? 'Absent / Incomplete' : 'Absent' }}</th>
                                     <th>Pass</th>
                                     <th>Fail</th>
                                     <th>Incomplete</th>
                                     <th>Pass Rate (%)</th>
                                     <th>Fail Rate (%)</th>
+                                    @if(!empty($usingCentralizedSummary))<th>Incomplete Rate (%)</th>@endif
                                 </tr>
                             </thead>
                             <tbody>
@@ -286,6 +290,7 @@ Result summary
                                     <td>{{ $overallSummary['incomplete'] ?? 0 }}</td>
                                     <td>{{ number_format($passRate, 2) }}</td>
                                     <td>{{ number_format($failRate, 2) }}</td>
+                                    @if(!empty($usingCentralizedSummary))<td>{{ number_format($incompleteRate, 2) }}</td>@endif
                                 </tr>
                             </tbody>
                         </table>

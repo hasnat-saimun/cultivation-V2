@@ -158,20 +158,20 @@ Marksheet Generate
             $sectionName    = "";
             $departmentName = "";
         endif;
-        $examDetails    = \App\Models\Exam::find($examId);
+        $examDetails    = $examDetails ?? \App\Models\Exam::find($examId);
         if(isset($examDetails)):
             $examName   = $examDetails->examName;
         else:
             $examName   = "";
         endif;
         
-        $subtotalMarks = 0;
+        $subtotalMarks = !empty($usingNewResultEngine) ? ($transcriptResult['totalMarks'] ?? 0) : 0;
         $selectedReligiousId = (int) ($studentDetails->religiousSubjectId ?? 0);
         $selectedFourthSubjectId = (int) ($studentDetails->fourthSubjectId ?? 0);
         $classIdForResolve = (int) ($studentDetails->className ?? 0);
-        $map = \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first();
+        $map = empty($usingNewResultEngine) ? \App\Models\ReligiousSubjectDefault::where('classId', $classIdForResolve)->first() : null;
         $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : ($map ? (int)$map->subjectId : 0);
-        if($effectiveReligiousId === 0){
+        if(empty($usingNewResultEngine) && $effectiveReligiousId === 0){
             $islamPreferred = \App\Models\Subject::where('isReligious', true)
                 ->where(function($q){
                     $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
@@ -186,7 +186,7 @@ Marksheet Generate
                 ->orderBy('id')->first();
             if($fallback){ $effectiveReligiousId = (int)$fallback->id; }
         }
-        if($studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()) {
+        if(empty($usingNewResultEngine) && $studentDetails && $studentDetails->marksheet && $studentDetails->marksheet->count()) {
             foreach($studentDetails->marksheet as $ckMark) {
                 $subjectDetails = \App\Models\Subject::find($ckMark->subjectId);
                 // Skip other religious subjects; include only effective one (student-selected or class default)
@@ -306,6 +306,53 @@ Marksheet Generate
         Transcript is shown with available marks.
     </div>
 @endif
+@if(!empty($usingNewResultEngine) && is_array($transcriptResult))
+@php
+    $subtotalMarks = $transcriptResult['totalMarks'];
+    $finalLetterGrade = $transcriptResult['letterGrade'];
+    $finalGradePoint = $transcriptResult['gpa'] === null ? 'Incomplete' : number_format((float)$transcriptResult['gpa'], 2);
+    $failedSubjectsAll = $transcriptResult['failedSubjects'];
+    $failedCount = count($failedSubjectsAll);
+@endphp
+
+<h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
+<table class="table table-bordered col-12 text-center">
+    <thead>
+        <th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th>
+    </thead>
+    <tbody>
+        @forelse($transcriptResult['mainRows'] as $row)
+            <tr>
+                <td>{{ $row['name'] }}</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td>
+                <td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="7">No main subjects</td></tr>
+        @endforelse
+    </tbody>
+</table>
+
+<h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
+<table class="table table-bordered col-12 text-center">
+    <thead>
+        <th>Subject Name</th><th>Theory</th><th>M.C.Q</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th>
+    </thead>
+    <tbody>
+        @forelse($transcriptResult['optionalRows'] as $row)
+            <tr>
+                <td>{{ $row['name'] }}</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td>
+                <td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="7">No selected 4th subject data found</td></tr>
+        @endforelse
+    </tbody>
+</table>
+
+@if(count($transcriptResult['missingSubjects']) > 0)
+<div class="alert alert-warning col-12">Incomplete: missing marks for {{ implode(', ', $transcriptResult['missingSubjects']) }}.</div>
+@endif
+@else
 @php
     $isFeatureWise = isset($examDetails) && $examDetails->passingSystem == 1;
     $finalLetterGrade = '-';
@@ -729,13 +776,14 @@ Marksheet Generate
         $finalGradePoint = '-';
     }
 @endphp
+@endif
 
 <table class="col-12 mb-4  table table-bordered">
     <thead>
         <th width="20%">Total Marks: {{ $subtotalMarks }}</th>
         <th width="20%">Letter Grade: {{ $finalLetterGrade }}</th>
         <th width="20%">Grade Point: {{ $finalGradePoint }}</th>
-        <th>Remark- </th>
+        <th>Remark- {{ !empty($usingNewResultEngine) ? ($transcriptResult['status'] ?? '') : '' }}</th>
     </thead>
 </table>
 
