@@ -7,6 +7,7 @@ use App\Http\Middleware\Roles;
 use App\Http\Middleware\VerifyCsrfToken;
 use App\Models\classManage;
 use App\Models\CultivationAdmin;
+use App\Models\sessionManage;
 use App\Models\sectionManage;
 use App\Models\Subject;
 use App\Models\TeacherClassSubject;
@@ -31,7 +32,7 @@ class AdminManagementTest extends TestCase
         $this->withoutMiddleware(VerifyCsrfToken::class);
     }
 
-    public function test_create_form_excludes_subjects_assigned_to_other_admins_and_keeps_unassigned_visible(): void
+    public function test_create_form_shows_subjects_even_if_assigned_to_other_admins(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
         $teacherOne = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
@@ -51,7 +52,7 @@ class AdminManagementTest extends TestCase
         $this->assertInstanceOf(View::class, $response);
         $subjectIds = collect($response->getData()['subjectList'])->pluck('id')->all();
 
-        $this->assertNotContains($assignedSubject->id, $subjectIds);
+        $this->assertContains($assignedSubject->id, $subjectIds);
         $this->assertContains($freeSubject->id, $subjectIds);
     }
 
@@ -80,7 +81,7 @@ class AdminManagementTest extends TestCase
         $this->assertContains($freeClass->id, $classIds);
     }
 
-    public function test_edit_form_keeps_current_admin_subjects_and_attendance_class_visible_but_excludes_other_admin_assignments(): void
+    public function test_edit_form_keeps_subjects_visible_across_teachers(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
         $targetTeacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
@@ -118,12 +119,12 @@ class AdminManagementTest extends TestCase
         $classIds = collect($response->getData()['attendanceClassList'])->pluck('id')->all();
 
         $this->assertContains($ownSubject->id, $subjectIds);
-        $this->assertNotContains($otherSubject->id, $subjectIds);
+        $this->assertContains($otherSubject->id, $subjectIds);
         $this->assertContains($ownClass->id, $classIds);
         $this->assertNotContains($otherClass->id, $classIds);
     }
 
-    public function test_manipulated_request_cannot_assign_subject_taken_by_another_admin(): void
+    public function test_subject_assignment_not_globally_blocked_by_legacy_teacher_subjects_table(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
         $teacherOne = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
@@ -137,8 +138,6 @@ class AdminManagementTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $countBefore = CultivationAdmin::count();
-
         $request = Request::create('/save/admin', 'POST', $this->teacherPayload([
                 'userName' => 'new-teacher',
                 'userMail' => 'new-teacher@example.test',
@@ -147,15 +146,9 @@ class AdminManagementTest extends TestCase
                 'subject' => [$subject->id],
             ]));
 
-        try {
-            app(CultivationController::class)->saveUser($request);
-            $this->fail('Expected duplicate subject validation to fail.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('subject', $exception->errors());
-        }
+        app(CultivationController::class)->saveUser($request);
 
-        $this->assertSame($countBefore, CultivationAdmin::count());
-        $this->assertDatabaseMissing('cultivation_admins', ['adminUser' => 'new-teacher']);
+        $this->assertDatabaseHas('cultivation_admins', ['adminUser' => 'new-teacher']);
     }
 
     public function test_manipulated_request_cannot_assign_attendance_class_taken_by_another_admin(): void
@@ -192,7 +185,7 @@ class AdminManagementTest extends TestCase
         $this->assertDatabaseMissing('cultivation_admins', ['adminUser' => 'new-attendance-teacher']);
     }
 
-    public function test_failed_assignment_rolls_back_admin_creation(): void
+    public function test_assignment_with_legacy_teacher_subject_link_still_allows_teacher_creation(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
         $teacherOne = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
@@ -206,8 +199,6 @@ class AdminManagementTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        $subjectsBefore = DB::table('teacher_subjects')->count();
-
         $request = Request::create('/save/admin', 'POST', $this->teacherPayload([
                 'userName' => 'rollback-teacher',
                 'userMail' => 'rollback@example.test',
@@ -216,15 +207,9 @@ class AdminManagementTest extends TestCase
                 'subject' => [$subject->id],
             ]));
 
-        try {
-            app(CultivationController::class)->saveUser($request);
-            $this->fail('Expected duplicate subject validation to roll back.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('subject', $exception->errors());
-        }
+        app(CultivationController::class)->saveUser($request);
 
-        $this->assertDatabaseMissing('cultivation_admins', ['adminUser' => 'rollback-teacher']);
-        $this->assertSame($subjectsBefore, DB::table('teacher_subjects')->count());
+        $this->assertDatabaseHas('cultivation_admins', ['adminUser' => 'rollback-teacher']);
     }
 
     public function test_admin_list_loads_with_datatable_config_and_actions(): void
@@ -486,6 +471,7 @@ class AdminManagementTest extends TestCase
             'userType' => CultivationAdmin::ROLE_TEACHER,
             'pass' => 'secret123',
             'confirmPass' => 'secret123',
+            'assignmentSessionId' => $this->ensureSession()->id,
             'primaryClass' => '',
             'primarySection' => '',
             'className' => [],
@@ -494,6 +480,20 @@ class AdminManagementTest extends TestCase
             'genderScope' => [],
             'subject' => [],
         ], $overrides);
+    }
+
+    private function ensureSession(): sessionManage
+    {
+        $session = sessionManage::query()->first();
+        if ($session) {
+            return $session;
+        }
+
+        $session = new sessionManage();
+        $session->session = '2026';
+        $session->save();
+
+        return $session;
     }
 
     private function createAdmin(array $attributes = []): CultivationAdmin

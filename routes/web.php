@@ -621,6 +621,8 @@ Route::middleware(['adminGuard'])->group (function(){
 
     // Promotion revert (restore previous class/section/roll from archive)
     Route::post('/promotion/revert/{stdId}', [AdmissionController::class, 'revertPromotion'])->name('promotion.revert');
+    Route::post('/promotion/revert-centralized/{promotionCycleId}', [AdmissionController::class, 'revertCentralizedPromotion'])
+        ->name('promotion.revert.centralized');
 
     Route::get('/notice/preview/{id}',[
         NoticeController::class ,
@@ -2218,6 +2220,11 @@ Route::middleware(['adminGuard'])->group (function(){
         'teacherSubjects'
     ])->name('api.teacher.subjects');
 
+    Route::post('/api/teacher/assignment-availability', [
+        CultivationController::class,
+        'assignmentAvailability'
+    ])->name('api.teacher.assignment-availability');
+
 // Debug routes removed
         
 
@@ -2243,7 +2250,6 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('api.governing-body.list');
 
     //web font end
-
 
 
 

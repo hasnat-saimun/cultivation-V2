@@ -52,6 +52,7 @@ Class Routine Management
     $dayOptions = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
 
     $teacherAssignmentScope = $teacherAssignmentScope ?? [
+        'session_id' => null,
         'class_id' => null,
         'section_id' => null,
         'group_id' => null,
@@ -62,6 +63,7 @@ Class Routine Management
         'assignments' => collect(),
     ];
 
+    $taAssignSession = old('ta_assignSession', $teacherAssignmentScope['session_id'] ?? $assignSession);
     $taAssignClass = old('ta_assignClass', $teacherAssignmentScope['class_id'] ?? $assignClass);
     $taAssignSection = old('ta_assignSection', $teacherAssignmentScope['section_id'] ?? $assignSection);
     $taAssignDepartment = old('ta_assignDepartment', $teacherAssignmentScope['group_id'] ?? $assignDepartment);
@@ -305,6 +307,16 @@ Class Routine Management
                         <form action="{{ route('saveResultClassRoutineTeacherAssignments') }}" method="POST" id="teacher-assignment-form">
                             @csrf
                             <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label class="field-label">Session *</label>
+                                    <select name="ta_assignSession" id="ta-assign-session" class="form-select" required>
+                                        <option value="">Select Session</option>
+                                        @php $taSessions = \App\Models\sessionManage::orderBy('id','DESC')->get(); @endphp
+                                        @foreach($taSessions as $sess)
+                                            <option value="{{ $sess->id }}" {{ (string)$taAssignSession === (string)$sess->id ? 'selected' : '' }}>{{ $sess->session }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                                 <div class="col-md-4 mb-3">
                                     <label class="field-label">Class *</label>
                                     <select name="ta_assignClass" id="ta-assign-class" class="form-select" required>
@@ -783,13 +795,20 @@ Class Routine Management
     }
 
     function reloadTeacherAssignmentScope() {
+        var sessionSel = document.getElementById('ta-assign-session');
         var classSel = document.getElementById('ta-assign-class');
         var sectionSel = document.getElementById('ta-assign-section');
         var groupSel = document.getElementById('ta-assign-department');
 
+        var sessionId = sessionSel ? String(sessionSel.value || '').trim() : '';
         var classId = classSel ? String(classSel.value || '').trim() : '';
         var sectionId = sectionSel ? String(sectionSel.value || '').trim() : '';
         var groupId = groupSel ? String(groupSel.value || '').trim() : '';
+
+        if (!sessionId) {
+            showValidationWarning('Please select session before loading assignment scope.');
+            return;
+        }
 
         if (!classId) {
             showValidationWarning('Please select class before loading assignment scope.');
@@ -798,6 +817,7 @@ Class Routine Management
 
         var baseUrl = '{{ route('resultClassRoutineManage') }}';
         var params = new URLSearchParams();
+        params.set('ta_session', sessionId);
         params.set('ta_class', classId);
         if (sectionId) {
             params.set('ta_section', sectionId);

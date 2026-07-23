@@ -18,6 +18,12 @@ use App\Services\FourthSubjectAssignmentResolver;
 use App\Services\MarksEntryAuthorizationService;
 use App\Services\MarksEntryContextService;
 use App\Services\ReligiousSubjectAssignmentResolver;
+use App\Services\ResultCalculation\BoardResultCalculator;
+use App\Services\ResultCalculation\TranscriptResultPresenter;
+use App\Services\ResultCalculation\ResultCalculationInputBuilder;
+use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
+use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
+use App\Services\ResultCalculation\TabulationResultPresenter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -30,13 +36,25 @@ class MarksheetController extends Controller
     private MarksEntryAuthorizationService $marksAuth;
     private MarksEntryContextService $marksContext;
     private ReligiousSubjectAssignmentResolver $religiousSubjectResolver;
+    private BoardResultCalculator $boardResultCalculator;
+    private TranscriptResultPresenter $transcriptResultPresenter;
+    private ResultCalculationInputBuilder $resultCalculationInputBuilder;
+    private BulkTranscriptResultBuilder $bulkTranscriptResultBuilder;
+    private ResultCalculationBatchBuilder $resultCalculationBatchBuilder;
+    private TabulationResultPresenter $tabulationResultPresenter;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
         FourthSubjectAssignmentResolver $fourthSubjectResolver,
         MarksEntryAuthorizationService $marksAuth,
         MarksEntryContextService $marksContext,
-        ReligiousSubjectAssignmentResolver $religiousSubjectResolver
+        ReligiousSubjectAssignmentResolver $religiousSubjectResolver,
+        BoardResultCalculator $boardResultCalculator,
+        TranscriptResultPresenter $transcriptResultPresenter,
+        ResultCalculationInputBuilder $resultCalculationInputBuilder,
+        BulkTranscriptResultBuilder $bulkTranscriptResultBuilder,
+        ResultCalculationBatchBuilder $resultCalculationBatchBuilder,
+        TabulationResultPresenter $tabulationResultPresenter
     )
     {
         $this->adminResolver = $adminResolver;
@@ -44,6 +62,12 @@ class MarksheetController extends Controller
         $this->marksAuth = $marksAuth;
         $this->marksContext = $marksContext;
         $this->religiousSubjectResolver = $religiousSubjectResolver;
+        $this->boardResultCalculator = $boardResultCalculator;
+        $this->transcriptResultPresenter = $transcriptResultPresenter;
+        $this->resultCalculationInputBuilder = $resultCalculationInputBuilder;
+        $this->bulkTranscriptResultBuilder = $bulkTranscriptResultBuilder;
+        $this->resultCalculationBatchBuilder = $resultCalculationBatchBuilder;
+        $this->tabulationResultPresenter = $tabulationResultPresenter;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -161,7 +185,7 @@ class MarksheetController extends Controller
                 return redirect()->route('addMarks')->with('error', 'Unauthorized subject selection');
             }
 
-            if (!$this->marksAuth->teacherCanSelectGender($user, $classId, $sectionId, $optionalGroupId, $subjectId, $gender)) {
+            if (!$this->marksAuth->teacherCanSelectGender($user, $classId, $sectionId, $optionalGroupId, $subjectId, $gender, $sessionId)) {
                 return redirect()->route('addMarks')->with('error', 'Unauthorized gender selection');
             }
         }
@@ -353,7 +377,8 @@ class MarksheetController extends Controller
                 $groupId ? (int) $groupId : null,
                 $optionalGroupId,
                 $subjectId,
-                $gender
+                $gender,
+                $sessionId
             );
 
             if (!$authorized) {
@@ -495,7 +520,8 @@ class MarksheetController extends Controller
                 $groupId ? (int) $groupId : null,
                 $optionalGroupId,
                 (int) $requ->subjectId,
-                $gender
+                $gender,
+                $sessionId
             );
 
             if (!$authorized) {
@@ -770,6 +796,20 @@ class MarksheetController extends Controller
         $sessionId = $request->get('sessionId');
         $sectionId = $request->get('sectionId'); // group/section
         $departmentId = $request->get('departmentId');
+
+        if (config('result_engine.tabulation_enabled') && !$request->attributes->get('_force_legacy_result_engine')
+            && $examId && $classId && $sessionId) {
+            try {
+                return $this->centralizedTabulation($request, (int) $examId, (int) $classId, (int) $sessionId,
+                    $sectionId ? (int) $sectionId : null, $departmentId ? (int) $departmentId : null);
+            } catch (\Throwable $exception) {
+                Log::error('Result engine tabulation failed; using complete legacy response.', [
+                    'exam_id' => (int) $examId, 'class_id' => (int) $classId, 'session_id' => (int) $sessionId,
+                    'section_id' => $sectionId ? (int) $sectionId : null,
+                    'exception' => get_class($exception),
+                ]);
+            }
+        }
 
         $exam      = $examId ? Exam::find($examId) : null;
         $isFeatureWise = $exam && $exam->passingSystem == 1; // same logic as single marksheet
@@ -1154,8 +1194,66 @@ class MarksheetController extends Controller
         ]);
     }
 
+    private function centralizedTabulation(Request $request, int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId)
+    {
+        $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
+        $presented = $this->tabulationResultPresenter->present($batch['entries']);
+        $passResults = []; $failResults = []; $incompleteResults = [];
+        foreach ($presented['rows'] as $row) {
+            if ($row['status'] === 'Incomplete') $incompleteResults[] = $row;
+            elseif ($row['status'] === 'Fail') $failResults[] = $row;
+            else $passResults[] = $row;
+        }
+        $compact = fn (array $rows) => array_map(function ($row) {
+            $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));
+            return $row;
+        }, $rows);
+        $compactMode = (bool) $request->get('compact');
+        $viewName = $request->routeIs('atGlanceResult') ? 'result.atGlanceResult' : 'result.allMarksheet';
+        return view($viewName, [
+            'subjects' => $presented['subjects'], 'passResults' => $passResults, 'failResults' => $failResults,
+            'incompleteResults' => $incompleteResults, 'passResultsCompact' => $compact($passResults),
+            'failResultsCompact' => $compact($failResults), 'incompleteResultsCompact' => $compact($incompleteResults),
+            'compactMode' => $compactMode, 'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId,
+            'sectionId' => $sectionId, 'departmentId' => $departmentId, 'studentsLoaded' => true,
+            'exam' => $batch['exam'], 'usingCentralizedTabulation' => true,
+        ]);
+    }
+
+    private function centralizedSummary(Request $request)
+    {
+        $examId = (int) $request->get('examId'); $classId = (int) $request->get('classId');
+        $sessionId = (int) $request->get('sessionId');
+        $sectionId = $request->get('sectionId') ? (int) $request->get('sectionId') : null;
+        $departmentId = $request->get('departmentId') ? (int) $request->get('departmentId') : null;
+        $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
+        $presented = $this->tabulationResultPresenter->present($batch['entries']);
+        $summary = $this->tabulationResultPresenter->summarize($presented['rows'], $presented['subjects']);
+        return view('result.result-summary', [
+            'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId, 'sectionId' => $sectionId,
+            'departmentId' => $departmentId, 'studentsLoaded' => true,
+            'overallSummary' => $summary['overallSummary'], 'subjectStats' => $summary['subjectStats'],
+            'failureBuckets' => $summary['failureBuckets'], 'gpaDistribution' => $summary['gpaDistribution'],
+            'gradeDistribution' => $summary['gradeDistribution'], 'hasData' => count($presented['rows']) > 0,
+            'usingCentralizedSummary' => true,
+        ]);
+    }
+
     public function resultSummary(Request $request)
     {
+        if (config('result_engine.summary_enabled') && $request->get('examId') && $request->get('classId') && $request->get('sessionId')) {
+            try {
+                return $this->centralizedSummary($request);
+            } catch (\Throwable $exception) {
+                Log::error('Result engine summary failed; using complete legacy response.', [
+                    'exam_id' => (int) $request->get('examId'), 'class_id' => (int) $request->get('classId'),
+                    'session_id' => (int) $request->get('sessionId'),
+                    'section_id' => $request->get('sectionId') ? (int) $request->get('sectionId') : null,
+                    'exception' => get_class($exception),
+                ]);
+            }
+        }
+        $request->attributes->set('_force_legacy_result_engine', true);
         $baseView = $this->allMarksheet($request);
         $data = method_exists($baseView, 'getData') ? $baseView->getData() : [];
 
@@ -1316,6 +1414,26 @@ class MarksheetController extends Controller
             }])
             ->first();
 
+        $usingNewResultEngine = false;
+        $transcriptResult = null;
+        if (config('result_engine.transcript_enabled') && $student && $examId > 0) {
+            try {
+                $exam = Exam::findOrFail($examId);
+                $subjects = $this->resultCalculationInputBuilder->subjectsForStudent($student);
+                $calculated = $this->boardResultCalculator->calculate($student, $exam, $student->marksheet, $subjects);
+                $transcriptResult = $this->transcriptResultPresenter->present($calculated, $subjects, $student->marksheet);
+                $usingNewResultEngine = true;
+            } catch (\Throwable $exception) {
+                Log::error('Result engine transcript calculation failed; using legacy transcript.', [
+                    'student_id' => (int) $student->id,
+                    'exam_id' => $examId,
+                    'class_id' => (int) ($student->className ?? 0),
+                    'session_id' => (int) ($student->sessName ?? 0),
+                    'exception' => get_class($exception),
+                ]);
+            }
+        }
+
         // Apply classwise max-subject rule to individual page
         $maxMarkedSubjects = 0; $studentMarkedSubjects = 0; $hideForMaxRule = false;
         if ($student && $examId) {
@@ -1421,9 +1539,10 @@ class MarksheetController extends Controller
             'studentMarkedSubjects' => $studentMarkedSubjects,
             'hideForMaxRule' => $hideForMaxRule,
             'meritRank' => $meritRank,
+            'usingNewResultEngine' => $usingNewResultEngine,
+            'transcriptResult' => $transcriptResult,
         ]);
     }
-
 
     //front web site str
     public function internalResult(){
@@ -1515,16 +1634,17 @@ class MarksheetController extends Controller
             $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
         }]);
 
-        $transcripts = [];
-        foreach ($students as $student) {
-            $transcripts[] = [
+        $transcripts = config('result_engine.bulk_transcript_enabled')
+            ? $this->bulkTranscriptResultBuilder->build($students, $exam)
+            : $students->map(fn ($student) => [
                 'studentDetails' => $student,
                 'meritRank' => null,
                 'maxMarkedSubjects' => 0,
                 'studentMarkedSubjects' => 0,
                 'hideForMaxRule' => false,
-            ];
-        }
+                'usingBulkResultEngine' => false,
+                'result' => null,
+            ])->all();
 
         try {
             @set_time_limit(180);

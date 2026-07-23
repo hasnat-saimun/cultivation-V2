@@ -109,6 +109,15 @@ Register Form
                                         <h6 class="mb-2">Assign (Marks Entry)</h6>
                                         <p class="small text-muted mb-2">Assign classes, sections and subjects a teacher may enter marks for.</p>
                                         <div class="mb-2">
+                                            <select id="assign_session_select" class="form-select">
+                                                <option value="">Select session</option>
+                                                @foreach(\App\Models\sessionManage::orderBy('id', 'desc')->get(['id', 'session']) as $sess)
+                                                    <option value="{{ $sess->id }}" {{ (string) $initialAssignmentSessionId === (string) $sess->id ? 'selected' : '' }}>{{ $sess->session }}</option>
+                                                @endforeach
+                                            </select>
+                                            <input type="hidden" name="assignmentSessionId" id="assignment_session_hidden" value="{{ $initialAssignmentSessionId }}">
+                                        </div>
+                                        <div class="mb-2">
                                             <select id="assign_class_select" class="form-select">
                                                 <option value="">Select class</option>
                                                 @foreach($classList as $cls)
@@ -140,21 +149,12 @@ Register Form
                                         </div>
                                         <div class="mb-2">
                                             <select id="assign_gender_scope_select" class="form-select mt-2 d-none">
-                                                <option value="all" selected>Gender: All</option>
-                                                <option value="male">Gender: Male</option>
-                                                <option value="female">Gender: Female</option>
+                                                <option value="">Select available gender</option>
                                             </select>
                                         </div>
                                         <div class="mb-2">
                                             <select id="assign_subject_select" class="form-select mt-2 d-none">
-                                                @if($subjectList->isEmpty())
-                                                    <option value="">No unassigned subjects available</option>
-                                                @else
-                                                    <option value="">Select subject</option>
-                                                    @foreach($subjectList as $sub)
-                                                        <option value="{{ $sub->id }}" data-assign-class="{{ $sub->assign_class ?? '' }}">{{ $sub->subjectName }} ({{ $sub->subjectType }})</option>
-                                                    @endforeach
-                                                @endif
+                                                <option value="">Select subject</option>
                                             </select>
                                         </div>
                                         @error('subject')
@@ -326,12 +326,21 @@ Register Form
     // Assignment panel logic
     document.addEventListener('DOMContentLoaded', function(){
         const classSelect = document.getElementById('assign_class_select');
+        const sessionSelect = document.getElementById('assign_session_select');
+        const hiddenAssignmentSession = document.getElementById('assignment_session_hidden');
         const sectionSelect = document.getElementById('assign_section_select');
         const groupSelect = document.getElementById('assign_group_select');
         const genderScopeSelect = document.getElementById('assign_gender_scope_select');
         const subjectSelect = document.getElementById('assign_subject_select');
         const assignBtn = document.getElementById('assign_btn');
         const assignTableBody = document.querySelector('#assign_table tbody');
+        const assignmentAvailabilityEndpoint = @json(route('api.teacher.assignment-availability'));
+        const csrfToken = @json(csrf_token());
+        const subjectGenderMap = {};
+
+        if (hiddenAssignmentSession && sessionSelect) {
+            hiddenAssignmentSession.value = sessionSelect.value || hiddenAssignmentSession.value || '';
+        }
         const primaryClassSelect = document.querySelector('select[name="primaryClass"]');
         const primarySectionSelect = document.querySelector('select[name="primarySection"]');
         const attendanceTakenMap = @json($attendanceTakenMap ?? []);
@@ -345,50 +354,155 @@ Register Form
         function show(el){ el.classList.remove('d-none'); }
         function hide(el){ el.classList.add('d-none'); }
 
+        function clearSubjectAndGenderState(subjectPlaceholder = 'Select subject', genderPlaceholder = 'Select available gender') {
+            subjectSelect.innerHTML = `<option value="">${subjectPlaceholder}</option>`;
+            genderScopeSelect.innerHTML = `<option value="">${genderPlaceholder}</option>`;
+            subjectSelect.value = '';
+            genderScopeSelect.value = '';
+            hide(subjectSelect);
+            hide(genderScopeSelect);
+            hide(assignBtn);
+            Object.keys(subjectGenderMap).forEach(function (key) {
+                delete subjectGenderMap[key];
+            });
+        }
+
+        function resetAfterContextChange() {
+            sectionSelect.value = '';
+            groupSelect.value = '';
+            clearSubjectAndGenderState();
+            hide(groupSelect);
+        }
+
+        function updateGenderOptionsForSubject() {
+            const subjectId = subjectSelect.value;
+            genderScopeSelect.innerHTML = '<option value="">Select available gender</option>';
+
+            if (!subjectId || !subjectGenderMap[subjectId] || !subjectGenderMap[subjectId].length) {
+                hide(genderScopeSelect);
+                hide(assignBtn);
+                return;
+            }
+
+            const labels = { all: 'Gender: All', male: 'Gender: Male', female: 'Gender: Female' };
+            subjectGenderMap[subjectId].forEach(function (scope) {
+                if (!labels[scope]) {
+                    return;
+                }
+
+                const option = document.createElement('option');
+                option.value = scope;
+                option.textContent = labels[scope];
+                genderScopeSelect.appendChild(option);
+            });
+
+            show(genderScopeSelect);
+            hide(assignBtn);
+        }
+
+        async function loadAssignmentAvailability() {
+            const sessionId = sessionSelect.value;
+            const classId = classSelect.value;
+            const sectionId = sectionSelect.value;
+
+            clearSubjectAndGenderState('Loading subjects...');
+
+            if (!sessionId || !classId || !sectionId) {
+                clearSubjectAndGenderState('Select session, class and section first');
+                return;
+            }
+
+            const payload = {
+                sessionId,
+                classId,
+                sectionId,
+                optionalGroupId: groupSelect.value || ''
+            };
+
+            try {
+                const response = await fetch(assignmentAvailabilityEndpoint, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to load assignment availability');
+                }
+
+                const json = await response.json();
+                const subjects = Array.isArray(json.subjects) ? json.subjects : [];
+
+                clearSubjectAndGenderState(subjects.length ? 'Select subject' : 'No subject/gender allocation remains for this context');
+
+                subjects.forEach(function (row) {
+                    const option = document.createElement('option');
+                    option.value = String(row.id);
+                    option.textContent = row.name;
+                    subjectSelect.appendChild(option);
+                    subjectGenderMap[String(row.id)] = Array.isArray(row.available_gender_scopes)
+                        ? row.available_gender_scopes
+                        : [];
+                });
+
+                if (subjects.length) {
+                    show(subjectSelect);
+                }
+            } catch (err) {
+                clearSubjectAndGenderState('Unable to load subjects for selected context');
+            }
+        }
+
+        sessionSelect && sessionSelect.addEventListener('change', function(){
+            hiddenAssignmentSession.value = this.value || '';
+            classSelect.value = '';
+            hide(sectionSelect);
+            resetAfterContextChange();
+            hide(sectionSelect);
+        });
+
         classSelect && classSelect.addEventListener('change', function(){
             if(this.value){
                 show(sectionSelect);
-                // reset section and subject
-                sectionSelect.value = '';
-                groupSelect.value = '';
-                genderScopeSelect.value = 'all';
-                subjectSelect.value = '';
-                hide(groupSelect);
-                hide(genderScopeSelect);
-                hide(subjectSelect);
-                hide(assignBtn);
+                resetAfterContextChange();
             } else {
                 hide(sectionSelect);
-                hide(groupSelect);
-                hide(genderScopeSelect);
-                hide(subjectSelect);
-                hide(assignBtn);
+                resetAfterContextChange();
             }
         });
 
         sectionSelect && sectionSelect.addEventListener('change', function(){
             const cls = classSelect.value;
-            if(this.value && cls){
+            const sess = sessionSelect.value;
+            if(this.value && cls && sess){
                 show(groupSelect);
-                show(genderScopeSelect);
-                // show all configured subjects for teacher assignment
-                for(const opt of subjectSelect.options){
-                    if(!opt.value) continue;
-                    opt.style.display = '';
-                }
-                subjectSelect.value = '';
-                show(subjectSelect);
-                hide(assignBtn);
+                loadAssignmentAvailability();
             } else {
-                hide(groupSelect);
-                hide(genderScopeSelect);
-                hide(subjectSelect);
-                hide(assignBtn);
+                resetAfterContextChange();
+            }
+        });
+
+        groupSelect && groupSelect.addEventListener('change', function(){
+            if (classSelect.value && sectionSelect.value && sessionSelect.value) {
+                loadAssignmentAvailability();
             }
         });
 
         subjectSelect && subjectSelect.addEventListener('change', function(){
-            if(this.value) show(assignBtn); else hide(assignBtn);
+            updateGenderOptionsForSubject();
+        });
+
+        genderScopeSelect && genderScopeSelect.addEventListener('change', function(){
+            if (this.value && subjectSelect.value) {
+                show(assignBtn);
+            } else {
+                hide(assignBtn);
+            }
         });
 
         // store assignments to prevent duplicates
@@ -422,8 +536,10 @@ Register Form
         });
 
         assignBtn && assignBtn.addEventListener('click', function(){
-            const clsId = classSelect.value; const secId = sectionSelect.value; const grpId = groupSelect.value; const gscope = genderScopeSelect.value || 'all'; const subId = subjectSelect.value;
-            if(!clsId || !secId || !subId) return showGlobalFlash('Please select class, section and subject.','danger');
+            const sessId = sessionSelect.value;
+            hiddenAssignmentSession.value = sessId || '';
+            const clsId = classSelect.value; const secId = sectionSelect.value; const grpId = groupSelect.value; const gscope = genderScopeSelect.value || ''; const subId = subjectSelect.value;
+            if(!sessId || !clsId || !secId || !subId || !gscope) return showGlobalFlash('Please select session, class, section, subject and available gender.','danger');
             const key = [clsId,secId,grpId,subId,gscope].join('-');
             if(assignments.has(key)) return showGlobalFlash('This assignment already added','warning');
             assignments.add(key);
@@ -452,8 +568,9 @@ Register Form
                 tr.remove();
             });
 
-            // reset selects for next assignment
-            sectionSelect.value=''; groupSelect.value=''; genderScopeSelect.value='all'; subjectSelect.value=''; hide(subjectSelect); hide(assignBtn);
+            // reset child selects for next assignment
+            sectionSelect.value=''; groupSelect.value='';
+            clearSubjectAndGenderState();
         });
 
         // Existing assignments are rendered server-side in the table; no JS prepopulate needed.

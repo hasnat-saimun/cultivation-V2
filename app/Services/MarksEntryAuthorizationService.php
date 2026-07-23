@@ -32,13 +32,14 @@ class MarksEntryAuthorizationService
         ?int $sectionId,
         ?int $optionalGroupId,
         ?int $subjectId,
-        string $requestedGender
+        string $requestedGender,
+        ?int $sessionId = null
     ): bool {
         if (!$user || !$user->isTeacher()) {
             return true;
         }
 
-        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId);
+        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId, $sessionId);
         if (!$map['has_assignments']) {
             return false;
         }
@@ -66,13 +67,14 @@ class MarksEntryAuthorizationService
         ?int $sectionId,
         ?int $optionalGroupId,
         ?int $subjectId,
-        string $requestedGender = 'all'
+        string $requestedGender = 'all',
+        ?int $sessionId = null
     ): bool {
         if (!$user || !$user->isTeacher()) {
             return true;
         }
 
-        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId);
+        $map = $this->teacherDepartmentGenderMap($user, $classId, $sectionId, $optionalGroupId, $subjectId, $sessionId);
         if (!$map['has_assignments']) {
             return false;
         }
@@ -194,6 +196,16 @@ class MarksEntryAuthorizationService
                 ->leftJoin('departments as d', 'd.id', '=', 'tcs.group_id')
                 ->where('tcs.teacher_id', (int) $user->id)
                 ->where('tcs.class_id', $classId)
+                ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
+                    $query->where(function ($sessionQuery) use ($sessionId) {
+                        if ($sessionId === null) {
+                            $sessionQuery->whereNull('tcs.session_id');
+                        } else {
+                            // Backward compatibility: legacy rows without session_id remain readable.
+                            $sessionQuery->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                        }
+                    });
+                })
                 ->whereNotNull('tcs.subject_id')
                 ->where(function ($query) {
                     // Ignore stale section references (non-null section must exist).
@@ -398,7 +410,8 @@ class MarksEntryAuthorizationService
         int $classId,
         ?int $sectionId,
         ?int $optionalGroupId,
-        ?int $subjectId
+        ?int $subjectId,
+        ?int $sessionId = null
     ): array {
         $rows = collect();
 
@@ -408,6 +421,15 @@ class MarksEntryAuthorizationService
                 ->leftJoin('departments as d', 'd.id', '=', 'tcs.group_id')
                 ->where('tcs.teacher_id', (int) $user->id)
                 ->where('tcs.class_id', $classId)
+                ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
+                    $query->where(function ($sessionQuery) use ($sessionId) {
+                        if ($sessionId === null) {
+                            $sessionQuery->whereNull('tcs.session_id');
+                        } else {
+                            $sessionQuery->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                        }
+                    });
+                })
                 ->where(function ($query) use ($subjectId) {
                     if ($subjectId === null) {
                         $query->whereNull('tcs.subject_id')->orWhereNotNull('tcs.subject_id');

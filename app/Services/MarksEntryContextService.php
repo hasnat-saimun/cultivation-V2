@@ -11,6 +11,7 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class MarksEntryContextService
 {
@@ -230,6 +231,15 @@ class MarksEntryContextService
             ->leftJoin('section_manages as sm', 'sm.id', '=', 'tcs.section_id')
             ->where('tcs.teacher_id', $teacherId)
             ->where('tcs.class_id', $classId)
+            ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
+                $query->when($sessionId !== null, function ($q) use ($sessionId) {
+                    $q->where(function ($sq) use ($sessionId) {
+                        $sq->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                    });
+                }, function ($q) {
+                    $q->whereNull('tcs.session_id');
+                });
+            })
             ->where(function ($q) {
                 $q->whereNull('tcs.section_id')
                     ->orWhereNotNull('sm.id');
@@ -382,6 +392,15 @@ class MarksEntryContextService
             ->join('subjects as s', 's.id', '=', 'tcs.subject_id')
             ->where('tcs.teacher_id', $teacherId)
             ->where('tcs.class_id', $classId)
+            ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
+                $query->when($sessionId !== null, function ($q) use ($sessionId) {
+                    $q->where(function ($sq) use ($sessionId) {
+                        $sq->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                    });
+                }, function ($q) {
+                    $q->whereNull('tcs.session_id');
+                });
+            })
             ->where(function ($q) use ($sectionId) {
                 if ($sectionId === null) {
                     $q->whereNull('tcs.section_id')->orWhereNotNull('sm.id');

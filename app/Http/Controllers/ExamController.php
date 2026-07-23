@@ -17,6 +17,7 @@ use App\Models\sessionManage;
 use App\Models\TeacherManagement;
 use App\Models\CultivationAdmin;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ExamController extends Controller
 {
@@ -154,6 +155,7 @@ class ExamController extends Controller
         $lookup = $this->buildRoutineLookupMaps($routineList, false);
         $teacherAssignmentScope = $this->resolveTeacherAssignmentScope();
         $teacherAssignmentData = $this->loadTeacherAssignmentData(
+            $teacherAssignmentScope['session_id'],
             $teacherAssignmentScope['class_id'],
             $teacherAssignmentScope['section_id'],
             $teacherAssignmentScope['group_id']
@@ -169,12 +171,16 @@ class ExamController extends Controller
 
     public function saveResultClassRoutineTeacherAssignments(Request $requ)
     {
+        $supportsSession = Schema::hasColumn('teacher_class_subjects', 'session_id');
+
         $requ->validate([
+            'ta_assignSession' => $supportsSession ? 'required|integer|exists:session_manages,id' : 'nullable|integer',
             'ta_assignClass' => 'required|integer',
             'ta_assignSection' => 'nullable|integer',
             'ta_assignDepartment' => 'nullable|integer',
         ]);
 
+        $sessionId = $supportsSession ? (int)$requ->input('ta_assignSession') : null;
         $classId = (int)$requ->input('ta_assignClass');
         $sectionId = $requ->filled('ta_assignSection') ? (int)$requ->input('ta_assignSection') : null;
         $groupId = $requ->filled('ta_assignDepartment') ? (int)$requ->input('ta_assignDepartment') : null;
@@ -238,6 +244,10 @@ class ExamController extends Controller
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
+
+            if ($supportsSession) {
+                $rows[count($rows) - 1]['session_id'] = $sessionId;
+            }
         }
 
         if (empty($rows)) {
@@ -247,7 +257,8 @@ class ExamController extends Controller
         $deduped = [];
         $seen = [];
         foreach ($rows as $row) {
-            $key = $row['teacher_id'].'|'.$row['class_id'].'|'.($row['section_id'] ?? 'n').'|'.($row['group_id'] ?? 'n').'|'.$row['subject_id'];
+            $sessionKey = $supportsSession ? ($row['session_id'] ?? 'n') : 'legacy';
+            $key = $row['teacher_id'].'|'.$sessionKey.'|'.$row['class_id'].'|'.($row['section_id'] ?? 'n').'|'.($row['group_id'] ?? 'n').'|'.$row['subject_id'];
             if (isset($seen[$key])) {
                 continue;
             }
@@ -258,6 +269,10 @@ class ExamController extends Controller
         DB::beginTransaction();
         try {
             $deleteQuery = DB::table('teacher_class_subjects')->where('class_id', $classId);
+
+            if ($supportsSession) {
+                $deleteQuery->where('session_id', $sessionId);
+            }
 
             if ($sectionId === null) {
                 $deleteQuery->whereNull('section_id');
@@ -446,11 +461,13 @@ class ExamController extends Controller
 
         $editingRoutine = ClassRoutine::find($id);
         $teacherAssignmentScope = $this->resolveTeacherAssignmentScope([
+            'session_id' => !empty($editingRoutine) && !empty($editingRoutine->assignSession) ? (int)$editingRoutine->assignSession : null,
             'class_id' => !empty($editingRoutine) ? (int)$editingRoutine->assignClass : null,
             'section_id' => !empty($editingRoutine) && !empty($editingRoutine->assignSection) ? (int)$editingRoutine->assignSection : null,
             'group_id' => !empty($editingRoutine) && !empty($editingRoutine->assignDepartment) ? (int)$editingRoutine->assignDepartment : null,
         ]);
         $teacherAssignmentData = $this->loadTeacherAssignmentData(
+            $teacherAssignmentScope['session_id'],
             $teacherAssignmentScope['class_id'],
             $teacherAssignmentScope['section_id'],
             $teacherAssignmentScope['group_id']
@@ -962,9 +979,14 @@ class ExamController extends Controller
 
     private function resolveTeacherAssignmentScope(array $default = []): array
     {
+        $sessionId = request()->filled('ta_session') ? (int)request()->query('ta_session') : ($default['session_id'] ?? null);
         $classId = request()->filled('ta_class') ? (int)request()->query('ta_class') : ($default['class_id'] ?? null);
         $sectionId = request()->filled('ta_section') ? (int)request()->query('ta_section') : ($default['section_id'] ?? null);
         $groupId = request()->filled('ta_group') ? (int)request()->query('ta_group') : ($default['group_id'] ?? null);
+
+        if (old('ta_assignSession') !== null && old('ta_assignSession') !== '') {
+            $sessionId = (int)old('ta_assignSession');
+        }
 
         if (old('ta_assignClass') !== null && old('ta_assignClass') !== '') {
             $classId = (int)old('ta_assignClass');
@@ -983,13 +1005,14 @@ class ExamController extends Controller
         }
 
         return [
+            'session_id' => $sessionId ? (int)$sessionId : null,
             'class_id' => $classId ? (int)$classId : null,
             'section_id' => $sectionId ? (int)$sectionId : null,
             'group_id' => $groupId ? (int)$groupId : null,
         ];
     }
 
-    private function loadTeacherAssignmentData(?int $classId, ?int $sectionId, ?int $groupId): array
+    private function loadTeacherAssignmentData(?int $sessionId, ?int $classId, ?int $sectionId, ?int $groupId): array
     {
         $teachers = CultivationAdmin::where('userType', CultivationAdmin::ROLE_TEACHER)
             ->orderBy('adminName', 'ASC')
@@ -999,6 +1022,14 @@ class ExamController extends Controller
 
         if (!empty($classId)) {
             $assignmentQuery = DB::table('teacher_class_subjects')->where('class_id', (int)$classId);
+
+            if (!empty($sessionId) && Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+                $assignmentQuery->where(function ($q) use ($sessionId) {
+                    $q->whereNull('session_id')->orWhere('session_id', (int)$sessionId);
+                });
+            } elseif (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+                $assignmentQuery->whereNull('session_id');
+            }
 
             if (empty($sectionId)) {
                 $assignmentQuery->whereNull('section_id');

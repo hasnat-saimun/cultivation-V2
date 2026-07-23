@@ -5,12 +5,14 @@ namespace Tests\Feature;
 use App\Http\Controllers\CultivationController;
 use App\Models\classManage;
 use App\Models\CultivationAdmin;
+use App\Models\sessionManage;
 use App\Models\sectionManage;
 use App\Models\Subject;
 use App\Models\TeacherClassSubject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
 class TeacherAssignmentTest extends TestCase
@@ -89,6 +91,88 @@ class TeacherAssignmentTest extends TestCase
         $this->assertSame('All', $row->gender_scope_label);
     }
 
+    public function test_existing_male_allows_only_female_for_same_context(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('TA Context Class');
+        $section = $this->createSection('C');
+        $subject = $this->createSubject('TA Context Subject');
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-male-user',
+            'userMail' => 'ta-male-user@example.test',
+            'assignmentSessionId' => $session->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'genderScope' => ['male'],
+            'subject' => [$subject->id],
+        ])));
+
+        try {
+            app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+                'userName' => 'ta-male-dup',
+                'userMail' => 'ta-male-dup@example.test',
+                'assignmentSessionId' => $session->id,
+                'className' => [$class->id],
+                'section' => [$section->id],
+                'optionalGroup' => [''],
+                'genderScope' => ['male'],
+                'subject' => [$subject->id],
+            ])));
+
+            $this->fail('Expected male overlap to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('genderScope', $exception->errors());
+        }
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-female-ok',
+            'userMail' => 'ta-female-ok@example.test',
+            'assignmentSessionId' => $session->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'genderScope' => ['female'],
+            'subject' => [$subject->id],
+        ])));
+
+        $this->assertDatabaseHas('cultivation_admins', ['adminUser' => 'ta-female-ok']);
+    }
+
+    public function test_same_gender_scope_can_be_assigned_in_different_session(): void
+    {
+        $sessionOne = $this->createSession('2026');
+        $sessionTwo = $this->createSession('2027');
+        $class = $this->createClass('TA Session Class');
+        $section = $this->createSection('D');
+        $subject = $this->createSubject('TA Session Subject');
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-s1',
+            'userMail' => 'ta-s1@example.test',
+            'assignmentSessionId' => $sessionOne->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'genderScope' => ['male'],
+            'subject' => [$subject->id],
+        ])));
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-s2',
+            'userMail' => 'ta-s2@example.test',
+            'assignmentSessionId' => $sessionTwo->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'genderScope' => ['male'],
+            'subject' => [$subject->id],
+        ])));
+
+        $this->assertDatabaseHas('cultivation_admins', ['adminUser' => 'ta-s2']);
+    }
+
     private function teacherPayload(array $overrides = []): array
     {
         return array_merge([
@@ -99,6 +183,7 @@ class TeacherAssignmentTest extends TestCase
             'userType' => CultivationAdmin::ROLE_TEACHER,
             'pass' => 'secret123',
             'confirmPass' => 'secret123',
+            'assignmentSessionId' => $this->ensureSession()->id,
             'primaryClass' => '',
             'primarySection' => '',
             'className' => [],
@@ -107,6 +192,25 @@ class TeacherAssignmentTest extends TestCase
             'genderScope' => [],
             'subject' => [],
         ], $overrides);
+    }
+
+    private function ensureSession(): sessionManage
+    {
+        $session = sessionManage::query()->first();
+        if ($session) {
+            return $session;
+        }
+
+        return $this->createSession('2026');
+    }
+
+    private function createSession(string $name): sessionManage
+    {
+        $session = new sessionManage();
+        $session->session = $name;
+        $session->save();
+
+        return $session;
     }
 
     private function createClass(string $name): classManage
