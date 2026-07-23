@@ -39,6 +39,7 @@ class CultivationController extends Controller
     {
         $sectionList = SectionModel::orderBy('id', 'ASC')->get();
         $attendanceTakenMap = $this->attendanceTakenMap($user);
+        $initialAssignmentSessionId = $this->resolveInitialAssignmentSessionId($user);
 
         return [
             'subjectList' => $this->availableAdminSubjects($user),
@@ -47,7 +48,70 @@ class CultivationController extends Controller
             'groupList' => Department::orderBy('id', 'ASC')->get(),
             'attendanceClassList' => $this->availableAttendanceClasses($user, $sectionList, $attendanceTakenMap),
             'attendanceTakenMap' => $attendanceTakenMap,
+            'initialAssignmentSessionId' => $initialAssignmentSessionId,
         ];
+    }
+
+    private function resolveInitialAssignmentSessionId(?CultivationAdmin $user = null)
+    {
+        $oldAssignmentSessionId = $this->normalizeOptionalSessionScalar(old('assignmentSessionId'));
+        if ($oldAssignmentSessionId !== null) {
+            return $oldAssignmentSessionId;
+        }
+
+        $existingAssignmentSessionId = $this->existingAssignmentSessionIdForEdit($user);
+        if ($existingAssignmentSessionId !== null) {
+            return $existingAssignmentSessionId;
+        }
+
+        $requestedAssignmentSessionId = $this->normalizeOptionalSessionScalar(request()->input('assignmentSessionId'));
+        if ($requestedAssignmentSessionId !== null) {
+            return $requestedAssignmentSessionId;
+        }
+
+        return null;
+    }
+
+    private function existingAssignmentSessionIdForEdit(?CultivationAdmin $user = null)
+    {
+        if (!$user || (int) $user->userType !== CultivationAdmin::ROLE_TEACHER) {
+            return null;
+        }
+
+        if (!Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+            return null;
+        }
+
+        $sessionIds = DB::table('teacher_class_subjects')
+            ->where('teacher_id', $user->id)
+            ->whereNotNull('session_id')
+            ->distinct()
+            ->pluck('session_id')
+            ->map(function ($sessionId) {
+                return (int) $sessionId;
+            })
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($sessionIds->count() === 1) {
+            return $sessionIds->first();
+        }
+
+        return null;
+    }
+
+    private function normalizeOptionalSessionScalar($value)
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (is_scalar($value) && ctype_digit((string) $value)) {
+            return (int) $value;
+        }
+
+        return null;
     }
 
     private function availableAdminSubjects(?CultivationAdmin $user = null)

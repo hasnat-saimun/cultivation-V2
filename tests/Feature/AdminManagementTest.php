@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -30,6 +31,163 @@ class AdminManagementTest extends TestCase
         parent::setUp();
 
         $this->withoutMiddleware(VerifyCsrfToken::class);
+    }
+
+    public function test_create_teacher_admin_form_renders_without_initial_assignment_session_variable_error(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+
+        $response = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('userType'));
+
+        $response->assertOk();
+        $this->assertInstanceOf(View::class, $response->original);
+        $this->assertArrayHasKey('initialAssignmentSessionId', $response->original->getData());
+        $this->assertNull($response->original->getData()['initialAssignmentSessionId']);
+        $response->assertSee('const initialAssignmentSessionId = null;', false);
+    }
+
+    public function test_edit_teacher_admin_form_prefills_existing_assignment_session_when_single_context_exists(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        $session = $this->ensureSession();
+        $class = $this->createClass('Session Prefill Class');
+        $section = $this->createSection('S');
+        $subject = $this->createSubject('Session Prefill Subject');
+
+        $this->insertTeacherAssignmentRow($teacher->id, $class->id, $section->id, $subject->id, $session->id);
+        $response = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('editUser', ['id' => $teacher->id]));
+
+        $response->assertOk();
+        $this->assertInstanceOf(View::class, $response->original);
+        $this->assertSame($session->id, $response->original->getData()['initialAssignmentSessionId']);
+        $response->assertSee('const initialAssignmentSessionId = '.$session->id.';', false);
+    }
+
+    public function test_non_teacher_create_and_edit_forms_render_without_initial_assignment_session_errors(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $cashAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_CASH]);
+        Session::put('cultivationAdmin', $generalAdmin->id);
+
+        $createResponse = app(CultivationController::class)->userType();
+        $editResponse = app(CultivationController::class)->editUser($cashAdmin->id);
+
+        $this->assertInstanceOf(View::class, $createResponse);
+        $this->assertInstanceOf(View::class, $editResponse);
+        $this->assertArrayHasKey('initialAssignmentSessionId', $createResponse->getData());
+        $this->assertArrayHasKey('initialAssignmentSessionId', $editResponse->getData());
+        $this->assertNull($createResponse->getData()['initialAssignmentSessionId']);
+        $this->assertNull($editResponse->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_edit_teacher_without_existing_assignments_defaults_to_null_initial_session(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        Session::put('cultivationAdmin', $generalAdmin->id);
+
+        $response = app(CultivationController::class)->editUser($teacher->id);
+
+        $this->assertInstanceOf(View::class, $response);
+        $this->assertArrayHasKey('initialAssignmentSessionId', $response->getData());
+        $this->assertNull($response->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_edit_teacher_with_legacy_null_session_assignment_loads_without_failure(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        $class = $this->createClass('Legacy Null Session Class');
+        $section = $this->createSection('N');
+        $subject = $this->createSubject('Legacy Null Session Subject');
+
+        $this->insertTeacherAssignmentRow($teacher->id, $class->id, $section->id, $subject->id, null);
+        Session::put('cultivationAdmin', $generalAdmin->id);
+
+        $response = app(CultivationController::class)->editUser($teacher->id);
+
+        $this->assertInstanceOf(View::class, $response);
+        $this->assertNull($response->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_old_input_assignment_session_takes_priority_after_validation_failure_path(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        $existingSession = $this->createSession('2028');
+        $oldInputSession = $this->createSession('2029');
+        $class = $this->createClass('Old Input Class');
+        $section = $this->createSection('O');
+        $subject = $this->createSubject('Old Input Subject');
+
+        $this->insertTeacherAssignmentRow($teacher->id, $class->id, $section->id, $subject->id, $existingSession->id);
+        $response = $this
+            ->withSession([
+                'cultivationAdmin' => $generalAdmin->id,
+                '_old_input' => ['assignmentSessionId' => (string) $oldInputSession->id],
+            ])
+            ->get(route('editUser', ['id' => $teacher->id]));
+
+        $response->assertOk();
+        $this->assertInstanceOf(View::class, $response->original);
+        $this->assertSame($oldInputSession->id, $response->original->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_edit_teacher_with_multiple_assignment_sessions_does_not_silently_pick_one(): void
+    {
+        if (!Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+            $this->markTestSkipped('session_id column is not available in this schema.');
+        }
+
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        $sessionOne = $this->createSession('2030');
+        $sessionTwo = $this->createSession('2031');
+        $class = $this->createClass('Multi Session Class');
+        $section = $this->createSection('M');
+        $subjectA = $this->createSubject('Multi Session Subject A');
+        $subjectB = $this->createSubject('Multi Session Subject B');
+
+        $this->insertTeacherAssignmentRow($teacher->id, $class->id, $section->id, $subjectA->id, $sessionOne->id);
+        $this->insertTeacherAssignmentRow($teacher->id, $class->id, $section->id, $subjectB->id, $sessionTwo->id);
+        Session::put('cultivationAdmin', $generalAdmin->id);
+
+        $response = app(CultivationController::class)->editUser($teacher->id);
+
+        $this->assertInstanceOf(View::class, $response);
+        $this->assertNull($response->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_migration_safe_path_returns_null_initial_session_when_session_column_not_available(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+        Session::put('cultivationAdmin', $generalAdmin->id);
+
+        Schema::shouldReceive('hasColumn')
+            ->once()
+            ->with('teacher_class_subjects', 'session_id')
+            ->andReturn(false);
+
+        $response = app(CultivationController::class)->editUser($teacher->id);
+
+        $this->assertInstanceOf(View::class, $response);
+        $this->assertNull($response->getData()['initialAssignmentSessionId']);
+    }
+
+    public function test_user_register_routes_return_http_200_after_fix(): void
+    {
+        $this->withoutMiddleware(Roles::class);
+
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+
+        $this->get(route('userType'))->assertOk();
+        $this->get(route('editUser', ['id' => $teacher->id]))->assertOk();
     }
 
     public function test_create_form_shows_subjects_even_if_assigned_to_other_admins(): void
@@ -355,6 +513,7 @@ class AdminManagementTest extends TestCase
             'userMail' => $teacher->adminMail,
             'userType' => CultivationAdmin::ROLE_TEACHER,
             'pass' => '',
+            'assignmentSessionId' => $this->ensureSession()->id,
             'primaryClass' => $class->id,
             'primarySection' => $section->id,
             'className' => [$class->id],
@@ -448,6 +607,26 @@ class AdminManagementTest extends TestCase
         ]);
     }
 
+    private function insertTeacherAssignmentRow(int $teacherId, int $classId, ?int $sectionId, ?int $subjectId, ?int $sessionId): void
+    {
+        $row = [
+            'teacher_id' => $teacherId,
+            'class_id' => $classId,
+            'section_id' => $sectionId,
+            'subject_id' => $subjectId,
+            'group_id' => null,
+            'gender_scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+
+        if (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+            $row['session_id'] = $sessionId;
+        }
+
+        DB::table('teacher_class_subjects')->insert($row);
+    }
+
     public function test_gender_scope_label_accessor_defaults_unknown_values_to_all(): void
     {
         $row = new TeacherClassSubject();
@@ -489,8 +668,13 @@ class AdminManagementTest extends TestCase
             return $session;
         }
 
+        return $this->createSession('2026');
+    }
+
+    private function createSession(string $name): sessionManage
+    {
         $session = new sessionManage();
-        $session->session = '2026';
+        $session->session = $name;
         $session->save();
 
         return $session;

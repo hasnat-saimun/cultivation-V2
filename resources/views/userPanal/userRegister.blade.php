@@ -37,6 +37,10 @@ Register Form
                         </ul>
                     </div>
                 @endif
+
+                @php
+                    $initialAssignmentSessionId = $initialAssignmentSessionId ?? old('assignmentSessionId') ?? null;
+                @endphp
                     
                     @error('insLogo')
                         <div class="alert alert-danger">{{ $message }}</div>
@@ -336,10 +340,15 @@ Register Form
         const assignTableBody = document.querySelector('#assign_table tbody');
         const assignmentAvailabilityEndpoint = @json(route('api.teacher.assignment-availability'));
         const csrfToken = @json(csrf_token());
+        const initialAssignmentSessionId = @json($initialAssignmentSessionId);
         const subjectGenderMap = {};
 
         if (hiddenAssignmentSession && sessionSelect) {
-            hiddenAssignmentSession.value = sessionSelect.value || hiddenAssignmentSession.value || '';
+            const normalizedInitialSession = initialAssignmentSessionId === null ? '' : String(initialAssignmentSessionId);
+            if (!sessionSelect.value && normalizedInitialSession) {
+                sessionSelect.value = normalizedInitialSession;
+            }
+            hiddenAssignmentSession.value = sessionSelect.value || normalizedInitialSession || hiddenAssignmentSession.value || '';
         }
         const primaryClassSelect = document.querySelector('select[name="primaryClass"]');
         const primarySectionSelect = document.querySelector('select[name="primarySection"]');
