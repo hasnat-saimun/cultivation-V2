@@ -146,6 +146,36 @@ class BoardResultCalculatorTest extends TestCase
         $this->assertContains('paper:1:cq', $result->subjectResults[0]->componentFailures);
     }
 
+    public function test_subject_level_api_reuses_normalization_grade_and_component_rules(): void
+    {
+        $student = ['id'=>1, 'fourthSubjectId'=>null];
+        $subject = $this->subject(1, 'Main', 50, 25, 25);
+        $mark = $this->mark(1, 40, 20, 20);
+
+        $result = $this->calculator->calculateSubject(
+            $student, ['id'=>1, 'passingSystem'=>1], $mark, $subject
+        );
+
+        $this->assertSame(80.0, $result->obtainedMarks);
+        $this->assertSame('A+', $result->letterGrade);
+        $this->assertSame(5.0, $result->gradePoint);
+        $this->assertSame('Pass', $result->status);
+    }
+
+    public function test_subject_level_api_returns_incomplete_when_required_component_is_missing(): void
+    {
+        $result = $this->calculator->calculateSubject(
+            ['id'=>1], ['id'=>1, 'passingSystem'=>1],
+            $this->mark(1, 40, null, 20),
+            $this->subject(1, 'Main', 50, 25, 25)
+        );
+
+        $this->assertTrue($result->missing);
+        $this->assertSame('Incomplete', $result->status);
+        $this->assertSame('-', $result->letterGrade);
+        $this->assertNull($result->obtainedMarks);
+    }
+
     private function calculate(array $subjects, array $marks, ?int $fourthId = null, int $passingSystem = 2)
     {
         return $this->calculator->calculate(['id' => 1, 'fourthSubjectId' => $fourthId], ['id' => 1, 'passingSystem' => $passingSystem], $marks, $subjects);

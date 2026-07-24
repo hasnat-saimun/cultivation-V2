@@ -47,7 +47,9 @@
                 <ul class="navbar-nav">
                     @php
                         $currentUserId = session('cultivationAdmin');
-                        $cultivationAdmin = \App\Models\CultivationAdmin::find($currentUserId);
+                        $cultivationAdmin = !empty($cultivationAdminPreloaded)
+                            ? ($preloadedCultivationAdmin ?? null)
+                            : \App\Models\CultivationAdmin::find($currentUserId);
                         if(!empty($cultivationAdmin)):
                             $adminName      =   $cultivationAdmin->adminName;
                             $adminEmail     =   $cultivationAdmin->adminMail;

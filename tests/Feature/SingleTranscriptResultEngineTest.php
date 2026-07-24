@@ -9,6 +9,8 @@ use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\Placement;
 use App\Models\ResultArchive;
+use App\Models\ResultPublish;
+use App\Models\PromotionAuditLog;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
@@ -16,6 +18,7 @@ use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -30,7 +33,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         config(['app.key' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', 'cache.default' => 'array']);
     }
 
-    public function test_disabled_flag_preserves_legacy_single_transcript(): void
+    public function test_retired_controller_uses_centralized_single_transcript_when_flag_is_disabled(): void
     {
         config(['result_engine.transcript_enabled' => false]);
         $scope = $this->scope();
@@ -42,8 +45,8 @@ class SingleTranscriptResultEngineTest extends TestCase
 
         $html = $this->html($student, $scope['exam']);
 
-        $this->assertSummary($html, '8', 'A+');
-        $this->assertStringNotContainsString('Remark- Pass', $html);
+        $this->assertSummary($html, '5.00', 'A+');
+        $this->assertStringContainsString('Remark- Pass', $html);
     }
 
     public function test_enabled_normal_pass_preserves_identity_and_layout_data(): void
@@ -56,6 +59,34 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertStringContainsString('Annual', $html);
         $this->assertStringContainsString('Mathematics', $html);
         $this->assertStringContainsString('Main Subject', $html);
+    }
+
+    public function test_view_receives_presenter_prepared_values_and_rendering_executes_no_queries(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Prepared Main', 'Main', 50);
+        $student = $this->student($scope);
+        $this->mark($student, $scope, $subject, 40);
+
+        $response = $this->response($student, $scope['exam']);
+        $data = $response->getData();
+
+        $this->assertTrue($data['usingNewResultEngine']);
+        $this->assertSame('A+', $data['transcriptResult']['mainRows'][0]['grade']);
+        $this->assertSame('5.00', $data['transcriptResult']['mainRows'][0]['gradePoint']);
+        $this->assertSame(40.0, $data['transcriptResult']['mainRows'][0]['total']);
+        $this->assertSame('5.00', $data['transcriptResult']['gpaDisplay']);
+        $this->assertSame('Pass', $data['transcriptResult']['status']);
+        $this->assertSame('Annual', $data['transcriptView']['examName']);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void {
+            $queries[] = $query->sql;
+        });
+        $html = $response->render();
+
+        $this->assertStringContainsString('Prepared Main', $html);
+        $this->assertSame([], $queries, 'The single-transcript Blade path executed a database query.');
     }
 
     public function test_enabled_gpa_is_capped_and_optional_a_plus_bonus_is_applied(): void
@@ -172,7 +203,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         return [['cq'], ['mcq'], ['practical']];
     }
 
-    public function test_presenter_exception_falls_back_to_valid_legacy_transcript_without_writes(): void
+    public function test_presenter_exception_fails_closed_without_writes(): void
     {
         config(['result_engine.transcript_enabled' => true]);
         $this->app->bind(TranscriptResultPresenter::class, fn () => new class extends TranscriptResultPresenter {
@@ -187,9 +218,11 @@ class SingleTranscriptResultEngineTest extends TestCase
         $mark = $this->mark($student, $scope, $subject, 80);
         $before = $mark->only(['subjectMarks', 'objectMarks', 'practicalMarks', 'laterGrade', 'gradePoint']);
 
-        $html = $this->html($student, $scope['exam']);
+        $response = app(MarksheetController::class)->generateMarksheet(Request::create('/marksheet/generate', 'GET', [
+            'studentId' => $student->id, 'examId' => $scope['exam']->id,
+        ]));
 
-        $this->assertSummary($html, '5', 'A+');
+        $this->assertInstanceOf(\Illuminate\Http\RedirectResponse::class, $response);
         $this->assertEquals($before, $mark->fresh()->only(array_keys($before)));
         $this->assertDatabaseCount('marksheets', 1);
     }
@@ -213,6 +246,8 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertDatabaseCount('marksheets', 2);
         $this->assertSame(0, Placement::count());
         $this->assertSame(0, ResultArchive::count());
+        $this->assertSame(0, ResultPublish::count());
+        $this->assertSame(0, PromotionAuditLog::count());
         $this->assertNotNull($mark->fresh());
     }
 
@@ -270,9 +305,14 @@ class SingleTranscriptResultEngineTest extends TestCase
 
     private function html(newAdmission $student, Exam $exam): string
     {
+        return $this->response($student, $exam)->render();
+    }
+
+    private function response(newAdmission $student, Exam $exam): \Illuminate\View\View
+    {
         return app(MarksheetController::class)->generateMarksheet(Request::create('/marksheet/generate', 'GET', [
             'studentId' => $student->id, 'examId' => $exam->id,
-        ]))->render();
+        ]));
     }
 
     private function assertSummary(string $html, string $gpa, string $letter): void

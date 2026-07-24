@@ -2,6 +2,8 @@
 
 namespace App\Services\ResultCalculation;
 
+use App\Models\GradeList;
+
 class TabulationResultPresenter
 {
     public function __construct(private TranscriptResultPresenter $transcriptPresenter) {}
@@ -9,14 +11,29 @@ class TabulationResultPresenter
     public function present(array $entries): array
     {
         $rows = [];
-        $columnNames = [];
+        $columnDefinitions = [];
+        $gradeRows = GradeList::all();
         foreach ($entries as $entry) {
             /** @var StudentResult $result */
             $result = $entry['result'];
-            $presented = $this->transcriptPresenter->present($result, $entry['subjects'], $entry['student']->marksheet);
+            $presented = $this->transcriptPresenter->presentWithGradeRows(
+                $result, $entry['subjects'], $entry['student']->marksheet, $gradeRows
+            );
             $subjectRows = [];
             foreach (array_merge($presented['mainRows'], $presented['optionalRows']) as $subjectRow) {
-                $columnNames[$subjectRow['name']] = true;
+                $sourceSubjects = collect($entry['subjects'])->whereIn('id', $subjectRow['sourceIds']);
+                $components = [];
+                if ($sourceSubjects->contains(fn ($subject) => (float) ($subject->CQ ?? 0) > 0)) $components[] = ['key' => 'cq', 'label' => 'CQ'];
+                if ($sourceSubjects->contains(fn ($subject) => (float) ($subject->MCQ ?? 0) > 0)) $components[] = ['key' => 'mcq', 'label' => 'MCQ'];
+                if ($sourceSubjects->contains(fn ($subject) => (float) ($subject->Practical ?? 0) > 0)) $components[] = ['key' => 'practical', 'label' => 'PR'];
+                if ($components === []) $components[] = ['key' => 'total', 'label' => 'Total'];
+                $columnDefinitions[$subjectRow['name']] ??= [
+                    'subjectName' => $subjectRow['name'],
+                    'paired' => $subjectRow['paired'],
+                    'optional' => $subjectRow['isOptional'],
+                    'componentColumns' => $components,
+                    'componentColumnCount' => count($components),
+                ];
                 $subjectRows[] = [
                     'name' => $subjectRow['name'],
                     'type' => $this->subjectType($subjectRow['name'], $presented['optionalRows']),
@@ -28,6 +45,11 @@ class TabulationResultPresenter
             }
             $rows[] = [
                 'student' => $entry['student'], 'subjects' => $subjectRows,
+                'studentIdentity' => [
+                    'id' => $entry['student']->id,
+                    'roll' => (string) ($entry['student']->rollNumber ?? ''),
+                    'name' => trim(($entry['student']->fullName ?? '').' '.($entry['student']->sureName ?? '')),
+                ],
                 'totalMarks' => $presented['totalMarks'],
                 'finalGpa' => $result->gpa === null ? null : number_format($result->gpa, 2),
                 'finalLetter' => $presented['letterGrade'],
@@ -42,9 +64,32 @@ class TabulationResultPresenter
                 '_studentResult' => $result,
             ];
         }
-        $columns = array_map(fn ($name) => (object) ['subjectName' => $name], array_keys($columnNames));
+        $columns = array_map(fn ($definition) => (object) $definition, array_values($columnDefinitions));
         usort($columns, fn ($a, $b) => strcasecmp($a->subjectName, $b->subjectName));
-        return ['rows' => $rows, 'subjects' => collect($columns)];
+        foreach ($rows as &$row) {
+            $row['cells'] = collect($row['subjects'])->keyBy('name')->all();
+            $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));
+        }
+        unset($row);
+        $sections = ['Pass' => [], 'Fail' => [], 'Incomplete' => []];
+        foreach ($rows as $row) $sections[$row['status']][] = $row;
+        $failureBuckets = [];
+        foreach ($sections['Fail'] as $row) {
+            $count = (int) $row['subjectFails'];
+            if ($count > 0) $failureBuckets[$count] = ($failureBuckets[$count] ?? 0) + 1;
+        }
+        ksort($failureBuckets);
+        $tabulationPages = $this->pageRowsByStatus($sections, 18);
+        $glancePageSize = collect($columns)->sum('componentColumnCount') >= 14 ? 18 : 24;
+        $glancePages = $this->pageRows($rows, $glancePageSize);
+        return [
+            'rows' => $rows,
+            'subjects' => collect($columns),
+            'sections' => $sections,
+            'failureBuckets' => $failureBuckets,
+            'tabulationPages' => $tabulationPages,
+            'glancePages' => $glancePages,
+        ];
     }
 
     public function summarize(array $rows, $subjects): array
@@ -85,7 +130,53 @@ class TabulationResultPresenter
                 'incompletePercentage' => $total ? round($counts['Incomplete'] / $total * 100, 2) : 0.0],
             'subjectStats' => $subjectStats, 'failureBuckets' => $failureBuckets,
             'gpaDistribution' => $gpaDistribution, 'gradeDistribution' => $gradeDistribution,
+            'subjectPages' => $this->pageSubjectRows($subjectStats, 22),
+            'failureSummaryLine' => $this->failureSummaryLine($failureBuckets),
         ];
+    }
+
+    private function pageRowsByStatus(array $sections, int $size): array
+    {
+        $pages = [];
+        foreach (['Pass', 'Fail', 'Incomplete'] as $status) {
+            foreach (array_chunk($sections[$status], $size) as $rows) {
+                $pages[] = ['status' => $status, 'rows' => $rows];
+            }
+        }
+        return $this->numberPages($pages);
+    }
+
+    private function pageRows(array $rows, int $size): array
+    {
+        return $this->numberPages(array_map(fn ($chunk) => ['rows' => $chunk], array_chunk($rows, $size)));
+    }
+
+    private function pageSubjectRows(array $rows, int $size): array
+    {
+        $pages = array_map(fn ($chunk) => ['subjectRows' => $chunk], array_chunk($rows, $size));
+        if ($pages === []) $pages = [['subjectRows' => []]];
+        return $this->numberPages($pages);
+    }
+
+    private function numberPages(array $pages): array
+    {
+        $count = count($pages);
+        foreach ($pages as $index => &$page) {
+            $page['pageNumber'] = $index + 1;
+            $page['pageCount'] = $count;
+        }
+        unset($page);
+        return $pages;
+    }
+
+    private function failureSummaryLine(array $buckets): string
+    {
+        if ($buckets === []) return 'No failed-subject bucket found.';
+        $parts = [];
+        foreach ($buckets as $failed => $students) {
+            $parts[] = $failed.' Subject'.($failed === 1 ? '' : 's').'-'.str_pad((string) $students, 2, '0', STR_PAD_LEFT);
+        }
+        return implode(', ', $parts);
     }
 
     private function subjectType(string $name, array $optionalRows): string

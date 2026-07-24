@@ -410,9 +410,7 @@ class AdmissionController extends Controller
             'selected_students' => 'required|array|min:1',
             'selected_students.*' => 'integer|distinct|exists:new_admissions,id',
             'roll_numbers' => 'nullable|array',
-            'examId' => config('result_engine.promotion_enabled', false)
-                ? 'required|integer|exists:exams,id'
-                : 'nullable|integer|exists:exams,id',
+            'examId' => 'required|integer|exists:exams,id',
             'submit_token' => 'required|string',
         ]);
 
@@ -472,6 +470,32 @@ class AdmissionController extends Controller
         }
 
         try {
+            $legacyBatch = app(\App\Services\ResultCalculation\ResultCalculationBatchBuilder::class)->buildTolerant(
+                (int) $validated['examId'],
+                $sourceClass,
+                $sourceSession,
+                $sourceType === 'sectionwise' ? $sourceSection : null,
+                null
+            );
+        } catch (\Throwable $exception) {
+            return back()->withInput()->with('error', 'The selected exam result could not be calculated. No records were modified.');
+        }
+
+        $selectedInScopeIds = collect($legacyBatch['students'])
+            ->pluck('id')
+            ->map(fn ($studentId) => (int) $studentId)
+            ->intersect($selectedIds);
+        $missingCalculationIds = $selectedInScopeIds
+            ->reject(fn ($studentId) => isset($legacyBatch['entries'][$studentId]))
+            ->values();
+        if ($missingCalculationIds->isNotEmpty()) {
+            return back()->withInput()->with(
+                'error',
+                'Centralized result calculation failed for selected student IDs: '.$missingCalculationIds->implode(', ').'. No records were modified.'
+            );
+        }
+
+        try {
             DB::transaction(function () use (
                 $selectedIds,
                 $sourceSession,
@@ -483,6 +507,7 @@ class AdmissionController extends Controller
                 $targetSection,
                 $rollNumbers,
                 $promotionId,
+                $legacyBatch,
                 &$promoted,
                 &$skipped,
                 &$failed,
@@ -556,66 +581,44 @@ class AdmissionController extends Controller
                         }
                     }
 
-                    // Archive current result snapshot before changing academic assignment.
-                    $marks = \App\Models\Marksheet::where('studentId', $student->id)->get();
-                    if ($marks->count() > 0) {
-                        $subjectIds = $marks->pluck('subjectId')->unique();
-                        $allSubjects = \App\Models\Subject::whereIn('id', $subjectIds)->get()->keyBy('id');
-                        $marksheetCtrl = app(\App\Http\Controllers\MarksheetController::class);
-
-                        $perSubjectOutput = [];
-                        $subjectCache = [];
-                        foreach ($marks as $mark) {
-                            $subject = $allSubjects->get((int) $mark->subjectId);
-                            $subjectName = optional($subject)->subjectName ?? ('Subject-' . $mark->subjectId);
-                            if ($subject) {
-                                $subjectCache[$subject->id] = $subject;
-                            }
-
-                            $perSubjectOutput[] = [
-                                'id' => $mark->subjectId,
-                                'name' => $subjectName,
-                                'cq' => $mark->subjectMarks ?? 0,
-                                'mcq' => $mark->objectMarks ?? 0,
-                                'practical' => $mark->practicalMarks ?? 0,
-                                'total' => $mark->totalMarks ?? 0,
-                                'grade' => $mark->laterGrade ?? 'N/A',
-                                'gradePoint' => $mark->gradePoint ?? 0,
-                                'type' => $subject->subjectType ?? 'Main',
-                                'cqGrade' => '-',
-                                'mcqGrade' => '-',
-                                'prGrade' => '-',
-                            ];
-                        }
-
-                        $pairGroups = $marksheetCtrl->detectSubjectPairs($allSubjects->values());
-                        $mergedSubjects = $marksheetCtrl->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, false);
-
-                        $totalMarks = 0;
-                        $mainGradePoints = [];
-                        $hasFailure = false;
-
-                        foreach ($mergedSubjects as $subj) {
-                            if (is_numeric($subj['total'])) {
-                                $totalMarks += (float)$subj['total'];
-                            }
-                            if (($subj['grade'] ?? '-') === 'F') {
-                                $hasFailure = true;
-                            }
-                            $gp = ($subj['grade'] === 'F') ? 0.0 : (is_numeric($subj['gradePoint']) ? (float)$subj['gradePoint'] : null);
-                            if ($gp !== null && ($subj['type'] ?? 'Main') === 'Main') {
-                                $mainGradePoints[] = $gp;
-                            }
-                        }
-
-                        $finalGpa = count($mainGradePoints) > 0 ? round(array_sum($mainGradePoints) / count($mainGradePoints), 2) : 0;
-                        $finalResult = $hasFailure ? 'Fail' : 'Pass';
+                    // Archive the selected exam's centralized result snapshot before changing academic assignment.
+                    $calculationEntry = $legacyBatch['entries'][(int) $student->id];
+                    if ($calculationEntry['student']->marksheet->isNotEmpty()) {
+                        $studentResult = $calculationEntry['result'];
+                        $presentedResult = app(\App\Services\ResultCalculation\TranscriptResultPresenter::class)->present(
+                            $studentResult,
+                            $calculationEntry['subjects'],
+                            $calculationEntry['student']->marksheet
+                        );
+                        $archiveSubjects = collect(array_merge(
+                            $presentedResult['mainRows'],
+                            $presentedResult['optionalRows']
+                        ))->map(fn (array $row) => [
+                            'id' => $row['id'],
+                            'sourceIds' => $row['sourceIds'],
+                            'name' => $row['name'],
+                            'cq' => $row['cq'],
+                            'mcq' => $row['mcq'],
+                            'practical' => $row['practical'],
+                            'total' => $row['total'],
+                            'grade' => $row['grade'],
+                            'gradePoint' => $row['gradePoint'],
+                            'type' => $row['type'],
+                            'componentFailures' => $row['componentFailures'],
+                        ])->all();
 
                         $resultData = [
-                            'subjects' => $mergedSubjects,
-                            'total_marks' => $totalMarks,
-                            'gpa' => $finalGpa,
-                            'result' => $finalResult,
+                            'subjects' => $archiveSubjects,
+                            'total_marks' => $presentedResult['totalMarks'],
+                            'gpa' => $studentResult->gpa,
+                            'result' => $studentResult->status,
+                            'status' => $studentResult->status,
+                            'optional_bonus' => $studentResult->optionalBonus,
+                            'compulsory_gp_sum' => $studentResult->compulsoryGpSum,
+                            'compulsory_subject_count' => $studentResult->compulsorySubjectCount,
+                            'failed_compulsory_subjects' => $studentResult->failedCompulsorySubjects,
+                            'missing_compulsory_subjects' => $studentResult->missingCompulsorySubjects,
+                            'calculation_version' => $studentResult->calculationVersion,
                         ];
 
                         \App\Models\ResultArchive::firstOrCreate(
@@ -693,9 +696,7 @@ class AdmissionController extends Controller
         $groupId = $requ->filled('groupId') ? $requ->groupId : null;
         $submitToken = (string) Str::uuid();
         session()->put('promotion_submit_token', $submitToken);
-        $promotionExamList = config('result_engine.promotion_enabled', false)
-            ? \App\Models\Exam::orderBy('id', 'DESC')->get()
-            : collect();
+        $promotionExamList = \App\Models\Exam::orderBy('id', 'DESC')->get();
         $activePromotionAudits = collect();
         $promotionCycleCounts = collect();
         if (config('result_engine.promotion_revert_enabled', false) && $studentList->isNotEmpty()) {

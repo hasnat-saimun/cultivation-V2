@@ -140,18 +140,17 @@ class PlacementPreviewTest extends TestCase
         $this->assertSame($selected->id, $preview['rows'][0]['studentId']);
     }
 
-    public function test_preview_reports_duplicate_marks_placements_and_rank_changes(): void
+    public function test_preview_reports_duplicate_placements_and_rank_changes_without_duplicate_marks(): void
     {
         $scope = $this->scope(); $subject = $this->subject('Main', 'Main', 100); $student = $this->student($scope, '01');
-        $this->mark($student, $scope, $subject, 80, 5); $this->mark($student, $scope, $subject, 70, 4);
+        $this->mark($student, $scope, $subject, 80, 5);
         $this->placement($student, $scope, 7, null, true); $this->placement($student, $scope, 8, null, true);
 
         $preview = app(PlacementPreviewBuilder::class)->build($scope['exam']->id,$scope['class']->id,$scope['session']->id); $row = $preview['rows'][0];
 
-        $this->assertContains('DUPLICATE_MARKS_ROWS', $row['reasons']);
+        $this->assertNotContains('DUPLICATE_MARKS_ROWS', $row['reasons']);
         $this->assertSame(1, $preview['summary']['duplicatePlacementRows']);
         $this->assertTrue($row['rankChanged']);
-        $this->assertContains('DATA_QUALITY_WARNING', $row['reasons']);
     }
 
     public function test_command_requires_scope_outputs_differences_and_summary(): void

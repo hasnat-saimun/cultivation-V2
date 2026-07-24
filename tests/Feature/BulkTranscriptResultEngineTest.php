@@ -19,6 +19,7 @@ use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -33,7 +34,7 @@ class BulkTranscriptResultEngineTest extends TestCase
         config(['app.key' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', 'cache.default' => 'array']);
     }
 
-    public function test_disabled_bulk_view_preserves_legacy_gpa_above_five(): void
+    public function test_bulk_view_remains_centralized_and_caps_gpa_when_flag_is_disabled(): void
     {
         config(['result_engine.bulk_transcript_enabled' => false]);
         $scope = $this->scope();
@@ -44,13 +45,14 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->mark($student, $scope, $optional, 80);
         $this->loadMarks([$student], $scope['exam']);
 
-        $html = $this->render([['studentDetails' => $student]], $scope['exam']);
+        $transcripts = app(BulkTranscriptResultBuilder::class)->build([$student], $scope['exam']);
+        $html = $this->render($transcripts, $scope['exam']);
 
-        $this->assertSummary($html, '8', 'A+');
-        $this->assertStringNotContainsString('Remark- Pass', $html);
+        $this->assertSummary($html, '5.00', 'A+');
+        $this->assertStringContainsString('Remark- Pass', $html);
     }
 
-    public function test_bulk_controller_invokes_builder_only_when_bulk_flag_is_enabled(): void
+    public function test_bulk_controller_always_invokes_centralized_builder(): void
     {
         $scope = $this->scope();
         $subject = $this->subject('Main', 'Main', 100);
@@ -59,12 +61,10 @@ class BulkTranscriptResultEngineTest extends TestCase
         $fake = new class(app(BoardResultCalculator::class), app(TranscriptResultPresenter::class), app(ResultCalculationInputBuilder::class)) extends BulkTranscriptResultBuilder {
             public int $calls = 0;
             public array $studentIds = [];
-            public function build(iterable $students, Exam $exam): array
+            public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows): array
             {
                 $this->calls++; $students = collect($students); $this->studentIds = $students->pluck('id')->all();
-                return $students->map(fn ($student) => ['studentDetails' => $student, 'meritRank' => null,
-                    'maxMarkedSubjects' => 0, 'studentMarkedSubjects' => 0, 'hideForMaxRule' => false,
-                    'usingBulkResultEngine' => false, 'result' => null])->all();
+                return parent::buildWithGradeRows($students, $exam, $gradeRows);
             }
         };
         $this->app->instance(BulkTranscriptResultBuilder::class, $fake);
@@ -72,11 +72,11 @@ class BulkTranscriptResultEngineTest extends TestCase
 
         config(['result_engine.bulk_transcript_enabled' => false]);
         app(\App\Http\Controllers\MarksheetController::class)->bulkTranscriptPdf($request());
-        $this->assertSame(0, $fake->calls);
+        $this->assertSame(1, $fake->calls);
 
         config(['result_engine.bulk_transcript_enabled' => true]);
         app(\App\Http\Controllers\MarksheetController::class)->bulkTranscriptPdf($request());
-        $this->assertSame(1, $fake->calls);
+        $this->assertSame(2, $fake->calls);
         $this->assertSame([$student->id], $fake->studentIds);
     }
 
@@ -166,7 +166,7 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->assertSame([$matching->id], $response->getData()['students']->pluck('id')->all());
     }
 
-    public function test_per_student_exception_falls_back_while_other_students_remain_centralized(): void
+    public function test_one_student_calculation_failure_blocks_the_complete_batch(): void
     {
         $scope = $this->scope();
         $subject = $this->subject('Main', 'Main', 100);
@@ -175,22 +175,17 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->loadMarks([$first, $second], $scope['exam']);
         $presenter = new class extends TranscriptResultPresenter {
             private int $calls = 0;
-            public function present(StudentResult $result, iterable $subjects, iterable $marks): array
+            public function presentWithGradeRows(StudentResult $result, iterable $subjects, iterable $marks, iterable $gradeRows): array
             {
                 if (++$this->calls === 1) throw new RuntimeException('simulated');
-                return parent::present($result, $subjects, $marks);
+                return parent::presentWithGradeRows($result, $subjects, $marks, $gradeRows);
             }
         };
         $builder = new BulkTranscriptResultBuilder(app(BoardResultCalculator::class), $presenter, app(ResultCalculationInputBuilder::class));
 
-        $transcripts = $builder->build([$first, $second], $scope['exam']);
-        $html = $this->render($transcripts, $scope['exam']);
-
-        $this->assertFalse($transcripts[0]['usingBulkResultEngine']);
-        $this->assertTrue($transcripts[1]['usingBulkResultEngine']);
-        $this->assertStringContainsString($first->stdId, $html);
-        $this->assertStringContainsString($second->stdId, $html);
-        $this->assertSame(2, substr_count($html, 'transcript-page marksheet'));
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('simulated');
+        $builder->build([$first, $second], $scope['exam']);
     }
 
     public function test_enabled_bulk_render_is_read_only_and_preserves_page_structure(): void
@@ -217,6 +212,46 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->assertSame(2, substr_count($html, 'transcript-page marksheet'));
         $this->assertStringContainsString('@page { size: A4 portrait', $html);
         $this->assertStringContainsString('Output Student', $html);
+    }
+
+    public function test_complete_bulk_blade_render_executes_no_database_queries(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Main', 'Main', 100);
+        $student = $this->student($scope, '01');
+        $this->mark($student, $scope, $subject, 80);
+        $this->loadMarks([$student], $scope['exam']);
+        $transcripts = app(BulkTranscriptResultBuilder::class)->build([$student], $scope['exam']);
+        $viewData = $this->bulkView($scope['exam']);
+
+        $queries = [];
+        DB::listen(function ($query) use (&$queries): void { $queries[] = $query->sql; });
+        view('result.bulk-transcript-pdf', compact('transcripts') + ['bulkView' => $viewData])->render();
+
+        $this->assertSame([], $queries);
+    }
+
+    public function test_bulk_builder_query_count_is_bounded_for_class_sized_batch(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Main', 'Main', 100);
+        $students = [];
+        foreach (range(1, 25) as $roll) {
+            $student = $this->student($scope, str_pad((string) $roll, 2, '0', STR_PAD_LEFT));
+            $this->mark($student, $scope, $subject, 80);
+            $students[] = $student;
+        }
+        $this->loadMarks($students, $scope['exam']);
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        app(BulkTranscriptResultBuilder::class)->build([$students[0]], $scope['exam']);
+        $oneStudentQueries = count(DB::getQueryLog());
+        DB::flushQueryLog();
+        app(BulkTranscriptResultBuilder::class)->build($students, $scope['exam']);
+        $classQueries = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        $this->assertLessThanOrEqual($oneStudentQueries + 2, $classQueries);
     }
 
     private function scenario(string $scenario): array
@@ -254,11 +289,18 @@ class BulkTranscriptResultEngineTest extends TestCase
 
     private function render(array $transcripts, Exam $exam): string
     {
-        $transcripts = array_map(fn ($item) => array_merge([
-            'meritRank' => null, 'maxMarkedSubjects' => 0, 'studentMarkedSubjects' => 0,
-            'hideForMaxRule' => false, 'usingBulkResultEngine' => false, 'result' => null,
-        ], $item), $transcripts);
-        return view('result.bulk-transcript-pdf', compact('exam', 'transcripts') + ['config' => null])->render();
+        return view('result.bulk-transcript-pdf', compact('transcripts') + ['bulkView' => $this->bulkView($exam)])->render();
+    }
+
+    private function bulkView(Exam $exam): array
+    {
+        return [
+            'title' => 'Academic Transcript',
+            'examName' => $exam->examName,
+            'institute' => ['name' => 'Test Institute', 'address' => '', 'mobile' => '', 'email' => '', 'logoUrl' => null],
+            'principalSignatureUrl' => null,
+            'gradeLegend' => [],
+        ];
     }
 
     private function loadMarks(array $students, Exam $exam): void

@@ -844,6 +844,71 @@ class MarksEntryTest extends TestCase
         ], $idsForClassB);
     }
 
+    public function test_confirm_marks_rejects_component_values_outside_subject_bounds_without_writing(): void
+    {
+        [$session, $class, $section, $department, $exam, $subject] = $this->createMarksScope('Class 8');
+        $student = $this->createStudent($session, $class, $section, $department, '1', '01');
+        $subject->CQ = 70;
+        $subject->MCQ = 30;
+        $subject->save();
+
+        try {
+            app(MarksheetController::class)->confirmMarks(Request::create('/marks/add/confirm', 'POST', [
+                'sessionId' => $session->id,
+                'classId' => $class->id,
+                'groupId' => $section->id,
+                'gender' => 'all',
+                'examId' => $exam->id,
+                'subjectId' => $subject->id,
+                'studentId' => [$student->id],
+                'cqMarks' => [71],
+                'mcqMarks' => [20],
+            ]));
+            $this->fail('Expected out-of-range marks validation to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('cqMarks.0', $exception->errors());
+        }
+
+        $this->assertSame(0, Marksheet::count());
+    }
+
+    public function test_marks_entry_render_query_count_is_constant_as_roster_grows(): void
+    {
+        [$session, $class, $section, $department, $exam, $subject] = $this->createMarksScope('Class 8');
+        $this->createStudent($session, $class, $section, $department, '1', '01');
+
+        $countQueries = function () use ($session, $class, $section, $exam, $subject): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            app(MarksheetController::class)->getMarks($this->marksRequest([
+                'sessionId' => $session->id,
+                'classId' => $class->id,
+                'groupId' => $section->id,
+                'gender' => 'all',
+                'examId' => $exam->id,
+                'subjectId' => $subject->id,
+            ]))->render();
+            $count = count(DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $count;
+        };
+
+        $oneStudentQueries = $countQueries();
+        foreach (range(2, 25) as $roll) {
+            $this->createStudent($session, $class, $section, $department, '1', str_pad((string) $roll, 2, '0', STR_PAD_LEFT));
+        }
+        $twentyFiveStudentQueries = $countQueries();
+        foreach (range(26, 100) as $roll) {
+            $this->createStudent($session, $class, $section, $department, '1', (string) $roll);
+        }
+        $oneHundredStudentQueries = $countQueries();
+
+        $this->assertSame($oneStudentQueries, $twentyFiveStudentQueries);
+        $this->assertSame($oneStudentQueries, $oneHundredStudentQueries);
+        $this->assertSame(15, $oneHundredStudentQueries);
+    }
+
     private function marksRequest(array $payload): Request
     {
         return Request::create('/marks/add/getData', 'POST', $payload);

@@ -1,9 +1,4 @@
 <?php
-use App\Http\Controllers\ResultArchiveController;
-// Result Archive
-Route::get('/result-archive', [ResultArchiveController::class, 'index'])->name('resultArchive');
-Route::get('/result-archive/transcript/{id}', [ResultArchiveController::class, 'transcript'])->name('resultArchive.transcript');
-
 // Testimonial routes
 Route::get('testimonials/create/{admission}', [App\Http\Controllers\TestimonialController::class, 'create'])->name('testimonials.create');
 Route::post('testimonials/store', [App\Http\Controllers\TestimonialController::class, 'store'])->name('testimonials.store');
@@ -191,6 +186,8 @@ Route::get('/download-student-template', [StudentController::class, 'downloadStu
 Route::middleware(['adminGuard'])->group (function(){
         // Result Archive
         Route::get('/result-archive', [\App\Http\Controllers\ResultArchiveController::class, 'index'])->name('resultArchive');
+        Route::get('/result-archive/transcript/{id}', [\App\Http\Controllers\ResultArchiveController::class, 'transcript'])
+            ->name('resultArchive.transcript');
     // Documentation route (internal user guide)
     Route::get('/user-guide', [DocsController::class, 'userGuide'])->name('userGuide');
     Route::get('/user-guide/general-admin', [DocsController::class, 'userGuideGeneralAdmin'])->name('userGuide.generalAdmin');
@@ -1841,7 +1838,19 @@ Route::middleware(['adminGuard'])->group (function(){
         Route::post('/marks/add/confirm',[
             MarksheetController::class ,
             'confirmMarks'
-        ])->name('confirmMarks');
+        ])->middleware('throttle:result-draft')->name('confirmMarks');
+        Route::post('/marks/add/draft',[
+            MarksheetController::class,
+            'saveDraftMarks'
+        ])->middleware('throttle:result-draft')->name('marks.draft.save');
+        Route::post('/marks/add/confirm-subject',[
+            MarksheetController::class,
+            'confirmSubjectMarks'
+        ])->middleware('throttle:result-transition')->name('marks.subject.confirm');
+        Route::post('/marks/add/reopen-subject',[
+            MarksheetController::class,
+            'reopenSubjectMarks'
+        ])->middleware('throttle:result-transition')->name('marks.subject.reopen');
     });
 
     Route::get('/marksheet/create',[
@@ -1877,7 +1886,15 @@ Route::middleware(['adminGuard'])->group (function(){
         Route::post('/result/final-publish',[
             MarksheetController::class,
             'finalPublishStore'
-        ])->name('result.final.publish.store');
+        ])->middleware('throttle:result-publication')->name('result.final.publish.store');
+        Route::post('/result/final-publish/publish',[
+            MarksheetController::class,
+            'publishResult'
+        ])->middleware('throttle:result-publication')->name('result.publish');
+        Route::post('/result/final-publish/unpublish',[
+            MarksheetController::class,
+            'unpublishResult'
+        ])->middleware('throttle:result-publication')->name('result.unpublish');
     });
 
 
@@ -2250,8 +2267,4 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('api.governing-body.list');
 
     //web font end
-
-
-
-
 

@@ -20,8 +20,8 @@ class PlacementTest extends TestCase
 
         // Marksheets (two subjects each)
         foreach ([$s1->id, $s2->id] as $sid) {
-            Marksheet::create(['studentId' => (string) $sid, 'classId' => '10', 'sessionId' => '2025', 'groupId' => null, 'examId' => 'final', 'gradePoint' => 4.0, 'totalMarks' => 80]);
-            Marksheet::create(['studentId' => (string) $sid, 'classId' => '10', 'sessionId' => '2025', 'groupId' => null, 'examId' => 'final', 'gradePoint' => 5.0, 'totalMarks' => 90]);
+            Marksheet::create(['studentId' => (string) $sid, 'classId' => '10', 'sessionId' => '2025', 'groupId' => null, 'examId' => 'final', 'subjectId' => '1', 'gradePoint' => 4.0, 'totalMarks' => 80]);
+            Marksheet::create(['studentId' => (string) $sid, 'classId' => '10', 'sessionId' => '2025', 'groupId' => null, 'examId' => 'final', 'subjectId' => '2', 'gradePoint' => 5.0, 'totalMarks' => 90]);
         }
 
         // Give Bob higher total marks on tiebreak

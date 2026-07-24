@@ -60,7 +60,9 @@
                         $subjectOpen = request()->routeIs($subjectRoutes);
                         $examOpen = request()->routeIs($examRoutes);
 
-                        $loginUser = \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
+                        $loginUser = !empty($cultivationAdminPreloaded)
+                            ? ($preloadedCultivationAdmin ?? null)
+                            : \App\Models\CultivationAdmin::find(session('cultivationAdmin'));
                         $userType = $loginUser['userType'] ?? null;
                         $isGeneralAdmin = $loginUser && $loginUser->isGeneral();
                         $demoHosts = ['demoadmin.cultivationapp.com', 'www.demoadmin.cultivationppa.com'];

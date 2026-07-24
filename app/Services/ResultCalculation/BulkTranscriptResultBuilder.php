@@ -3,6 +3,7 @@
 namespace App\Services\ResultCalculation;
 
 use App\Models\Exam;
+use App\Models\GradeList;
 use App\Models\classManage;
 use App\Models\Classes;
 use App\Models\Department;
@@ -20,6 +21,16 @@ class BulkTranscriptResultBuilder
 
     public function build(iterable $students, Exam $exam): array
     {
+        return $this->buildPrepared($students, $exam, GradeList::all());
+    }
+
+    public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows): array
+    {
+        return $this->buildPrepared($students, $exam, collect($gradeRows));
+    }
+
+    private function buildPrepared(iterable $students, Exam $exam, $gradeRows): array
+    {
         $students = collect($students)->values();
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
         $sessionNames = sessionManage::whereIn('id', $students->pluck('sessName')->filter())->pluck('session', 'id');
@@ -29,8 +40,7 @@ class BulkTranscriptResultBuilder
         $sectionNames = sectionManage::whereIn('id', $students->pluck('sectionName')->filter())->pluck('section', 'id');
         $departmentIds = $students->map(fn ($student) => $student->departmentName ?? $student->departmentId ?? null)->filter()->unique();
         $departmentNames = Department::whereIn('id', $departmentIds)->pluck('departmentName', 'id');
-
-        return $students->map(function ($student) use ($exam, $subjectsByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames) {
+        return $students->map(function ($student) use ($exam, $subjectsByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows) {
             $classId = (int) ($student->className ?? 0);
             $departmentId = (int) ($student->departmentName ?? $student->departmentId ?? 0);
             $transcript = $this->baseTranscript($student, [
@@ -42,16 +52,17 @@ class BulkTranscriptResultBuilder
             try {
                 $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
                 $result = $this->calculator->calculate($student, $exam, $student->marksheet, $subjects);
-                $transcript['result'] = $this->presenter->present($result, $subjects, $student->marksheet);
+                $transcript['result'] = $this->presenter->presentWithGradeRows($result, $subjects, $student->marksheet, $gradeRows);
                 $transcript['usingBulkResultEngine'] = true;
             } catch (\Throwable $exception) {
-                Log::error('Result engine bulk transcript calculation failed; using legacy student output.', [
+                Log::error('Centralized bulk transcript batch calculation failed; batch blocked.', [
                     'student_id' => (int) $student->id,
                     'exam_id' => (int) $exam->id,
                     'class_id' => (int) ($student->className ?? 0),
                     'session_id' => (int) ($student->sessName ?? 0),
                     'exception' => get_class($exception),
                 ]);
+                throw $exception;
             }
             return $transcript;
         })->all();
@@ -68,6 +79,15 @@ class BulkTranscriptResultBuilder
             'usingBulkResultEngine' => false,
             'result' => null,
             'metadata' => $metadata,
+            'studentIdentity' => [
+                'studentId' => $student->stdId ?? $student->id,
+                'studentName' => trim(($student->fullName ?? '').' '.($student->sureName ?? '')),
+                'fatherName' => $student->fatherName ?? $student->father ?? '',
+                'motherName' => $student->motherName ?? $student->mother ?? '',
+                'rollNumber' => is_numeric($student->rollNumber)
+                    ? str_pad((string) ((int) $student->rollNumber), 2, '0', STR_PAD_LEFT)
+                    : (string) ($student->rollNumber ?? ''),
+            ],
         ];
     }
 }

@@ -210,15 +210,10 @@ class ReligiousSubjectMarksEntryTest extends TestCase
         ]));
 
         $this->assertInstanceOf(RedirectResponse::class, $response);
-        $this->assertDatabaseHas('marksheets', [
-            'studentId' => $matching->id,
-            'subjectId' => $islamic->id,
-            'subjectMarks' => 70,
-        ]);
+        $this->assertSame(0, \App\Models\Marksheet::count());
         $this->assertDatabaseMissing('marksheets', [
             'studentId' => $nonMatching->id,
             'subjectId' => $islamic->id,
-            'subjectMarks' => 80,
         ]);
     }
 

@@ -9,6 +9,16 @@ class TranscriptResultPresenter
 {
     public function present(StudentResult $result, iterable $subjects, iterable $marks): array
     {
+        return $this->presentPrepared($result, $subjects, $marks, null);
+    }
+
+    public function presentWithGradeRows(StudentResult $result, iterable $subjects, iterable $marks, iterable $gradeRows): array
+    {
+        return $this->presentPrepared($result, $subjects, $marks, $gradeRows);
+    }
+
+    private function presentPrepared(StudentResult $result, iterable $subjects, iterable $marks, ?iterable $gradeRows): array
+    {
         $subjectsById = collect($subjects)->keyBy(fn ($subject) => (string) $subject->id);
         $marksBySubject = collect($marks)->groupBy(fn ($mark) => (string) $mark->subjectId);
         $mainRows = [];
@@ -32,7 +42,7 @@ class TranscriptResultPresenter
         $letter = match ($result->status) {
             'Fail' => 'F',
             'Incomplete' => 'Incomplete',
-            default => GradeList::letterForGpa((float) $result->gpa) ?? '-',
+            default => $this->letterForGpa((float) $result->gpa, $gradeRows),
         };
 
         return [
@@ -40,16 +50,46 @@ class TranscriptResultPresenter
             'optionalRows' => $optionalRows,
             'totalMarks' => round($totalMarks, 2),
             'gpa' => $result->status === 'Incomplete' ? null : $result->gpa,
+            'gpaDisplay' => $result->status === 'Incomplete'
+                ? 'Incomplete'
+                : number_format((float) $result->gpa, 2),
             'letterGrade' => $letter,
             'status' => $result->status,
             'optionalBonus' => $result->optionalBonus,
+            'optionalBonusDisplay' => number_format($result->optionalBonus, 2),
             'failedSubjects' => array_values(array_unique($failedNames)),
+            'failedSubjectCount' => count(array_unique($failedNames)),
             'missingSubjects' => array_values(array_unique($missingNames)),
+            'missingSubjectCount' => count(array_unique($missingNames)),
+            'isIncomplete' => $result->status === 'Incomplete',
             'componentFailures' => collect($result->subjectResults)
                 ->filter(fn ($item) => $item->componentFailures !== [])
                 ->mapWithKeys(fn ($item) => [$item->subjectId => $item->componentFailures])->all(),
             'warnings' => $result->warnings,
         ];
+    }
+
+    private function letterForGpa(float $gpa, ?iterable $gradeRows): string
+    {
+        if ($gradeRows === null) return GradeList::letterForGpa($gpa) ?? '-';
+        $candidate = null;
+        foreach ($gradeRows as $row) {
+            $min = is_numeric($row->minGp) ? (float) $row->minGp : null;
+            $max = is_numeric($row->maxGp) ? (float) $row->maxGp : null;
+            if ($min !== null && $max !== null && $gpa >= $min && $gpa <= $max) return (string) $row->gradeName;
+            if (is_numeric($row->gradePoint) && (float) $row->gradePoint <= $gpa
+                && ($candidate === null || (float) $candidate->gradePoint < (float) $row->gradePoint)) {
+                $candidate = $row;
+            }
+        }
+        if ($candidate !== null) return (string) $candidate->gradeName;
+        if ($gpa >= 5.0) return 'A+';
+        if ($gpa >= 4.0) return 'A';
+        if ($gpa >= 3.5) return 'A-';
+        if ($gpa >= 3.0) return 'B';
+        if ($gpa >= 2.0) return 'C';
+        if ($gpa >= 1.0) return 'D';
+        return 'F';
     }
 
     private function subjectRow(SubjectResult $result, Collection $subjectsById, Collection $marksBySubject): array
@@ -61,6 +101,11 @@ class TranscriptResultPresenter
         $paired = $sourceSubjects->count() > 1;
 
         return [
+            'id' => $result->subjectId,
+            'sourceIds' => $result->sourceSubjectIds,
+            'type' => $result->subjectType,
+            'isOptional' => $result->isOptional,
+            'paired' => $paired,
             'name' => $this->displayName($result, $sourceSubjects),
             'cq' => $this->componentDisplay($sourceSubjects, $sourceMarks, 'CQ', 'subjectMarks', $paired),
             'mcq' => $this->componentDisplay($sourceSubjects, $sourceMarks, 'MCQ', 'objectMarks', $paired),

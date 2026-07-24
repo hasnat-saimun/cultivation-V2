@@ -415,9 +415,15 @@ class CentralizedPromotionProcessor
     private function isPublished(array $scope): bool
     {
         return ResultPublish::query()->where('examId',(string)$scope['examId'])->where('classId',(string)$scope['sourceClassId'])
-            ->where('sessionId',(string)$scope['sourceSessionId'])->where(function ($query) use ($scope) {
-                $query->whereNull('groupId');
-                if ($scope['sourceSectionId'] !== null) $query->orWhere('groupId',(string)$scope['sourceSectionId']);
+            ->where('sessionId',(string)$scope['sourceSessionId'])
+            ->where('status', ResultPublish::STATUS_PUBLISHED)
+            ->where(function ($query) use ($scope) {
+                if ($scope['sourceSectionId'] === null) {
+                    $query->whereNull('groupId');
+                    return;
+                }
+                $query->where('groupId',(string)$scope['sourceSectionId'])
+                    ->orWhere(fn ($legacy) => $legacy->whereNull('groupId')->where('legacyImported', true));
             })->exists();
     }
 

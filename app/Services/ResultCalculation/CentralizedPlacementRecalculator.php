@@ -244,9 +244,15 @@ class CentralizedPlacementRecalculator
     private function isPublished(int $examId, int $classId, int $sessionId, ?int $sectionId): bool
     {
         return ResultPublish::query()->where('examId', (string) $examId)->where('classId', (string) $classId)
-            ->where('sessionId', (string) $sessionId)->where(function ($query) use ($sectionId) {
-                $query->whereNull('groupId');
-                if ($sectionId !== null) $query->orWhere('groupId', (string) $sectionId);
+            ->where('sessionId', (string) $sessionId)
+            ->where('status', ResultPublish::STATUS_PUBLISHED)
+            ->where(function ($query) use ($sectionId) {
+                if ($sectionId === null) {
+                    $query->whereNull('groupId');
+                    return;
+                }
+                $query->where('groupId', (string) $sectionId)
+                    ->orWhere(fn ($legacy) => $legacy->whereNull('groupId')->where('legacyImported', true));
             })->exists();
     }
 

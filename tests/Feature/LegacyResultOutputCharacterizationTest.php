@@ -14,6 +14,7 @@ use App\Models\ResultArchive;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
+use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
@@ -37,7 +38,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         ]);
     }
 
-    public function test_single_transcript_currently_allows_optional_bonus_above_five_and_normalizes_non_100_subject(): void
+    public function test_single_transcript_caps_optional_bonus_at_five_and_normalizes_non_100_subject(): void
     {
         $scope = $this->scope();
         $main = $this->subject('Fifty Mark Main', 'Main', 50);
@@ -50,13 +51,13 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $html = $this->singleTranscriptHtml($student, $scope['exam']);
         $summary = $this->summaryFromHtml($html);
 
-        $this->assertSame('8', $summary['gpa']);
+        $this->assertSame('5.00', $summary['gpa']);
         $this->assertSame('A+', $summary['letter']);
         $this->assertStringContainsString('Fifty Mark Main', $html);
         $this->assertMatchesRegularExpression('/Fifty Mark Main.*?40.*?A\+.*?5\.00/s', $html);
     }
 
-    public function test_single_transcript_current_fail_zero_missing_theory_component_and_pair_behaviors(): void
+    public function test_single_transcript_uses_centralized_fail_and_incomplete_behaviors(): void
     {
         $scope = $this->scope(1);
 
@@ -71,23 +72,23 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $this->mark($optionalStudent, $scope, $passedMain, 80, 5, 'A+');
         $this->mark($optionalStudent, $scope, $optionalF, 0, 0, 'F');
         $optionalHtml = $this->singleTranscriptHtml($optionalStudent, $scope['exam']);
-        $this->assertSame(['gpa' => '5', 'letter' => 'A+'], $this->summaryFromHtml($optionalHtml));
+        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($optionalHtml));
         $this->assertStringContainsString('Failed Subjects (1)', $optionalHtml);
 
         $zero = $this->student($scope, '04');
         $zeroMain = $this->subject('Zero Main', 'Main', 100);
         $this->mark($zero, $scope, $zeroMain, 0, 0, 'F');
-        $this->assertSame(['gpa' => '-', 'letter' => '-'], $this->summaryFromHtml($this->singleTranscriptHtml($zero, $scope['exam'])));
+        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($this->singleTranscriptHtml($zero, $scope['exam'])));
 
         $missing = $this->student($scope, '05');
-        $this->assertSame(['gpa' => '-', 'letter' => '-'], $this->summaryFromHtml($this->singleTranscriptHtml($missing, $scope['exam'])));
+        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($this->singleTranscriptHtml($missing, $scope['exam'])));
 
         $theory = $this->student($scope, '06');
         $theorySubject = $this->subject('Theory Type', 'Theory', 100);
         $this->mark($theory, $scope, $theorySubject, 80, 5, 'A+');
         $theoryHtml = $this->singleTranscriptHtml($theory, $scope['exam']);
-        $this->assertSame(['gpa' => '-', 'letter' => '-'], $this->summaryFromHtml($theoryHtml));
-        $this->assertStringNotContainsString('Theory Type</td>', $theoryHtml);
+        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($theoryHtml));
+        $this->assertStringContainsString('Theory Type</td>', $theoryHtml);
 
         $paired = $this->student($scope, '07');
         $paper1 = $this->subject('Bangla 1st Paper', 'Main', 70, 30, 0, 'bangla_1st_paper');
@@ -95,11 +96,11 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $this->mark($paired, $scope, $paper1, 20, 0, 'F', 30);
         $this->mark($paired, $scope, $paper2, 70, 5, 'A+', 30);
         $pairedHtml = $this->singleTranscriptHtml($paired, $scope['exam']);
-        $this->assertSame(['gpa' => '4', 'letter' => 'A'], $this->summaryFromHtml($pairedHtml));
+        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($pairedHtml));
         $this->assertStringContainsString('(20 + 70) = 90', $pairedHtml);
     }
 
-    public function test_bulk_transcript_renders_multiple_students_with_the_same_legacy_summary_rules_as_single(): void
+    public function test_bulk_transcript_renders_multiple_students_from_centralized_results(): void
     {
         $scope = $this->scope();
         $main = $this->subject('Main Subject', 'Main', 100);
@@ -126,16 +127,15 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $summaries = array_map(fn ($m) => [trim($m[2]), trim($m[1])], $matches);
 
         $this->assertSame([
-            ['8', 'A+'],
-            ['0.00', 'F'],
-            ['5', 'A+'],
-            ['-', '-'],
-            ['-', '-'],
+            ['Incomplete', 'Incomplete'],
+            ['Incomplete', 'Incomplete'],
+            ['Incomplete', 'Incomplete'],
+            ['Incomplete', 'Incomplete'],
+            ['Incomplete', 'Incomplete'],
         ], $summaries);
-        $this->assertSame($this->summaryFromHtml($this->singleTranscriptHtml($bonus, $scope['exam'])), ['gpa' => $summaries[0][0], 'letter' => $summaries[0][1]]);
     }
 
-    public function test_promotion_archive_currently_mixes_exams_omits_bonus_and_optional_f_causes_failure(): void
+    public function test_promotion_archive_uses_only_selected_exam_centralized_result(): void
     {
         $scope = $this->scope();
         $secondExam = new Exam();
@@ -154,10 +154,11 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $archive = $this->promoteAndArchive($student, $scope);
         $snapshot = $archive->result_data;
 
-        $this->assertSame(3.5, (float) $snapshot['gpa']);
-        $this->assertSame('Fail', $snapshot['result']);
+        $this->assertNull($snapshot['gpa']);
+        $this->assertSame('Incomplete', $snapshot['result']);
         $this->assertCount(3, $snapshot['subjects']);
-        $this->assertSame(120.0, (float) $snapshot['total_marks']);
+        $this->assertSame(80.0, (float) $snapshot['total_marks']);
+        $this->assertSame('board-v1', $snapshot['calculation_version']);
 
         // firstOrCreate preserves an existing snapshot with the same old academic identity.
         $this->assertDatabaseCount('result_archives', 1);
@@ -201,7 +202,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $this->assertStringNotContainsString('Grade Point: 5', $html);
     }
 
-    public function test_result_summary_inherits_tabulation_optional_failure_and_missing_subject_counts(): void
+    public function test_result_summary_uses_centralized_optional_and_missing_subject_counts(): void
     {
         $scope = $this->scope();
         $main = $this->subject('Main', 'Main', 100);
@@ -216,11 +217,14 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $response = app(MarksheetController::class)->resultSummary($this->resultRequest($scope));
         $data = $response->getData();
 
-        $this->assertSame(['total' => 3, 'present' => 2, 'absent' => 1, 'pass' => 1, 'fail' => 1, 'incomplete' => 0], $data['overallSummary']);
-        $this->assertSame([1 => 1], $data['failureBuckets']);
+        $this->assertSame([
+            'total' => 3, 'present' => 2, 'absent' => 1, 'pass' => 2, 'fail' => 0, 'incomplete' => 1,
+            'passPercentage' => 66.67, 'failPercentage' => 0.0, 'incompletePercentage' => 33.33,
+        ], $data['overallSummary']);
+        $this->assertSame([], $data['failureBuckets']);
     }
 
-    public function test_cross_output_fixture_records_current_gpa_and_status_disagreement(): void
+    public function test_centralized_controller_outputs_agree_across_active_paths(): void
     {
         $scope = $this->scope();
         $main = $this->subject('Main A Plus', 'Main', 100);
@@ -248,9 +252,9 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $archive = $this->promoteAndArchive($student, $scope);
         $archiveHtml = app(ResultArchiveController::class)->transcript($archive->id)->render();
 
-        $this->assertSame(['gpa' => '8', 'letter' => 'A+'], $single);
-        $this->assertSame($single, $bulk);
-        $this->assertSame('8.00', $tabulation['finalGpa']);
+        $this->assertSame(['gpa' => '5.00', 'letter' => 'A+'], $single);
+        $this->assertSame(['gpa' => '5.00', 'letter' => 'A+'], $bulk);
+        $this->assertSame('5.00', $tabulation['finalGpa']);
         $this->assertSame('Pass', $placement->status);
         $this->assertSame(5.0, (float) $placement->gpa);
         $this->assertSame(2, (int) $placement->subjectsCount);
@@ -327,18 +331,17 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         foreach ($students as $student) {
             $student->load(['marksheet' => fn ($q) => $q->where('examId', $exam->id)->orderBy('subjectId')]);
         }
-        $transcripts = array_map(fn ($student) => [
-            'studentDetails' => $student,
-            'meritRank' => null,
-            'maxMarkedSubjects' => 0,
-            'studentMarkedSubjects' => 0,
-            'hideForMaxRule' => false,
-        ], $students);
+        $transcripts = app(BulkTranscriptResultBuilder::class)->build($students, $exam);
 
         return view('result.bulk-transcript-pdf', [
-            'exam' => $exam,
             'transcripts' => $transcripts,
-            'config' => null,
+            'bulkView' => [
+                'title' => 'Academic Transcript',
+                'examName' => $exam->examName,
+                'institute' => ['name' => 'Test Institute', 'address' => '', 'mobile' => '', 'email' => '', 'logoUrl' => null],
+                'principalSignatureUrl' => null,
+                'gradeLegend' => [],
+            ],
         ])->render();
     }
 
@@ -377,6 +380,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
             'promotSection' => $targetSection->id,
             'selected_students' => [$student->id],
             'roll_numbers' => [$student->id => $student->rollNumber],
+            'examId' => $scope['exam']->id,
             'submit_token' => $token,
         ]));
 

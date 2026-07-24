@@ -135,25 +135,18 @@ class CentralizedPlacementRecalculatorTest extends TestCase
         $this->assertNull(Placement::where('studentId', $incomplete->id)->value('position'));
     }
 
-    public function test_preflight_publication_flag_and_dry_run_preserve_existing_scope(): void
+    public function test_publication_flag_and_dry_run_preserve_existing_scope_after_database_duplicate_prevention(): void
     {
         $scope = $this->scope('grading');
         $subject = $this->subject('Main', 'Main', 100);
         $student = $this->student($scope, '01');
         $this->mark($student, $scope, $subject, 80);
-        $this->mark($student, $scope, $subject, 70);
         $existing = $this->placement($student, $scope, 9);
 
-        try {
-            $this->service()->recalculate(...$this->args($scope));
-            $this->fail('Duplicate marks should block persistence.');
-        } catch (PlacementRecalculationException $exception) {
-            $this->assertContains('DUPLICATE_MARKS', collect($exception->report['blockingErrors'])->pluck('code')->all());
-        }
-        $this->assertDatabaseHas('exam_placements', ['id' => $existing->id, 'position' => 9]);
-
-        Marksheet::latest('id')->first()->delete();
         ResultPublish::create(['examId'=>$scope['exam']->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'groupId'=>$scope['section']->id]);
+        ResultPublish::first()->forceFill(['status' => ResultPublish::STATUS_UNPUBLISHED])->save();
+        $this->assertFalse($this->service()->recalculate(...$this->args($scope, dryRun: true))['publicationLocked']);
+        ResultPublish::first()->forceFill(['status' => ResultPublish::STATUS_PUBLISHED])->save();
         $dry = $this->service()->recalculate(...$this->args($scope, dryRun: true));
         $this->assertTrue($dry['publicationLocked']);
         $this->assertTrue($dry['forceRequired']);

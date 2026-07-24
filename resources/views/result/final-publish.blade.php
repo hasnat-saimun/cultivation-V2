@@ -3,13 +3,6 @@
 Final Result Publish
 @endsection
 @section('backIndex')
-@php
-    $publishedMap = [];
-    foreach ($publishedList as $row) {
-        $key = implode(':', [$row->examId, $row->sessionId, $row->classId, $row->groupId ?? '']);
-        $publishedMap[$key] = $row;
-    }
-@endphp
 <div class="row gutters-20">
     <div class="col-12">
         @if(session()->has('success'))
@@ -25,7 +18,7 @@ Final Result Publish
         <div class="card">
             <div class="card-body">
                 <h4 class="mb-3">Publish Final Result</h4>
-                <form method="POST" action="{{ route('result.final.publish.store') }}">
+                <form method="POST" action="{{ route('result.publish') }}">
                     @csrf
                     <div class="form-group mb-2">
                         <label>Exam *</label>
@@ -65,10 +58,9 @@ Final Result Publish
                         </select>
                     </div>
                     <div class="d-flex gap-2">
-                        <button type="submit" name="action" value="publish" class="btn btn-success">Publish</button>
-                        <button type="submit" name="action" value="unpublish" class="btn btn-outline-danger">Unpublish</button>
+                        <button type="submit" class="btn btn-success">Publish Ready Scope(s)</button>
                     </div>
-                    <small class="text-muted d-block mt-2">If Section is empty, the publish applies to all sections for the class.</small>
+                    <small class="text-muted d-block mt-2">If Section is empty, actual sections are validated and published atomically as separate scopes.</small>
                 </form>
             </div>
         </div>
@@ -76,7 +68,7 @@ Final Result Publish
     <div class="col-lg-7">
         <div class="card">
             <div class="card-body">
-                <h4 class="mb-3">Published Results</h4>
+                <h4 class="mb-3">Publication States</h4>
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <thead>
@@ -86,6 +78,7 @@ Final Result Publish
                                 <th>Class</th>
                                 <th>Section</th>
                                 <th>Published</th>
+                                <th>Status / Revision</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -99,20 +92,44 @@ Final Result Publish
                                     <td>{{ $sectionNames[$pub->groupId] ?? ($pub->groupId ? $pub->groupId : 'All') }}</td>
                                     <td>{{ $pub->published_at ? $pub->published_at->format('Y-m-d H:i') : '-' }}</td>
                                     <td>
-                                        <form method="POST" action="{{ route('result.final.publish.store') }}">
+                                        <span class="badge {{ $pub->isPublished() ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ ucfirst($pub->status) }}
+                                        </span>
+                                        r{{ $pub->revision }}
+                                        @if($pub->legacyImported)<small class="d-block text-muted">Legacy import</small>@endif
+                                    </td>
+                                    <td>
+                                        @if($pub->isPublished())
+                                        <form method="POST" action="{{ route('result.unpublish') }}">
                                             @csrf
                                             <input type="hidden" name="examId" value="{{ $pub->examId }}">
                                             <input type="hidden" name="sessionId" value="{{ $pub->sessionId }}">
                                             <input type="hidden" name="classId" value="{{ $pub->classId }}">
                                             <input type="hidden" name="groupId" value="{{ $pub->groupId }}">
-                                            <button type="submit" name="action" value="unpublish" class="btn btn-sm btn-outline-danger">Unpublish</button>
+                                            <input type="hidden" name="publication_revision" value="{{ $pub->revision }}">
+                                            <input type="hidden" name="exact_scope" value="1">
+                                            <input type="text" name="reason" maxlength="500" required
+                                                class="form-control form-control-sm mb-1" placeholder="Unpublish reason">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Unpublish</button>
                                         </form>
+                                        @else
+                                        <form method="POST" action="{{ route('result.publish') }}">
+                                            @csrf
+                                            <input type="hidden" name="examId" value="{{ $pub->examId }}">
+                                            <input type="hidden" name="sessionId" value="{{ $pub->sessionId }}">
+                                            <input type="hidden" name="classId" value="{{ $pub->classId }}">
+                                            <input type="hidden" name="groupId" value="{{ $pub->groupId }}">
+                                            <input type="hidden" name="publication_revision" value="{{ $pub->revision }}">
+                                            <input type="hidden" name="exact_scope" value="1">
+                                            <button type="submit" class="btn btn-sm btn-success">Republish</button>
+                                        </form>
+                                        @endif
                                     </td>
                                 </tr>
                                 @endforeach
                             @else
                                 <tr>
-                                    <td colspan="6">No published results found.</td>
+                                    <td colspan="7">No publication states found.</td>
                                 </tr>
                             @endif
                         </tbody>

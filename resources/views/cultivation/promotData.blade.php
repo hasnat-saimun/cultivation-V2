@@ -36,7 +36,6 @@ Get Promotional Student Data
                 @endif
                 <div class="row">
                     <div class="col-12"><h1>Manage the promotion of student from the list</h1></div>
-                    @if(config('result_engine.promotion_enabled'))
                     <div class="col-12 form-group">
                         <label>Controlling Exam *</label>
                         <select class="select2" name="examId" required>
@@ -45,9 +44,8 @@ Get Promotional Student Data
                                 <option value="{{ $exam->id }}" {{ (string)old('examId') === (string)$exam->id ? 'selected' : '' }}>{{ $exam->examName }}</option>
                             @endforeach
                         </select>
-                        <small class="form-text text-muted">Only this published exam controls eligibility and the centralized archive.</small>
+                        <small class="form-text text-muted">This exam controls the centralized result snapshot used by the promotion archive.</small>
                     </div>
-                    @endif
                     <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ isset($type) && $type==='classwise' ? 'All Sections' : $sectionName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Current Class:</b>  {{ $className }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Session:</b> {{ $session_name }}</div>

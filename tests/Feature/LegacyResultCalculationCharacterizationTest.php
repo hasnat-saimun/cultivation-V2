@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\MarksheetController;
+use App\Services\ResultCalculation\BoardResultCalculator;
 use App\Models\classManage;
 use App\Models\Exam;
 use App\Models\GradeList;
@@ -12,8 +13,12 @@ use App\Models\Placement;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
+use App\Models\CultivationAdmin;
+use App\Models\MarksScopeState;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Session;
 use Tests\TestCase;
 
 /**
@@ -30,6 +35,15 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
     {
         parent::setUp();
         config(['app.key' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=']);
+        $admin = new CultivationAdmin();
+        $admin->adminName = 'Characterization Admin';
+        $admin->adminUser = 'characterization';
+        $admin->userType = CultivationAdmin::ROLE_GENERAL;
+        $admin->loginPassword = Hash::make('secret');
+        $admin->adminMobile = '01700000000';
+        $admin->adminMail = 'characterization@example.test';
+        $admin->save();
+        Session::put('cultivationAdmin', $admin->id);
     }
 
     public function test_grade_resolver_current_fallback_boundaries(): void
@@ -49,7 +63,7 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
         }
     }
 
-    public function test_marks_submission_and_update_store_grade_from_raw_total(): void
+    public function test_marks_submission_and_update_store_centralized_normalized_grade(): void
     {
         [$session, $class, $section, $exam, $student] = $this->academicScope();
         $subject = $this->subject('Fifty Mark Subject', 'Main', 50, 0, 0);
@@ -57,16 +71,16 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
         $this->submitMarks($session, $class, $section, $exam, $subject, $student, 40, '', '');
 
         $mark = Marksheet::where('studentId', $student->id)->where('subjectId', $subject->id)->firstOrFail();
-        $this->assertSame('C', $mark->laterGrade);
-        $this->assertSame(2.0, (float) $mark->gradePoint);
+        $this->assertSame('A+', $mark->laterGrade);
+        $this->assertSame(5.0, (float) $mark->gradePoint);
         $this->assertSame(40.0, (float) $mark->totalMarks);
 
         $this->submitMarks($session, $class, $section, $exam, $subject, $student, 50, '', '');
 
         $this->assertDatabaseCount('marksheets', 1);
         $mark->refresh();
-        $this->assertSame('B', $mark->laterGrade);
-        $this->assertSame(3.0, (float) $mark->gradePoint);
+        $this->assertSame('A+', $mark->laterGrade);
+        $this->assertSame(5.0, (float) $mark->gradePoint);
     }
 
     public function test_zero_marks_are_stored_as_an_attempt_and_blank_marks_clear_existing_row(): void
@@ -105,7 +119,7 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
         $this->assertSame(4.0, (float) $mark->gradePoint);
     }
 
-    public function test_tabulation_currently_treats_an_optional_f_as_overall_failure(): void
+    public function test_tabulation_ignores_an_optional_f_for_overall_status(): void
     {
         [$session, $class, $section, $exam, $student] = $this->academicScope();
         $main = $this->subject('Mathematics', 'Main', 100, 0, 0);
@@ -118,13 +132,13 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
 
         $data = $this->tabulation($session, $class, $section, $exam);
 
-        $this->assertCount(0, $data['passResults']);
-        $this->assertCount(1, $data['failResults']);
-        $this->assertSame('F', $data['failResults'][0]['finalLetter']);
-        $this->assertSame('0.00', $data['failResults'][0]['finalGpa']);
+        $this->assertCount(1, $data['passResults']);
+        $this->assertCount(0, $data['failResults']);
+        $this->assertSame('A+', $data['passResults'][0]['finalLetter']);
+        $this->assertSame('5.00', $data['passResults'][0]['finalGpa']);
     }
 
-    public function test_tabulation_currently_skips_a_missing_compulsory_subject(): void
+    public function test_tabulation_marks_a_missing_compulsory_subject_incomplete(): void
     {
         [$session, $class, $section, $exam, $student] = $this->academicScope();
         $present = $this->subject('Mathematics', 'Main', 100, 0, 0);
@@ -136,34 +150,30 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
         $this->mark($other, $session, $class, $section, $exam, $missing, 70, 4, 'A');
 
         $data = $this->tabulation($session, $class, $section, $exam);
-        $result = collect($data['passResults'])->first(fn (array $row) => $row['student']->id === $student->id);
+        $result = collect($data['incompleteResults'])->first(fn (array $row) => $row['student']->id === $student->id);
 
         $this->assertNotNull($result);
-        $this->assertFalse($result['isIncomplete']);
-        $this->assertSame('5.00', $result['finalGpa']);
+        $this->assertTrue($result['isIncomplete']);
+        $this->assertNull($result['finalGpa']);
     }
 
-    public function test_paired_subject_merge_currently_uses_combined_total_even_in_feature_wise_mode(): void
+    public function test_paired_subjects_are_calculated_by_the_centralized_calculator(): void
     {
         $paperOne = $this->subject('Bangla 1st Paper', 'Main', 70, 30, 0, 'bangla_1st_paper');
         $paperTwo = $this->subject('Bangla 2nd Paper', 'Main', 70, 30, 0, 'bangla_2nd_paper');
-        $controller = app(MarksheetController::class);
-        $subjects = collect([$paperOne, $paperTwo]);
-        $pairs = $controller->detectSubjectPairs($subjects);
+        $result = app(BoardResultCalculator::class)->calculate(
+            (object) [],
+            (object) ['passingSystem' => 'Total Mark'],
+            [
+                (object) ['id' => 1, 'subjectId' => $paperOne->id, 'subjectMarks' => 20, 'objectMarks' => 30, 'practicalMarks' => 0],
+                (object) ['id' => 2, 'subjectId' => $paperTwo->id, 'subjectMarks' => 70, 'objectMarks' => 30, 'practicalMarks' => 0],
+            ],
+            [$paperOne, $paperTwo],
+        );
 
-        $rows = [
-            $this->resultRow($paperOne, 20, 30, 0, 50, 'F', 0, 'F', 'A+'),
-            $this->resultRow($paperTwo, 70, 30, 0, 100, 'A+', 5, 'A+', 'A+'),
-        ];
-
-        $merged = $controller->mergeSubjectsForRow($rows, $pairs, [
-            $paperOne->id => $paperOne,
-            $paperTwo->id => $paperTwo,
-        ], true);
-
-        $this->assertCount(1, $merged);
-        $this->assertSame('A', $merged[0]['grade']);
-        $this->assertSame('4.00', $merged[0]['gradePoint']);
+        $this->assertCount(1, $result->subjectResults);
+        $this->assertSame('A', $result->subjectResults[0]->letterGrade);
+        $this->assertSame(4.0, $result->subjectResults[0]->gradePoint);
     }
 
     public function test_placement_currently_counts_optional_row_and_optional_f_as_failure(): void
@@ -235,6 +245,13 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
 
     private function submitMarks($session, $class, $section, $exam, Subject $subject, newAdmission $student, $cq, $mcq, $practical): void
     {
+        $revision = MarksScopeState::query()
+            ->where('sessionId', (string) $session->id)
+            ->where('classId', (string) $class->id)
+            ->where('groupId', (string) $section->id)
+            ->where('examId', (string) $exam->id)
+            ->where('subjectId', (string) $subject->id)
+            ->value('revision');
         app(MarksheetController::class)->confirmMarks(Request::create('/marks/add/confirm', 'POST', [
             'sessionId' => $session->id,
             'classId' => $class->id,
@@ -247,6 +264,7 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
             'cqMarks' => [$cq],
             'mcqMarks' => [$mcq],
             'practical' => [$practical],
+            'scope_revision' => $revision,
         ]));
     }
 

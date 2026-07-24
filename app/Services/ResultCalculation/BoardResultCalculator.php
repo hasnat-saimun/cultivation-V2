@@ -7,6 +7,29 @@ use InvalidArgumentException;
 
 final class BoardResultCalculator
 {
+    /**
+     * Calculate one entered subject through the same normalization and component rules
+     * used by complete student results.
+     */
+    public function calculateSubject(
+        object|array $student,
+        object|array $exam,
+        object|array $mark,
+        object|array $subject,
+    ): SubjectResult {
+        $result = $this->calculate($student, $exam, [$mark], [$subject]);
+        $subjectId = (string) $this->value($subject, 'id');
+        $subjectResult = collect($result->subjectResults)->first(
+            fn (SubjectResult $item) => in_array($subjectId, $item->sourceSubjectIds, true)
+        );
+
+        if (!$subjectResult) {
+            throw new InvalidArgumentException("Subject {$subjectId} is not applicable to the selected student.");
+        }
+
+        return $subjectResult;
+    }
+
     /** Pure calculation over already-loaded records; performs no queries or writes. */
     public function calculate(object|array $student, object|array $exam, iterable $marks, iterable $subjects): StudentResult
     {

@@ -10,12 +10,12 @@ Get Mark
     $examIdSafe = request()->input('examId', $examId ?? null);
     $subjectIdSafe = request()->input('subjectId', $subjectId ?? null);
 
-    $classData = \App\Models\classManage::find($classIdSafe);
-    $sectionData = \App\Models\sectionManage::find($groupIdSafe);
-    $optionalGroupData = !empty($optionalGroupIdSafe) ? \App\Models\Department::find($optionalGroupIdSafe) : null;
-    $sessionData = \App\Models\sessionManage::find($sessionIdSafe);
-    $examData = \App\Models\Exam::find($examIdSafe);
-    $subjectData = \App\Models\Subject::find($subjectIdSafe);
+    $classData = $classData ?? null;
+    $sectionData = $sectionData ?? null;
+    $optionalGroupData = $optionalGroupData ?? null;
+    $sessionData = $sessionData ?? null;
+    $examData = $examData ?? null;
+    $subjectData = $subjectData ?? null;
     if($classData):
         $className = $classData->className;
     else:
@@ -83,7 +83,7 @@ Get Mark
         }
     </style>
     @if($studentList->count()>0)
-        <form method="POST" class="card-body form form-group" action="{{ route('confirmMarks') }}">
+        <form method="POST" class="card-body form form-group" action="{{ route('marks.draft.save') }}">
                 <div class="row">
                     <div class="col-6 col-md-4 mb-2"><b>Group/Section:</b>  {{ $sectionName }}</div>
                     <div class="col-6 col-md-4 mb-2"><b>Group (Optional):</b>  {{ $optionalGroupName }}</div>
@@ -94,11 +94,24 @@ Get Mark
                 </div>
                 @csrf
                 @php
-                    $isReadOnly = !empty($isFinalPublished) && !empty($isTeacherAdmin);
+                    $isReadOnly = !empty($isFinalPublished) || !empty($hasConfirmedScope);
+                    $singleScopeKey = count($scopeStatuses ?? []) === 1 ? array_key_first($scopeStatuses) : null;
+                    $singleScopeStatus = $singleScopeKey ? ($scopeStatuses[$singleScopeKey] ?? 'draft') : null;
+                    $lifecycleGroupId = $singleScopeKey && str_starts_with($singleScopeKey, 'section:')
+                        ? substr($singleScopeKey, strlen('section:'))
+                        : null;
                 @endphp
+                <div class="mt-2">
+                    @foreach(($scopeStatuses ?? []) as $scopeKey => $scopeStatus)
+                        <span class="badge {{ $scopeStatus === 'confirmed' ? 'bg-success' : 'bg-secondary' }}">
+                            {{ $scopeKey }}: {{ ucfirst($scopeStatus) }} (Revision {{ $scopeRevisions[$scopeKey] ?? 1 }})
+                        </span>
+                    @endforeach
+                </div>
                 @if($isReadOnly)
                     <div class="alert alert-warning mt-2">
-                        Final result is published for this exam/class/session. Marks entry is locked for teachers.
+                        {{ !empty($isFinalPublished) ? 'Final result is published.' : 'This subject scope is Confirmed.' }}
+                        Marks entry is read-only.
                     </div>
                 @endif
                 <div class="alert alert-info mt-2">
@@ -137,33 +150,15 @@ Get Mark
                         <input type="hidden" name="optionalGroupId" value="{{ $optionalGroupIdSafe }}">
                         <input type="hidden" name="gender" value="{{ $gender ?? 'all' }}">
                         <input type="hidden" name="subjectId" value="{{ $subjectIdSafe }}">
+                        @if($singleScopeRevision)
+                            <input type="hidden" name="scope_revision" value="{{ $singleScopeRevision }}">
+                        @endif
+                        @foreach(($scopeRevisions ?? []) as $scopeKey => $scopeRevision)
+                            <input type="hidden" name="scope_revisions[{{ $scopeKey }}]" value="{{ $scopeRevision }}">
+                        @endforeach
                          @foreach($studentList as $std)
                         @php
-                            $sessionTextForMark = optional(\App\Models\sessionManage::find((int)$sessionIdSafe))->session;
-                            $stdSectionId = (int)($std->sectionName ?? 0);
-                            $marksDataQuery = \App\Models\Marksheet::where('classId', $classIdSafe)
-                                ->where('studentId', $std->id)
-                                ->where('examId', $examIdSafe)
-                                ->where('subjectId', $subjectIdSafe);
-
-                            if(!empty($sessionIdSafe) || !empty($sessionTextForMark)){
-                                $marksDataQuery->orderByRaw(
-                                    'CASE WHEN sessionId = ? THEN 0 '.(!empty($sessionTextForMark) ? 'WHEN sessionId = ? THEN 1 ' : '').'ELSE 2 END',
-                                    !empty($sessionTextForMark)
-                                        ? [(string)$sessionIdSafe, (string)$sessionTextForMark]
-                                        : [(string)$sessionIdSafe]
-                                );
-                            }
-
-                            if(!empty($groupIdSafe)){
-                                $marksDataQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 ELSE 1 END', [$groupIdSafe]);
-                            } elseif($stdSectionId > 0) {
-                                $marksDataQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 WHEN groupId IS NULL OR groupId = "" THEN 1 ELSE 2 END', [$stdSectionId]);
-                            }
-
-                            $marksData = $marksDataQuery
-                                ->orderByDesc('id')
-                                ->first();
+                            $marksData = ($marksByStudent ?? collect())->get((int) $std->id);
                             $subjectMarks = $marksData ? $marksData->subjectMarks : "";
                             $objectMarks = $marksData ? $marksData->objectMarks : "";
                             $practicalMarks = $marksData ? $marksData->practicalMarks : "";
@@ -171,9 +166,9 @@ Get Mark
                             $readonlyByOther = (!empty($isTeacherAdmin) && $marksData && $marksData->teacher_id && $marksData->teacher_id != $currentUserId);
                             $readonly = $readonlyByOther || $isReadOnly;
                             $enteredById = $marksData ? ($marksData->entered_by ?? $marksData->teacher_id) : null;
-                            $enteredBy = $enteredById ? optional(\App\Models\CultivationAdmin::find($enteredById))->adminName : null;
+                            $enteredBy = $enteredById ? ($actorNames[$enteredById] ?? null) : null;
                             $enteredRole = $marksData->entered_by_role ?? ($marksData && $marksData->teacher_id ? 'teacher' : null);
-                            $updatedBy = ($marksData && $marksData->updated_by) ? optional(\App\Models\CultivationAdmin::find($marksData->updated_by))->adminName : null;
+                            $updatedBy = ($marksData && $marksData->updated_by) ? ($actorNames[$marksData->updated_by] ?? null) : null;
                             $updatedRole = $marksData->updated_by_role ?? null;
                         @endphp
                         <input type="hidden" name="studentId[]" value="{{ $std->id }}">
@@ -248,7 +243,26 @@ Get Mark
                         @endforeach
                         <div class="mb-4">
                             @if(!$isReadOnly)
-                                <input type="submit" value="Save" class="btn btn-success">
+                                <input type="submit" value="Save Draft" class="btn btn-success">
+                                @if($singleScopeStatus === 'draft')
+                                    <button type="submit"
+                                            formaction="{{ route('marks.subject.confirm') }}"
+                                            name="groupId"
+                                            value="{{ $lifecycleGroupId }}"
+                                            class="btn btn-warning">
+                                        Confirm Subject
+                                    </button>
+                                @endif
+                            @elseif($singleScopeStatus === 'confirmed' && !empty($canReopenMarks) && empty($isFinalPublished))
+                                <input type="text" name="reason" maxlength="500" class="form-control d-inline-block w-auto"
+                                    placeholder="Mandatory reopen reason" required>
+                                <button type="submit"
+                                    formaction="{{ route('marks.subject.reopen') }}"
+                                    name="groupId"
+                                    value="{{ $lifecycleGroupId }}"
+                                    class="btn btn-warning">
+                                    Reopen as Draft
+                                </button>
                             @endif
                             <a href="{{ route('addMarks') }}" class="btn btn-primary">Back</a>
                         </div>

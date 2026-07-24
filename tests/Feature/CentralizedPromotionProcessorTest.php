@@ -76,7 +76,11 @@ class CentralizedPromotionProcessorTest extends TestCase
         $scope=$this->scope();$subject=$this->subject('Main','Main',100);$student=$this->student($scope,'01');$this->mark($student,$scope,$subject,80);
         $this->assertBlocked(fn()=> $this->processor()->process(...$this->args($scope,[$student->id])),'PUBLICATION_REQUIRED');
         $this->assertDatabaseCount('result_archives',0);
-        $this->publish($scope);config(['result_engine.promotion_enabled'=>false]);
+        $this->publish($scope);
+        ResultPublish::first()->forceFill(['status' => ResultPublish::STATUS_UNPUBLISHED])->save();
+        $this->assertBlocked(fn()=> $this->processor()->process(...$this->args($scope,[$student->id])),'PUBLICATION_REQUIRED');
+        ResultPublish::first()->forceFill(['status' => ResultPublish::STATUS_PUBLISHED])->save();
+        config(['result_engine.promotion_enabled'=>false]);
         $dry=$this->processor()->process(...$this->args($scope,[$student->id],dryRun:true));
         $this->assertTrue($dry['writeSafe']);$this->assertTrue($dry['noRecordsModified']);
         $this->assertBlocked(fn()=> $this->processor()->process(...$this->args($scope,[$student->id])),'PROMOTION_ENGINE_DISABLED');

@@ -5,13 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
-use App\Models\GradeList;
 use App\Models\ServerConfig;
+use App\Models\GradeList;
 use App\Models\sessionManage;
+use App\Models\sectionManage;
+use App\Models\Department;
 use App\Models\ResultPublish;
 use App\Models\Subject;
 use App\Models\Exam;
 use App\Models\classManage;
+use App\Models\CultivationAdmin;
 use App\Models\ReligiousSubjectDefault;
 use App\Services\CultivationAdminResolver;
 use App\Services\FourthSubjectAssignmentResolver;
@@ -24,9 +27,18 @@ use App\Services\ResultCalculation\ResultCalculationInputBuilder;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultCalculation\TabulationResultPresenter;
+use App\Services\ResultMarksDraftService;
+use App\Services\ResultMarksConfirmationService;
+use App\Services\ResultMarksReopenService;
+use App\Services\ResultMarksScopeService;
+use App\Exceptions\ResultLifecycleException;
+use App\Exceptions\ResultPublicationException;
+use App\Services\ResultPublishService;
+use App\Services\ResultUnpublishService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class MarksheetController extends Controller
@@ -42,6 +54,12 @@ class MarksheetController extends Controller
     private BulkTranscriptResultBuilder $bulkTranscriptResultBuilder;
     private ResultCalculationBatchBuilder $resultCalculationBatchBuilder;
     private TabulationResultPresenter $tabulationResultPresenter;
+    private ResultMarksDraftService $draftMarks;
+    private ResultMarksConfirmationService $marksConfirmation;
+    private ResultMarksReopenService $marksReopen;
+    private ResultMarksScopeService $marksScopes;
+    private ResultPublishService $resultPublisher;
+    private ResultUnpublishService $resultUnpublisher;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
@@ -54,7 +72,13 @@ class MarksheetController extends Controller
         ResultCalculationInputBuilder $resultCalculationInputBuilder,
         BulkTranscriptResultBuilder $bulkTranscriptResultBuilder,
         ResultCalculationBatchBuilder $resultCalculationBatchBuilder,
-        TabulationResultPresenter $tabulationResultPresenter
+        TabulationResultPresenter $tabulationResultPresenter,
+        ResultMarksDraftService $draftMarks,
+        ResultMarksConfirmationService $marksConfirmation,
+        ResultMarksReopenService $marksReopen,
+        ResultMarksScopeService $marksScopes,
+        ResultPublishService $resultPublisher,
+        ResultUnpublishService $resultUnpublisher
     )
     {
         $this->adminResolver = $adminResolver;
@@ -68,6 +92,12 @@ class MarksheetController extends Controller
         $this->bulkTranscriptResultBuilder = $bulkTranscriptResultBuilder;
         $this->resultCalculationBatchBuilder = $resultCalculationBatchBuilder;
         $this->tabulationResultPresenter = $tabulationResultPresenter;
+        $this->draftMarks = $draftMarks;
+        $this->marksConfirmation = $marksConfirmation;
+        $this->marksReopen = $marksReopen;
+        $this->marksScopes = $marksScopes;
+        $this->resultPublisher = $resultPublisher;
+        $this->resultUnpublisher = $resultUnpublisher;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -198,6 +228,7 @@ class MarksheetController extends Controller
         return ResultPublish::where('examId', $examId)
             ->where('sessionId', $sessionId)
             ->where('classId', $classId)
+            ->where('status', ResultPublish::STATUS_PUBLISHED)
             ->where(function($q) use ($groupId){
                 $q->whereNull('groupId');
                 if($groupId){
@@ -332,6 +363,10 @@ class MarksheetController extends Controller
         if (!$subject) {
             return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
         }
+        $exam = Exam::find((int) $requ->examId);
+        if (!$exam) {
+            return redirect()->route('addMarks')->with('error', 'Invalid exam selection');
+        }
 
         $groupId = $requ->groupId ?: null;
         $sessionId = (int) $requ->sessionId;
@@ -389,7 +424,8 @@ class MarksheetController extends Controller
         }
 
         $studentSessionValue = (string) $sessionId;
-        $sessionText = sessionManage::where('id', $sessionId)->value('session');
+        $sessionData = sessionManage::find($sessionId);
+        $sessionText = $sessionData?->session;
 
         if(!$sessionId){
             return redirect()->route('addMarks')->with('error','Session not found');
@@ -423,8 +459,93 @@ class MarksheetController extends Controller
             }
         }
 
+        $studentIds = $studentList->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $candidateMarks = Marksheet::query()
+            ->where('classId', (int) $requ->classId)
+            ->where('examId', (int) $requ->examId)
+            ->where('subjectId', $subjectId)
+            ->whereIn('studentId', $studentIds)
+            ->get()
+            ->groupBy(fn (Marksheet $mark) => (int) $mark->studentId);
+
+        $marksByStudent = $studentList->mapWithKeys(function (newAdmission $student) use (
+            $candidateMarks,
+            $sessionId,
+            $sessionText,
+            $groupId
+        ) {
+            $studentSectionId = (int) ($student->sectionName ?? 0);
+            $selected = $candidateMarks->get((int) $student->id, collect())
+                ->sort(function (Marksheet $left, Marksheet $right) use ($sessionId, $sessionText, $groupId, $studentSectionId) {
+                    $rank = static function (Marksheet $mark) use ($sessionId, $sessionText, $groupId, $studentSectionId): array {
+                        $sessionRank = (string) $mark->sessionId === (string) $sessionId
+                            ? 0
+                            : (!empty($sessionText) && (string) $mark->sessionId === (string) $sessionText ? 1 : 2);
+                        if ($groupId !== null) {
+                            $groupRank = (string) $mark->groupId === (string) $groupId ? 0 : 1;
+                        } elseif ($studentSectionId > 0) {
+                            $groupRank = (string) $mark->groupId === (string) $studentSectionId
+                                ? 0
+                                : ($mark->groupId === null || $mark->groupId === '' ? 2 : 1);
+                        } else {
+                            $groupRank = 0;
+                        }
+
+                        return [$sessionRank, $groupRank, -(int) $mark->id];
+                    };
+
+                    return $rank($left) <=> $rank($right);
+                })
+                ->first();
+
+            return [(int) $student->id => $selected];
+        });
+
+        $actorIds = $marksByStudent
+            ->filter()
+            ->flatMap(fn (Marksheet $mark) => [$mark->entered_by ?? $mark->teacher_id, $mark->updated_by])
+            ->filter()
+            ->unique()
+            ->values();
+        $actorNames = CultivationAdmin::whereIn('id', $actorIds)->pluck('adminName', 'id');
+        $actualSectionIds = $studentList->map(fn (newAdmission $student) => (int) ($student->sectionName ?? 0))
+            ->unique()->values();
+        $scopeStates = \App\Models\MarksScopeState::query()
+            ->where('sessionId', (string) $sessionId)
+            ->where('classId', (string) $requ->classId)
+            ->where('examId', (string) $requ->examId)
+            ->where('subjectId', (string) $subjectId)
+            ->where(function ($query) use ($actualSectionIds) {
+                if ($actualSectionIds->contains(0)) {
+                    $query->whereNull('groupId');
+                    $positive = $actualSectionIds->filter(fn ($id) => $id > 0)->all();
+                    if ($positive !== []) $query->orWhereIn('groupId', $positive);
+                } else {
+                    $query->whereIn('groupId', $actualSectionIds->all());
+                }
+            })
+            ->get()
+            ->keyBy(fn ($state) => $state->groupId === null ? 'class' : 'section:'.$state->groupId);
+        $scopeRevisions = [];
+        $scopeStatuses = [];
+        foreach ($actualSectionIds as $actualSectionId) {
+            $key = $actualSectionId > 0 ? 'section:'.$actualSectionId : 'class';
+            $scopeRevisions[$key] = (int) ($scopeStates->get($key)?->revision ?? 1);
+            $scopeStatuses[$key] = (string) ($scopeStates->get($key)?->status ?? \App\Models\MarksScopeState::STATUS_DRAFT);
+        }
+        $hasConfirmedScope = collect($scopeStatuses)->contains(\App\Models\MarksScopeState::STATUS_CONFIRMED);
+        $singleScopeRevision = count($scopeRevisions) === 1 ? reset($scopeRevisions) : null;
+
         return view('result.get-marks',[
             'studentList'=>$studentList,
+            'marksByStudent'=>$marksByStudent,
+            'actorNames'=>$actorNames,
+            'classData'=>$class,
+            'sectionData'=>$groupId ? sectionManage::find((int) $groupId) : null,
+            'optionalGroupData'=>$optionalGroupId ? Department::find((int) $optionalGroupId) : null,
+            'sessionData'=>$sessionData,
+            'examData'=>$exam,
+            'subjectData'=>$subject,
             'groupId'=>$groupId,
             'optionalGroupId'=>$optionalGroupId,
             'gender'=>$gender,
@@ -435,237 +556,124 @@ class MarksheetController extends Controller
             'subjectId'=>$requ->subjectId,
             'isFinalPublished'=>$isFinalPublished,
             'isTeacherAdmin'=>$isTeacherAdmin,
+            'scopeRevisions'=>$scopeRevisions,
+            'scopeStatuses'=>$scopeStatuses,
+            'singleScopeRevision'=>$singleScopeRevision,
+            'hasConfirmedScope'=>$hasConfirmedScope,
+            'canReopenMarks'=>$user && !$user->isTeacher() && !$user->isCash(),
         ]);
     }
 
     public function confirmMarks(Request $requ){
-        $requ->validate([
+        // Deprecated compatibility endpoint: despite its historical name, this action saves Draft marks.
+        return $this->saveDraftMarks($requ, true);
+
+    }
+
+    public function saveDraftMarks(Request $request, bool $legacy = false)
+    {
+        $subjectForValidation = Subject::find((int) $request->input('subjectId'));
+        $legacyAllComponents = $subjectForValidation
+            && $subjectForValidation->CQ === null
+            && $subjectForValidation->MCQ === null
+            && $subjectForValidation->Practical === null;
+        $cqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->CQ ?? 0);
+        $mcqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->MCQ ?? 0);
+        $practicalMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->Practical ?? 0);
+        $request->validate([
             'examId' => 'required|integer',
             'classId' => 'required|integer',
-            'subjectId' => 'required|integer|exists:subjects,id',
+            'subjectId' => 'required|integer',
             'sessionId' => 'required|integer',
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
-            'gender' => 'nullable|string',
+            'gender' => 'nullable|string|in:all,1,2,3',
+            'studentId' => 'required|array|min:1|max:500',
+            'studentId.*' => 'required|integer|distinct',
+            'cqMarks' => 'nullable|array|max:500',
+            'cqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$cqMaximum],
+            'mcqMarks' => 'nullable|array|max:500',
+            'mcqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$mcqMaximum],
+            'practical' => 'nullable|array|max:500',
+            'practical.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$practicalMaximum],
+            'scope_revision' => 'nullable|integer|min:1',
+            'scope_revisions' => 'nullable|array',
+            'scope_revisions.*' => 'integer|min:1',
         ]);
+        $actor = $this->adminResolver->current();
+        if (!$actor) abort(403);
 
-        [, , $optionalGroupId] = $this->normalizeOptionalGroupSelection($requ);
-        $gender = $this->validatedGenderValue($requ);
-
-        $subjectId = (int)$requ->subjectId;
-        $subject = Subject::find($subjectId);
-        if (!$subject) {
-            return redirect()->route('addMarks')->with('error', 'Invalid subject selection');
+        try {
+            $result = $this->draftMarks->save($request->all(), $actor, $request->ip(), $legacy);
+            $message = $result['changed_student_count'] > 0
+                ? 'Draft marks saved successfully (Changed: '.$result['changed_student_count'].', Unchanged: '.$result['unchanged_student_count'].').'
+                : 'Draft marks are already up to date.';
+            return $request->expectsJson()
+                ? response()->json($result)
+                : redirect()->route('addMarks')->with('success', $message);
+        } catch (ResultLifecycleException $exception) {
+            return $this->lifecycleFailure($request, $exception);
         }
+    }
 
-        $sessionId = (int) $requ->sessionId;
-        if(!$sessionId){
-            return redirect()->route('addMarks')->with('error','Session not found');
+    public function confirmSubjectMarks(Request $request)
+    {
+        $request->validate([
+            'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'subjectId' => 'required|integer',
+            'sessionId' => 'required|integer',
+            'groupId' => 'nullable|integer',
+            'optionalGroupId' => 'nullable|integer',
+            'scope_revision' => 'required|integer|min:1',
+        ]);
+        $actor = $this->adminResolver->current();
+        if (!$actor) abort(403);
+        try {
+            $result = $this->marksConfirmation->confirm($request->all(), $actor, $request->ip());
+            return $request->expectsJson()
+                ? response()->json($result)
+                : redirect()->route('addMarks')->with('success', 'Subject marks confirmed successfully.');
+        } catch (ResultLifecycleException $exception) {
+            return $this->lifecycleFailure($request, $exception);
         }
-        $sessionText = sessionManage::where('id', (int)$sessionId)->value('session');
-        $groupId = $requ->groupId ?: null;
-        $academicContext = [
-            'class_id' => (int) $requ->classId,
-            'section_id' => $groupId ? (int) $groupId : null,
-            'department_id' => $optionalGroupId,
-            'session_id' => $sessionId,
-        ];
-        // Enforce teacher role restrictions before saving
-        $user = $this->adminResolver->current();
-        $isTeacherAdmin = $user && $user->isTeacher();
+    }
 
-        $requiresOptionalGroup = $this->classRequiresOptionalGroup((string) optional(classManage::find((int) $requ->classId))->className);
-        $selection = $this->validatedSelectionContext(
-            $user,
-            (int) $requ->classId,
-            $groupId ? (int) $groupId : null,
-            $optionalGroupId,
-            $sessionId,
-            (int) $requ->subjectId,
-            $requiresOptionalGroup,
-            $gender
-        );
-        if ($selection instanceof \Illuminate\Http\RedirectResponse) {
-            return $selection;
+    public function reopenSubjectMarks(Request $request)
+    {
+        $request->validate([
+            'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'subjectId' => 'required|integer',
+            'sessionId' => 'required|integer',
+            'groupId' => 'nullable|integer',
+            'scope_revision' => 'required|integer|min:1',
+            'reason' => 'required|string|max:500',
+        ]);
+        $actor = $this->adminResolver->current();
+        if (!$actor) abort(403);
+        try {
+            $result = $this->marksReopen->reopen($request->all(), $actor, $request->ip());
+            return $request->expectsJson()
+                ? response()->json($result)
+                : redirect()->route('addMarks')->with('success', 'Subject marks reopened as Draft.');
+        } catch (ResultLifecycleException $exception) {
+            return $this->lifecycleFailure($request, $exception);
         }
+    }
 
-        $isFinalPublished = $this->isResultPublished((int)$requ->examId, (int)$sessionId, (int)$requ->classId, $groupId);
-        if($isTeacherAdmin && $isFinalPublished){
-            return redirect()->route('addMarks')->with('error','Final result is published. Marks entry is locked for teachers.');
+    private function lifecycleFailure(Request $request, ResultLifecycleException $exception)
+    {
+        $this->logLifecycleFailure($request, $exception->failure, $exception->httpStatus);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => $exception->failure,
+                'message' => $exception->getMessage(),
+                'details' => $exception->details,
+            ], $exception->httpStatus);
         }
-
-        $authorizedStudentQuery = newAdmission::query()
-            ->where('className', (int) $requ->classId)
-            ->when($groupId, function ($q) use ($groupId) {
-                return $q->where('sectionName', (int) $groupId);
-            })
-            ->when($optionalGroupId, function ($q) use ($optionalGroupId) {
-                return $q->where('departmentName', (int) $optionalGroupId);
-            })
-            ->where(function ($q) use ($sessionId, $sessionText) {
-                $q->where('sessName', (string) $sessionId);
-                if (!empty($sessionText)) {
-                    $q->orWhere('sessName', (string) $sessionText);
-                }
-            });
-
-        $this->religiousSubjectResolver->applyStudentReligiousSubjectFilter($authorizedStudentQuery, $subject);
-        $this->fourthSubjectResolver->applyStudentFourthSubjectFilter($authorizedStudentQuery, $subject, $academicContext);
-
-        if ($isTeacherAdmin) {
-            $authorized = $this->marksAuth->applyTeacherStudentAuthorizationFilters(
-                $authorizedStudentQuery,
-                $user,
-                (int) $requ->classId,
-                $groupId ? (int) $groupId : null,
-                $optionalGroupId,
-                (int) $requ->subjectId,
-                $gender,
-                $sessionId
-            );
-
-            if (!$authorized) {
-                return redirect()->route('addMarks')->with('error', 'Unauthorized student scope');
-            }
-        }
-
-        $authorizedStudentIds = $authorizedStudentQuery
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->all();
-        $authorizedStudentIds = array_fill_keys($authorizedStudentIds, true);
-
-        $studentId = $requ->studentId;
-        $totalData = count($studentId);
-        $x = 0;
-        $skipped = 0;
-        $saved = 0;
-        $actorId = $user ? (int)$user->id : null;
-        $actorRole = ($user && $user->isTeacher()) ? 'teacher' : 'admin';
-        while($x<$totalData){
-            if($authorizedStudentIds === null || !isset($authorizedStudentIds[(int)$requ->studentId[$x]])){
-                $skipped++;
-                $x++;
-                continue;
-            }
-
-            $studentSectionId = (int)(newAdmission::where('id', (int)$requ->studentId[$x])->value('sectionName') ?? 0);
-
-            $existingMarkQuery = Marksheet::where('classId', $requ->classId)
-                ->where('studentId', $requ->studentId[$x])
-                ->where('examId', $requ->examId)
-                ->where('subjectId', $requ->subjectId)
-                ;
-
-            if(!empty($sessionId) || !empty($sessionText)){
-                $existingMarkQuery->orderByRaw(
-                    'CASE WHEN sessionId = ? THEN 0 '.(!empty($sessionText) ? 'WHEN sessionId = ? THEN 1 ' : '').'ELSE 2 END',
-                    !empty($sessionText)
-                        ? [(string)$sessionId, (string)$sessionText]
-                        : [(string)$sessionId]
-                );
-            }
-
-            if($groupId !== null){
-                $existingMarkQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 ELSE 1 END', [$groupId]);
-            } elseif($studentSectionId > 0) {
-                $existingMarkQuery->orderByRaw('CASE WHEN groupId = ? THEN 0 WHEN groupId IS NULL OR groupId = "" THEN 2 ELSE 1 END', [$studentSectionId]);
-            }
-
-            $existingMark = $existingMarkQuery->orderByDesc('id')->first();
-            if(isset($existingMark) && !empty($existingMark)):
-                // If existing marks are entered by another teacher, do not overwrite
-                if($user && $user->isTeacher() && (int)$existingMark->teacher_id !== (int)$user->id){
-                    $skipped++;
-                    $x++;
-                    continue;
-                }
-            endif;
-            $totalMarks = 0;
-            $hasAny = false;
-            if(isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== null && $requ->cqMarks[$x] !== '') {
-                $totalMarks += (float)$requ->cqMarks[$x];
-                $hasAny = true;
-            }
-            if(isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== null && $requ->mcqMarks[$x] !== '') {
-                $totalMarks += (float)$requ->mcqMarks[$x];
-                $hasAny = true;
-            }
-            if(isset($requ->practical[$x]) && $requ->practical[$x] !== null && $requ->practical[$x] !== '') {
-                $totalMarks += (float)$requ->practical[$x];
-                $hasAny = true;
-            }
-
-            // Skip saving a marksheet row if no marks were entered
-            if(!$hasAny){
-                if($existingMark){
-                    $existingMark->subjectMarks = null;
-                    $existingMark->objectMarks = null;
-                    $existingMark->practicalMarks = null;
-                    $existingMark->totalMarks = null;
-                    $existingMark->laterGrade = null;
-                    $existingMark->gradePoint = null;
-                    $existingMark->updated_by = $actorId;
-                    $existingMark->updated_by_role = $actorRole;
-                    $existingMark->teacher_id = $actorId;
-                    $existingMark->save();
-                    $saved++;
-                } else {
-                    $skipped++;
-                }
-                $x++;
-                continue;
-            }
-
-            $grade = GradeList::forScore((float)$totalMarks);
-            if(isset($grade) && !empty($grade)){
-                $gradePoint = $grade->gradePoint;
-                $laterGrade = $grade->gradeName;
-            }else{
-                $gradePoint = 0.00;
-                $laterGrade = 'F';
-            }
-            $marks = $existingMark ?: new Marksheet();
-
-            $marks->studentId       = $requ->studentId[$x];
-            $marks->classId         = $requ->classId;
-            $marks->sessionId       = $sessionId;
-            $marks->examId          = $requ->examId;
-            $marks->subjectId       = $requ->subjectId;
-            if($groupId !== null){
-                $marks->groupId = $groupId;
-            } elseif($existingMark && $existingMark->groupId !== null && $existingMark->groupId !== ''){
-                $marks->groupId = $existingMark->groupId;
-            } elseif($studentSectionId > 0){
-                $marks->groupId = $studentSectionId;
-            } else {
-                $marks->groupId = null;
-            }
-            $marks->subjectMarks    = (isset($requ->cqMarks[$x]) && $requ->cqMarks[$x] !== '') ? (float)$requ->cqMarks[$x] : null;
-            $marks->objectMarks     = (isset($requ->mcqMarks[$x]) && $requ->mcqMarks[$x] !== '') ? (float)$requ->mcqMarks[$x] : null;
-            $marks->practicalMarks  = (isset($requ->practical[$x]) && $requ->practical[$x] !== '') ? (float)$requ->practical[$x] : null;
-            $marks->totalMarks      = $totalMarks;
-            $marks->laterGrade      = $laterGrade;
-            $marks->gradePoint      = $gradePoint;
-            if(!$existingMark){
-                $marks->entered_by      = $actorId;
-                $marks->entered_by_role = $actorRole;
-            }
-            $marks->updated_by      = $actorId;
-            $marks->updated_by_role = $actorRole;
-            $marks->teacher_id      = $actorId;
-            $marks->save();
-            $saved++;
-
-            $x++;
-        }
-
-        if($saved > 0){
-            $msg = 'Marks updated successfully (Saved: '.$saved.($skipped > 0 ? ', Skipped: '.$skipped : '').')';
-            return redirect(route('addMarks'))->with('success', $msg);
-        }
-
-        return redirect(route('addMarks'))->with('error', 'No marks were updated. Please verify filters/session/student mapping.'.($skipped > 0 ? ' Skipped: '.$skipped : ''));
+        return redirect()->route('addMarks')->with('error', $exception->getMessage());
     }
 
     public function marksEntrySubjects(Request $request)
@@ -720,7 +728,7 @@ class MarksheetController extends Controller
         $sessionList = sessionManage::orderBy('id','DESC')->get();
         $classList = \App\Models\classManage::orderBy('id','DESC')->get();
         $sectionList = \App\Models\sectionManage::orderBy('id','DESC')->get();
-        $publishedList = ResultPublish::orderBy('published_at','DESC')->get();
+        $publishedList = ResultPublish::orderByDesc('updated_at')->get();
 
         $examNames = Exam::orderBy('id','DESC')->pluck('examName','id');
         $sessionNames = sessionManage::orderBy('id','DESC')->pluck('session','id');
@@ -741,483 +749,161 @@ class MarksheetController extends Controller
     }
 
     public function finalPublishStore(Request $requ){
-        $requ->validate([
+        $requ->validate(['action' => 'required|in:publish,unpublish']);
+        return $requ->input('action') === 'publish'
+            ? $this->publishResult($requ)
+            : $this->unpublishResult($requ);
+    }
+
+    public function publishResult(Request $request)
+    {
+        $this->validatePublicationRequest($request, false);
+        $actor = $this->adminResolver->current();
+        if (!$actor) abort(403);
+        try {
+            $result = $this->resultPublisher->publish($request->all(), $actor, $request->ip());
+            return $request->expectsJson()
+                ? response()->json($result)
+                : back()->with('success', $result['idempotent']
+                    ? 'Result scope was already Published.'
+                    : 'Final result published successfully.');
+        } catch (ResultPublicationException $exception) {
+            return $this->publicationFailure($request, $exception);
+        }
+    }
+
+    public function unpublishResult(Request $request)
+    {
+        $this->validatePublicationRequest($request, true);
+        $actor = $this->adminResolver->current();
+        if (!$actor) abort(403);
+        try {
+            $result = $this->resultUnpublisher->unpublish($request->all(), $actor, $request->ip());
+            return $request->expectsJson()
+                ? response()->json($result)
+                : back()->with('success', $result['idempotent']
+                    ? 'Result scope was already Unpublished.'
+                    : 'Final result unpublished successfully.');
+        } catch (ResultPublicationException $exception) {
+            return $this->publicationFailure($request, $exception);
+        }
+    }
+
+    private function validatePublicationRequest(Request $request, bool $unpublish): void
+    {
+        $request->validate([
             'examId' => 'required|integer',
             'sessionId' => 'required|integer',
             'classId' => 'required',
+            'classIds' => 'nullable|array|max:100',
+            'classIds.*' => 'integer|min:1|distinct',
             'groupId' => 'nullable|integer',
-            'action' => 'required|in:publish,unpublish',
+            'publication_revision' => 'nullable|integer|min:1',
+            'publication_revisions' => 'nullable|array',
+            'publication_revisions.*' => 'integer|min:1',
+            'exact_scope' => 'nullable|boolean',
+            'reason' => $unpublish ? 'required|string|max:500' : 'nullable|string|max:500',
         ]);
-
-        $classId = $requ->classId;
-        if($classId !== 'all' && !ctype_digit((string)$classId)){
-            return back()->with('error', 'Invalid class selection.');
+        $classId = $request->input('classId');
+        if ($classId !== 'all' && (!is_numeric($classId) || (int) $classId <= 0)) {
+            throw ValidationException::withMessages(['classId' => ['Invalid class selection.']]);
         }
-
-        $groupId = $requ->groupId ? (string)$requ->groupId : null;
-        $classIds = [];
-        if($classId === 'all'){
-            $classIds = \App\Models\classManage::orderBy('id','DESC')->pluck('id')->map(fn($v) => (string)$v)->all();
-        } else {
-            $classIds = [(string)$classId];
-        }
-
-        foreach($classIds as $cid){
-            $payload = [
-                'examId' => (string)$requ->examId,
-                'sessionId' => (string)$requ->sessionId,
-                'classId' => $cid,
-                'groupId' => $groupId,
-            ];
-
-            if($requ->action === 'publish'){
-                ResultPublish::updateOrCreate(
-                    $payload,
-                    [
-                        'published_by' => session('cultivationAdmin'),
-                        'published_at' => now(),
-                    ]
-                );
-            } else {
-                ResultPublish::where($payload)->delete();
-            }
-        }
-
-        $msg = $requ->action === 'publish'
-            ? 'Final result published successfully.'
-            : 'Final result unpublished successfully.';
-        return back()->with('success', $msg);
     }
 
-    public function allMarksheet(Request $request){
-        // Filter inputs (optional)
-        $examId    = $request->get('examId');
-        $classId   = $request->get('classId');
-        $sessionId = $request->get('sessionId');
-        $sectionId = $request->get('sectionId'); // group/section
-        $departmentId = $request->get('departmentId');
-
-        if (config('result_engine.tabulation_enabled') && !$request->attributes->get('_force_legacy_result_engine')
-            && $examId && $classId && $sessionId) {
-            try {
-                return $this->centralizedTabulation($request, (int) $examId, (int) $classId, (int) $sessionId,
-                    $sectionId ? (int) $sectionId : null, $departmentId ? (int) $departmentId : null);
-            } catch (\Throwable $exception) {
-                Log::error('Result engine tabulation failed; using complete legacy response.', [
-                    'exam_id' => (int) $examId, 'class_id' => (int) $classId, 'session_id' => (int) $sessionId,
-                    'section_id' => $sectionId ? (int) $sectionId : null,
-                    'exception' => get_class($exception),
-                ]);
-            }
+    private function publicationFailure(Request $request, ResultPublicationException $exception)
+    {
+        $this->logLifecycleFailure($request, $exception->failure, $exception->httpStatus);
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => false,
+                'error' => $exception->failure,
+                'message' => $exception->getMessage(),
+                'details' => $exception->details,
+            ], $exception->httpStatus);
         }
+        return back()->with('error', $exception->getMessage())
+            ->with('publication_errors', $exception->details);
+    }
 
-        $exam      = $examId ? Exam::find($examId) : null;
-        $isFeatureWise = $exam && $exam->passingSystem == 1; // same logic as single marksheet
-
-        // Subjects (global list for header)
-        $subjects = Subject::orderBy('id','ASC')->get();
-
-    $passResults = [];
-    $failResults = [];
-    $subjectWise = [];
-    $incompleteResults = [];
-        $studentsLoaded = false;
-
-        if($examId && $classId && $sessionId){
-            // Build marks query for the selected filters
-            $marksBaseQuery = Marksheet::where('examId',$examId)
-                ->where('classId',$classId);
-            $marksBaseQuery->where('sessionId',$sessionId);
-            if($sectionId){ $marksBaseQuery->where('groupId',$sectionId); }
-
-            $studentIds = $marksBaseQuery->distinct()->pluck('studentId');
-            $students = newAdmission::whereIn('id',$studentIds)
-                ->when($departmentId, function($q) use ($departmentId){
-                    return $q->where('departmentName', (int)$departmentId);
-                })
-                ->get();
-            $filteredStudentIds = $students->pluck('id');
-            // Determine active subjects for this class/session/section/exam from marks present
-            $activeSubjectIds = Marksheet::where('examId',$examId)
-                ->where('classId',$classId)
-                ->where('sessionId',$sessionId)
-                ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
-                ->when($departmentId, function($q) use ($filteredStudentIds){
-                    return $q->whereIn('studentId', $filteredStudentIds);
-                })
-                ->distinct()
-                ->pluck('subjectId')
-                ->map(fn($v) => (int)$v)
-                ->all();
-            $studentsLoaded = true;
-            $maxMarkedSubjects = 0;
-
-            // Pre-cache subject details to reduce queries
-            $subjectCache = [];
-            foreach($subjects as $s){ $subjectCache[$s->id] = $s; }
-
-            // Grade list caching for 0-100 mapping
-            $gradeList = GradeList::orderBy('minMark','ASC')->get();
-
-            foreach($students as $stu){
-                $selectedReligiousId = $stu->religiousSubjectId ? (int)$stu->religiousSubjectId : 0;
-                $selectedFourthSubjectId = $stu->fourthSubjectId ? (int)$stu->fourthSubjectId : 0;
-                $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
-                // Build a fresh query per student to avoid accumulating where clauses
-                $stuMarks = Marksheet::where('examId',$examId)
-                    ->where('classId',$classId)
-                    ->where('sessionId',$sessionId)
-                    ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
-                    ->where('studentId',$stu->id)
-                    ->get();
-                $marksBySubject = [];
-                foreach($stuMarks as $m){
-                    $marksBySubject[$m->subjectId] = $m; // last wins if duplicates
-                }
-
-                $mainGradePoints = [];
-                $optionalPoint = 0; $optionalSubjectFound = false;
-                $subtotalMarks = 0; $hasFail = false;
-                $perSubjectOutput = [];
-
-                $missingMainSubjects = 0;
-                $markedSubjectsCount = 0;
-                foreach($subjects as $sub){
-                    // Per-student religious subject rule: include only the effective religious subject (student-selected or class default)
-                    if (!empty($sub->isReligious)) {
-                        if ($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId) {
-                            continue;
-                        }
-                    }
-                    // Skip subjects that have no marks across the class filters (inactive)
-                    if (!in_array((int)$sub->id, $activeSubjectIds, true)) { continue; }
-                    $markRow = $marksBySubject[$sub->id] ?? null;
-                    $cq = ($markRow && is_numeric($markRow->subjectMarks)) ? (float)$markRow->subjectMarks : null;
-                    $mcq = ($markRow && is_numeric($markRow->objectMarks)) ? (float)$markRow->objectMarks : null;
-                    $pr  = ($markRow && is_numeric($markRow->practicalMarks)) ? (float)$markRow->practicalMarks : null;
-                    // Only consider subjects with at least one component mark; ignore total-only rows
-                    $hasAnyMark = ($cq !== null) || ($mcq !== null) || ($pr !== null);
-
-                    // Displays
-                    $cqDisplay = $cq !== null ? $cq : '-';
-                    $mcqDisplay = $mcq !== null ? $mcq : '-';
-                    $prDisplay = $pr !== null ? $pr : '-';
-
-                    $total = 0;
-                    if ($hasAnyMark) {
-                        $total = ($cq !== null ? $cq : 0) + ($mcq !== null ? $mcq : 0) + ($pr !== null ? $pr : 0);
-                        $subtotalMarks += $total;
-                        $markedSubjectsCount++;
-                    } else {
-                        // Skip subjects without any marks from calculations (do not mark incomplete)
-                    }
-
-                    // Component grade percent (only if value & full mark available)
-                    $fullCQ = $sub->CQ ?? 0; $fullMCQ = $sub->MCQ ?? 0; $fullPR = $sub->Practical ?? 0;
-                    $cqPercent = ($fullCQ > 0 && $cq !== null) ? ($cq / $fullCQ) * 100 : null;
-                    $mcqPercent = ($fullMCQ > 0 && $mcq !== null) ? ($mcq / $fullMCQ) * 100 : null;
-                    $prPercent = ($fullPR > 0 && $pr !== null) ? ($pr / $fullPR) * 100 : null;
-
-                    $componentGrades = [];
-                    $overallGrade = '-';
-                    $overallPoint = 0;
-                    if ($hasAnyMark) {
-                        foreach(['cqPercent'=>$cqPercent,'mcqPercent'=>$mcqPercent,'prPercent'=>$prPercent] as $key=>$val){
-                            if($val === null){
-                                $componentGrades[$key] = '-';
-                            }else{
-                                $row = GradeList::forScore($val);
-                                $componentGrades[$key] = $row ? $row->gradeName : '-';
-                            }
-                        }
-                        // Overall grade (by normalized percentage of subject full marks)
-                        $subjectFullMark = ((float)$fullCQ + (float)$fullMCQ + (float)$fullPR);
-                        $totalPercent = $subjectFullMark > 0 ? (($total / $subjectFullMark) * 100) : null;
-                        $gradeRow = $totalPercent !== null ? GradeList::forScore($totalPercent) : null;
-                        $overallGrade = $gradeRow ? $gradeRow->gradeName : '-';
-                        $overallPoint = $gradeRow ? $gradeRow->gradePoint : 0;
-                        // Feature-wise fail override
-                        if($isFeatureWise && (in_array('F',$componentGrades))){
-                            $overallGrade = 'F';
-                            $overallPoint = 0;
-                            $hasFail = true;
-                        }
-                        if($overallGrade === 'F'){ $hasFail = true; }
-                        if($sub->subjectType === 'Main'){
-                            $mainGradePoints[] = $overallPoint;
-                        }elseif($sub->subjectType === 'Optional'){
-                            $optionalSubjectFound = true; $optionalPoint = $overallPoint; // Only one optional considered
-                        }
-                    }
-
-                    $rowForSubject = [
-                        'id' => $sub->id,
-                        'name' => $sub->subjectName,
-                        'type' => $sub->subjectType,
-                        'isReligious' => (int)($sub->isReligious ?? 0),
-                        'hasCQFeature' => ((float)$fullCQ > 0),
-                        'hasMCQFeature' => ((float)$fullMCQ > 0),
-                        'hasPracticalFeature' => ((float)$fullPR > 0),
-                        'cq' => $cqDisplay,
-                        'mcq' => $mcqDisplay,
-                        'practical' => $prDisplay,
-                        'total' => $hasAnyMark ? ($markRow && is_numeric($markRow->totalMarks) ? $markRow->totalMarks : $total) : '-',
-                        'grade' => $overallGrade,
-                        'gradePoint' => $overallPoint > 0 ? number_format($overallPoint,2) : ($overallGrade==='F' ? '0.00' : '-'),
-                        'cqGrade' => $componentGrades['cqPercent'] ?? '-',
-                        'mcqGrade' => $componentGrades['mcqPercent'] ?? '-',
-                        'prGrade' => $componentGrades['prPercent'] ?? '-',
-                    ];
-                    $perSubjectOutput[] = $rowForSubject;
-
-                    // Build subject-wise aggregation (include all, religious already filtered to effective per student)
-                    if(!isset($subjectWise[$sub->id])){
-                        $subjectWise[$sub->id] = [
-                            'subjectId' => $sub->id,
-                            'subjectName' => $sub->subjectName,
-                            'rows' => []
-                        ];
-                    }
-                    // Include only if at least one component exists or total is numeric
-                    $hasAnyMark = ($rowForSubject['cq'] !== '-') || ($rowForSubject['mcq'] !== '-') || ($rowForSubject['practical'] !== '-') || ($rowForSubject['total'] !== '-');
-                    if($hasAnyMark){
-                        $subjectWise[$sub->id]['rows'][] = [
-                            'studentId' => $stu->stdId,
-                            'studentName' => trim(($stu->fullName ?? '').' '.($stu->sureName ?? '')),
-                            'cq' => $rowForSubject['cq'],
-                            'mcq' => $rowForSubject['mcq'],
-                            'practical' => $rowForSubject['practical'],
-                            'total' => $rowForSubject['total'],
-                            'grade' => $rowForSubject['grade'],
-                            'gradePoint' => $rowForSubject['gradePoint'],
-                            'isFail' => $rowForSubject['grade'] === 'F',
-                        ];
-                    }
-                }
-
-                // Pair-subject merge for this student
-                $pairGroups = $this->detectSubjectPairs($subjects);
-                $subjectsPaired = $this->mergeSubjectsForRow($perSubjectOutput, $pairGroups, $subjectCache, $isFeatureWise);
-                // Recompute subtotal, GPA and counts using paired rows
-                $subtotalPaired = 0; $mainGradePointsPaired = []; $optionalPointPaired = 0; $optionalFoundPaired = false; $hasFailPaired = false; $markedPairedCount = 0;
-                foreach($subjectsPaired as $sr){
-                    $hasAny = ($sr['cq'] !== '-') || ($sr['mcq'] !== '-') || ($sr['practical'] !== '-') || ($sr['total'] !== '-');
-                    if($hasAny){ $markedPairedCount++; }
-                    if(is_numeric($sr['total'])){ $subtotalPaired += (float)$sr['total']; }
-                    if(($sr['grade'] ?? '-') === 'F'){ $hasFailPaired = true; }
-                    // parse gradePoint display
-                    $gp = ($sr['grade'] === 'F') ? 0.0 : (is_numeric($sr['gradePoint']) ? (float)$sr['gradePoint'] : null);
-                    if($gp !== null){
-                        if(($sr['type'] ?? 'Main') === 'Main'){ $mainGradePointsPaired[] = $gp; }
-                        else{
-                            $sourceIds = $sr['sourceIds'] ?? [];
-                            if($selectedFourthSubjectId > 0 && in_array($selectedFourthSubjectId, $sourceIds, true)){
-                                $optionalFoundPaired = true;
-                                $optionalPointPaired = $gp;
-                            }
-                        }
-                    }
-                }
-                // If no subjects have marks at all, skip this student entirely (paired criterion)
-                if ($markedPairedCount === 0) { continue; }
-
-                $optionalBonus = ($optionalFoundPaired && $optionalPointPaired > 2) ? ($optionalPointPaired - 2) : 0;
-                $mainCount = count($mainGradePointsPaired);
-                $isIncomplete = false; // blank subjects skipped
-                $finalGpa = $mainCount > 0 ? round((array_sum($mainGradePointsPaired) + $optionalBonus)/$mainCount, 2) : 0;
-                $finalLetter = '-';
-                if($isIncomplete){
-                    $finalLetter = 'Incomplete'; $finalGpa = null;
-                }elseif($hasFailPaired){
-                    $finalLetter = 'F'; $finalGpa = 0;
-                }elseif($mainCount>0){
-                    $avgRow = GradeList::forGpa($finalGpa);
-                    $finalLetter = $avgRow ? $avgRow->gradeName : '-';
-                }
-
-                $rowPayload = [
-                    'student' => $stu,
-                    'subjects' => $subjectsPaired,
-                    'totalMarks' => $subtotalPaired,
-                    'finalGpa' => number_format($finalGpa,2),
-                    'finalLetter' => $finalLetter,
-                    'isFail' => $hasFailPaired,
-                    'isIncomplete' => $isIncomplete,
-                    'religiousSubjectIdUsed' => $effectiveReligiousId,
-                    'fourthSubjectIdUsed' => $selectedFourthSubjectId,
-                    'religiousSubjectUsedName' => ($effectiveReligiousId && isset($subjectCache[$effectiveReligiousId])) ? $subjectCache[$effectiveReligiousId]->subjectName : null,
-                    'markedSubjectsCount' => $markedPairedCount,
-                ];
-                if ($markedPairedCount > $maxMarkedSubjects) { $maxMarkedSubjects = $markedPairedCount; }
-                if($isIncomplete){ $incompleteResults[] = $rowPayload; }
-                elseif($hasFailPaired){ $failResults[] = $rowPayload; } else { $passResults[] = $rowPayload; }
-            }
-        }
-
-        // Keep all matched students; do not prune by max subject-count.
-
-        // Skip subjects that have no data across the class (no rows in subjectWise)
-        // Build active subject id list
-        $activeSubjectIds = [];
-        foreach ($subjectWise as $sid => $payload) {
-            if (!empty($payload['rows'])) { $activeSubjectIds[] = (int) $sid; }
-        }
-        if (!empty($activeSubjectIds)) {
-            // Build paired headers from active subjects
-            $activeSubjects = $subjects->filter(function($s) use ($activeSubjectIds) {
-                return in_array((int)$s->id, $activeSubjectIds, true);
-            })->values();
-            $pairGroups = $this->detectSubjectPairs($activeSubjects);
-            // Headers: paired names followed by singletons not in pairs
-            $pairedIdsFlat = [];
-            foreach($pairGroups as $pg){ foreach($pg['ids'] as $id){ $pairedIdsFlat[(int)$id] = true; } }
-            $headers = [];
-            foreach($pairGroups as $pg){ $o = (object)['subjectName' => $pg['name'], 'isPaired' => true]; $headers[] = $o; }
-            foreach($activeSubjects as $s){ if(!isset($pairedIdsFlat[(int)$s->id])){ $headers[] = (object)['subjectName' => $s->subjectName, 'isPaired' => false]; } }
-            $subjects = collect($headers);
-            // Reorder rows to follow header names
-            $orderNames = array_map(function($o){ return $o->subjectName; }, $headers);
-            $reorderByName = function(array $rows) use ($orderNames){
-                $byName = [];
-                foreach($rows as $r){ $byName[(string)$r['name']] = $r; }
-                $out = [];
-                foreach($orderNames as $nm){ if(isset($byName[$nm])){ $out[] = $byName[$nm]; } }
-                return $out;
-            };
-            foreach ($passResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
-            unset($row);
-            foreach ($failResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
-            unset($row);
-            foreach ($incompleteResults as &$row) { $row['subjects'] = $reorderByName($row['subjects']); }
-            unset($row);
+    private function logLifecycleFailure(Request $request, string $category, int $status): void
+    {
+        $actor = $this->adminResolver->current();
+        $context = [
+            'action' => (string) ($request->route()?->getName() ?? 'result.lifecycle'),
+            'actor_id' => $actor?->id,
+            'actor_role' => $actor?->user_type_label,
+            'scope' => array_filter([
+                'sessionId' => $request->input('sessionId'),
+                'classId' => $request->input('classId'),
+                'groupId' => $request->input('groupId'),
+                'examId' => $request->input('examId'),
+                'subjectId' => $request->input('subjectId'),
+            ], fn ($value) => $value !== null && $value !== ''),
+            'error_category' => $category,
+            'revision' => $request->input('scope_revision', $request->input('publication_revision')),
+            'http_status' => $status,
+        ];
+        if ($status === 403) {
+            Log::warning('Result lifecycle authorization denied.', $context);
+        } elseif ($status === 409) {
+            Log::notice('Result lifecycle concurrency conflict.', $context);
         } else {
-            // If no active subjects found, clear headers to avoid empty grid
-            $subjects = collect([]);
-            foreach ($passResults as &$row) { $row['subjects'] = []; }
-            unset($row);
-            foreach ($failResults as &$row) { $row['subjects'] = []; }
-            unset($row);
-            foreach ($incompleteResults as &$row) { $row['subjects'] = []; }
-            unset($row);
+            Log::info('Result lifecycle operation rejected.', $context);
         }
+    }
 
-        // Optional compact mode: per-student, only show subjects with actual marks
-        $compactMode = (bool) $request->get('compact');
-        $passResultsCompact = [];
-        $failResultsCompact = [];
-        $incompleteResultsCompact = [];
-        // Sort results by student roll number ASC before compact mapping
-        $sortByRoll = function(&$arr){
-            usort($arr, function($a,$b){
-                $ra = isset($a['student']->rollNumber) ? (int)$a['student']->rollNumber : 0;
-                $rb = isset($b['student']->rollNumber) ? (int)$b['student']->rollNumber : 0;
-                if($ra === $rb){ return $a['student']->id <=> $b['student']->id; }
-                return $ra <=> $rb;
-            });
-        };
-        $sortByRoll($passResults);
-        $sortByRoll($failResults);
-        $sortByRoll($incompleteResults);
+    public function allMarksheet(Request $request)
+    {
+        $examId = $request->integer('examId');
+        $classId = $request->integer('classId');
+        $sessionId = $request->integer('sessionId');
+        $sectionId = $request->filled('sectionId') ? $request->integer('sectionId') : null;
+        $departmentId = $request->filled('departmentId') ? $request->integer('departmentId') : null;
 
-        // Merit ranking for passed students: by GPA desc, then total marks desc, then roll asc
-        $rankMap = [];
-        if (!empty($passResults)) {
-            $sortedForMerit = $passResults;
-            usort($sortedForMerit, function($a,$b){
-                $ga = is_numeric($a['finalGpa']) ? (float)$a['finalGpa'] : -1.0;
-                $gb = is_numeric($b['finalGpa']) ? (float)$b['finalGpa'] : -1.0;
-                if ($ga !== $gb) { return $gb <=> $ga; }
-                $ta = is_numeric($a['totalMarks']) ? (float)$a['totalMarks'] : 0.0;
-                $tb = is_numeric($b['totalMarks']) ? (float)$b['totalMarks'] : 0.0;
-                if ($ta !== $tb) { return $tb <=> $ta; }
-                $ra = isset($a['student']->rollNumber) ? (int)$a['student']->rollNumber : 0;
-                $rb = isset($b['student']->rollNumber) ? (int)$b['student']->rollNumber : 0;
-                if ($ra !== $rb) { return $ra <=> $rb; }
-                return $a['student']->id <=> $b['student']->id;
-            });
-            $rank = 1;
-            foreach ($sortedForMerit as $row) {
-                $sid = $row['student']->id;
-                if (!isset($rankMap[$sid])) { $rankMap[$sid] = $rank; }
-                $rank++;
-            }
-            // Attach merit rank to pass results
-            foreach ($passResults as &$row) {
-                $sid = $row['student']->id;
-                $row['meritRank'] = $rankMap[$sid] ?? null;
-            }
-            unset($row);
-        }
-        if ($compactMode) {
-            $filterHasMarks = function(array $rows) {
-                $out = [];
-                foreach ($rows as $r) {
-                    $hasAny = ($r['cq'] !== '-') || ($r['mcq'] !== '-') || ($r['practical'] !== '-') || ($r['total'] !== '-');
-                    if ($hasAny) { $out[] = $r; }
-                }
-                return $out;
-            };
-            foreach ($passResults as $row) {
-                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
-                // keep merit rank if present
-                if (isset($row['meritRank'])) { $row['meritRank'] = $row['meritRank']; }
-                $passResultsCompact[] = $row;
-            }
-            foreach ($failResults as $row) {
-                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
-                $failResultsCompact[] = $row;
-            }
-            foreach ($incompleteResults as $row) {
-                $row['subjectsCompact'] = $filterHasMarks($row['subjects']);
-                $incompleteResultsCompact[] = $row;
+        if ($examId > 0 && $classId > 0 && $sessionId > 0) {
+            try {
+                return $this->centralizedTabulation($request, $examId, $classId, $sessionId, $sectionId, $departmentId);
+            } catch (\Throwable $exception) {
+                Log::error('Centralized marksheet calculation failed.', [
+                    'exam_id'=>$examId,'class_id'=>$classId,'session_id'=>$sessionId,
+                    'section_id'=>$sectionId,'department_id'=>$departmentId,
+                    'exception'=>get_class($exception),
+                ]);
+                return back()->with('error', 'Result calculation failed safely. No partial result was rendered.');
             }
         }
 
         $viewName = $request->routeIs('atGlanceResult') ? 'result.atGlanceResult' : 'result.allMarksheet';
-
         return view($viewName, [
-            'subjects' => $subjects,
-            'passResults' => $passResults,
-            'failResults' => $failResults,
-            'incompleteResults' => $incompleteResults,
-            'passResultsCompact' => $passResultsCompact,
-            'failResultsCompact' => $failResultsCompact,
-            'incompleteResultsCompact' => $incompleteResultsCompact,
-            'compactMode' => $compactMode,
-            'examId' => $examId,
-            'classId' => $classId,
-            'sessionId' => $sessionId,
-            'sectionId' => $sectionId,
-            'departmentId' => $departmentId,
-            'studentsLoaded' => $studentsLoaded,
-            'exam' => $exam,
-        ]);
+            'subjects'=>collect(),'passResults'=>[],'failResults'=>[],'incompleteResults'=>[],
+            'passResultsCompact'=>[],'failResultsCompact'=>[],'incompleteResultsCompact'=>[],
+            'compactMode'=>(bool)$request->get('compact'),'examId'=>$examId ?: null,
+            'classId'=>$classId ?: null,'sessionId'=>$sessionId ?: null,'sectionId'=>$sectionId,
+            'departmentId'=>$departmentId,'studentsLoaded'=>false,'exam'=>null,
+            'usingCentralizedTabulation'=>true,
+        ] + $this->resultPresentationContext($examId ?: null, $classId ?: null, $sessionId ?: null, $sectionId, $departmentId));
     }
 
     private function centralizedTabulation(Request $request, int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId)
     {
         $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
         $presented = $this->tabulationResultPresenter->present($batch['entries']);
-        $passResults = []; $failResults = []; $incompleteResults = [];
-        foreach ($presented['rows'] as $row) {
-            if ($row['status'] === 'Incomplete') $incompleteResults[] = $row;
-            elseif ($row['status'] === 'Fail') $failResults[] = $row;
-            else $passResults[] = $row;
-        }
-        $compact = fn (array $rows) => array_map(function ($row) {
-            $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));
-            return $row;
-        }, $rows);
+        $passResults = $presented['sections']['Pass'];
+        $failResults = $presented['sections']['Fail'];
+        $incompleteResults = $presented['sections']['Incomplete'];
         $compactMode = (bool) $request->get('compact');
         $viewName = $request->routeIs('atGlanceResult') ? 'result.atGlanceResult' : 'result.allMarksheet';
         return view($viewName, [
             'subjects' => $presented['subjects'], 'passResults' => $passResults, 'failResults' => $failResults,
-            'incompleteResults' => $incompleteResults, 'passResultsCompact' => $compact($passResults),
-            'failResultsCompact' => $compact($failResults), 'incompleteResultsCompact' => $compact($incompleteResults),
+            'incompleteResults' => $incompleteResults, 'passResultsCompact' => $passResults,
+            'failResultsCompact' => $failResults, 'incompleteResultsCompact' => $incompleteResults,
             'compactMode' => $compactMode, 'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId,
             'sectionId' => $sectionId, 'departmentId' => $departmentId, 'studentsLoaded' => true,
             'exam' => $batch['exam'], 'usingCentralizedTabulation' => true,
-        ]);
+            'tabulationRows' => $presented['rows'], 'tabulationSections' => $presented['sections'],
+            'failureBuckets' => $presented['failureBuckets'],
+            'tabulationPages' => $presented['tabulationPages'], 'glancePages' => $presented['glancePages'],
+        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam']));
     }
 
     private function centralizedSummary(Request $request)
@@ -1235,316 +921,190 @@ class MarksheetController extends Controller
             'overallSummary' => $summary['overallSummary'], 'subjectStats' => $summary['subjectStats'],
             'failureBuckets' => $summary['failureBuckets'], 'gpaDistribution' => $summary['gpaDistribution'],
             'gradeDistribution' => $summary['gradeDistribution'], 'hasData' => count($presented['rows']) > 0,
+            'summaryView' => $summary,
             'usingCentralizedSummary' => true,
-        ]);
+        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam']));
     }
 
     public function resultSummary(Request $request)
     {
-        if (config('result_engine.summary_enabled') && $request->get('examId') && $request->get('classId') && $request->get('sessionId')) {
+        if ($request->filled('examId') && $request->filled('classId') && $request->filled('sessionId')) {
             try {
                 return $this->centralizedSummary($request);
             } catch (\Throwable $exception) {
-                Log::error('Result engine summary failed; using complete legacy response.', [
-                    'exam_id' => (int) $request->get('examId'), 'class_id' => (int) $request->get('classId'),
-                    'session_id' => (int) $request->get('sessionId'),
-                    'section_id' => $request->get('sectionId') ? (int) $request->get('sectionId') : null,
-                    'exception' => get_class($exception),
+                Log::error('Centralized result summary failed.', [
+                    'exam_id'=>$request->integer('examId'),'class_id'=>$request->integer('classId'),
+                    'session_id'=>$request->integer('sessionId'),'exception'=>get_class($exception),
                 ]);
+                return back()->with('error', 'Result summary calculation failed safely.');
             }
         }
-        $request->attributes->set('_force_legacy_result_engine', true);
-        $baseView = $this->allMarksheet($request);
-        $data = method_exists($baseView, 'getData') ? $baseView->getData() : [];
-
-        $subjects = collect($data['subjects'] ?? []);
-        $passResults = $data['passResults'] ?? [];
-        $failResults = $data['failResults'] ?? [];
-        $incompleteResults = $data['incompleteResults'] ?? [];
-
-        $examId = $data['examId'] ?? $request->get('examId');
-        $classId = $data['classId'] ?? $request->get('classId');
-        $sessionId = $data['sessionId'] ?? $request->get('sessionId');
-        $sectionId = $data['sectionId'] ?? $request->get('sectionId');
-        $departmentId = $data['departmentId'] ?? $request->get('departmentId');
-
-        $allRows = array_merge($passResults, $failResults, $incompleteResults);
-
-        $totalStudents = 0;
-        if ($examId && $classId && $sessionId) {
-            $totalStudents = newAdmission::where('className', (int)$classId)
-                ->where('sessName', (int)$sessionId)
-                ->when($sectionId, function ($q) use ($sectionId) {
-                    return $q->where('sectionName', (int)$sectionId);
-                })
-                ->when($departmentId, function ($q) use ($departmentId) {
-                    return $q->where('departmentName', (int)$departmentId);
-                })
-                ->count();
-        }
-
-        $presentCount = count($allRows);
-        $absentCount = max(0, (int)$totalStudents - (int)$presentCount);
-
-        $overallSummary = [
-            'total' => (int)$totalStudents,
-            'present' => (int)$presentCount,
-            'absent' => (int)$absentCount,
-            'pass' => count($passResults),
-            'fail' => count($failResults),
-            'incomplete' => count($incompleteResults),
-        ];
-
-        $subjectStats = [];
-        foreach ($subjects as $subject) {
-            $subjectName = (string)($subject->subjectName ?? '');
-            if ($subjectName === '') {
-                continue;
-            }
-
-            $appeared = 0;
-            $passed = 0;
-            $failed = 0;
-            $missing = 0;
-
-            foreach ($allRows as $row) {
-                $subjectRow = null;
-                foreach (($row['subjects'] ?? []) as $sr) {
-                    if ((string)($sr['name'] ?? '') === $subjectName) {
-                        $subjectRow = $sr;
-                        break;
-                    }
-                }
-
-                if (!$subjectRow) {
-                    $missing++;
-                    continue;
-                }
-
-                $hasMarks = ($subjectRow['cq'] ?? '-') !== '-'
-                    || ($subjectRow['mcq'] ?? '-') !== '-'
-                    || ($subjectRow['practical'] ?? '-') !== '-'
-                    || ($subjectRow['total'] ?? '-') !== '-';
-
-                if (!$hasMarks) {
-                    $missing++;
-                    continue;
-                }
-
-                $appeared++;
-                if (($subjectRow['grade'] ?? '-') === 'F') {
-                    $failed++;
-                } else {
-                    $passed++;
-                }
-            }
-
-            $subjectStats[] = [
-                'subjectName' => $subjectName,
-                'appeared' => $appeared,
-                'pass' => $passed,
-                'fail' => $failed,
-                'missing' => $missing,
-                'passRate' => $appeared > 0 ? round(($passed / $appeared) * 100, 2) : 0.00,
-                'failRate' => $appeared > 0 ? round(($failed / $appeared) * 100, 2) : 0.00,
-            ];
-        }
-
-        usort($subjectStats, function ($a, $b) {
-            return strcasecmp($a['subjectName'], $b['subjectName']);
-        });
-
-        $failureBuckets = [];
-        foreach ($allRows as $row) {
-            $failCount = 0;
-            foreach (($row['subjects'] ?? []) as $sr) {
-                if (($sr['grade'] ?? '-') === 'F') {
-                    $failCount++;
-                }
-            }
-
-            if ($failCount > 0) {
-                if (!isset($failureBuckets[$failCount])) {
-                    $failureBuckets[$failCount] = 0;
-                }
-                $failureBuckets[$failCount]++;
-            }
-        }
-        ksort($failureBuckets);
 
         return view('result.result-summary', [
-            'examId' => $examId,
-            'classId' => $classId,
-            'sessionId' => $sessionId,
-            'sectionId' => $sectionId,
-            'departmentId' => $departmentId,
-            'studentsLoaded' => (bool)($data['studentsLoaded'] ?? false),
-            'overallSummary' => $overallSummary,
-            'subjectStats' => $subjectStats,
-            'failureBuckets' => $failureBuckets,
-            'hasData' => count($allRows) > 0,
-        ]);
+            'examId'=>$request->get('examId'),'classId'=>$request->get('classId'),
+            'sessionId'=>$request->get('sessionId'),'sectionId'=>$request->get('sectionId'),
+            'departmentId'=>$request->get('departmentId'),'studentsLoaded'=>false,
+            'overallSummary'=>['total'=>0,'present'=>0,'absent'=>0,'pass'=>0,'fail'=>0,'incomplete'=>0,'passRate'=>0],
+            'subjectStats'=>[],'failureBuckets'=>[],'gpaDistribution'=>[],'gradeDistribution'=>[],
+            'hasData'=>false,'usingCentralizedSummary'=>true,
+            'summaryView'=>['subjectPages'=>[[]],'failureSummaryLine'=>'No failed-subject bucket found.'],
+        ] + $this->resultPresentationContext(
+            $request->integer('examId') ?: null,
+            $request->integer('classId') ?: null,
+            $request->integer('sessionId') ?: null,
+            $request->integer('sectionId') ?: null,
+            $request->integer('departmentId') ?: null,
+        ));
     }
 
-    public function generateMarksheet(Request $requ){
-        // return $requ->all();
-        $config = ServerConfig::first(); 
-        $examId = (int)$requ->examId;
-        $studentIdInput = trim((string)($requ->studentId ?? ''));
-        $stdIdInput = trim((string)($requ->stdId ?? $requ->studentId ?? $requ->id ?? ''));
+    private function resultPresentationContext(
+        ?int $examId,
+        ?int $classId,
+        ?int $sessionId,
+        ?int $sectionId,
+        ?int $departmentId,
+        ?Exam $exam = null,
+    ): array {
+        $serverConfig = ServerConfig::orderBy('id', 'DESC')->first();
+        $class = $classId ? classManage::find($classId) : null;
+        $session = $sessionId ? sessionManage::find($sessionId) : null;
+        $section = $sectionId ? sectionManage::find($sectionId) : null;
+        $department = $departmentId ? Department::find($departmentId) : null;
+        $exam ??= $examId ? Exam::find($examId) : null;
+        return [
+            'filterOptions' => [
+                'exams' => Exam::orderBy('id', 'DESC')->get(),
+                'classes' => classManage::orderBy('id')->get(),
+                'sessions' => sessionManage::orderBy('id', 'DESC')->get(),
+                'sections' => sectionManage::orderBy('id')->get(),
+                'departments' => Department::orderBy('id')->get(),
+            ],
+            'scopeLabels' => [
+                'exam' => $exam?->examName ?? '-',
+                'class' => $class?->className ?? '-',
+                'session' => $session?->session ?? '-',
+                'section' => $section?->section ?? 'N/A',
+                'department' => $department?->departmentName ?? 'All',
+            ],
+            'resultHeader' => [
+                'examName' => $exam?->examName ?? '-',
+                'className' => $class?->className ?? '-',
+                'sessionName' => $session?->session ?? '-',
+                'sectionName' => $section?->section ?? '-',
+                'printedAt' => now()->format('d M Y, h:i A'),
+            ],
+            'preloadedInstituteConfig' => $serverConfig,
+            'instituteConfigPreloaded' => true,
+            'signatureView' => [
+                'roles' => ['Class Teacher', 'Principal/Head Master'],
+                'principalSignatureUrl' => empty($serverConfig?->principalSign) ? null : (
+                    preg_match('~^https?://~i', $serverConfig->principalSign)
+                        ? $serverConfig->principalSign
+                        : asset('public/upload/image/cultivation/'.ltrim($serverConfig->principalSign, '/'))
+                ),
+            ],
+            'preloadedCultivationAdmin' => $this->adminResolver->current(),
+            'cultivationAdminPreloaded' => true,
+        ];
+    }
+    public function generateMarksheet(Request $request)
+    {
+        $examId = $request->integer('examId');
+        $studentIdInput = trim((string)($request->studentId ?? ''));
+        $stdIdInput = trim((string)($request->stdId ?? $request->studentId ?? $request->id ?? ''));
 
         $studentQuery = newAdmission::query();
         if ($studentIdInput !== '' && ctype_digit($studentIdInput)) {
-            $studentQuery->where('id', (int)$studentIdInput);
+            $studentQuery->whereKey((int)$studentIdInput);
         } elseif ($stdIdInput !== '') {
-            $studentQuery->where(function($q) use ($stdIdInput){
-                $q->where('stdId', $stdIdInput)
-                  ->orWhereRaw('TRIM(stdId) = ?', [$stdIdInput]);
-                if (ctype_digit($stdIdInput)) {
-                    $q->orWhere('id', (int)$stdIdInput);
-                }
+            $studentQuery->where(function ($query) use ($stdIdInput) {
+                $query->where('stdId',$stdIdInput)->orWhereRaw('TRIM(stdId) = ?',[$stdIdInput]);
+                if (ctype_digit($stdIdInput)) $query->orWhereKey((int)$stdIdInput);
             });
         } else {
             $studentQuery->whereRaw('1 = 0');
         }
 
-        $student = $studentQuery
-            ->with(['marksheet' => function($q) use ($examId){
-                $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
-            }])
-            ->first();
+        $student = $studentQuery->with(['marksheet'=>fn ($query) =>
+            $query->where('examId',$examId)->orderBy('subjectId')
+        ])->first();
+        if (!$student) return back()->with('error','Student not found.');
+        if ($examId <= 0) return back()->with('error','Selected exam is required.');
 
-        $usingNewResultEngine = false;
-        $transcriptResult = null;
-        if (config('result_engine.transcript_enabled') && $student && $examId > 0) {
-            try {
-                $exam = Exam::findOrFail($examId);
-                $subjects = $this->resultCalculationInputBuilder->subjectsForStudent($student);
-                $calculated = $this->boardResultCalculator->calculate($student, $exam, $student->marksheet, $subjects);
-                $transcriptResult = $this->transcriptResultPresenter->present($calculated, $subjects, $student->marksheet);
-                $usingNewResultEngine = true;
-            } catch (\Throwable $exception) {
-                Log::error('Result engine transcript calculation failed; using legacy transcript.', [
-                    'student_id' => (int) $student->id,
-                    'exam_id' => $examId,
-                    'class_id' => (int) ($student->className ?? 0),
-                    'session_id' => (int) ($student->sessName ?? 0),
-                    'exception' => get_class($exception),
-                ]);
-            }
-        }
-
-        // Apply classwise max-subject rule to individual page
-        $maxMarkedSubjects = 0; $studentMarkedSubjects = 0; $hideForMaxRule = false;
-        if ($student && $examId) {
-            $classId = $student->className ?? null;
-            $sessionId = $student->sessName ?? null;
-            $sectionId = $student->sectionName ?? null; // aka group/section
-            if ($classId) {
-                $base = Marksheet::where('examId',$examId)->where('classId',$classId);
-                if ($sessionId) { $base = $base->where('sessionId',$sessionId); }
-                if ($sectionId) { $base = $base->where('groupId',$sectionId); }
-                $studentIds = $base->distinct()->pluck('studentId');
-                // Cache subjects
-                $subjectCache = Subject::orderBy('id','ASC')->get()->keyBy('id');
-                foreach ($studentIds as $sid) {
-                    $rows = Marksheet::where('examId',$examId)->where('classId',$classId)
-                        ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
-                        ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
-                        ->where('studentId',$sid)->get();
-                    // Pair-aware counting: group subjects by base alias, include only effective religious subject
-                    $stuRow = newAdmission::find($sid);
-                    $selectedReligiousId = $stuRow && $stuRow->religiousSubjectId ? (int)$stuRow->religiousSubjectId : 0;
-                    $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
-                    $groups = [];
-                    foreach($rows as $r){
-                        $sub = isset($subjectCache[$r->subjectId]) ? $subjectCache[$r->subjectId] : null;
-                        if(!$sub) continue;
-                        if(($sub->isReligious ?? false)){
-                            if($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){ continue; }
-                        }
-                        $base = $this->basePairAlias($sub->alias ?? $sub->subjectName ?? '');
-                        $key = $base ?: ('single_'.(int)$sub->id);
-                        $hasAny = is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks);
-                        if(!isset($groups[$key])){ $groups[$key] = false; }
-                        if($hasAny){ $groups[$key] = true; }
-                    }
-                    $cnt = 0; foreach($groups as $k=>$has){ if($has){ $cnt++; } }
-                    if ($cnt > $maxMarkedSubjects) { $maxMarkedSubjects = $cnt; }
-                    if ($sid == $student->id) { $studentMarkedSubjects = $cnt; }
-                }
-                if ($maxMarkedSubjects > 0 && $studentMarkedSubjects < $maxMarkedSubjects) {
-                    $hideForMaxRule = true;
-                }
-            }
-        }
-
-        // Compute classwise merit position by sum of subject totals, including failed
-        $meritRank = null;
         try {
-            if ($student && $examId) {
-                $classId = $student->className ?? null;
-                $sessionId = $student->sessName ?? null;
-                $sectionId = $student->sectionName ?? null;
-                if ($classId) {
-                    $base = Marksheet::where('examId',$examId)->where('classId',$classId);
-                    if ($sessionId) { $base = $base->where('sessionId',$sessionId); }
-                    if ($sectionId) { $base = $base->where('groupId',$sectionId); }
-                    $studentIds = $base->distinct()->pluck('studentId');
-                    $subjectCache = Subject::orderBy('id','ASC')->get()->keyBy('id');
-                    $rankItems = [];
-                    foreach ($studentIds as $sid) {
-                        $rows = Marksheet::where('examId',$examId)->where('classId',$classId)
-                            ->when($sessionId, function($q) use ($sessionId){ return $q->where('sessionId',$sessionId); })
-                            ->when($sectionId, function($q) use ($sectionId){ return $q->where('groupId',$sectionId); })
-                            ->where('studentId',$sid)->get();
-                        $stuRow = newAdmission::find($sid);
-                        $selectedReligiousId = $stuRow && $stuRow->religiousSubjectId ? (int)$stuRow->religiousSubjectId : 0;
-                        $effectiveReligiousId = $selectedReligiousId > 0 ? $selectedReligiousId : $this->resolveReligiousSubjectForClass((int)$classId);
-                        $sum = 0.0;
-                        foreach ($rows as $r) {
-                            $sub = isset($subjectCache[$r->subjectId]) ? $subjectCache[$r->subjectId] : null;
-                            if($sub && ($sub->isReligious ?? false)){
-                                if($effectiveReligiousId === 0 || (int)$sub->id !== $effectiveReligiousId){
-                                    continue;
-                                }
-                            }
-                            $hasAny = is_numeric($r->subjectMarks) || is_numeric($r->objectMarks) || is_numeric($r->practicalMarks);
-                            if(!$hasAny) { continue; }
-                            $sum += (is_numeric($r->subjectMarks)?(float)$r->subjectMarks:0) + (is_numeric($r->objectMarks)?(float)$r->objectMarks:0) + (is_numeric($r->practicalMarks)?(float)$r->practicalMarks:0);
-                        }
-                        $rankItems[] = ['sid'=>(int)$sid, 'total'=>$sum];
-                    }
-                    usort($rankItems, function($a,$b){
-                        if ($a['total'] == $b['total']) return 0;
-                        return ($a['total'] > $b['total']) ? -1 : 1; // desc
-                    });
-                    $rank = 0; $prevTotal = null; $map = [];
-                    foreach ($rankItems as $it) {
-                        if ($prevTotal === null || $it['total'] != $prevTotal) { $rank++; $prevTotal = $it['total']; }
-                        $map[$it['sid']] = $rank;
-                    }
-                    $meritRank = $map[$student->id] ?? null;
-                }
-            }
-        } catch (\Throwable $e) {
-            $meritRank = null;
+            $exam = Exam::findOrFail($examId);
+            $subjects = $this->resultCalculationInputBuilder->subjectsForStudent($student);
+            $calculated = $this->boardResultCalculator->calculate($student,$exam,$student->marksheet,$subjects);
+            $transcriptResult = $this->transcriptResultPresenter->present(
+                $calculated,$subjects,$student->marksheet
+            );
+            $serverConfig = ServerConfig::first();
+            $sessionName = is_numeric($student->sessName)
+                ? (sessionManage::find($student->sessName)?->session ?? '-')
+                : ((string) ($student->sessName ?? '-') ?: '-');
+            $className = is_numeric($student->className)
+                ? (classManage::find($student->className)?->className ?? '-')
+                : ((string) ($student->className ?? '-') ?: '-');
+            $sectionName = is_numeric($student->sectionName)
+                ? (sectionManage::find($student->sectionName)?->section ?? '-')
+                : ((string) ($student->sectionName ?? '-') ?: '-');
+            $departmentName = is_numeric($student->departmentName)
+                ? (Department::find($student->departmentName)?->departmentName ?? '-')
+                : ((string) ($student->departmentName ?? '-') ?: '-');
+            $publicAsset = fn (?string $path, string $directory): ?string =>
+                empty($path) ? null : (
+                    preg_match('~^https?://~i', $path)
+                        ? $path
+                        : asset('public/'.$directory.'/'.ltrim($path, '/'))
+                );
+            $transcriptView = [
+                'studentId' => $student->stdId ?? $student->id,
+                'studentName' => trim(($student->fullName ?? '').' '.($student->sureName ?? '')),
+                'fatherName' => $student->fatherName ?? $student->father ?? '',
+                'motherName' => $student->motherName ?? $student->mother ?? '',
+                'rollNumber' => is_numeric($student->rollNumber)
+                    ? str_pad((string) ((int) $student->rollNumber), 2, '0', STR_PAD_LEFT)
+                    : (string) ($student->rollNumber ?? ''),
+                'sessionName' => $sessionName,
+                'className' => $className,
+                'sectionName' => $sectionName,
+                'departmentName' => $departmentName,
+                'examName' => (string) $exam->examName,
+                'meritRank' => null,
+                'title' => $serverConfig?->transcript_title ?? 'Academic Transcript',
+                'institute' => [
+                    'name' => $serverConfig?->instituteName ?? 'Jahanara Ayub Academy',
+                    'address' => $serverConfig?->address ?? '',
+                    'mobile' => $serverConfig?->officeMobile ?? '',
+                    'email' => $serverConfig?->officeEmail ?? '',
+                    'logoUrl' => $publicAsset($serverConfig?->logo, 'upload/image/cultivation'),
+                ],
+                'principalSignatureUrl' => $publicAsset($serverConfig?->principalSign, 'upload/image/cultivation'),
+                'gradeLegend' => GradeList::orderBy('gradePoint', 'DESC')->get()
+                    ->map(fn ($grade) => [
+                        'range' => $grade->minMark.' - '.$grade->maxMark,
+                        'grade' => $grade->gradeName,
+                        'point' => $grade->gradePoint,
+                    ])->all(),
+            ];
+        } catch (\Throwable $exception) {
+            Log::error('Centralized single marksheet calculation failed.', [
+                'student_id'=>(int)$student->id,'exam_id'=>$examId,'exception'=>get_class($exception),
+            ]);
+            return back()->with('error','Result calculation failed safely.');
         }
 
         return view('result.marksheetGenerate',[
-            'studentDetails'=>$student,
-            'examId'=>$examId,
-            'config'=>$config,
-            'maxMarkedSubjects' => $maxMarkedSubjects,
-            'studentMarkedSubjects' => $studentMarkedSubjects,
-            'hideForMaxRule' => $hideForMaxRule,
-            'meritRank' => $meritRank,
-            'usingNewResultEngine' => $usingNewResultEngine,
-            'transcriptResult' => $transcriptResult,
+            'studentDetails'=>$student,'examId'=>$examId,'config'=>$serverConfig,
+            'maxMarkedSubjects'=>count($calculated->subjectResults),
+            'studentMarkedSubjects'=>count($calculated->subjectResults),
+            'hideForMaxRule'=>$calculated->status === 'Incomplete','meritRank'=>null,
+            'usingNewResultEngine'=>true,'transcriptResult'=>$transcriptResult,
+            'transcriptView'=>$transcriptView,
+            'preloadedCultivationAdmin'=>$this->adminResolver->current(),
+            'cultivationAdminPreloaded'=>true,
         ]);
     }
-
-    //front web site str
     public function internalResult(){
         return view('frontend.result.internalResult');
     }
@@ -1634,27 +1194,55 @@ class MarksheetController extends Controller
             $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
         }]);
 
-        $transcripts = config('result_engine.bulk_transcript_enabled')
-            ? $this->bulkTranscriptResultBuilder->build($students, $exam)
-            : $students->map(fn ($student) => [
-                'studentDetails' => $student,
-                'meritRank' => null,
-                'maxMarkedSubjects' => 0,
-                'studentMarkedSubjects' => 0,
-                'hideForMaxRule' => false,
-                'usingBulkResultEngine' => false,
-                'result' => null,
-            ])->all();
+        try {
+            $gradeRows = GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
+            $transcripts = $this->bulkTranscriptResultBuilder->buildWithGradeRows($students, $exam, $gradeRows);
+        } catch (\Throwable $exception) {
+            Log::warning('Centralized bulk transcript calculation failed.', [
+                'exam_id' => $examId,
+                'student_count' => $students->count(),
+                'exception' => get_class($exception),
+            ]);
+            return back()->with('error', 'Transcripts could not be calculated safely.');
+        }
+
+        if (collect($transcripts)->contains(fn ($item) => !($item['usingBulkResultEngine'] ?? false))) {
+            return back()->with('error', 'Transcripts could not be calculated safely.');
+        }
 
         try {
             @set_time_limit(180);
             @ini_set('memory_limit', '512M');
 
             $config = ServerConfig::first();
+            $publicAsset = fn (?string $path, string $directory): ?string =>
+                empty($path) ? null : (
+                    preg_match('~^https?://~i', $path)
+                        ? $path
+                        : asset('public/'.$directory.'/'.ltrim($path, '/'))
+                );
+            $bulkView = [
+                'title' => $config?->transcript_title ?? 'Academic Transcript',
+                'examName' => (string) $exam->examName,
+                'institute' => [
+                    'name' => $config?->instituteName ?? 'Jahanara Ayub Academy',
+                    'address' => $config?->address ?? '',
+                    'mobile' => $config?->officeMobile ?? '',
+                    'email' => $config?->officeEmail ?? '',
+                    'logoUrl' => $publicAsset($config?->logo, 'upload/image/cultivation'),
+                ],
+                'principalSignatureUrl' => $publicAsset($config?->principalSign, 'upload/image/cultivation'),
+                'gradeLegend' => $gradeRows->map(fn ($grade) => [
+                        'range' => $grade->minMark.' - '.$grade->maxMark,
+                        'grade' => $grade->gradeName,
+                        'point' => number_format((float) $grade->gradePoint, 2),
+                    ])->all(),
+            ];
             $html = view('result.bulk-transcript-pdf', [
                 'exam' => $exam,
                 'transcripts' => $transcripts,
                 'config' => $config,
+                'bulkView' => $bulkView,
             ])->render();
 
             $fileName = 'bulk-transcripts-exam-'.$examId.'-'.date('Y-m-d').'.pdf';
@@ -1694,264 +1282,4 @@ class MarksheetController extends Controller
         }
     }
 
-    private function resolveIslamReligiousSubjectId(?int $classId = null): int
-    {
-        $query = Subject::where('isReligious', true)
-            ->where(function($q){
-                $q->whereRaw('LOWER(subjectName) LIKE ?', ['%islam%'])
-                  ->orWhereRaw('LOWER(alias) LIKE ?', ['%islam%']);
-            });
-
-        if (!empty($classId) && $classId > 0) {
-            $query->where(function($q) use ($classId){
-                $q->where('assign_class', (string)$classId)
-                  ->orWhere('assign_class', '0');
-            });
-        }
-
-        $sub = $query
-            ->orderByRaw("CASE WHEN LOWER(subjectName) LIKE '%111%' OR LOWER(alias) LIKE '%111%' THEN 0 ELSE 1 END")
-            ->orderBy('id')
-            ->first();
-
-        return $sub ? (int)$sub->id : 0;
-    }
-
-    // Resolve effective religious subject for a class (mapping -> Islam default -> assigned -> any)
-    private function resolveReligiousSubjectForClass(int $classId): int
-    {
-        if ($classId <= 0) {
-            $islamGlobal = $this->resolveIslamReligiousSubjectId(null);
-            if ($islamGlobal > 0) return $islamGlobal;
-            $sub = Subject::where('isReligious', true)->orderBy('id')->first();
-            return $sub ? (int)$sub->id : 0;
-        }
-
-        $map = ReligiousSubjectDefault::where('classId', $classId)->first();
-        if ($map && Subject::where('id', (int)$map->subjectId)->where('isReligious', true)->exists()) {
-            return (int)$map->subjectId;
-        }
-
-        $islamForClass = $this->resolveIslamReligiousSubjectId($classId);
-        if ($islamForClass > 0) return $islamForClass;
-
-        $sub = Subject::where('isReligious', true)
-            ->where(function($q) use ($classId){
-                $q->where('assign_class', (string)$classId)
-                  ->orWhere('assign_class', '0');
-            })
-            ->orderBy('id')->first();
-        if ($sub) return (int)$sub->id;
-
-        $islamGlobal = $this->resolveIslamReligiousSubjectId(null);
-        if ($islamGlobal > 0) return $islamGlobal;
-
-        $sub = Subject::where('isReligious', true)->orderBy('id')->first();
-        return $sub ? (int)$sub->id : 0;
-    }
-
-    /**
-     * Compute a normalized base alias for pairing (e.g., bangla_1st_paper -> bangla).
-     */
-    private function basePairAlias(?string $alias): ?string
-    {
-        if(!$alias) return null;
-        $a = strtolower(trim($alias));
-        // Config-driven mapping (aliases/names)
-        $mapA = config('subject_pairs.aliases', []);
-        $mapN = config('subject_pairs.names', []);
-        if(isset($mapA[$a])){
-            $mapped = strtolower(trim((string)$mapA[$a]));
-            $mapped = str_replace(['-','  '],'_', $mapped);
-            $mapped = preg_replace('/__+/', '_', $mapped);
-            return trim($mapped, '_');
-        }
-        // try original (non-lower) against names map too
-        $orig = trim($alias);
-        if(isset($mapN[$orig])){
-            $mapped = strtolower(trim((string)$mapN[$orig]));
-            $mapped = str_replace(['-','  '],'_', $mapped);
-            $mapped = preg_replace('/__+/', '_', $mapped);
-            return trim($mapped, '_');
-        }
-        // remove common paper tokens
-        $a = str_replace(['-','  '],'_', $a);
-        $a = preg_replace('/(_1st|_first)/','', $a);
-        $a = preg_replace('/(_2nd|_second)/','', $a);
-        $a = preg_replace('/(_paper|_part|_p)$/','', $a);
-        $a = preg_replace('/__+/', '_', $a);
-        return trim($a, '_');
-    }
-
-    /**
-     * Detect subject pairs from active subjects using alias patterns and optional config.
-     * Returns array of groups: [ [ 'base' => 'bangla', 'ids' => [id1,id2], 'name' => 'Bangla' ], ... ]
-     */
-    public function detectSubjectPairs($subjects)
-    {
-        $groups = [];
-        $byBase = [];
-        $mapIds = config('subject_pairs.ids', []);
-        $disp = config('subject_pairs.displayNames', []);
-        foreach($subjects as $s){
-            // id mapping override
-            if(isset($mapIds[$s->id])){
-                $base = $this->basePairAlias((string)$mapIds[$s->id]);
-            } else {
-                $base = $this->basePairAlias($s->alias ?? '') ?: $this->basePairAlias($s->subjectName ?? '');
-            }
-            if(!$base) continue;
-            $byBase[$base] = $byBase[$base] ?? [];
-            $byBase[$base][] = $s;
-        }
-        foreach($byBase as $base => $list){
-            if(count($list) >= 2){
-                // choose display name from first, stripping trailing paper tokens from subjectName
-                $name = $disp[strtolower($base)] ?? $list[0]->subjectName;
-                $name = preg_replace('/\s*(1st|2nd)\s*Paper$/i','', $name);
-                $groups[] = [
-                    'base' => $base,
-                    'ids' => array_map(fn($x)=> (int)$x->id, $list),
-                    'name' => $name
-                ];
-            }
-        }
-        return $groups;
-    }
-
-    /**
-     * Merge per-subject rows into paired rows according to detected groups.
-     * $rowSubjects: array of rows with keys: id, name, type, cq, mcq, practical, total, grade, gradePoint
-     * $subjectCache: map[id] => Subject model
-     */
-    public function mergeSubjectsForRow(array $rowSubjects, array $pairGroups, array $subjectCache, bool $isFeatureWise): array
-    {
-        $used = [];
-        $out = [];
-        $indexById = [];
-        foreach($rowSubjects as $r){ $indexById[(int)$r['id']] = $r; }
-
-        // helper to parse numeric values
-        $num = function($v){ return is_numeric($v) ? (float)$v : 0.0; };
-
-        foreach($pairGroups as $g){
-            $ids = $g['ids'];
-            $rows = [];
-            foreach($ids as $id){ if(isset($indexById[$id])){ $rows[] = $indexById[$id]; $used[$id] = true; } }
-            // Merge even if only one paper is present; skip only if none present
-            if(count($rows) === 0){ continue; }
-            $type = 'Main';
-            foreach($rows as $r){ if(($r['type'] ?? 'Main') === 'Optional') { $type = 'Optional'; break; } }
-            $cq = 0; $mcq = 0; $pr = 0; $total = 0;
-            $anyMark = false; $anyFail = false;
-            $fullCQ = 0; $fullMCQ = 0; $fullPr = 0;
-            foreach($rows as $r){
-                $cq += $num($r['cq']); $mcq += $num($r['mcq']); $pr += $num($r['practical']);
-                $total += $num($r['total']);
-                if(is_numeric($r['cq']) || is_numeric($r['mcq']) || is_numeric($r['practical']) || is_numeric($r['total'])){ $anyMark = true; }
-                // For paired subjects, do not propagate paper-level fail; final fail will be based on combined total only
-                $sub = $subjectCache[(int)$r['id']] ?? null;
-                if($sub){ $fullCQ += (float)($sub->CQ ?? 0); $fullMCQ += (float)($sub->MCQ ?? 0); $fullPr += (float)($sub->Practical ?? 0); }
-            }
-            $grade = '-'; $pointDisplay = '-';
-            if($anyMark){
-                // Component-wise fail under feature-wise
-                $cqPct = ($fullCQ > 0) ? ($cq / $fullCQ) * 100 : null;
-                $mcqPct = ($fullMCQ > 0) ? ($mcq / $fullMCQ) * 100 : null;
-                $prPct = ($fullPr > 0) ? ($pr / $fullPr) * 100 : null;
-                $cGrades = [];
-                foreach(['cqPct'=>$cqPct,'mcqPct'=>$mcqPct,'prPct'=>$prPct] as $k=>$v){
-                    if($v === null){ $cGrades[$k] = '-'; } else { $row = GradeList::forScore($v); $cGrades[$k] = $row ? $row->gradeName : '-'; }
-                }
-                // Passing system for paired subjects: NOT feature-wise. Only combined total determines fail.
-                if(false){ /* placeholder to keep diff simple */ }
-                if($anyFail){
-                    $grade = 'F'; $pointDisplay = '0.00';
-                }else{
-                    $fullSum = $fullCQ + $fullMCQ + $fullPr;
-                    $percent = ($fullSum > 0) ? ($total / $fullSum) * 100 : null;
-                    if($percent !== null){
-                        $gRow = GradeList::forScore($percent);
-                        $grade = $gRow ? $gRow->gradeName : '-';
-                        $pointDisplay = $gRow ? number_format($gRow->gradePoint,2) : '-';
-                    } else {
-                        $grade = '-'; $pointDisplay = '-';
-                    }
-                }
-            }
-            // capture per-paper components for column-based display
-            $paper1 = null; $paper2 = null;
-            if(count($rows) >= 1){
-                $r1 = $rows[0];
-                $paper1 = [
-                    'cq' => $r1['cq'],
-                    'mcq' => $r1['mcq'],
-                    'practical' => $r1['practical'],
-                    'cqGrade' => $r1['cqGrade'] ?? '-',
-                    'mcqGrade' => $r1['mcqGrade'] ?? '-',
-                    'prGrade' => $r1['prGrade'] ?? '-',
-                ];
-            }
-            if(count($rows) >= 2){
-                $r2 = $rows[1];
-                $paper2 = [
-                    'cq' => $r2['cq'],
-                    'mcq' => $r2['mcq'],
-                    'practical' => $r2['practical'],
-                    'cqGrade' => $r2['cqGrade'] ?? '-',
-                    'mcqGrade' => $r2['mcqGrade'] ?? '-',
-                    'prGrade' => $r2['prGrade'] ?? '-',
-                ];
-            }
-            $out[] = [
-                'id' => implode('-', $ids),
-                'sourceIds' => array_values(array_map(fn($x) => (int)$x, $ids)),
-                'name' => $g['name'],
-                'type' => $type,
-                'isReligious' => 0,
-                'hasCQFeature' => ((float)$fullCQ > 0),
-                'hasMCQFeature' => ((float)$fullMCQ > 0),
-                'hasPracticalFeature' => ((float)$fullPr > 0),
-                'paired' => true,
-                'paper1' => $paper1,
-                'paper2' => $paper2,
-                'cq' => $anyMark ? ($cq > 0 ? $cq : '-') : '-',
-                'mcq' => $anyMark ? ($mcq > 0 ? $mcq : '-') : '-',
-                'practical' => $anyMark ? ($pr > 0 ? $pr : '-') : '-',
-                'total' => $anyMark ? ($total > 0 ? $total : '-') : '-',
-                'grade' => $grade,
-                'gradePoint' => $pointDisplay,
-                'cqGrade' => $cGrades['cqPct'] ?? '-',
-                'mcqGrade' => $cGrades['mcqPct'] ?? '-',
-                'prGrade' => $cGrades['prPct'] ?? '-',
-            ];
-        }
-
-        // add non-paired subjects, enrich with component grades
-        foreach($rowSubjects as $r){
-            if(!isset($used[(int)$r['id']])){
-                $sub = $subjectCache[(int)$r['id']] ?? null;
-                $fullCQ = $sub ? (float)($sub->CQ ?? 0) : 0.0;
-                $fullMCQ = $sub ? (float)($sub->MCQ ?? 0) : 0.0;
-                $fullPr = $sub ? (float)($sub->Practical ?? 0) : 0.0;
-                $cqPct = ($fullCQ>0 && is_numeric($r['cq'])) ? ((float)$r['cq'] / $fullCQ) * 100 : null;
-                $mcqPct = ($fullMCQ>0 && is_numeric($r['mcq'])) ? ((float)$r['mcq'] / $fullMCQ) * 100 : null;
-                $prPct = ($fullPr>0 && is_numeric($r['practical'])) ? ((float)$r['practical'] / $fullPr) * 100 : null;
-                $rr = $r;
-                $rr['paired'] = false;
-                $rr['paper1'] = null; $rr['paper2'] = null;
-                $rr['sourceIds'] = [(int)$r['id']];
-                $rr['hasCQFeature'] = ($fullCQ > 0);
-                $rr['hasMCQFeature'] = ($fullMCQ > 0);
-                $rr['hasPracticalFeature'] = ($fullPr > 0);
-                $rr['cqGrade'] = $cqPct!==null ? (GradeList::forScore($cqPct)->gradeName ?? '-') : '-';
-                $rr['mcqGrade'] = $mcqPct!==null ? (GradeList::forScore($mcqPct)->gradeName ?? '-') : '-';
-                $rr['prGrade'] = $prPct!==null ? (GradeList::forScore($prPct)->gradeName ?? '-') : '-';
-                $out[] = $rr;
-            }
-        }
-        // preserve order roughly by subject id
-        usort($out, function($a,$b){ return strcmp((string)$a['name'], (string)$b['name']); });
-        return $out;
-    }
 }
