@@ -78,7 +78,7 @@ use App\Http\Middleware\adminGuard;
 Route::get('/',[
     FrontController::class,
     'adminLogin'
-])->name('adminLogin');
+])->name('admin.login.entry');
 
 // Static asset compatibility routes for local Apache environments where
 // vhost static file resolution falls through to Laravel.
@@ -769,12 +769,12 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/home/info/eduMinImg/del/{id}',[
         InstituteController::class ,
         'delEduMinImg'
-    ])->name('delEduMinImg');
+    ])->name('home.delEduMinImg');
 
     Route::get('/home/info/boardChairmanImg/del/{id}',[
         InstituteController::class ,
         'delBoardChairmanImg'
-    ])->name('delBoardChairmanImg');
+    ])->name('home.delBoardChairmanImg');
 
     Route::get('/home/info/principalImg/del/{id}',[
         InstituteController::class ,
