@@ -40,12 +40,6 @@ use App\Http\Controllers\registerController;
 use App\Http\Controllers\schoolUserController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DocsController;
-use App\Http\Controllers\CurriculumSubjectMappingController;
-use App\Http\Controllers\TeacherAuthController;
-use App\Http\Controllers\TeacherResultController;
-use App\Http\Controllers\TeacherAttendanceController;
-use App\Http\Controllers\TeacherAcademicController;
-use App\Http\Controllers\TeacherProfileController;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\cultivationAdmin;
 use App\Http\Middleware\EncryptCookies;
@@ -174,42 +168,6 @@ Route::get('/login',[
     FrontController::class,
     'adminLogin'
 ])->name('adminLogin');
-
-Route::prefix('teacher')->name('teacher.')->group(function () {
-    Route::middleware('teacher.guest')->group(function () {
-        Route::get('/login', [TeacherAuthController::class, 'create'])->name('login');
-        Route::post('/login', [TeacherAuthController::class, 'store'])
-            ->middleware('throttle:teacher-login')
-            ->name('login.submit');
-    });
-
-    Route::middleware('teacher.auth')->group(function () {
-        Route::get('/dashboard', [TeacherAuthController::class, 'dashboard'])->name('dashboard');
-        Route::get('/attendance', [TeacherAttendanceController::class, 'index'])->name('attendance.index');
-        Route::get('/attendance/workspace', [TeacherAttendanceController::class, 'workspace'])->name('attendance.workspace');
-        Route::post('/attendance/load', [TeacherAttendanceController::class, 'load'])->name('attendance.load');
-        Route::post('/attendance/save', [TeacherAttendanceController::class, 'save'])
-            ->middleware('throttle:30,1')->name('attendance.save');
-        Route::get('/classes', [TeacherAcademicController::class, 'classes'])->name('classes.index');
-        Route::get('/students', [TeacherAcademicController::class, 'students'])->name('students.index');
-        Route::get('/students/{student}', [TeacherAcademicController::class, 'student'])
-            ->whereNumber('student')->name('students.show');
-        Route::get('/profile', [TeacherProfileController::class, 'show'])->name('profile.show');
-        Route::get('/profile/edit', [TeacherProfileController::class, 'edit'])->name('profile.edit');
-        Route::put('/profile', [TeacherProfileController::class, 'update'])->name('profile.update');
-        Route::get('/settings/password', [TeacherProfileController::class, 'passwordEdit'])->name('password.edit');
-        Route::put('/settings/password', [TeacherProfileController::class, 'passwordUpdate'])
-            ->middleware('throttle:6,1')->name('password.update');
-        Route::get('/results', [TeacherResultController::class, 'index'])->name('results.index');
-        Route::get('/results/workspace', [TeacherResultController::class, 'workspace'])->name('results.workspace');
-        Route::post('/results/load', [TeacherResultController::class, 'load'])->name('results.load');
-        Route::post('/results/draft', [TeacherResultController::class, 'draft'])
-            ->middleware('throttle:30,1')->name('results.draft');
-        Route::post('/results/confirm', [TeacherResultController::class, 'confirm'])
-            ->middleware('throttle:12,1')->name('results.confirm');
-        Route::post('/logout', [TeacherAuthController::class, 'destroy'])->name('logout');
-    });
-});
 
 Route::get('/logout',[
     FrontController::class,
@@ -2013,23 +1971,6 @@ Route::middleware(['adminGuard'])->group (function(){
         'downloadResultClassRoutineTeacherWisePdf'
     ])->name('downloadResultClassRoutineTeacherWisePdf');
 
-    Route::get('/result/curriculum-mapping/manage', [
-        CurriculumSubjectMappingController::class,
-        'index',
-    ])->name('resultCurriculumMappingManage');
-    Route::post('/result/curriculum-mapping/save', [
-        CurriculumSubjectMappingController::class,
-        'save',
-    ])->name('saveResultCurriculumMapping');
-    Route::post('/result/curriculum-mapping/copy-preview', [
-        CurriculumSubjectMappingController::class,
-        'copyPreview',
-    ])->name('previewResultCurriculumMappingCopy');
-    Route::post('/result/curriculum-mapping/copy', [
-        CurriculumSubjectMappingController::class,
-        'copy',
-    ])->name('copyResultCurriculumMapping');
-
     Route::get('/admit-card/creation',[
         ExamController::class,
         'admitCardRoutine'
@@ -2326,3 +2267,4 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('api.governing-body.list');
 
     //web font end
+

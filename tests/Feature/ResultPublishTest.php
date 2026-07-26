@@ -115,27 +115,14 @@ class ResultPublishTest extends TestCase
         $this->assertDatabaseCount('result_publishes', 2);
         $this->assertSame(1, ResultLifecycleEvent::where('action', 'result_published')
             ->pluck('correlation_uuid')->unique()->count());
-        $this->assertLessThan(70, $queryCount);
-        $this->assertSame(54, $queryCount);
+        $this->assertLessThan(50, $queryCount);
+        $this->assertSame(42, $queryCount);
     }
 
     public function test_genuinely_sectionless_scope_publishes_as_class_identity(): void
     {
         $data = $this->lifecycleScope();
         $data['students']->first()->update(['sectionName' => null]);
-        DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $data['session']->id,
-            'class_id' => (string) $data['class']->id,
-            'section_id' => null,
-            'department_id' => null,
-            'subject_id' => (int) $data['subject']->id,
-            'mapping_type' => 'main',
-            'sort_order' => 2,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
         $actor = $this->lifecycleActor();
         $marksInput = array_replace($this->lifecycleInput($data), ['groupId' => null]);
         app(ResultMarksDraftService::class)->save($marksInput, $actor, null, true);
@@ -162,8 +149,8 @@ class ResultPublishTest extends TestCase
         app(ResultPublishService::class)->publish($input, $actor);
         $count = count(DB::getQueryLog());
         DB::disableQueryLog();
-        $this->assertLessThan(40, $count);
-        $this->assertSame(30, $count);
+        $this->assertLessThan(30, $count);
+        $this->assertSame(24, $count);
     }
 
     private function twoSectionScope(bool $confirmSecond): array
@@ -180,19 +167,6 @@ class ResultPublishTest extends TestCase
         $student->rollNumber = '2';
         $student->save();
         $data['students']->push($student);
-        DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $data['session']->id,
-            'class_id' => (string) $data['class']->id,
-            'section_id' => (string) $secondSection->id,
-            'department_id' => null,
-            'subject_id' => (int) $data['subject']->id,
-            'mapping_type' => 'main',
-            'sort_order' => 1,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
         $actor = $this->lifecycleActor();
         $draft = $this->lifecycleInput($data);
         $draft['groupId'] = null;

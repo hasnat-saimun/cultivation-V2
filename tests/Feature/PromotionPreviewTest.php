@@ -211,7 +211,7 @@ class PromotionPreviewTest extends TestCase
     {
         $session = new sessionManage(); $session->session = '2026'; $session->save();
         $toSession = new sessionManage(); $toSession->session = '2027'; $toSession->save();
-        $class = new classManage(); $class->className = 'Class 8'; $class->save();
+        $class = new classManage(); $class->className = 'Class 10'; $class->save();
         $toClass = new classManage(); $toClass->className = 'Class 11'; $toClass->save();
         $section = new sectionManage(); $section->section = 'A'; $section->save();
         $toSection = new sectionManage(); $toSection->section = 'B'; $toSection->save();
@@ -233,47 +233,9 @@ class PromotionPreviewTest extends TestCase
 
     private function mark(newAdmission $student, array $scope, Subject $subject, float $cq, ?Exam $exam = null): Marksheet
     {
-        $this->ensureCurriculumMapping($scope, $subject);
-
         return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
             'groupId'=>$scope['section']->id,'examId'=>($exam ?? $scope['exam'])->id,'subjectId'=>$subject->id,
             'subjectMarks'=>$cq,'totalMarks'=>$cq,'gradePoint'=>$cq >= 80 ? 5 : 0,'laterGrade'=>$cq >= 33 ? 'A+' : 'F']);
-    }
-
-    private function ensureCurriculumMapping(array $scope, Subject $subject): void
-    {
-        $exists = \Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $scope['session']->id)
-            ->where('class_id', (string) $scope['class']->id)
-            ->where('section_id', (string) $scope['section']->id)
-            ->whereNull('department_id')
-            ->where('subject_id', (int) $subject->id)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $nextOrder = (int) (\Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $scope['session']->id)
-            ->where('class_id', (string) $scope['class']->id)
-            ->where('section_id', (string) $scope['section']->id)
-            ->whereNull('department_id')
-            ->max('sort_order') ?? 0) + 1;
-
-        \Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $scope['session']->id,
-            'class_id' => (string) $scope['class']->id,
-            'section_id' => (string) $scope['section']->id,
-            'department_id' => null,
-            'subject_id' => (int) $subject->id,
-            'mapping_type' => 'main',
-            'sort_order' => $nextOrder,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
 
     private function placement(newAdmission $student, array $scope, int $position, ?Exam $exam = null): Placement

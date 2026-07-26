@@ -87,6 +87,6 @@ class ResultPublicationReadinessTest extends TestCase
             $this->refreshDatabase();
         }
         $this->assertSame([$counts[0], $counts[0], $counts[0]], $counts);
-        $this->assertSame([10, 10, 10], $counts);
+        $this->assertSame([7, 7, 7], $counts);
     }
 }

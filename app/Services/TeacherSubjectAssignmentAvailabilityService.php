@@ -35,23 +35,15 @@ class TeacherSubjectAssignmentAvailabilityService
             return self::GENDER_ALL;
         }
 
-        if (in_array($scope, ['1', 'm'], true)) {
-            return self::GENDER_MALE;
-        }
-
-        if (in_array($scope, ['2', 'f'], true)) {
-            return self::GENDER_FEMALE;
-        }
-
         return in_array($scope, [self::GENDER_ALL, self::GENDER_MALE, self::GENDER_FEMALE], true)
             ? $scope
             : null;
     }
 
-    public function availableGenderScopes(array $context, int|array|null $excludeRowIds = null): array
+    public function availableGenderScopes(array $context, ?int $excludeRowId = null): array
     {
         $context = $this->normalizeContext($context);
-        $existingScopes = $this->existingGenderScopesForContext($context, $excludeRowIds);
+        $existingScopes = $this->existingGenderScopesForContext($context, $excludeRowId);
 
         if (in_array(self::GENDER_ALL, $existingScopes, true)) {
             return [];
@@ -75,24 +67,24 @@ class TeacherSubjectAssignmentAvailabilityService
         return [self::GENDER_ALL, self::GENDER_MALE, self::GENDER_FEMALE];
     }
 
-    public function canAssignGender(array $context, string $genderScope, int|array|null $excludeRowIds = null): bool
+    public function canAssignGender(array $context, string $genderScope, ?int $excludeRowId = null): bool
     {
         $normalizedGender = $this->normalizeGenderScope($genderScope);
         if ($normalizedGender === null) {
             return false;
         }
 
-        return in_array($normalizedGender, $this->availableGenderScopes($context, $excludeRowIds), true);
+        return in_array($normalizedGender, $this->availableGenderScopes($context, $excludeRowId), true);
     }
 
     /**
      * Lock rows for the context inside a transaction to reduce overlap race conditions.
      */
-    public function lockContextRows(array $context, int|array|null $excludeRowIds = null): Collection
+    public function lockContextRows(array $context, ?int $excludeRowId = null): Collection
     {
         $context = $this->normalizeContext($context);
 
-        return $this->baseContextQuery($context, $excludeRowIds)
+        return $this->baseContextQuery($context, $excludeRowId)
             ->lockForUpdate()
             ->get(['id', 'gender_scope']);
     }
@@ -100,7 +92,7 @@ class TeacherSubjectAssignmentAvailabilityService
     /**
      * Return subjects with allowed genders for the selected context.
      */
-    public function subjectsWithAvailability(array $baseContext, ?string $selectedGender = null): Collection
+    public function subjectsWithAvailability(array $baseContext): Collection
     {
         $sessionId = $this->normalizeNullableId($baseContext['session_id'] ?? null);
         $classId = $this->normalizeRequiredId($baseContext['class_id'] ?? null);
@@ -112,36 +104,28 @@ class TeacherSubjectAssignmentAvailabilityService
             ->orderBy('subjectName', 'asc')
             ->get();
 
-        $coverage = $this->baseAcademicScopeQuery($sessionId, $classId, $sectionId, $groupId)
-            ->get(['subject_id', 'gender_scope'])
-            ->groupBy(fn ($row) => (int) $row->subject_id)
-            ->map(fn ($rows) => $rows
-                ->map(fn ($row) => $this->normalizeGenderScope($row->gender_scope))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all());
+        return $subjectRows->map(function ($subject) use ($sessionId, $classId, $sectionId, $groupId) {
+            $context = [
+                'session_id' => $sessionId,
+                'class_id' => $classId,
+                'section_id' => $sectionId,
+                'group_id' => $groupId,
+                'subject_id' => (int) $subject->id,
+            ];
 
-        $selectedGender = $selectedGender === null ? null : $this->normalizeGenderScope($selectedGender);
-
-        return $subjectRows->map(function ($subject) use ($coverage) {
             return [
                 'id' => (int) $subject->id,
                 'name' => (string) $subject->subjectName,
-                'available_gender_scopes' => $this->availableFromCoverage(
-                    $coverage->get((int) $subject->id, [])
-                ),
+                'available_gender_scopes' => $this->availableGenderScopes($context),
             ];
-        })->filter(function (array $row) use ($selectedGender) {
-            return $selectedGender === null
-                ? !empty($row['available_gender_scopes'])
-                : in_array($selectedGender, $row['available_gender_scopes'], true);
+        })->filter(function (array $row) {
+            return !empty($row['available_gender_scopes']);
         })->values();
     }
 
-    private function existingGenderScopesForContext(array $context, int|array|null $excludeRowIds = null): array
+    private function existingGenderScopesForContext(array $context, ?int $excludeRowId = null): array
     {
-        $rows = $this->baseContextQuery($context, $excludeRowIds)
+        $rows = $this->baseContextQuery($context, $excludeRowId)
             ->get(['gender_scope']);
 
         $scopes = [];
@@ -156,93 +140,39 @@ class TeacherSubjectAssignmentAvailabilityService
         return array_values(array_unique($scopes));
     }
 
-    private function baseContextQuery(array $context, int|array|null $excludeRowIds = null): Builder
-    {
-        $query = $this->baseAcademicScopeQuery(
-            $context['session_id'],
-            $context['class_id'],
-            $context['section_id'],
-            $context['group_id'],
-        )
-            ->where('subject_id', $context['subject_id']);
-
-        $excluded = collect(is_array($excludeRowIds) ? $excludeRowIds : [$excludeRowIds])
-            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-        if ($excluded !== []) {
-            $query->whereNotIn('id', $excluded);
-        }
-
-        return $query;
-    }
-
-    public function canGenderScopesOverlap(string $left, string $right): bool
-    {
-        $left = $this->normalizeGenderScope($left);
-        $right = $this->normalizeGenderScope($right);
-        if ($left === null || $right === null) {
-            return true;
-        }
-
-        return $left === self::GENDER_ALL || $right === self::GENDER_ALL || $left === $right;
-    }
-
-    private function baseAcademicScopeQuery(?int $sessionId, int $classId, ?int $sectionId, ?int $groupId): Builder
+    private function baseContextQuery(array $context, ?int $excludeRowId = null): Builder
     {
         $query = DB::table('teacher_class_subjects')
-            ->where('class_id', $classId);
+            ->where('class_id', $context['class_id'])
+            ->where('subject_id', $context['subject_id']);
 
         if (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
-            if ($sessionId === null) {
+            if ($context['session_id'] === null) {
                 $query->whereNull('session_id');
             } else {
-                $query->where('session_id', $sessionId);
+                $query->where(function ($q) use ($context) {
+                    $q->whereNull('session_id')->orWhere('session_id', $context['session_id']);
+                });
             }
         }
 
-        if ($sectionId === null) {
+        if ($context['section_id'] === null) {
             $query->whereNull('section_id');
         } else {
-            $query->where('section_id', $sectionId);
+            $query->where('section_id', $context['section_id']);
         }
 
-        $query->where(function (Builder $groups) use ($groupId) {
-            if ($groupId === null) {
-                // All Departments intersects every concrete department.
-                $groups->whereNull('group_id')->orWhereNotNull('group_id');
-                return;
-            }
+        if ($context['group_id'] === null) {
+            $query->whereNull('group_id');
+        } else {
+            $query->where('group_id', $context['group_id']);
+        }
 
-            // A concrete department intersects its own rows and All Departments.
-            $groups->whereNull('group_id')->orWhere('group_id', $groupId);
-        });
+        if ($excludeRowId !== null) {
+            $query->where('id', '!=', $excludeRowId);
+        }
 
         return $query;
-    }
-
-    private function availableFromCoverage(array $existingScopes): array
-    {
-        if (in_array(self::GENDER_ALL, $existingScopes, true)) {
-            return [];
-        }
-
-        $hasMale = in_array(self::GENDER_MALE, $existingScopes, true);
-        $hasFemale = in_array(self::GENDER_FEMALE, $existingScopes, true);
-
-        if ($hasMale && $hasFemale) {
-            return [];
-        }
-        if ($hasMale) {
-            return [self::GENDER_FEMALE];
-        }
-        if ($hasFemale) {
-            return [self::GENDER_MALE];
-        }
-
-        return [self::GENDER_ALL, self::GENDER_MALE, self::GENDER_FEMALE];
     }
 
     private function normalizeNullableId($value): ?int

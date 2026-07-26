@@ -7,8 +7,6 @@ use Illuminate\Support\Collection;
 
 class TranscriptResultPresenter
 {
-    public function __construct(private ?TranscriptSubjectOrderingService $ordering = null) {}
-
     public function present(StudentResult $result, iterable $subjects, iterable $marks): array
     {
         return $this->presentPrepared($result, $subjects, $marks, null);
@@ -38,8 +36,8 @@ class TranscriptResultPresenter
             else $mainRows[] = $row;
         }
 
-        $mainRows = $this->ordering()->sortMainRows($mainRows);
-        $optionalRows = $this->ordering()->sortOptionalRows($optionalRows);
+        usort($mainRows, fn ($a, $b) => $this->order($a['name']) <=> $this->order($b['name'])
+            ?: strcasecmp($a['name'], $b['name']));
 
         $letter = match ($result->status) {
             'Fail' => 'F',
@@ -107,7 +105,6 @@ class TranscriptResultPresenter
             'sourceIds' => $result->sourceSubjectIds,
             'type' => $result->subjectType,
             'isOptional' => $result->isOptional,
-            'isReligious' => $sourceSubjects->contains(fn ($subject) => (bool) ($subject->isReligious ?? false)),
             'paired' => $paired,
             'name' => $this->displayName($result, $sourceSubjects),
             'cq' => $this->componentDisplay($sourceSubjects, $sourceMarks, 'CQ', 'subjectMarks', $paired),
@@ -118,26 +115,6 @@ class TranscriptResultPresenter
             'gradePoint' => $result->missing ? '-' : number_format($result->gradePoint, 2),
             'status' => $result->status,
             'componentFailures' => $result->componentFailures,
-            'mappingSortOrder' => (int) ($sourceSubjects->min('mapping_sort_order') ?? $sourceSubjects->min('applicability_order') ?? PHP_INT_MAX),
-            'mappingDepartmentIds' => $sourceSubjects
-                ->map(fn ($subject) => is_numeric($subject->mapping_department_id ?? null) ? (int) $subject->mapping_department_id : null)
-                ->filter(fn ($id) => $id !== null)
-                ->unique()
-                ->values()
-                ->all(),
-            'applicabilitySources' => $sourceSubjects
-                ->map(fn ($subject) => (string) ($subject->applicability_source ?? ''))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all(),
-            'mappingCategories' => $sourceSubjects
-                ->map(fn ($subject) => (string) ($subject->mapping_category ?? ''))
-                ->filter()
-                ->unique()
-                ->values()
-                ->all(),
-            'sortOrder' => (int) ($sourceSubjects->min('applicability_order') ?? PHP_INT_MAX),
         ];
     }
 
@@ -164,13 +141,16 @@ class TranscriptResultPresenter
         return (string) ($subjects->first()?->subjectName ?? $result->subjectId);
     }
 
-    private function ordering(): TranscriptSubjectOrderingService
+    private function order(string $name): int
     {
-        if ($this->ordering === null) {
-            $this->ordering = app(TranscriptSubjectOrderingService::class);
-        }
-
-        return $this->ordering;
+        $name = strtolower($name);
+        if ((str_contains($name, 'information') && str_contains($name, 'communication')) || str_contains($name, 'ict')) return 900;
+        if (str_contains($name, 'bangla') && !str_contains($name, 'bangladesh')) return 100;
+        if (str_contains($name, 'english')) return 200;
+        if (str_contains($name, 'mathematics') || preg_match('/\bmath\b/', $name)) return 300;
+        if (str_contains($name, 'general science')) return 400;
+        if (str_contains($name, 'social science') || str_contains($name, 'bangladesh') || str_contains($name, 'bgs')) return 500;
+        if (preg_match('/religion|islam|hindu|buddh|christ/', $name)) return 600;
+        return 700;
     }
-
 }

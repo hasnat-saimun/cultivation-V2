@@ -18,15 +18,12 @@ use App\Models\TeacherManagement;
 use App\Models\CultivationAdmin;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Services\TeacherAssignmentAcademicScopeService;
 
 class ExamController extends Controller
 {
     private const CLASS_ROUTINE_ALLOWED_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday'];
     private const CLASS_ROUTINE_BREAK_TOKEN = '__BREAK__';
     private const CLASS_ROUTINE_BREAK_LABEL = 'Break/Tiffin Time';
-
-    public function __construct(private TeacherAssignmentAcademicScopeService $academicScope) {}
 
     protected function validateExamRequest(Request $requ, $isUpdate = false)
     {
@@ -181,15 +178,12 @@ class ExamController extends Controller
             'ta_assignClass' => 'required|integer',
             'ta_assignSection' => 'nullable|integer',
             'ta_assignDepartment' => 'nullable|integer',
-            'ta_departmentScope' => 'required|in:all,specific,not_applicable',
         ]);
 
         $sessionId = $supportsSession ? (int)$requ->input('ta_assignSession') : null;
         $classId = (int)$requ->input('ta_assignClass');
         $sectionId = $requ->filled('ta_assignSection') ? (int)$requ->input('ta_assignSection') : null;
         $groupId = $requ->filled('ta_assignDepartment') ? (int)$requ->input('ta_assignDepartment') : null;
-        $departmentScope = (string) $requ->input('ta_departmentScope');
-        $this->academicScope->assertValid($classId, $sectionId, $groupId, null, 'ta_assignDepartment', $departmentScope, 'ta_departmentScope');
 
         $teacherIds = $requ->input('ta_teacher_id', []);
         $subjectIds = $requ->input('ta_subject_id', []);
@@ -1030,11 +1024,12 @@ class ExamController extends Controller
             $assignmentQuery = DB::table('teacher_class_subjects')->where('class_id', (int)$classId);
 
             if (!empty($sessionId) && Schema::hasColumn('teacher_class_subjects', 'session_id')) {
-                $assignmentQuery->where('session_id', (int)$sessionId);
+                $assignmentQuery->where(function ($q) use ($sessionId) {
+                    $q->whereNull('session_id')->orWhere('session_id', (int)$sessionId);
+                });
             } elseif (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
-                $assignmentQuery->whereRaw('1 = 0');
+                $assignmentQuery->whereNull('session_id');
             }
-            $this->academicScope->assertValid($classId, $sectionId, $groupId, $subjectId, 'ta_assignDepartment', $departmentScope, 'ta_departmentScope');
 
             if (empty($sectionId)) {
                 $assignmentQuery->whereNull('section_id');

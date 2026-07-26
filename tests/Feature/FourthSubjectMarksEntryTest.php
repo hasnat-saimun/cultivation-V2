@@ -150,7 +150,6 @@ class FourthSubjectMarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
-            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $section->id,
             'group_id' => $science->id,
@@ -246,7 +245,6 @@ class FourthSubjectMarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
-            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $section->id,
             'group_id' => $science->id,

@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Schema;
 
 class MarksEntryAuthorizationService
 {
-    public function __construct(private TeacherAssignmentAcademicScopeService $academicScope) {}
     public function normalizeGenderScope(?string $scope): ?string
     {
         if ($scope === null) {
@@ -176,8 +175,7 @@ class MarksEntryAuthorizationService
         ?int $optionalGroupId = null,
         ?int $sessionId = null
     ): Collection {
-        if (!$user || !$user->isTeacher()
-            || !$this->academicScope->isValidAuthorizationDepartment($classId, $optionalGroupId)) {
+        if (!$user || !$user->isTeacher()) {
             return collect();
         }
 
@@ -199,9 +197,14 @@ class MarksEntryAuthorizationService
                 ->where('tcs.teacher_id', (int) $user->id)
                 ->where('tcs.class_id', $classId)
                 ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
-                    $sessionId === null
-                        ? $query->whereRaw('1 = 0')
-                        : $query->where('tcs.session_id', $sessionId);
+                    $query->where(function ($sessionQuery) use ($sessionId) {
+                        if ($sessionId === null) {
+                            $sessionQuery->whereNull('tcs.session_id');
+                        } else {
+                            // Backward compatibility: legacy rows without session_id remain readable.
+                            $sessionQuery->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                        }
+                    });
                 })
                 ->whereNotNull('tcs.subject_id')
                 ->where(function ($query) {
@@ -245,9 +248,7 @@ class MarksEntryAuthorizationService
         }
 
         // Composite precedence is evaluated for the selected context only.
-        if (empty($subjectIds)
-            && $sessionId === null
-            && Schema::hasTable('teacher_subjects')) {
+        if (empty($subjectIds) && Schema::hasTable('teacher_subjects')) {
             $legacyQuery = DB::table('teacher_subjects as ts')
                 ->join('subjects as s', 's.id', '=', 'ts.subject_id')
                 ->where('ts.teacher_id', (int) $user->id)
@@ -413,12 +414,6 @@ class MarksEntryAuthorizationService
         ?int $sessionId = null
     ): array {
         $rows = collect();
-        if (!$this->academicScope->isValidAuthorizationDepartment($classId, $optionalGroupId)) {
-            return [
-                'has_assignments' => false, 'wildcard_scopes' => [], 'department_scopes' => [],
-                'all_scopes' => [], 'wildcard_all' => false,
-            ];
-        }
 
         if (Schema::hasTable('teacher_class_subjects')) {
             $rows = DB::table('teacher_class_subjects as tcs')
@@ -427,9 +422,13 @@ class MarksEntryAuthorizationService
                 ->where('tcs.teacher_id', (int) $user->id)
                 ->where('tcs.class_id', $classId)
                 ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
-                    $sessionId === null
-                        ? $query->whereRaw('1 = 0')
-                        : $query->where('tcs.session_id', $sessionId);
+                    $query->where(function ($sessionQuery) use ($sessionId) {
+                        if ($sessionId === null) {
+                            $sessionQuery->whereNull('tcs.session_id');
+                        } else {
+                            $sessionQuery->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
+                        }
+                    });
                 })
                 ->where(function ($query) use ($subjectId) {
                     if ($subjectId === null) {

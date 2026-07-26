@@ -23,22 +23,6 @@ Marksheet Generate
         .report-header .hdr-logo { height: 48px !important; }
         .report-header .name { font-size: 18px !important; }
         .report-header .subline, .report-header .contacts { font-size: 11px !important; }
-        .transcript-information-grid {
-            display: grid !important;
-            grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
-            gap: 16px !important;
-            align-items: start !important;
-        }
-        .student-information,
-        .grading-information {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-        }
-        .grading-information table {
-            break-inside: avoid !important;
-            page-break-inside: avoid !important;
-            width: 100% !important;
-        }
         .failed-subjects { font-size: 11px !important; }
         .failed-subjects h4 { margin-bottom: 4px !important; }
         .failed-subjects ul { columns: 2 !important; column-gap: 12px !important; list-style-position: inside !important; margin: 4px 0 !important; padding-left: 0 !important; }
@@ -66,32 +50,6 @@ Marksheet Generate
     .report-header .name { font-weight: 700; margin-bottom: 0; }
     .report-header .subline { font-size: 12px; color: #6b7280; }
     .report-header .contacts { font-size: 12px; }
-    .transcript-information-grid {
-        display: grid;
-        grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
-        gap: 24px;
-        align-items: start;
-    }
-    .student-information,
-    .grading-information {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-    .student-information .student-info,
-    .grading-information .grading-table {
-        width: 100%;
-        margin-bottom: 0;
-    }
-    .grading-information .grading-table th,
-    .grading-information .grading-table td {
-        white-space: nowrap;
-    }
-    @media (max-width: 992px) {
-        .transcript-information-grid {
-            grid-template-columns: 1fr;
-            gap: 16px;
-        }
-    }
 </style>
 
 <div class="report-header">
@@ -133,53 +91,42 @@ Marksheet Generate
                 </div>
             </div>
 
-            <div class="col-12 mb-4 transcript-information-grid">
-                <div class="student-information">
-                    <table class="student-info">
-                        <tbody>
-                            <tr><th>Student ID</th><td>:</td><td colspan="4">{{ $transcriptView['studentId'] ?: '-' }}</td></tr>
-                            <tr><th>Name</th><td>:</td><td colspan="4">{{ $transcriptView['studentName'] }}</td></tr>
-                            <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $transcriptView['fatherName'] }}</td></tr>
-                            <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $transcriptView['motherName'] }}</td></tr>
-                            <tr>
-                                <th>Roll Number</th><td>:</td><td>{{ $transcriptView['rollNumber'] }}</td>
-                                <th>Session</th><td>:</td><td>{{ $transcriptView['sessionName'] }}</td>
-                            </tr>
-                            <tr>
-                                <th>Class</th><td>:</td><td>{{ $transcriptView['className'] }}</td>
-                                <th>Section</th><td>:</td><td>{{ $transcriptView['sectionName'] }}</td>
-                            </tr>
-                            <tr><th>Department</th><td>:</td><td colspan="4">{{ $transcriptView['departmentName'] }}</td></tr>
-                            <tr><th>Merit Position</th><td>:</td><td colspan="4">{{ $transcriptView['meritRank'] ?? '-' }}</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="grading-information">
-                    <table class="table-bordered text-center grading-table">
-                        <thead>
-                            <tr><th>Range of Marks</th><th>Grade</th><th>Point</th></tr>
-                        </thead>
-                        <tbody>
-                            @forelse($transcriptView['gradeLegend'] as $grade)
-                                <tr><td>{{ $grade['range'] }}</td><td>{{ $grade['grade'] }}</td><td>{{ $grade['point'] }}</td></tr>
-                            @empty
-                                <tr><td colspan="3">No grading legend configured</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            <table class="col-8 col-md-8 mb-4 student-info">
+                <tbody>
+                    <tr><th>Student ID</th><td>:</td><td colspan="4">{{ $transcriptView['studentId'] ?: '-' }}</td></tr>
+                    <tr><th>Name</th><td>:</td><td colspan="4">{{ $transcriptView['studentName'] }}</td></tr>
+                    <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $transcriptView['fatherName'] }}</td></tr>
+                    <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $transcriptView['motherName'] }}</td></tr>
+                    <tr>
+                        <th>Roll Number</th><td>:</td><td>{{ $transcriptView['rollNumber'] }}</td>
+                        <th>Session</th><td>:</td><td>{{ $transcriptView['sessionName'] }}</td>
+                    </tr>
+                    <tr>
+                        <th>Class</th><td>:</td><td>{{ $transcriptView['className'] }}</td>
+                        <th>Section</th><td>:</td><td>{{ $transcriptView['sectionName'] }}</td>
+                    </tr>
+                    <tr><th>Department</th><td>:</td><td colspan="4">{{ $transcriptView['departmentName'] }}</td></tr>
+                    <tr><th>Merit Position</th><td>:</td><td colspan="4">{{ $transcriptView['meritRank'] ?? '-' }}</td></tr>
+                </tbody>
+            </table>
+
+            <table class="col-4 col-md-4 mb-4 table-bordered text-center">
+                <thead>
+                    <tr><th>Range of Marks</th><th>Grade</th><th>Point</th></tr>
+                </thead>
+                <tbody>
+                    @forelse($transcriptView['gradeLegend'] as $grade)
+                        <tr><td>{{ $grade['range'] }}</td><td>{{ $grade['grade'] }}</td><td>{{ $grade['point'] }}</td></tr>
+                    @empty
+                        <tr><td colspan="3">No grading legend configured</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
 
             @if(!empty($hideForMaxRule))
                 <div class="alert alert-warning col-12 d-print-none">
                     Notice: this student has marks in {{ $studentMarkedSubjects }} subject(s), while class maximum is {{ $maxMarkedSubjects }} for this exam.
                     Transcript is shown with available marks.
-                </div>
-            @endif
-
-            @if(isset($transcriptResult['curriculumStatus']) && empty($transcriptResult['curriculumStatus']['configured']))
-                <div class="alert alert-danger col-12 d-print-none">
-                    Curriculum is not configured for this session/class/section/department scope. Main subject list cannot be derived.
                 </div>
             @endif
 

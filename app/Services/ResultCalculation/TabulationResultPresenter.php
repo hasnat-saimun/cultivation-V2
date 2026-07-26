@@ -33,7 +33,6 @@ class TabulationResultPresenter
                     'optional' => $subjectRow['isOptional'],
                     'componentColumns' => $components,
                     'componentColumnCount' => count($components),
-                    'sortOrder' => (int) ($subjectRow['sortOrder'] ?? PHP_INT_MAX),
                 ];
                 $subjectRows[] = [
                     'name' => $subjectRow['name'],
@@ -66,8 +65,7 @@ class TabulationResultPresenter
             ];
         }
         $columns = array_map(fn ($definition) => (object) $definition, array_values($columnDefinitions));
-        usort($columns, fn ($a, $b) => $a->sortOrder <=> $b->sortOrder
-            ?: strcasecmp($a->subjectName, $b->subjectName));
+        usort($columns, fn ($a, $b) => strcasecmp($a->subjectName, $b->subjectName));
         foreach ($rows as &$row) {
             $row['cells'] = collect($row['subjects'])->keyBy('name')->all();
             $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));

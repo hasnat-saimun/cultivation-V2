@@ -1007,41 +1007,6 @@ class MarksheetController extends Controller
             'cultivationAdminPreloaded' => true,
         ];
     }
-
-    private function scopedTranscriptMarks(newAdmission $student, int $examId)
-    {
-        $sessionRaw = (string) ($student->sessName ?? '');
-        $sessionAlternates = array_values(array_unique(array_filter([
-            $sessionRaw,
-            is_numeric($sessionRaw)
-                ? (string) (sessionManage::find((int) $sessionRaw)?->session ?? '')
-                : '',
-        ])));
-        $classId = (int) ($student->className ?? 0);
-        $sectionId = is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null;
-
-        return Marksheet::query()
-            ->where('studentId', (int) $student->id)
-            ->where('examId', $examId)
-            ->when($classId > 0, fn ($query) => $query->where('classId', $classId))
-            ->when($sessionAlternates !== [], function ($query) use ($sessionAlternates) {
-                $query->where(function ($sessionQuery) use ($sessionAlternates) {
-                    $sessionQuery->whereIn('sessionId', $sessionAlternates)
-                        ->orWhereNull('sessionId')
-                        ->orWhere('sessionId', '');
-                });
-            })
-            ->when($sectionId !== null, function ($query) use ($sectionId) {
-                $query->where(function ($groupQuery) use ($sectionId) {
-                    $groupQuery->where('groupId', $sectionId)
-                        ->orWhereNull('groupId')
-                        ->orWhere('groupId', '');
-                });
-            })
-            ->orderBy('subjectId')
-            ->get();
-    }
-
     public function generateMarksheet(Request $request)
     {
         $examId = $request->integer('examId');
@@ -1068,25 +1033,11 @@ class MarksheetController extends Controller
 
         try {
             $exam = Exam::findOrFail($examId);
-            $scopedMarks = $this->scopedTranscriptMarks($student, (int) $exam->id);
-            $student->setRelation('marksheet', $scopedMarks);
             $subjects = $this->resultCalculationInputBuilder->subjectsForStudent($student);
-            $calculated = $this->boardResultCalculator->calculate($student, $exam, $scopedMarks, $subjects);
+            $calculated = $this->boardResultCalculator->calculate($student,$exam,$student->marksheet,$subjects);
             $transcriptResult = $this->transcriptResultPresenter->present(
-                $calculated, $subjects, $scopedMarks
+                $calculated,$subjects,$student->marksheet
             );
-            $transcriptResult['curriculumStatus'] = [
-                'configured' => (bool) ($student->curriculum_main_subjects_configured ?? false),
-                'reason' => (bool) ($student->curriculum_main_subjects_configured ?? false)
-                    ? null
-                    : 'Curriculum main subjects are not configured for this scope.',
-                'scope' => [
-                    'sessionId' => $student->sessName ?? null,
-                    'classId' => $student->className ?? null,
-                    'sectionId' => $student->sectionName ?? null,
-                    'departmentId' => $student->departmentName ?? null,
-                ],
-            ];
             $serverConfig = ServerConfig::first();
             $sessionName = is_numeric($student->sessName)
                 ? (sessionManage::find($student->sessName)?->session ?? '-')
@@ -1242,9 +1193,6 @@ class MarksheetController extends Controller
         $students->load(['marksheet' => function($q) use ($examId){
             $q->where('examId', $examId)->orderBy('subjectId', 'ASC');
         }]);
-        $students->each(function (newAdmission $student) use ($examId) {
-            $student->setRelation('marksheet', $this->scopedTranscriptMarks($student, $examId));
-        });
 
         try {
             $gradeRows = GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();

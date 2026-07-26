@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\classManage;
 use App\Models\Exam;
-use App\Models\Department;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\Placement;
@@ -314,16 +313,14 @@ class BulkTranscriptResultEngineTest extends TestCase
         $session = new sessionManage(); $session->session = '2026'; $session->save();
         $class = new classManage(); $class->className = 'Class 10'; $class->save();
         $section = new sectionManage(); $section->section = 'A'; $section->save();
-        $department = new Department(); $department->departmentName = 'Science'; $department->save();
         $exam = new Exam(); $exam->examName = 'Annual'; $exam->passingSystem = $passingSystem; $exam->save();
-        return compact('session', 'class', 'section', 'department', 'exam');
+        return compact('session', 'class', 'section', 'exam');
     }
 
     private function student(array $scope, string $roll, ?int $fourthSubjectId = null): newAdmission
     {
         $student = new newAdmission(); $student->stdId = (string) random_int(100000, 999999999); $student->fullName = 'Output Student';
         $student->sessName = $scope['session']->id; $student->className = $scope['class']->id; $student->sectionName = $scope['section']->id;
-        $student->departmentName = $scope['department']->id;
         $student->rollNumber = $roll; $student->fourthSubjectId = $fourthSubjectId; $student->save(); return $student;
     }
 
@@ -335,48 +332,10 @@ class BulkTranscriptResultEngineTest extends TestCase
 
     private function mark(newAdmission $student, array $scope, Subject $subject, float $cq, ?float $mcq = null, ?float $practical = null, ?Exam $exam = null): Marksheet
     {
-        $this->ensureCurriculumMapping($scope, $subject);
-
         return Marksheet::create(['studentId' => $student->id, 'classId' => $scope['class']->id, 'sessionId' => $scope['session']->id,
             'groupId' => $scope['section']->id, 'examId' => ($exam ?? $scope['exam'])->id, 'subjectId' => $subject->id,
             'subjectMarks' => $cq, 'objectMarks' => $mcq, 'practicalMarks' => $practical, 'totalMarks' => $cq + ($mcq ?? 0) + ($practical ?? 0),
             'gradePoint' => 99, 'laterGrade' => 'Stored']);
-    }
-
-    private function ensureCurriculumMapping(array $scope, Subject $subject): void
-    {
-        $exists = DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $scope['session']->id)
-            ->where('class_id', (string) $scope['class']->id)
-            ->where('section_id', (string) $scope['section']->id)
-            ->where('department_id', (string) $scope['department']->id)
-            ->where('subject_id', (int) $subject->id)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $nextOrder = (int) (DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $scope['session']->id)
-            ->where('class_id', (string) $scope['class']->id)
-            ->where('section_id', (string) $scope['section']->id)
-            ->where('department_id', (string) $scope['department']->id)
-            ->max('sort_order') ?? 0) + 1;
-
-        DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $scope['session']->id,
-            'class_id' => (string) $scope['class']->id,
-            'section_id' => (string) $scope['section']->id,
-            'department_id' => (string) $scope['department']->id,
-            'subject_id' => (int) $subject->id,
-            'mapping_type' => 'main',
-            'sort_order' => $nextOrder,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
 
     private function assertSummary(string $html, string $gpa, string $letter): void

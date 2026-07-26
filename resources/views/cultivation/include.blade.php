@@ -103,6 +103,9 @@
 
     <script>
         $(document).ready(function() {
+            $(".alert").fadeTo(20000, 5000).slideUp(5000, function() {
+                $(".alert").slideUp(5000);
+            });
 
             function wrapResponsiveTables(rootSelector){
                 const root = document.querySelector(rootSelector);

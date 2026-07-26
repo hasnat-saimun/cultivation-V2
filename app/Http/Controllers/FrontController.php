@@ -64,7 +64,7 @@ class FrontController extends Controller
     }
     
     public function adminLogout(){
-        Session::forget('cultivationAdmin');
+        Session::flush();
         return redirect(route('adminLogin'))->with('success','Yes! Logout successfull');
     }
 

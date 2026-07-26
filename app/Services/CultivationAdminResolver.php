@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\CultivationAdmin;
-use Illuminate\Support\Facades\Auth;
 
 class CultivationAdminResolver
 {
@@ -13,14 +12,6 @@ class CultivationAdminResolver
     public function currentSessionAdminId(): ?int
     {
         $raw = session('cultivationAdmin');
-        if (($raw === null || $raw === '') && Auth::guard('teacher')->check()) {
-            $teacher = Auth::guard('teacher')->user();
-
-            return $teacher instanceof CultivationAdmin && $teacher->isTeacher()
-                ? (int) $teacher->getAuthIdentifier()
-                : null;
-        }
-
         if ($raw === null || $raw === '') {
             return null;
         }

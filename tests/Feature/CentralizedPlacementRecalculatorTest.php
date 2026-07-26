@@ -18,7 +18,6 @@ use App\Services\ResultCalculation\RankingMethodResolver;
 use App\Http\Controllers\CultivationController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ViewErrorBag;
@@ -233,7 +232,7 @@ class CentralizedPlacementRecalculatorTest extends TestCase
     {
         ServerConfig::create(['ranking_method' => $method]);
         $session = new sessionManage(); $session->session = '2026'; $session->save();
-        $class = new classManage(); $class->className = 'Class 8'; $class->save();
+        $class = new classManage(); $class->className = 'Class 10'; $class->save();
         $section = new sectionManage(); $section->section = 'A'; $section->save();
         $exam = new Exam(); $exam->examName = 'Annual'; $exam->passingSystem = 2; $exam->save();
         return compact('session', 'class', 'section', 'exam');
@@ -252,48 +251,9 @@ class CentralizedPlacementRecalculatorTest extends TestCase
 
     private function mark(newAdmission $student, array $scope, Subject $subject, float $cq): Marksheet
     {
-        $this->ensureCurriculumMapping($scope, $subject);
-
         return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
             'groupId'=>$scope['section']->id,'examId'=>$scope['exam']->id,'subjectId'=>$subject->id,'subjectMarks'=>$cq,
             'totalMarks'=>$cq,'gradePoint'=>0,'laterGrade'=>'Stored']);
-    }
-
-    private function ensureCurriculumMapping(array $scope, Subject $subject): void
-    {
-        if (strcasecmp(trim((string) $subject->subjectType), 'Optional') === 0) {
-            return;
-        }
-
-        $base = DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $scope['session']->id)
-            ->where('class_id', (string) $scope['class']->id)
-            ->where('section_id', (string) $scope['section']->id)
-            ->whereNull('department_id');
-
-        $exists = (clone $base)
-            ->where('subject_id', (int) $subject->id)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $nextOrder = (int) ((clone $base)->max('sort_order') ?? 0) + 1;
-
-        DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $scope['session']->id,
-            'class_id' => (string) $scope['class']->id,
-            'section_id' => (string) $scope['section']->id,
-            'department_id' => null,
-            'subject_id' => (int) $subject->id,
-            'mapping_type' => 'main',
-            'sort_order' => $nextOrder,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
 
     private function placement(newAdmission $student, array $scope, int $position): Placement

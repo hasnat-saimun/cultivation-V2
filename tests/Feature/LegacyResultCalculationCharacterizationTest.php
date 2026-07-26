@@ -199,7 +199,7 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
         $session->session = '2026';
         $session->save();
         $class = new classManage();
-        $class->className = 'Class 8';
+        $class->className = 'Class 10';
         $class->save();
         $section = new sectionManage();
         $section->section = 'A';
@@ -245,8 +245,6 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
 
     private function submitMarks($session, $class, $section, $exam, Subject $subject, newAdmission $student, $cq, $mcq, $practical): void
     {
-        $this->ensureCurriculumMapping($session, $class, $section, $subject);
-
         $revision = MarksScopeState::query()
             ->where('sessionId', (string) $session->id)
             ->where('classId', (string) $class->id)
@@ -272,8 +270,6 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
 
     private function mark($student, $session, $class, $section, $exam, Subject $subject, float $cq, float $gp, string $letter): void
     {
-        $this->ensureCurriculumMapping($session, $class, $section, $subject);
-
         Marksheet::create([
             'studentId' => $student->id,
             'classId' => $class->id,
@@ -285,42 +281,6 @@ class LegacyResultCalculationCharacterizationTest extends TestCase
             'totalMarks' => $cq,
             'gradePoint' => $gp,
             'laterGrade' => $letter,
-        ]);
-    }
-
-    private function ensureCurriculumMapping($session, $class, $section, Subject $subject): void
-    {
-        $exists = \Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $session->id)
-            ->where('class_id', (string) $class->id)
-            ->where('section_id', (string) $section->id)
-            ->whereNull('department_id')
-            ->where('subject_id', (int) $subject->id)
-            ->exists();
-
-        if ($exists) {
-            return;
-        }
-
-        $nextOrder = (int) (\Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')
-            ->where('session_id', (string) $session->id)
-            ->where('class_id', (string) $class->id)
-            ->where('section_id', (string) $section->id)
-            ->whereNull('department_id')
-            ->max('sort_order') ?? 0) + 1;
-
-        \Illuminate\Support\Facades\DB::table('curriculum_subject_mappings')->insert([
-            'session_id' => (string) $session->id,
-            'class_id' => (string) $class->id,
-            'section_id' => (string) $section->id,
-            'department_id' => null,
-            'subject_id' => (int) $subject->id,
-            'mapping_type' => 'main',
-            'sort_order' => $nextOrder,
-            'is_active' => 1,
-            'source' => 'test-fixture',
-            'created_at' => now(),
-            'updated_at' => now(),
         ]);
     }
 

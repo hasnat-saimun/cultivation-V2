@@ -25,16 +25,12 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use App\Models\sessionManage;
 use App\Services\TeacherSubjectAssignmentAvailabilityService;
-use App\Services\TeacherAssignmentAcademicScopeService;
 
 class CultivationController extends Controller
 {
     private TeacherSubjectAssignmentAvailabilityService $assignmentAvailability;
 
-    public function __construct(
-        TeacherSubjectAssignmentAvailabilityService $assignmentAvailability,
-        private TeacherAssignmentAcademicScopeService $academicScope
-    )
+    public function __construct(TeacherSubjectAssignmentAvailabilityService $assignmentAvailability)
     {
         $this->assignmentAvailability = $assignmentAvailability;
     }
@@ -45,17 +41,14 @@ class CultivationController extends Controller
         $attendanceTakenMap = $this->attendanceTakenMap($user);
         $initialAssignmentSessionId = $this->resolveInitialAssignmentSessionId($user);
 
-        $classList = ClassModel::orderBy('id', 'ASC')->get();
-
         return [
             'subjectList' => $this->availableAdminSubjects($user),
-            'classList' => $classList,
+            'classList' => ClassModel::orderBy('id', 'ASC')->get(),
             'sectionList' => $sectionList,
             'groupList' => Department::orderBy('id', 'ASC')->get(),
             'attendanceClassList' => $this->availableAttendanceClasses($user, $sectionList, $attendanceTakenMap),
             'attendanceTakenMap' => $attendanceTakenMap,
             'initialAssignmentSessionId' => $initialAssignmentSessionId,
-            'classGroupRequirementMap' => $this->academicScope->groupRequirementMap($classList),
         ];
     }
 
@@ -189,7 +182,6 @@ class CultivationController extends Controller
         $rawSec = $requ->input('section', []);
         $rawSub = $requ->input('subject', []);
         $rawGrp = $requ->input('optionalGroup', []);
-        $rawDepartmentScope = $requ->input('departmentScope', []);
         $rawGenderScope = $requ->input('genderScope', []);
 
         $sectionIds = SectionModel::pluck('id')->map(function ($id) {
@@ -219,9 +211,6 @@ class CultivationController extends Controller
             $sectionValue = $rawSec[$i] ?? null;
             $groupValue = $rawGrp[$i] ?? null;
             $groupId = is_numeric($groupValue) ? (int) $groupValue : null;
-            $departmentScope = is_scalar($rawDepartmentScope[$i] ?? null)
-                ? strtolower(trim((string) $rawDepartmentScope[$i]))
-                : null;
             $genderScope = $this->normalizeGenderScopeValue($rawGenderScope[$i] ?? 'all');
 
             if ($sectionValue === 'all') {
@@ -232,7 +221,6 @@ class CultivationController extends Controller
                         'class_id' => $classId,
                         'section_id' => $sectionId,
                         'group_id' => $groupId,
-                        'department_scope' => $departmentScope,
                         'subject_id' => $subjectId,
                         'gender_scope' => $genderScope,
                     ];
@@ -251,7 +239,6 @@ class CultivationController extends Controller
                 'class_id' => $classId,
                 'section_id' => $normalizedSectionId,
                 'group_id' => $groupId,
-                'department_scope' => $departmentScope,
                 'subject_id' => $subjectId,
                 'gender_scope' => $genderScope,
             ];
@@ -269,18 +256,6 @@ class CultivationController extends Controller
         }
 
         $this->assertNoTeacherAssignmentGenderConflicts($dedupedRows);
-        foreach ($dedupedRows as $row) {
-            $this->academicScope->assertValid(
-                (int) $row['class_id'],
-                $row['section_id'] === null ? null : (int) $row['section_id'],
-                $row['group_id'] === null ? null : (int) $row['group_id'],
-                $row['subject_id'] === null ? null : (int) $row['subject_id']
-                ,
-                'optionalGroup',
-                $row['department_scope'] ?? null,
-                'departmentScope'
-            );
-        }
 
         return [
             'class_ids' => array_values(array_unique($classIds)),
@@ -337,19 +312,9 @@ class CultivationController extends Controller
 
     private function normalizeGenderScopeValue($value): string
     {
-        return $this->assignmentAvailability->normalizeGenderScope($value) ?? 'all';
-    }
+        $scope = strtolower(trim((string) $value));
 
-    private function teacherAssignmentRowKey(array $row): string
-    {
-        return implode(':', [
-            $row['session_id'] ?? 0,
-            $row['class_id'] ?? 0,
-            $row['section_id'] ?? 0,
-            $row['group_id'] ?? 0,
-            $row['subject_id'] ?? 0,
-            $this->normalizeGenderScopeValue($row['gender_scope'] ?? 'all'),
-        ]);
+        return in_array($scope, ['all', 'male', 'female'], true) ? $scope : 'all';
     }
 
     private function ensureSubjectAssignmentsAvailable(array $subjectIds, ?int $ignoreAdminId = null): void
@@ -359,7 +324,7 @@ class CultivationController extends Controller
             return;
         }
 
-        Subject::query()->whereIn('id', $subjectIds)->orderBy('id')->lockForUpdate()->get(['id']);
+        Subject::query()->whereIn('id', $subjectIds)->lockForUpdate()->get(['id']);
     }
 
     private function ensureAttendanceAssignmentAvailable(?int $classId, ?int $sectionId, ?int $ignoreAdminId = null): void
@@ -1176,21 +1141,9 @@ class CultivationController extends Controller
             'className' => 'array',
             'className.*' => 'nullable|integer|exists:class_manages,id',
             'section' => 'array',
-            'section.*' => [
-                'nullable',
-                function ($attribute, $value, $fail) {
-                    if (in_array($value, [null, '', 'all', 'none'], true)) {
-                        return;
-                    }
-                    if (!is_numeric($value) || !SectionModel::query()->whereKey((int) $value)->exists()) {
-                        $fail('The selected section is invalid.');
-                    }
-                },
-            ],
+            'section.*' => 'nullable',
             'optionalGroup' => 'array',
             'optionalGroup.*' => 'nullable|integer|exists:departments,id',
-            'departmentScope' => 'array',
-            'departmentScope.*' => ['nullable', Rule::in(['all', 'specific', 'not_applicable'])],
             'genderScope' => 'array',
             'genderScope.*' => ['nullable', Rule::in(['all', 'male', 'female'])],
             'subject' => 'array',
@@ -1243,9 +1196,13 @@ class CultivationController extends Controller
             $primaryClassId = $requ->filled('primaryClass') ? (int) $requ->primaryClass : null;
             $primarySectionId = $requ->filled('primarySection') ? (int) $requ->primarySection : null;
 
-            // Stable subject-row locks serialize even the first write into an
-            // otherwise empty academic assignment scope.
-            $this->ensureSubjectAssignmentsAvailable($teacherPayload['subject_ids'], $ignoreAdminId);
+            $currentSubjectIds = $ignoreAdminId
+                ? DB::table('teacher_subjects')->where('teacher_id', $ignoreAdminId)->pluck('subject_id')->map(function ($id) {
+                    return (int) $id;
+                })->toArray()
+                : [];
+            $newSubjectClaims = array_values(array_diff($teacherPayload['subject_ids'], $currentSubjectIds));
+            $this->ensureSubjectAssignmentsAvailable($newSubjectClaims, $ignoreAdminId);
 
             $isNewAttendanceClaim = !$existingUser
                 || (int) ($existingUser->primary_class_id ?? 0) !== (int) ($primaryClassId ?? 0)
@@ -1255,8 +1212,24 @@ class CultivationController extends Controller
             }
 
             if ((int) $requ->userType === CultivationAdmin::ROLE_TEACHER) {
+                // Lock and validate requested assignment contexts against overlapping gender scopes.
+                foreach ($teacherPayload['assignment_rows'] as $row) {
+                    if (empty($row['subject_id'])) {
+                        continue;
+                    }
+
+                    $context = [
+                        'session_id' => $row['session_id'] ?? null,
+                        'class_id' => $row['class_id'] ?? null,
+                        'section_id' => $row['section_id'] ?? null,
+                        'group_id' => $row['group_id'] ?? null,
+                        'subject_id' => $row['subject_id'] ?? null,
+                    ];
+
+                    $this->assignmentAvailability->lockContextRows($context);
+                }
+
                 $rowIdsByKey = [];
-                $removedCurrentRowIds = [];
                 if ($ignoreAdminId) {
                     $currentRowColumns = ['id', 'class_id', 'section_id', 'group_id', 'subject_id', 'gender_scope'];
                     if (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
@@ -1265,33 +1238,19 @@ class CultivationController extends Controller
 
                     $currentRows = DB::table('teacher_class_subjects')
                         ->where('teacher_id', $ignoreAdminId)
-                        ->lockForUpdate()
                         ->get($currentRowColumns);
-                    $desiredKeys = collect($teacherPayload['assignment_rows'])
-                        ->map(fn ($row) => $this->teacherAssignmentRowKey($row))
-                        ->flip();
 
                     foreach ($currentRows as $currentRow) {
-                        $key = $this->teacherAssignmentRowKey((array) $currentRow);
+                        $key = implode(':', [
+                            $currentRow->session_id ?? 0,
+                            $currentRow->class_id,
+                            $currentRow->section_id ?? 0,
+                            $currentRow->group_id ?? 0,
+                            $currentRow->subject_id ?? 0,
+                            $this->normalizeGenderScopeValue($currentRow->gender_scope ?? 'all'),
+                        ]);
                         $rowIdsByKey[$key] = (int) $currentRow->id;
-                        if (!$desiredKeys->has($key)) {
-                            $removedCurrentRowIds[] = (int) $currentRow->id;
-                        }
                     }
-                }
-
-                foreach ($teacherPayload['assignment_rows'] as $row) {
-                    if (empty($row['subject_id'])) {
-                        continue;
-                    }
-
-                    $this->assignmentAvailability->lockContextRows([
-                        'session_id' => $row['session_id'] ?? null,
-                        'class_id' => $row['class_id'] ?? null,
-                        'section_id' => $row['section_id'] ?? null,
-                        'group_id' => $row['group_id'] ?? null,
-                        'subject_id' => $row['subject_id'] ?? null,
-                    ]);
                 }
 
                 foreach ($teacherPayload['assignment_rows'] as $row) {
@@ -1307,15 +1266,19 @@ class CultivationController extends Controller
                         'subject_id' => $row['subject_id'] ?? null,
                     ];
 
-                    $rowKey = $this->teacherAssignmentRowKey($row);
+                    $rowKey = implode(':', [
+                        $row['session_id'] ?? 0,
+                        $row['class_id'],
+                        $row['section_id'] ?? 0,
+                        $row['group_id'] ?? 0,
+                        $row['subject_id'] ?? 0,
+                        $this->normalizeGenderScopeValue($row['gender_scope'] ?? 'all'),
+                    ]);
 
-                    $excludeRowIds = $removedCurrentRowIds;
-                    if (isset($rowIdsByKey[$rowKey])) {
-                        $excludeRowIds[] = $rowIdsByKey[$rowKey];
-                    }
+                    $excludeRowId = $rowIdsByKey[$rowKey] ?? null;
                     $requestedScope = $this->normalizeGenderScopeValue($row['gender_scope'] ?? 'all');
 
-                    if (!$this->assignmentAvailability->canAssignGender($context, $requestedScope, $excludeRowIds)) {
+                    if (!$this->assignmentAvailability->canAssignGender($context, $requestedScope, $excludeRowId)) {
                         if ($requestedScope === 'all') {
                             throw ValidationException::withMessages([
                                 'genderScope' => ["This subject is already assigned with partial gender coverage in the selected session, class, section and department."],
@@ -1513,9 +1476,13 @@ class CultivationController extends Controller
                 ->where('teacher_id', $user->id)
                 ->where('class_id', $classId)
                 ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
-                    $sessionId === null
-                        ? $query->whereRaw('1 = 0')
-                        : $query->where('session_id', $sessionId);
+                    $query->where(function ($qs) use ($sessionId) {
+                        if ($sessionId === null) {
+                            $qs->whereNull('session_id');
+                        } else {
+                            $qs->whereNull('session_id')->orWhere('session_id', $sessionId);
+                        }
+                    });
                 })
                 ->where(function($qq) use ($sectionId){
                     if($sectionId === null) {
@@ -1551,8 +1518,6 @@ class CultivationController extends Controller
             'classId' => 'required|integer|exists:class_manages,id',
             'sectionId' => 'nullable',
             'optionalGroupId' => 'nullable',
-            'departmentScope' => ['required', Rule::in(['all', 'specific', 'not_applicable'])],
-            'genderScope' => ['nullable', Rule::in(['all', 'male', 'female'])],
         ]);
 
         $sessionId = (int) $request->input('sessionId');
@@ -1570,22 +1535,12 @@ class CultivationController extends Controller
             $groupId = (int) $groupRaw;
         }
 
-        $this->academicScope->assertValid(
-            $classId,
-            $sectionId,
-            $groupId,
-            null,
-            'optionalGroupId',
-            (string) $request->input('departmentScope'),
-            'departmentScope'
-        );
-
         $subjects = $this->assignmentAvailability->subjectsWithAvailability([
             'session_id' => $sessionId,
             'class_id' => $classId,
             'section_id' => $sectionId,
             'group_id' => $groupId,
-        ], $request->filled('genderScope') ? (string) $request->input('genderScope') : null);
+        ]);
 
         return response()->json([
             'subjects' => $subjects,
