@@ -242,13 +242,15 @@ Register Form
                                                             <td>{{ $grpText }}</td>
                                                             <td>{{ $gscopeText }}</td>
                                                             <td>{{ $subText }}</td>
-                                                            <td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>
-                                                            <input type="hidden" name="className[]" value="{{ $cid }}">
-                                                            <input type="hidden" name="section[]" value="{{ $sid }}">
-                                                            <input type="hidden" name="optionalGroup[]" value="{{ $gid }}">
-                                                            <input type="hidden" name="departmentScope[]" value="{{ $departmentScope }}">
-                                                            <input type="hidden" name="genderScope[]" value="{{ $gscope }}">
-                                                            <input type="hidden" name="subject[]" value="{{ $subid }}">
+                                                            <td>
+                                                                <button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button>
+                                                                <input type="hidden" name="className[]" value="{{ $cid }}">
+                                                                <input type="hidden" name="section[]" value="{{ $sid }}">
+                                                                <input type="hidden" name="optionalGroup[]" value="{{ $gid }}">
+                                                                <input type="hidden" name="departmentScope[]" value="{{ $departmentScope }}">
+                                                                <input type="hidden" name="genderScope[]" value="{{ $gscope }}">
+                                                                <input type="hidden" name="subject[]" value="{{ $subid }}">
+                                                            </td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>
@@ -541,13 +543,15 @@ Register Form
             tr.innerHTML = `<td>${clsText}</td><td>${secText}</td><td>${grpText}</td><td>${gscopeText}</td><td>${subText}</td><td><button type="button" class="btn btn-sm btn-danger remove-assign">Remove</button></td>`;
             assignTableBody.appendChild(tr);
 
+            const actionCell = tr.lastElementChild;
+
             // hidden inputs for controller sync
-            const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; tr.appendChild(hiddenCls);
-            const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; tr.appendChild(hiddenSec);
-            const hiddenGrp = document.createElement('input'); hiddenGrp.type='hidden'; hiddenGrp.name='optionalGroup[]'; hiddenGrp.value=grpId; hiddenGrp.dataset.key=key; tr.appendChild(hiddenGrp);
-            const hiddenDepartmentScope = document.createElement('input'); hiddenDepartmentScope.type='hidden'; hiddenDepartmentScope.name='departmentScope[]'; hiddenDepartmentScope.value=departmentScope; hiddenDepartmentScope.dataset.key=key; tr.appendChild(hiddenDepartmentScope);
-            const hiddenGscope = document.createElement('input'); hiddenGscope.type='hidden'; hiddenGscope.name='genderScope[]'; hiddenGscope.value=gscope; hiddenGscope.dataset.key=key; tr.appendChild(hiddenGscope);
-            const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; tr.appendChild(hiddenSub);
+            const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; actionCell.appendChild(hiddenCls);
+            const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; actionCell.appendChild(hiddenSec);
+            const hiddenGrp = document.createElement('input'); hiddenGrp.type='hidden'; hiddenGrp.name='optionalGroup[]'; hiddenGrp.value=grpId; hiddenGrp.dataset.key=key; actionCell.appendChild(hiddenGrp);
+            const hiddenDepartmentScope = document.createElement('input'); hiddenDepartmentScope.type='hidden'; hiddenDepartmentScope.name='departmentScope[]'; hiddenDepartmentScope.value=departmentScope; hiddenDepartmentScope.dataset.key=key; actionCell.appendChild(hiddenDepartmentScope);
+            const hiddenGscope = document.createElement('input'); hiddenGscope.type='hidden'; hiddenGscope.name='genderScope[]'; hiddenGscope.value=gscope; hiddenGscope.dataset.key=key; actionCell.appendChild(hiddenGscope);
+            const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; actionCell.appendChild(hiddenSub);
 
             // remove handler
             tr.querySelector('.remove-assign').addEventListener('click', function(){
