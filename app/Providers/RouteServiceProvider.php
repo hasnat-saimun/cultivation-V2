@@ -34,7 +34,6 @@ class RouteServiceProvider extends ServiceProvider
             Limit::perMinute(12)->by($this->resultActorKey($request)));
         RateLimiter::for('result-publication', fn (Request $request) =>
             Limit::perMinute(6)->by($this->resultActorKey($request)));
-
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')

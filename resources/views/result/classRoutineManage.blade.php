@@ -321,7 +321,10 @@ Class Routine Management
                                     <label class="field-label">Class *</label>
                                     <select name="ta_assignClass" id="ta-assign-class" class="form-select" required>
                                         <option value="">Select Class</option>
-                                        @php $taClasses = \App\Models\classManage::orderBy('id','DESC')->get(); @endphp
+                                        @php
+                                            $taClasses = \App\Models\classManage::orderBy('id','DESC')->get();
+                                            $taClassGroupMap = app(\App\Services\TeacherAssignmentAcademicScopeService::class)->groupRequirementMap($taClasses);
+                                        @endphp
                                         @foreach($taClasses as $cls)
                                             <option value="{{ $cls->id }}" {{ (string)$taAssignClass === (string)$cls->id ? 'selected' : '' }}>{{ $cls->className }}</option>
                                         @endforeach
@@ -337,15 +340,16 @@ Class Routine Management
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4 mb-3">
-                                    <label class="field-label">Department</label>
+                                <div class="col-md-4 mb-3" id="ta-assign-department-wrap">
+                                    <label class="field-label">Department / Group *</label>
                                     <select name="ta_assignDepartment" id="ta-assign-department" class="form-select">
-                                        <option value="">All/None</option>
+                                        <option value="">All Departments</option>
                                         @php $taDepartments = \App\Models\Department::orderBy('id','ASC')->get(); @endphp
                                         @foreach($taDepartments as $dept)
                                             <option value="{{ $dept->id }}" {{ (string)$taAssignDepartment === (string)$dept->id ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
                                         @endforeach
                                     </select>
+                                    <input type="hidden" name="ta_departmentScope" id="ta-department-scope" value="">
                                 </div>
                             </div>
 
@@ -728,6 +732,24 @@ Class Routine Management
             }
             sel.removeAttribute('data-existing-subject-id');
         });
+    }
+
+    function syncTeacherAssignmentDepartment() {
+        var classSelect = document.getElementById('ta-assign-class');
+        var departmentSelect = document.getElementById('ta-assign-department');
+        var departmentWrap = document.getElementById('ta-assign-department-wrap');
+        var departmentScope = document.getElementById('ta-department-scope');
+        if (!classSelect || !departmentSelect || !departmentWrap || !departmentScope) return;
+        var requirementMap = @json($taClassGroupMap ?? []);
+        var required = requirementMap[String(classSelect.value)] === true;
+        departmentSelect.required = false;
+        departmentWrap.style.display = required ? '' : 'none';
+        if (!required) {
+            departmentSelect.value = '';
+            departmentScope.value = 'not_applicable';
+        } else {
+            departmentScope.value = departmentSelect.value ? 'specific' : 'all';
+        }
     }
 
     function addTeacherAssignmentRow() {
@@ -1340,7 +1362,13 @@ Class Routine Management
 
         var taClassSelect = document.getElementById('ta-assign-class');
         if (taClassSelect) {
-            taClassSelect.addEventListener('change', refreshTeacherAssignmentSubjectDropdowns);
+            taClassSelect.addEventListener('change', function() {
+                document.getElementById('ta-assign-department').value = '';
+                syncTeacherAssignmentDepartment();
+                refreshTeacherAssignmentSubjectDropdowns();
+            });
+            syncTeacherAssignmentDepartment();
+            document.getElementById('ta-assign-department').addEventListener('change', syncTeacherAssignmentDepartment);
         }
 
         var taForm = document.getElementById('teacher-assignment-form');

@@ -232,13 +232,9 @@ class MarksEntryContextService
             ->where('tcs.teacher_id', $teacherId)
             ->where('tcs.class_id', $classId)
             ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
-                $query->when($sessionId !== null, function ($q) use ($sessionId) {
-                    $q->where(function ($sq) use ($sessionId) {
-                        $sq->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
-                    });
-                }, function ($q) {
-                    $q->whereNull('tcs.session_id');
-                });
+                $sessionId === null
+                    ? $query->whereRaw('1 = 0')
+                    : $query->where('tcs.session_id', $sessionId);
             })
             ->where(function ($q) {
                 $q->whereNull('tcs.section_id')
@@ -393,13 +389,9 @@ class MarksEntryContextService
             ->where('tcs.teacher_id', $teacherId)
             ->where('tcs.class_id', $classId)
             ->when(Schema::hasColumn('teacher_class_subjects', 'session_id'), function ($query) use ($sessionId) {
-                $query->when($sessionId !== null, function ($q) use ($sessionId) {
-                    $q->where(function ($sq) use ($sessionId) {
-                        $sq->whereNull('tcs.session_id')->orWhere('tcs.session_id', $sessionId);
-                    });
-                }, function ($q) {
-                    $q->whereNull('tcs.session_id');
-                });
+                $sessionId === null
+                    ? $query->whereRaw('1 = 0')
+                    : $query->where('tcs.session_id', $sessionId);
             })
             ->where(function ($q) use ($sectionId) {
                 if ($sectionId === null) {

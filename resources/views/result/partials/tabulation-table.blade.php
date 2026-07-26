@@ -15,7 +15,7 @@
                         {{ $row['cells'][$subject->subjectName]['total'] }}
                         <span class="subject-outcome">({{ $row['cells'][$subject->subjectName]['grade'] }}/{{ $row['cells'][$subject->subjectName]['gradePoint'] }})</span>
                     @else
-                        -
+                        N/A
                     @endif
                 </td>
             @endforeach

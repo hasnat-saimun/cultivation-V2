@@ -102,6 +102,15 @@
                             <h6 class="mb-2">Assign (Marks Entry)</h6>
                             <p class="small text-muted mb-2">Assign classes, sections and subjects a teacher may enter marks for.</p>
                             <div class="mb-2">
+                                <select id="assign_session_select" class="form-select">
+                                    <option value="">Select session</option>
+                                    @foreach(\App\Models\sessionManage::orderBy('id', 'desc')->get(['id', 'session']) as $sess)
+                                        <option value="{{ $sess->id }}" {{ (string) $initialAssignmentSessionId === (string) $sess->id ? 'selected' : '' }}>{{ $sess->session }}</option>
+                                    @endforeach
+                                </select>
+                                <input type="hidden" name="assignmentSessionId" id="assignment_session_hidden" value="{{ $initialAssignmentSessionId }}">
+                            </div>
+                            <div class="mb-2">
                                 <select id="assign_class_select" class="form-select">
                                     <option value="">Select class</option>
                                     @foreach($classList as $cls)
@@ -123,7 +132,7 @@
                             </div>
                             <div class="mb-2">
                                 <select id="assign_group_select" class="form-select mt-2 d-none">
-                                    <option value="">All Groups</option>
+                                    <option value="__all__">All Departments</option>
                                     @if(isset($groupList))
                                         @foreach($groupList as $grp)
                                             <option value="{{ $grp->id }}">{{ $grp->departmentName }}</option>
@@ -212,7 +221,9 @@
                                                 $gscope = in_array(($r['gscope'] ?? 'all'), ['all', 'male', 'female']) ? $r['gscope'] : 'all';
                                                 $clsText = optional(collect($classList)->firstWhere('id', $cid))->className ?? ('Class #'.$cid);
                                                 $secText = $sid ? ( ($sid==='all') ? 'All Sections' : ( ($sid==='none') ? 'No Section (show all class data)' : (optional(collect($sectionList)->firstWhere('id',$sid))->section ?? ('Section #'.$sid)) ) ) : '';
-                                                $grpText = $gid ? (optional(collect($groupList ?? collect())->firstWhere('id',$gid))->departmentName ?? ('Group #'.$gid)) : 'All Groups';
+                                                $groupEnabled = (bool)($classGroupRequirementMap[(int)$cid] ?? false);
+                                                $departmentScope = $groupEnabled ? ($gid ? 'specific' : 'all') : 'not_applicable';
+                                                $grpText = $gid ? (optional(collect($groupList ?? collect())->firstWhere('id',$gid))->departmentName ?? ('Group #'.$gid)) : ($groupEnabled ? 'All Departments' : 'Not Applicable');
                                                 $gscopeText = $gscope === 'male' ? 'Male' : ($gscope === 'female' ? 'Female' : 'All');
                                                 $subText = $subid ? (optional(collect($subjectList)->firstWhere('id',$subid))->subjectName ?? ('Subject #'.$subid)) : '';
                                                 $key = $cid.'-'.($sid ?? '').'-'.($gid ?? '').'-'.($subid ?? '').'-'.$gscope;
@@ -227,6 +238,7 @@
                                                 <input type="hidden" name="className[]" value="{{ $cid }}">
                                                 <input type="hidden" name="section[]" value="{{ $sid }}">
                                                 <input type="hidden" name="optionalGroup[]" value="{{ $gid }}">
+                                                <input type="hidden" name="departmentScope[]" value="{{ $departmentScope }}">
                                                 <input type="hidden" name="genderScope[]" value="{{ $gscope }}">
                                                 <input type="hidden" name="subject[]" value="{{ $subid }}">
                                             </tr>
@@ -310,15 +322,20 @@
         // Assignment panel logic
         document.addEventListener('DOMContentLoaded', function(){
             const classSelect = document.getElementById('assign_class_select');
+            const sessionSelect = document.getElementById('assign_session_select');
+            const hiddenAssignmentSession = document.getElementById('assignment_session_hidden');
             const sectionSelect = document.getElementById('assign_section_select');
             const groupSelect = document.getElementById('assign_group_select');
             const genderScopeSelect = document.getElementById('assign_gender_scope_select');
             const subjectSelect = document.getElementById('assign_subject_select');
             const assignBtn = document.getElementById('assign_btn');
             const assignTableBody = document.querySelector('#assign_table tbody');
+            const assignmentAvailabilityEndpoint = @json(route('api.teacher.assignment-availability'));
+            const csrfToken = @json(csrf_token());
             const primaryClassSelect = document.querySelector('select[name="primaryClass"]');
             const primarySectionSelect = document.querySelector('select[name="primarySection"]');
             const attendanceTakenMap = @json($attendanceTakenMap ?? []);
+            const classGroupRequirementMap = @json($classGroupRequirementMap ?? []);
             const primarySectionOptionSnapshot = primarySectionSelect
                 ? Array.from(primarySectionSelect.options).map(function(option){
                     return { value: option.value, text: option.text, selected: option.selected };
@@ -328,9 +345,36 @@
             // helper to show/hide
             function show(el){ el.classList.remove('d-none'); }
             function hide(el){ el.classList.add('d-none'); }
+            function selectedClassRequiresGroup(){ return classGroupRequirementMap[String(classSelect.value)] === true; }
+
+            async function loadAssignmentAvailability() {
+                subjectSelect.innerHTML = '<option value="">Loading subjects...</option>';
+                hide(subjectSelect); hide(assignBtn);
+                if (!sessionSelect.value || !classSelect.value || !sectionSelect.value || !genderScopeSelect.value) return;
+                const response = await fetch(assignmentAvailabilityEndpoint, {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: {'Content-Type':'application/json','X-CSRF-TOKEN':csrfToken,'Accept':'application/json'},
+                    body: JSON.stringify({
+                        sessionId: sessionSelect.value, classId: classSelect.value,
+                        sectionId: sectionSelect.value,
+                        optionalGroupId: groupSelect.value === '__all__' ? '' : (groupSelect.value || ''),
+                        departmentScope: selectedClassRequiresGroup() ? (groupSelect.value === '__all__' ? 'all' : 'specific') : 'not_applicable',
+                        genderScope: genderScopeSelect.value
+                    })
+                });
+                const json = response.ok ? await response.json() : {subjects: []};
+                subjectSelect.innerHTML = `<option value="">${json.subjects.length ? 'Select subject' : 'No subject allocation remains for this context'}</option>`;
+                json.subjects.forEach(row => subjectSelect.add(new Option(row.name, row.id)));
+                if (json.subjects.length) show(subjectSelect);
+            }
+
+            sessionSelect && sessionSelect.addEventListener('change', function(){
+                hiddenAssignmentSession.value = this.value || '';
+                classSelect.value = ''; hide(sectionSelect); hide(groupSelect); hide(genderScopeSelect); hide(subjectSelect); hide(assignBtn);
+            });
 
             classSelect && classSelect.addEventListener('change', function(){
-                if(this.value){
+                if(this.value && sessionSelect.value){
                     show(sectionSelect);
                     // reset section and subject
                     sectionSelect.value = '';
@@ -353,15 +397,12 @@
             sectionSelect && sectionSelect.addEventListener('change', function(){
                 const cls = classSelect.value;
                 if(this.value && cls){
-                    show(groupSelect);
+                    groupSelect.value = selectedClassRequiresGroup() ? '__all__' : '';
+                    groupSelect.required = selectedClassRequiresGroup();
+                    if(groupSelect.required) show(groupSelect); else hide(groupSelect);
                     show(genderScopeSelect);
-                    // show all configured subjects for teacher assignment
-                    for(const opt of subjectSelect.options){
-                        if(!opt.value) continue;
-                        opt.style.display = '';
-                    }
                     subjectSelect.value = '';
-                    show(subjectSelect);
+                    loadAssignmentAvailability();
                     hide(assignBtn);
                 } else {
                     hide(groupSelect);
@@ -370,6 +411,9 @@
                     hide(assignBtn);
                 }
             });
+
+            groupSelect && groupSelect.addEventListener('change', loadAssignmentAvailability);
+            genderScopeSelect && genderScopeSelect.addEventListener('change', loadAssignmentAvailability);
 
             subjectSelect && subjectSelect.addEventListener('change', function(){
                 if(this.value) show(assignBtn); else hide(assignBtn);
@@ -406,8 +450,9 @@
             });
 
             assignBtn && assignBtn.addEventListener('click', function(){
-                const clsId = classSelect.value; const secId = sectionSelect.value; const grpId = groupSelect.value; const gscope = genderScopeSelect.value || 'all'; const subId = subjectSelect.value;
-                if(!clsId || !secId || !subId) return showGlobalFlash('Please select class, section and subject.','danger');
+                const clsId = classSelect.value; const secId = sectionSelect.value; const groupChoice = groupSelect.value; const grpId = groupChoice === '__all__' ? '' : groupChoice; const departmentScope = selectedClassRequiresGroup() ? (groupChoice === '__all__' ? 'all' : 'specific') : 'not_applicable'; const gscope = genderScopeSelect.value || 'all'; const subId = subjectSelect.value;
+                hiddenAssignmentSession.value = sessionSelect.value || '';
+                if(!sessionSelect.value || !clsId || !secId || !subId || (departmentScope === 'specific' && !grpId)) return showGlobalFlash('Please select session, class, section, department scope and subject.','danger');
                 const key = [clsId,secId,grpId,subId,gscope].join('-');
                 if(assignments.has(key)) return showGlobalFlash('This assignment already added','warning');
                 assignments.add(key);
@@ -415,7 +460,7 @@
                 let secText = sectionSelect.options[sectionSelect.selectedIndex].text;
                 if(secId === 'all') secText = 'All Sections';
                 if(secId === 'none') secText = 'No Section (show all class data)';
-                const grpText = grpId ? groupSelect.options[groupSelect.selectedIndex].text : 'All Groups';
+                const grpText = departmentScope === 'all' ? 'All Departments' : (grpId ? groupSelect.options[groupSelect.selectedIndex].text : 'Not Applicable');
                 const gscopeText = gscope === 'male' ? 'Male' : (gscope === 'female' ? 'Female' : 'All');
                 const subText = subjectSelect.options[subjectSelect.selectedIndex].text;
 
@@ -427,6 +472,7 @@
                 const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; tr.appendChild(hiddenCls);
                 const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; tr.appendChild(hiddenSec);
                 const hiddenGrp = document.createElement('input'); hiddenGrp.type='hidden'; hiddenGrp.name='optionalGroup[]'; hiddenGrp.value=grpId; hiddenGrp.dataset.key=key; tr.appendChild(hiddenGrp);
+                const hiddenDepartmentScope = document.createElement('input'); hiddenDepartmentScope.type='hidden'; hiddenDepartmentScope.name='departmentScope[]'; hiddenDepartmentScope.value=departmentScope; hiddenDepartmentScope.dataset.key=key; tr.appendChild(hiddenDepartmentScope);
                 const hiddenGscope = document.createElement('input'); hiddenGscope.type='hidden'; hiddenGscope.name='genderScope[]'; hiddenGscope.value=gscope; hiddenGscope.dataset.key=key; tr.appendChild(hiddenGscope);
                 const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; tr.appendChild(hiddenSub);
 

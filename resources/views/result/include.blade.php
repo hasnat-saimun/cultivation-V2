@@ -49,7 +49,7 @@
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
                         $sessionRoutes = ['allSession','createSession'];
-                        $subjectRoutes = ['allSubject','createSubject'];
+                        $subjectRoutes = ['allSubject','resultCurriculumMappingManage','saveResultCurriculumMapping','previewResultCurriculumMappingCopy','copyResultCurriculumMapping','createSubject'];
                         $examRoutes = ['allExam','createExam','admitCard','getAdmitCard','resultExamRoutineManage','saveResultExamRoutine','editResultExamRoutine','delResultExamRoutine','admitCardRoutine','getAdmitCardRoutine','attendSheet','getAttendSheet'];
 
                         $resultOpen = request()->routeIs($resultRoutes);
@@ -156,6 +156,9 @@
                                             <a href="{{ route('allSubject') }}" class="nav-link {{ request()->routeIs('allSubject') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>All Subject</a>
                                         </li>
                                         <li class="nav-item">
+                                            <a href="{{ route('resultCurriculumMappingManage') }}" class="nav-link {{ request()->routeIs('resultCurriculumMappingManage') || request()->routeIs('saveResultCurriculumMapping') || request()->routeIs('previewResultCurriculumMappingCopy') || request()->routeIs('copyResultCurriculumMapping') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Curriculum Mapping</a>
+                                        </li>
+                                        <li class="nav-item">
                                             <a href="{{ route('createSubject') }}" class="nav-link {{ request()->routeIs('createSubject') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Add New Subject</a>
                                         </li>
                                     </ul>
@@ -234,9 +237,6 @@
             // Clear old corrupted localStorage
             localStorage.removeItem('resultSidebarOpenGroups');
             
-            $(".alert").fadeTo(2000, 500).slideUp(500, function() {
-                $(".alert").slideUp(500);
-            });
 
             function wrapResponsiveTables(rootSelector){
                 const root = document.querySelector(rootSelector);

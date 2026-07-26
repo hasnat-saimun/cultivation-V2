@@ -143,7 +143,7 @@ Register Form
                                         </div>
                                         <div class="mb-2">
                                             <select id="assign_group_select" class="form-select mt-2 d-none">
-                                                <option value="">All Groups</option>
+                                                <option value="__all__">All Departments</option>
                                                 @if(isset($groupList))
                                                     @foreach($groupList as $grp)
                                                         <option value="{{ $grp->id }}">{{ $grp->departmentName }}</option>
@@ -153,7 +153,10 @@ Register Form
                                         </div>
                                         <div class="mb-2">
                                             <select id="assign_gender_scope_select" class="form-select mt-2 d-none">
-                                                <option value="">Select available gender</option>
+                                                <option value="">Select gender coverage</option>
+                                                <option value="all">Gender: All</option>
+                                                <option value="male">Gender: Male</option>
+                                                <option value="female">Gender: Female</option>
                                             </select>
                                         </div>
                                         <div class="mb-2">
@@ -226,7 +229,9 @@ Register Form
                                                             $gscope = in_array(($r['gscope'] ?? 'all'), ['all', 'male', 'female']) ? $r['gscope'] : 'all';
                                                             $clsText = optional(collect($classList)->firstWhere('id', $cid))->className ?? ('Class #'.$cid);
                                                             $secText = $sid ? ( ($sid==='all') ? 'All Sections' : ( ($sid==='none') ? 'No Section (show all class data)' : (optional(collect($sectionList)->firstWhere('id',$sid))->section ?? ('Section #'.$sid)) ) ) : '';
-                                                            $grpText = $gid ? (optional(collect($groupList ?? collect())->firstWhere('id',$gid))->departmentName ?? ('Group #'.$gid)) : 'All Groups';
+                                                            $groupEnabled = (bool)($classGroupRequirementMap[(int)$cid] ?? false);
+                                                            $departmentScope = $groupEnabled ? ($gid ? 'specific' : 'all') : 'not_applicable';
+                                                            $grpText = $gid ? (optional(collect($groupList ?? collect())->firstWhere('id',$gid))->departmentName ?? ('Group #'.$gid)) : ($groupEnabled ? 'All Departments' : 'Not Applicable');
                                                             $gscopeText = $gscope === 'male' ? 'Male' : ($gscope === 'female' ? 'Female' : 'All');
                                                             $subText = $subid ? (optional(collect($subjectList)->firstWhere('id',$subid))->subjectName ?? ('Subject #'.$subid)) : '';
                                                             $key = $cid.'-'.($sid ?? '').'-'.($gid ?? '').'-'.($subid ?? '').'-'.$gscope;
@@ -241,6 +246,7 @@ Register Form
                                                             <input type="hidden" name="className[]" value="{{ $cid }}">
                                                             <input type="hidden" name="section[]" value="{{ $sid }}">
                                                             <input type="hidden" name="optionalGroup[]" value="{{ $gid }}">
+                                                            <input type="hidden" name="departmentScope[]" value="{{ $departmentScope }}">
                                                             <input type="hidden" name="genderScope[]" value="{{ $gscope }}">
                                                             <input type="hidden" name="subject[]" value="{{ $subid }}">
                                                         </tr>
@@ -341,7 +347,6 @@ Register Form
         const assignmentAvailabilityEndpoint = @json(route('api.teacher.assignment-availability'));
         const csrfToken = @json(csrf_token());
         const initialAssignmentSessionId = @json($initialAssignmentSessionId);
-        const subjectGenderMap = {};
 
         if (hiddenAssignmentSession && sessionSelect) {
             const normalizedInitialSession = initialAssignmentSessionId === null ? '' : String(initialAssignmentSessionId);
@@ -353,6 +358,7 @@ Register Form
         const primaryClassSelect = document.querySelector('select[name="primaryClass"]');
         const primarySectionSelect = document.querySelector('select[name="primarySection"]');
         const attendanceTakenMap = @json($attendanceTakenMap ?? []);
+        const classGroupRequirementMap = @json($classGroupRequirementMap ?? []);
         const primarySectionOptionSnapshot = primarySectionSelect
             ? Array.from(primarySectionSelect.options).map(function(option){
                 return { value: option.value, text: option.text, selected: option.selected };
@@ -362,51 +368,22 @@ Register Form
         // helper to show/hide
         function show(el){ el.classList.remove('d-none'); }
         function hide(el){ el.classList.add('d-none'); }
+        function selectedClassRequiresGroup(){ return classGroupRequirementMap[String(classSelect.value)] === true; }
 
-        function clearSubjectAndGenderState(subjectPlaceholder = 'Select subject', genderPlaceholder = 'Select available gender') {
+        function clearSubjectState(subjectPlaceholder = 'Select subject') {
             subjectSelect.innerHTML = `<option value="">${subjectPlaceholder}</option>`;
-            genderScopeSelect.innerHTML = `<option value="">${genderPlaceholder}</option>`;
             subjectSelect.value = '';
-            genderScopeSelect.value = '';
             hide(subjectSelect);
-            hide(genderScopeSelect);
             hide(assignBtn);
-            Object.keys(subjectGenderMap).forEach(function (key) {
-                delete subjectGenderMap[key];
-            });
         }
 
         function resetAfterContextChange() {
             sectionSelect.value = '';
             groupSelect.value = '';
-            clearSubjectAndGenderState();
+            genderScopeSelect.value = '';
+            clearSubjectState();
+            hide(genderScopeSelect);
             hide(groupSelect);
-        }
-
-        function updateGenderOptionsForSubject() {
-            const subjectId = subjectSelect.value;
-            genderScopeSelect.innerHTML = '<option value="">Select available gender</option>';
-
-            if (!subjectId || !subjectGenderMap[subjectId] || !subjectGenderMap[subjectId].length) {
-                hide(genderScopeSelect);
-                hide(assignBtn);
-                return;
-            }
-
-            const labels = { all: 'Gender: All', male: 'Gender: Male', female: 'Gender: Female' };
-            subjectGenderMap[subjectId].forEach(function (scope) {
-                if (!labels[scope]) {
-                    return;
-                }
-
-                const option = document.createElement('option');
-                option.value = scope;
-                option.textContent = labels[scope];
-                genderScopeSelect.appendChild(option);
-            });
-
-            show(genderScopeSelect);
-            hide(assignBtn);
         }
 
         async function loadAssignmentAvailability() {
@@ -414,10 +391,10 @@ Register Form
             const classId = classSelect.value;
             const sectionId = sectionSelect.value;
 
-            clearSubjectAndGenderState('Loading subjects...');
+            clearSubjectState('Loading subjects...');
 
-            if (!sessionId || !classId || !sectionId) {
-                clearSubjectAndGenderState('Select session, class and section first');
+            if (!sessionId || !classId || !sectionId || !genderScopeSelect.value) {
+                clearSubjectState('Select session, class, section and gender first');
                 return;
             }
 
@@ -425,7 +402,9 @@ Register Form
                 sessionId,
                 classId,
                 sectionId,
-                optionalGroupId: groupSelect.value || ''
+                optionalGroupId: groupSelect.value === '__all__' ? '' : (groupSelect.value || ''),
+                departmentScope: selectedClassRequiresGroup() ? (groupSelect.value === '__all__' ? 'all' : 'specific') : 'not_applicable',
+                genderScope: genderScopeSelect.value
             };
 
             try {
@@ -447,23 +426,20 @@ Register Form
                 const json = await response.json();
                 const subjects = Array.isArray(json.subjects) ? json.subjects : [];
 
-                clearSubjectAndGenderState(subjects.length ? 'Select subject' : 'No subject/gender allocation remains for this context');
+                clearSubjectState(subjects.length ? 'Select subject' : 'No subject allocation remains for this context');
 
                 subjects.forEach(function (row) {
                     const option = document.createElement('option');
                     option.value = String(row.id);
                     option.textContent = row.name;
                     subjectSelect.appendChild(option);
-                    subjectGenderMap[String(row.id)] = Array.isArray(row.available_gender_scopes)
-                        ? row.available_gender_scopes
-                        : [];
                 });
 
                 if (subjects.length) {
                     show(subjectSelect);
                 }
             } catch (err) {
-                clearSubjectAndGenderState('Unable to load subjects for selected context');
+                clearSubjectState('Unable to load subjects for selected context');
             }
         }
 
@@ -489,29 +465,30 @@ Register Form
             const cls = classSelect.value;
             const sess = sessionSelect.value;
             if(this.value && cls && sess){
-                show(groupSelect);
-                loadAssignmentAvailability();
+                groupSelect.value = selectedClassRequiresGroup() ? '__all__' : '';
+                groupSelect.required = selectedClassRequiresGroup();
+                if(groupSelect.required) show(groupSelect); else hide(groupSelect);
+                show(genderScopeSelect);
+                genderScopeSelect.value = '';
+                clearSubjectState();
             } else {
                 resetAfterContextChange();
             }
         });
 
         groupSelect && groupSelect.addEventListener('change', function(){
-            if (classSelect.value && sectionSelect.value && sessionSelect.value) {
+            if (classSelect.value && sectionSelect.value && sessionSelect.value && genderScopeSelect.value) {
                 loadAssignmentAvailability();
             }
         });
 
         subjectSelect && subjectSelect.addEventListener('change', function(){
-            updateGenderOptionsForSubject();
+            if (this.value && genderScopeSelect.value) show(assignBtn);
+            else hide(assignBtn);
         });
 
         genderScopeSelect && genderScopeSelect.addEventListener('change', function(){
-            if (this.value && subjectSelect.value) {
-                show(assignBtn);
-            } else {
-                hide(assignBtn);
-            }
+            loadAssignmentAvailability();
         });
 
         // store assignments to prevent duplicates
@@ -547,8 +524,8 @@ Register Form
         assignBtn && assignBtn.addEventListener('click', function(){
             const sessId = sessionSelect.value;
             hiddenAssignmentSession.value = sessId || '';
-            const clsId = classSelect.value; const secId = sectionSelect.value; const grpId = groupSelect.value; const gscope = genderScopeSelect.value || ''; const subId = subjectSelect.value;
-            if(!sessId || !clsId || !secId || !subId || !gscope) return showGlobalFlash('Please select session, class, section, subject and available gender.','danger');
+            const clsId = classSelect.value; const secId = sectionSelect.value; const groupChoice = groupSelect.value; const grpId = groupChoice === '__all__' ? '' : groupChoice; const departmentScope = selectedClassRequiresGroup() ? (groupChoice === '__all__' ? 'all' : 'specific') : 'not_applicable'; const gscope = genderScopeSelect.value || ''; const subId = subjectSelect.value;
+            if(!sessId || !clsId || !secId || !subId || !gscope || (departmentScope === 'specific' && !grpId)) return showGlobalFlash('Please select session, class, section, department scope, subject and available gender.','danger');
             const key = [clsId,secId,grpId,subId,gscope].join('-');
             if(assignments.has(key)) return showGlobalFlash('This assignment already added','warning');
             assignments.add(key);
@@ -556,7 +533,7 @@ Register Form
             let secText = sectionSelect.options[sectionSelect.selectedIndex].text;
             if(secId === 'all') secText = 'All Sections';
             if(secId === 'none') secText = 'No Section (show all class data)';
-            const grpText = grpId ? groupSelect.options[groupSelect.selectedIndex].text : 'All Groups';
+            const grpText = departmentScope === 'all' ? 'All Departments' : (grpId ? groupSelect.options[groupSelect.selectedIndex].text : 'Not Applicable');
             const gscopeText = gscope === 'male' ? 'Male' : (gscope === 'female' ? 'Female' : 'All');
             const subText = subjectSelect.options[subjectSelect.selectedIndex].text;
 
@@ -568,6 +545,7 @@ Register Form
             const hiddenCls = document.createElement('input'); hiddenCls.type='hidden'; hiddenCls.name='className[]'; hiddenCls.value=clsId; hiddenCls.dataset.key=key; tr.appendChild(hiddenCls);
             const hiddenSec = document.createElement('input'); hiddenSec.type='hidden'; hiddenSec.name='section[]'; hiddenSec.value=secId; hiddenSec.dataset.key=key; tr.appendChild(hiddenSec);
             const hiddenGrp = document.createElement('input'); hiddenGrp.type='hidden'; hiddenGrp.name='optionalGroup[]'; hiddenGrp.value=grpId; hiddenGrp.dataset.key=key; tr.appendChild(hiddenGrp);
+            const hiddenDepartmentScope = document.createElement('input'); hiddenDepartmentScope.type='hidden'; hiddenDepartmentScope.name='departmentScope[]'; hiddenDepartmentScope.value=departmentScope; hiddenDepartmentScope.dataset.key=key; tr.appendChild(hiddenDepartmentScope);
             const hiddenGscope = document.createElement('input'); hiddenGscope.type='hidden'; hiddenGscope.name='genderScope[]'; hiddenGscope.value=gscope; hiddenGscope.dataset.key=key; tr.appendChild(hiddenGscope);
             const hiddenSub = document.createElement('input'); hiddenSub.type='hidden'; hiddenSub.name='subject[]'; hiddenSub.value=subId; hiddenSub.dataset.key=key; tr.appendChild(hiddenSub);
 
@@ -579,7 +557,9 @@ Register Form
 
             // reset child selects for next assignment
             sectionSelect.value=''; groupSelect.value='';
-            clearSubjectAndGenderState();
+            genderScopeSelect.value='';
+            clearSubjectState();
+            hide(genderScopeSelect);
         });
 
         // Existing assignments are rendered server-side in the table; no JS prepopulate needed.

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\MarksheetController;
 use App\Models\classManage;
 use App\Models\Exam;
+use App\Models\Department;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\Placement;
@@ -15,6 +16,7 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
 use App\Services\ResultCalculation\StudentResult;
+use App\Services\ResultCalculation\TranscriptSubjectOrderingService;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -153,7 +155,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $html = $this->html($student, $scope['exam']);
 
         $this->assertSummary($html, 'Incomplete', 'Incomplete');
-        $this->assertStringContainsString('Incomplete: missing marks for Missing Main', $html);
+        $this->assertStringContainsString('No main subjects', $html);
         $this->assertStringContainsString('Remark- Incomplete', $html);
     }
 
@@ -179,6 +181,90 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertSummary($html, '5.00', 'A+');
         $this->assertStringContainsString('(80 + 80) = 160', $html);
         $this->assertSame(1, substr_count($html, '<td>Bangla</td>'));
+    }
+
+    public function test_presenter_orders_common_then_science_and_keeps_pairs_stable(): void
+    {
+        $ordering = app(TranscriptSubjectOrderingService::class);
+
+        $rows = [
+            [
+                'id' => '44', 'name' => 'Physics', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['department_group'], 'mappingSortOrder' => 1, 'sortOrder' => 1,
+                'sourceIds' => ['44'],
+            ],
+            [
+                'id' => '45', 'name' => 'Chemistry', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['department_group'], 'mappingSortOrder' => 2, 'sortOrder' => 2,
+                'sourceIds' => ['45'],
+            ],
+            [
+                'id' => '46', 'name' => 'Biology', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['department_group'], 'mappingSortOrder' => 3, 'sortOrder' => 3,
+                'sourceIds' => ['46'],
+            ],
+            [
+                'id' => 'pair:bangla', 'name' => 'Bangla', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 10, 'sortOrder' => 10,
+                'sourceIds' => ['11', '12'],
+            ],
+            [
+                'id' => 'pair:english', 'name' => 'English', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 20, 'sortOrder' => 20,
+                'sourceIds' => ['21', '22'],
+            ],
+            [
+                'id' => '31', 'name' => 'Mathematics', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 30, 'sortOrder' => 30,
+                'sourceIds' => ['31'],
+            ],
+            [
+                'id' => '32', 'name' => 'ICT', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 40, 'sortOrder' => 40,
+                'sourceIds' => ['32'],
+            ],
+            [
+                'id' => '33', 'name' => 'Bangladesh and Global Studies', 'isOptional' => false, 'isReligious' => false,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 50, 'sortOrder' => 50,
+                'sourceIds' => ['33'],
+            ],
+            [
+                'id' => '41', 'name' => 'Islam and moral education-111', 'isOptional' => false, 'isReligious' => true,
+                'mappingCategories' => ['common'], 'mappingSortOrder' => 8, 'sortOrder' => 8,
+                'sourceIds' => ['41'],
+            ],
+        ];
+
+        $sorted = $ordering->sortMainRows($rows);
+        $sortedNames = collect($sorted)->pluck('name')->values()->all();
+
+        $this->assertSame([
+            'Bangla',
+            'English',
+            'Mathematics',
+            'ICT',
+            'Bangladesh and Global Studies',
+            'Islam and moral education-111',
+            'Physics',
+            'Chemistry',
+            'Biology',
+        ], $sortedNames);
+
+        $banglaRow = collect($sorted)->firstWhere('name', 'Bangla');
+        $englishRow = collect($sorted)->firstWhere('name', 'English');
+        $this->assertSame(['11', '12'], $banglaRow['sourceIds']);
+        $this->assertSame(['21', '22'], $englishRow['sourceIds']);
+    }
+
+    public function test_marksheet_header_uses_shared_information_grid_wrapper(): void
+    {
+        [$html] = $this->singleMainResult('Grid Main', 'Main', 100, 80);
+
+        $this->assertStringContainsString('class="col-12 mb-4 transcript-information-grid"', $html);
+        $this->assertStringContainsString('class="student-information"', $html);
+        $this->assertStringContainsString('class="grading-information"', $html);
+        $this->assertStringContainsString('class="table-bordered text-center grading-table"', $html);
+        $this->assertStringContainsString('grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);', $html);
     }
 
     #[DataProvider('failedComponentProvider')]
@@ -266,8 +352,9 @@ class SingleTranscriptResultEngineTest extends TestCase
         $session = new sessionManage(); $session->session = '2026'; $session->save();
         $class = new classManage(); $class->className = 'Class 10'; $class->save();
         $section = new sectionManage(); $section->section = 'A'; $section->save();
+        $department = new Department(); $department->departmentName = 'Science'; $department->save();
         $exam = new Exam(); $exam->examName = 'Annual'; $exam->passingSystem = $passingSystem; $exam->save();
-        return compact('session', 'class', 'section', 'exam');
+        return compact('session', 'class', 'section', 'department', 'exam');
     }
 
     private function student(array $scope, ?int $fourthSubjectId = null): newAdmission
@@ -278,6 +365,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $student->sessName = $scope['session']->id;
         $student->className = $scope['class']->id;
         $student->sectionName = $scope['section']->id;
+        $student->departmentName = $scope['department']->id;
         $student->rollNumber = '01';
         $student->fourthSubjectId = $fourthSubjectId;
         $student->save();
@@ -295,11 +383,76 @@ class SingleTranscriptResultEngineTest extends TestCase
 
     private function mark(newAdmission $student, array $scope, Subject $subject, float $cq, ?float $mcq = null, ?float $practical = null): Marksheet
     {
+        $this->ensureCurriculumMapping($scope, $subject);
+
         return Marksheet::create([
             'studentId' => $student->id, 'classId' => $scope['class']->id, 'sessionId' => $scope['session']->id,
             'groupId' => $scope['section']->id, 'examId' => $scope['exam']->id, 'subjectId' => $subject->id,
             'subjectMarks' => $cq, 'objectMarks' => $mcq, 'practicalMarks' => $practical,
             'totalMarks' => $cq + ($mcq ?? 0) + ($practical ?? 0), 'gradePoint' => 99, 'laterGrade' => 'Stored',
+        ]);
+    }
+
+    private function ensureCurriculumMapping(array $scope, Subject $subject): void
+    {
+        $exists = DB::table('curriculum_subject_mappings')
+            ->where('session_id', (string) $scope['session']->id)
+            ->where('class_id', (string) $scope['class']->id)
+            ->where('section_id', (string) $scope['section']->id)
+            ->where('department_id', (string) $scope['department']->id)
+            ->where('subject_id', (int) $subject->id)
+            ->exists();
+
+        if ($exists) {
+            return;
+        }
+
+        $nextOrder = (int) (DB::table('curriculum_subject_mappings')
+            ->where('session_id', (string) $scope['session']->id)
+            ->where('class_id', (string) $scope['class']->id)
+            ->where('section_id', (string) $scope['section']->id)
+            ->where('department_id', (string) $scope['department']->id)
+            ->max('sort_order') ?? 0) + 1;
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $scope['session']->id,
+            'class_id' => (string) $scope['class']->id,
+            'section_id' => (string) $scope['section']->id,
+            'department_id' => (string) $scope['department']->id,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => $nextOrder,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    private function mapSubjectWithOrder(array $scope, Subject $subject, int $sortOrder, bool $asCommon = false): void
+    {
+        $mappedDepartmentId = $asCommon ? null : (int) $scope['department']->id;
+
+        $deleteQuery = DB::table('curriculum_subject_mappings')
+            ->where('session_id', (string) $scope['session']->id)
+            ->where('class_id', (string) $scope['class']->id)
+            ->where('section_id', (string) $scope['section']->id)
+            ->where('subject_id', (int) $subject->id);
+
+        $deleteQuery->delete();
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $scope['session']->id,
+            'class_id' => (string) $scope['class']->id,
+            'section_id' => (string) $scope['section']->id,
+            'department_id' => $mappedDepartmentId === null ? null : (string) $mappedDepartmentId,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => $sortOrder,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
@@ -321,5 +474,22 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertNotEmpty($match);
         $this->assertSame($letter, trim($match[1]));
         $this->assertSame($gpa, trim($match[2]));
+    }
+
+    private function extractSubjectNamesFromSection(string $html, string $heading): array
+    {
+        $escapedHeading = preg_quote($heading, '/');
+        if (!preg_match('/<h3[^>]*>\s*'.$escapedHeading.'\s*<\/h3>\s*<table[^>]*>.*?<tbody>(.*?)<\/tbody>/si', $html, $sectionMatch)) {
+            return [];
+        }
+
+        if (!preg_match_all('/<tr[^>]*>\s*<td[^>]*>(.*?)<\/td>/si', $sectionMatch[1], $rows)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            fn ($value) => trim(html_entity_decode(strip_tags((string) $value))),
+            $rows[1]
+        ));
     }
 }

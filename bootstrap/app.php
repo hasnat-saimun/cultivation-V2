@@ -8,6 +8,8 @@ use App\Http\Middleware\SuperAdmin;
 use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
+use App\Http\Middleware\EnsureTeacherAuthenticated;
+use App\Http\Middleware\RedirectIfTeacherAuthenticated;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -23,6 +25,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'basicAdmin'    => BasicAdmin::class,
             'dealerAdmin'   => DealerAdmin::class,
             'adminGuard'    => adminGuard::class,
+            'teacher.auth'  => EnsureTeacherAuthenticated::class,
+            'teacher.guest' => RedirectIfTeacherAuthenticated::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
