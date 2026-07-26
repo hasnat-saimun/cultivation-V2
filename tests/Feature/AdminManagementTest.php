@@ -65,6 +65,33 @@ class AdminManagementTest extends TestCase
             ->assertSee("groupSelect.value === '__all__' ? 'all' : 'specific'", false);
     }
 
+    public function test_temporary_assignment_builder_selects_do_not_use_native_required_validation(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin(['userType' => CultivationAdmin::ROLE_TEACHER]);
+
+        $legacy = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('userType'));
+        $legacy->assertOk()
+            ->assertSee('groupSelect.required = false;', false)
+            ->assertDontSee('groupSelect.required = selectedClassRequiresGroup();', false);
+
+        $modernCreate = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('adminModernUsersCreate'));
+        $modernCreate->assertOk()
+            ->assertSee('groupSelect.required = false;', false)
+            ->assertDontSee('groupSelect.required = selectedClassRequiresGroup();', false);
+
+        $modernEdit = $this
+            ->withSession(['cultivationAdmin' => $generalAdmin->id])
+            ->get(route('adminModernUsersEdit', ['id' => $teacher->id]));
+        $modernEdit->assertOk()
+            ->assertSee('groupSelect.required = false;', false)
+            ->assertDontSee('groupSelect.required = selectedClassRequiresGroup();', false);
+    }
+
     public function test_edit_teacher_admin_form_prefills_existing_assignment_session_when_single_context_exists(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);

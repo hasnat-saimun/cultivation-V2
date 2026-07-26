@@ -400,8 +400,8 @@
                 const cls = classSelect.value;
                 if(this.value && cls){
                     groupSelect.value = selectedClassRequiresGroup() ? '__all__' : '';
-                    groupSelect.required = selectedClassRequiresGroup();
-                    if(groupSelect.required) show(groupSelect); else hide(groupSelect);
+                    groupSelect.required = false;
+                    if(selectedClassRequiresGroup()) show(groupSelect); else hide(groupSelect);
                     show(genderScopeSelect);
                     subjectSelect.value = '';
                     loadAssignmentAvailability();

@@ -13,6 +13,10 @@ class TeacherSubjectAssignmentAvailabilityService
     public const GENDER_MALE = 'male';
     public const GENDER_FEMALE = 'female';
 
+    public function __construct(private TeacherAssignmentSubjectCatalogService $subjectCatalog)
+    {
+    }
+
     /**
      * Normalize assignment context IDs so null/empty/0 are treated consistently.
      */
@@ -107,7 +111,19 @@ class TeacherSubjectAssignmentAvailabilityService
         $sectionId = $this->normalizeNullableId($baseContext['section_id'] ?? null);
         $groupId = $this->normalizeNullableId($baseContext['group_id'] ?? null);
 
+        $eligibleSubjectIds = $this->subjectCatalog->resolveAllowedSubjectIds(
+            $sessionId,
+            $classId,
+            $sectionId,
+            $groupId
+        );
+
+        if (empty($eligibleSubjectIds)) {
+            return collect();
+        }
+
         $subjectRows = DB::table('subjects')
+            ->whereIn('id', $eligibleSubjectIds)
             ->select('id', 'subjectName')
             ->orderBy('subjectName', 'asc')
             ->get();
@@ -269,4 +285,5 @@ class TeacherSubjectAssignmentAvailabilityService
         $stringValue = trim((string) $value);
         return ctype_digit($stringValue) ? (int) $stringValue : 0;
     }
+
 }

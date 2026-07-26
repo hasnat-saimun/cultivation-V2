@@ -15,7 +15,10 @@ class TeacherAssignmentAcademicScopeService
     public const DEPARTMENT_SPECIFIC = 'specific';
     public const DEPARTMENT_NOT_APPLICABLE = 'not_applicable';
 
-    public function __construct(private DepartmentBasedClassDetector $departmentBasedClassDetector) {}
+    public function __construct(
+        private DepartmentBasedClassDetector $departmentBasedClassDetector,
+        private TeacherAssignmentSubjectCatalogService $subjectCatalog
+    ) {}
 
     public function requiresGroup(classManage $class): bool
     {
@@ -42,7 +45,8 @@ class TeacherAssignmentAcademicScopeService
         ?int $subjectId = null,
         string $groupField = 'optionalGroup',
         ?string $departmentScope = null,
-        string $scopeField = 'departmentScope'
+        string $scopeField = 'departmentScope',
+        ?int $sessionId = null
     ): void {
         $class = classManage::find($classId);
         if (!$class) {
@@ -78,8 +82,13 @@ class TeacherAssignmentAcademicScopeService
         }
 
         if ($subjectId !== null) {
-            $subject = Subject::find($subjectId);
-            if (!$subject || !$this->subjectMatchesClass($subject->assign_class, $classId)) {
+            if (!$this->subjectCatalog->isAllowedSubjectInScope(
+                $sessionId,
+                $classId,
+                $sectionId,
+                $groupId,
+                $subjectId
+            )) {
                 throw ValidationException::withMessages(['subject' => ['The selected subject is not valid for the selected class.']]);
             }
         }
@@ -96,21 +105,5 @@ class TeacherAssignmentAcademicScopeService
         }
 
         return $groupId === null || Department::whereKey($groupId)->exists();
-    }
-
-    private function subjectMatchesClass(?string $assignClass, int $classId): bool
-    {
-        $assignClass = trim((string) $assignClass);
-        if ($assignClass === '' || $assignClass === '0') {
-            return true;
-        }
-        if (ctype_digit($assignClass)) {
-            return (int) $assignClass === $classId;
-        }
-
-        preg_match_all('/\d+/', $assignClass, $matches);
-        $classIds = array_map('intval', $matches[0] ?? []);
-
-        return empty($classIds) || in_array($classId, $classIds, true);
     }
 }

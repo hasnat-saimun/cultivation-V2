@@ -382,6 +382,7 @@ Register Form
         function resetAfterContextChange() {
             sectionSelect.value = '';
             groupSelect.value = '';
+            groupSelect.required = false;
             genderScopeSelect.value = '';
             clearSubjectState();
             hide(genderScopeSelect);
@@ -468,8 +469,8 @@ Register Form
             const sess = sessionSelect.value;
             if(this.value && cls && sess){
                 groupSelect.value = selectedClassRequiresGroup() ? '__all__' : '';
-                groupSelect.required = selectedClassRequiresGroup();
-                if(groupSelect.required) show(groupSelect); else hide(groupSelect);
+                groupSelect.required = false;
+                if(selectedClassRequiresGroup()) show(groupSelect); else hide(groupSelect);
                 show(genderScopeSelect);
                 genderScopeSelect.value = '';
                 clearSubjectState();

@@ -14,6 +14,7 @@ use App\Services\TeacherSubjectAssignmentAvailabilityService;
 use App\Services\MarksEntryAuthorizationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -47,6 +48,184 @@ class TeacherAssignmentTest extends TestCase
             'subject_id' => $subject->id,
             'gender_scope' => 'all',
         ]);
+    }
+
+    public function test_teacher_save_rejects_empty_assignment_rows(): void
+    {
+        try {
+            app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+                'userName' => 'ta-empty-assignment',
+                'userMail' => 'ta-empty-assignment@example.test',
+                'className' => [],
+                'section' => [],
+                'optionalGroup' => [],
+                'departmentScope' => [],
+                'genderScope' => [],
+                'subject' => [],
+            ])));
+            $this->fail('Expected empty teacher assignment payload to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('subject', $exception->errors());
+        }
+    }
+
+    public function test_assignment_subject_validation_uses_assignment_class_not_primary_class(): void
+    {
+        $assignmentClass = $this->createClass('Class 10');
+        $primaryClass = $this->createClass('Class 7');
+        $section = $this->createSection('A');
+        $subject = $this->createSubject('Agricultural Studies 134');
+        $subject->assign_class = (string) $assignmentClass->id;
+        $subject->save();
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-primary-isolation',
+            'userMail' => 'ta-primary-isolation@example.test',
+            'primaryClass' => $primaryClass->id,
+            'primarySection' => $section->id,
+            'className' => [$assignmentClass->id],
+            'section' => [$section->id],
+            'optionalGroup' => [''],
+            'departmentScope' => ['all'],
+            'subject' => [$subject->id],
+        ])));
+
+        $teacherId = CultivationAdmin::where('adminUser', 'ta-primary-isolation')->value('id');
+        $this->assertNotNull($teacherId);
+        $this->assertDatabaseHas('teacher_class_subjects', [
+            'teacher_id' => $teacherId,
+            'class_id' => $assignmentClass->id,
+            'section_id' => $section->id,
+            'subject_id' => $subject->id,
+        ]);
+    }
+
+    public function test_assignment_availability_excludes_subjects_outside_selected_class(): void
+    {
+        $classTen = $this->createClass('Class 10');
+        $classSeven = $this->createClass('Class 7');
+        $section = $this->createSection('Availability A');
+        $session = $this->ensureSession();
+
+        $validSubject = $this->createSubject('Class 10 Subject');
+        $validSubject->assign_class = (string) $classTen->id;
+        $validSubject->save();
+
+        $invalidSubject = $this->createSubject('Class 7 Subject');
+        $invalidSubject->assign_class = (string) $classSeven->id;
+        $invalidSubject->save();
+
+        $response = app(CultivationController::class)->assignmentAvailability(Request::create('/api/teacher/assignment-availability', 'POST', [
+            'sessionId' => $session->id,
+            'classId' => $classTen->id,
+            'sectionId' => $section->id,
+            'optionalGroupId' => '',
+            'departmentScope' => 'all',
+            'genderScope' => 'all',
+        ]));
+
+        $subjects = collect($response->getData(true)['subjects'] ?? []);
+        $this->assertTrue($subjects->contains('id', $validSubject->id));
+        $this->assertFalse($subjects->contains('id', $invalidSubject->id));
+    }
+
+    public function test_assignment_availability_uses_curriculum_mapping_when_assign_class_is_empty(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('A');
+        $science = $this->createDepartment('Science');
+        $business = $this->createDepartment('Business Studies');
+
+        $common = $this->createSubject('Mapped Common');
+        $common->assign_class = '';
+        $common->save();
+
+        $scienceOnly = $this->createSubject('Mapped Science');
+        $scienceOnly->assign_class = '';
+        $scienceOnly->save();
+
+        $businessOnly = $this->createSubject('Mapped Business');
+        $businessOnly->assign_class = '';
+        $businessOnly->save();
+
+        $this->insertMapping($session->id, $class->id, $section->id, null, $common->id, 1);
+        $this->insertMapping($session->id, $class->id, $section->id, $science->id, $scienceOnly->id, 2);
+        $this->insertMapping($session->id, $class->id, $section->id, $business->id, $businessOnly->id, 3);
+
+        $availability = app(CultivationController::class)->assignmentAvailability(Request::create('/api/teacher/assignment-availability', 'POST', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $section->id,
+            'optionalGroupId' => $science->id,
+            'departmentScope' => 'specific',
+            'genderScope' => 'all',
+        ]));
+
+        $subjects = collect($availability->getData(true)['subjects'] ?? []);
+        $this->assertTrue($subjects->contains('id', $common->id));
+        $this->assertTrue($subjects->contains('id', $scienceOnly->id));
+        $this->assertFalse($subjects->contains('id', $businessOnly->id));
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'ta-mapped-empty-assign-class',
+            'userMail' => 'ta-mapped-empty-assign-class@example.test',
+            'assignmentSessionId' => $session->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [$science->id],
+            'departmentScope' => ['specific'],
+            'genderScope' => ['all'],
+            'subject' => [$scienceOnly->id],
+        ])));
+
+        $teacherId = CultivationAdmin::where('adminUser', 'ta-mapped-empty-assign-class')->value('id');
+        $this->assertNotNull($teacherId);
+        $this->assertDatabaseHas('teacher_class_subjects', [
+            'teacher_id' => $teacherId,
+            'session_id' => $session->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => $science->id,
+            'subject_id' => $scienceOnly->id,
+        ]);
+    }
+
+    public function test_assignment_save_rejects_cross_department_subject_when_unmapped_for_selected_scope(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('B');
+        $science = $this->createDepartment('Science');
+        $business = $this->createDepartment('Business Studies');
+
+        $scienceSubject = $this->createSubject('Scope Science');
+        $scienceSubject->assign_class = '';
+        $scienceSubject->save();
+
+        $businessSubject = $this->createSubject('Scope Business');
+        $businessSubject->assign_class = '';
+        $businessSubject->save();
+
+        $this->insertMapping($session->id, $class->id, $section->id, $science->id, $scienceSubject->id, 1);
+        $this->insertMapping($session->id, $class->id, $section->id, $business->id, $businessSubject->id, 2);
+
+        try {
+            app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+                'userName' => 'ta-cross-department-reject',
+                'userMail' => 'ta-cross-department-reject@example.test',
+                'assignmentSessionId' => $session->id,
+                'className' => [$class->id],
+                'section' => [$section->id],
+                'optionalGroup' => [$science->id],
+                'departmentScope' => ['specific'],
+                'genderScope' => ['all'],
+                'subject' => [$businessSubject->id],
+            ])));
+            $this->fail('Expected cross-department mapped subject to be rejected for selected scope.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('subject', $exception->errors());
+        }
     }
 
     public function test_gender_scope_male_and_female_are_stored(): void
@@ -616,6 +795,29 @@ class TeacherAssignmentTest extends TestCase
         $department->save();
 
         return $department;
+    }
+
+    private function insertMapping(
+        int $sessionId,
+        int $classId,
+        ?int $sectionId,
+        ?int $departmentId,
+        int $subjectId,
+        int $sortOrder
+    ): void {
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $sessionId,
+            'class_id' => (string) $classId,
+            'section_id' => $sectionId === null ? null : (string) $sectionId,
+            'department_id' => $departmentId === null ? null : (string) $departmentId,
+            'subject_id' => $subjectId,
+            'mapping_type' => 'main',
+            'sort_order' => $sortOrder,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     private function createAdmin(array $attributes = []): CultivationAdmin

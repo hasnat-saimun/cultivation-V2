@@ -201,23 +201,42 @@ class CultivationController extends Controller
         $sectionIdPool = [];
         $assignmentRows = [];
 
-        for ($i = 0; $i < count($rawCls); $i++) {
+        $rowCount = max(
+            count($rawCls),
+            count($rawSec),
+            count($rawSub),
+            count($rawGrp),
+            count($rawDepartmentScope),
+            count($rawGenderScope)
+        );
+
+        for ($i = 0; $i < $rowCount; $i++) {
             $classValue = $rawCls[$i] ?? null;
+            $subjectValue = $rawSub[$i] ?? null;
+            $sectionValue = $rawSec[$i] ?? null;
+            $groupValue = $rawGrp[$i] ?? null;
+
+            $hasAnyRowValue = $classValue !== null || $subjectValue !== null || $sectionValue !== null || $groupValue !== null;
+            if (!$hasAnyRowValue) {
+                continue;
+            }
+
             if (!is_numeric($classValue)) {
+                throw ValidationException::withMessages([
+                    'className' => ['Each assignment row must include a valid class.'],
+                ]);
+            }
+
+            $subjectId = is_numeric($subjectValue) ? (int) $subjectValue : null;
+            if (!$subjectId) {
+                // Ignore stale/legacy class-only rows; only subject-bound rows are persisted.
                 continue;
             }
 
             $classId = (int) $classValue;
             $classIds[] = $classId;
+            $subjectIds[] = $subjectId;
 
-            $subjectValue = $rawSub[$i] ?? null;
-            $subjectId = is_numeric($subjectValue) ? (int) $subjectValue : null;
-            if ($subjectId) {
-                $subjectIds[] = $subjectId;
-            }
-
-            $sectionValue = $rawSec[$i] ?? null;
-            $groupValue = $rawGrp[$i] ?? null;
             $groupId = is_numeric($groupValue) ? (int) $groupValue : null;
             $departmentScope = is_scalar($rawDepartmentScope[$i] ?? null)
                 ? strtolower(trim((string) $rawDepartmentScope[$i]))
@@ -278,7 +297,8 @@ class CultivationController extends Controller
                 ,
                 'optionalGroup',
                 $row['department_scope'] ?? null,
-                'departmentScope'
+                'departmentScope',
+                isset($row['session_id']) && is_numeric($row['session_id']) ? (int) $row['session_id'] : null
             );
         }
 
@@ -1212,6 +1232,12 @@ class CultivationController extends Controller
             ? $this->parseTeacherAssignmentPayload($requ)
             : ['class_ids' => [], 'subject_ids' => [], 'section_ids' => [], 'assignment_rows' => []];
 
+        if ((int) $requ->userType === CultivationAdmin::ROLE_TEACHER && empty($teacherPayload['assignment_rows'])) {
+            throw ValidationException::withMessages([
+                'subject' => ['Assigned subject is required. Add at least one marks-entry assignment row.'],
+            ]);
+        }
+
         if ((int) $requ->userType === CultivationAdmin::ROLE_TEACHER
             && !empty($teacherPayload['assignment_rows'])
             && Schema::hasColumn('teacher_class_subjects', 'session_id')
@@ -1577,7 +1603,8 @@ class CultivationController extends Controller
             null,
             'optionalGroupId',
             (string) $request->input('departmentScope'),
-            'departmentScope'
+            'departmentScope',
+            $sessionId
         );
 
         $subjects = $this->assignmentAvailability->subjectsWithAvailability([
