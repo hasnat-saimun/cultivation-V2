@@ -3,8 +3,10 @@
 namespace App\Services;
 
 use App\Models\classManage as ClassModel;
+use App\Models\ReligiousSubjectDefault;
 use App\Models\Subject;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class TeacherAssignmentSubjectCatalogService
 {
@@ -52,7 +54,12 @@ class TeacherAssignmentSubjectCatalogService
 
         // Optional and religious subjects are student-specific at runtime, but
         // assignable at admin level when class-compatible.
-        $supplementalIds = $this->classCompatibleSupplementalSubjectIds($classId);
+        $supplementalIds = $this->classCompatibleSupplementalSubjectIds(
+            $sessionId,
+            $classId,
+            $sectionId,
+            $groupId
+        );
 
         if (!empty($mappedMainIds)) {
             return array_values(array_unique(array_merge($mappedMainIds, $supplementalIds)));
@@ -92,9 +99,14 @@ class TeacherAssignmentSubjectCatalogService
     }
 
     /** @return array<int,int> */
-    private function classCompatibleSupplementalSubjectIds(int $classId): array
+    private function classCompatibleSupplementalSubjectIds(
+        ?int $sessionId,
+        int $classId,
+        ?int $sectionId,
+        ?int $groupId
+    ): array
     {
-        return Subject::query()
+        $flaggedIds = Subject::query()
             ->select(['id', 'assign_class', 'subjectType', 'isReligious'])
             ->orderBy('id')
             ->get()
@@ -109,6 +121,48 @@ class TeacherAssignmentSubjectCatalogService
 
                 return strcasecmp((string) ($subject->subjectType ?? ''), 'Optional') === 0;
             })
+            ->pluck('id')
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $religionDefaultIds = ReligiousSubjectDefault::query()
+            ->where('classId', (string) $classId)
+            ->pluck('subjectId')
+            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        $fourthSubjectIds = [];
+        if ($sessionId !== null) {
+            $fourthSubjectIds = DB::table('new_admissions')
+                ->where('sessName', (string) $sessionId)
+                ->where('className', (string) $classId)
+                ->when($sectionId !== null, fn ($query) => $query->where('sectionName', (string) $sectionId))
+                ->when($groupId !== null, fn ($query) => $query->where('departmentName', (string) $groupId))
+                ->whereNotNull('fourthSubjectId')
+                ->where('fourthSubjectId', '!=', '')
+                ->where('fourthSubjectId', '!=', '0')
+                ->pluck('fourthSubjectId')
+                ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
+        }
+
+        $candidateIds = array_values(array_unique(array_merge($flaggedIds, $religionDefaultIds, $fourthSubjectIds)));
+
+        if ($candidateIds === []) {
+            return [];
+        }
+
+        return Subject::query()
+            ->whereIn('id', $candidateIds)
+            ->select(['id', 'assign_class'])
+            ->get()
+            ->filter(fn (Subject $subject) => $this->subjectMatchesClass($subject->assign_class ?? null, $classId))
             ->pluck('id')
             ->map(fn ($id) => (int) $id)
             ->values()

@@ -445,6 +445,164 @@ class AdminManagementTest extends TestCase
         $this->assertStringContainsString('List Class', $html);
     }
 
+    public function test_admin_list_merges_legacy_subjects_with_composite_assignments_for_teachers(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin([
+            'userType' => CultivationAdmin::ROLE_TEACHER,
+            'adminName' => 'Merged Teacher',
+        ]);
+
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 8');
+        $section = $this->createSection('A');
+        $legacyOnlySubject = $this->createSubject('Legacy Only Subject');
+        $compositeSubject = $this->createSubject('Composite Subject');
+
+        $teacher->classes()->sync([$class->id]);
+        $teacher->subjects()->sync([$legacyOnlySubject->id]);
+
+        $row = [
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => null,
+            'subject_id' => $compositeSubject->id,
+            'gender_scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        if (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+            $row['session_id'] = $session->id;
+        }
+        DB::table('teacher_class_subjects')->insert($row);
+
+        Session::put('cultivationAdmin', $generalAdmin->id);
+        $response = app(CultivationController::class)->userRegList();
+
+        $this->assertInstanceOf(View::class, $response);
+        $html = $response->render();
+        $this->assertStringContainsString('Composite Subject', $html);
+        $this->assertStringContainsString('Legacy Only Subject', $html);
+    }
+
+    public function test_assigned_subjects_flow_from_db_to_view_data_and_html_with_ids_and_sources(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $teacher = $this->createAdmin([
+            'userType' => CultivationAdmin::ROLE_TEACHER,
+            'adminName' => 'Trace Teacher',
+            'adminUser' => 'trace-teacher',
+        ]);
+
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 9');
+        $section = $this->createSection('A');
+        $subjectLegacyOnly = $this->createSubject('Trace Legacy Subject');
+        $subjectCompositeOnly = $this->createSubject('Trace Composite Subject');
+        $subjectBoth = $this->createSubject('Trace Both Subject');
+
+        DB::table('teacher_classes')->insert([
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('teacher_subjects')->insert([
+            [
+                'teacher_id' => $teacher->id,
+                'subject_id' => $subjectLegacyOnly->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'teacher_id' => $teacher->id,
+                'subject_id' => $subjectBoth->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $rowOne = [
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => null,
+            'subject_id' => $subjectCompositeOnly->id,
+            'gender_scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        $rowTwo = [
+            'teacher_id' => $teacher->id,
+            'class_id' => $class->id,
+            'section_id' => $section->id,
+            'group_id' => null,
+            'subject_id' => $subjectBoth->id,
+            'gender_scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ];
+        if (Schema::hasColumn('teacher_class_subjects', 'session_id')) {
+            $rowOne['session_id'] = $session->id;
+            $rowTwo['session_id'] = $session->id;
+        }
+        DB::table('teacher_class_subjects')->insert([$rowOne, $rowTwo]);
+
+        Session::put('cultivationAdmin', $generalAdmin->id);
+        $response = app(CultivationController::class)->userRegList();
+        $this->assertInstanceOf(View::class, $response);
+
+        $teacherRow = collect($response->getData()['userList'])
+            ->firstWhere('id', $teacher->id);
+
+        $this->assertNotNull($teacherRow);
+
+        $summary = collect($teacherRow->subject_assignment_summary ?? []);
+        $subjectItems = $summary
+            ->flatMap(fn ($assignment) => (array) ($assignment['subject_items'] ?? []))
+            ->filter(fn ($subject) => (int) ($subject['id'] ?? 0) > 0)
+            ->groupBy(fn ($subject) => (int) $subject['id']);
+
+        $expectedSubjectIds = [
+            $subjectLegacyOnly->id,
+            $subjectCompositeOnly->id,
+            $subjectBoth->id,
+        ];
+
+        foreach ($expectedSubjectIds as $subjectId) {
+            $this->assertTrue($subjectItems->has($subjectId), 'Missing subject ID in view data: '.$subjectId);
+        }
+
+        $bothSources = collect($subjectItems->get($subjectBoth->id))
+            ->flatMap(fn ($subject) => (array) ($subject['sources'] ?? []))
+            ->unique()
+            ->values()
+            ->all();
+
+        $this->assertContains('legacy', $bothSources);
+        $this->assertContains('composite', $bothSources);
+
+        foreach ($summary as $assignment) {
+            $names = collect((array) ($assignment['subject_items'] ?? []))
+                ->map(fn ($subject) => trim((string) ($subject['name'] ?? '')))
+                ->filter()
+                ->values();
+            $this->assertSame($names->count(), $names->unique()->count(), 'Duplicate subject labels within assignment scope.');
+        }
+
+        $html = $response->render();
+        $this->assertStringContainsString('Trace Legacy Subject', $html);
+        $this->assertStringContainsString('Trace Composite Subject', $html);
+        $this->assertStringContainsString('Trace Both Subject', $html);
+        $this->assertStringContainsString('data-subject-id="'.$subjectLegacyOnly->id.'"', $html);
+        $this->assertStringContainsString('data-subject-id="'.$subjectCompositeOnly->id.'"', $html);
+        $this->assertStringContainsString('data-subject-id="'.$subjectBoth->id.'"', $html);
+        $this->assertStringContainsString('data-subject-sources="legacy"', $html);
+        $this->assertStringContainsString('data-subject-sources="composite"', $html);
+    }
+
     public function test_admin_list_shows_type_of_user_column_and_labels(): void
     {
         $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);

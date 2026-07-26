@@ -93,6 +93,8 @@ Get Mark
                     <div class="col-6 col-md-4 mb-2"><b>Subject:</b> {{ $subjectName }}</div>
                 </div>
                 @csrf
+                <input type="hidden" name="submission_action" id="submission_action" value="">
+                <input type="hidden" name="confirm_blank_marks" id="confirm_blank_marks" value="0">
                 @php
                     $isReadOnly = !empty($isFinalPublished) || !empty($hasConfirmedScope);
                     $singleScopeKey = count($scopeStatuses ?? []) === 1 ? array_key_first($scopeStatuses) : null;
@@ -249,7 +251,7 @@ Get Mark
                                             formaction="{{ route('marks.subject.confirm') }}"
                                             name="groupId"
                                             value="{{ $lifecycleGroupId }}"
-                                            class="btn btn-warning">
+                                            class="btn btn-warning js-confirm-subject">
                                         Confirm Subject
                                     </button>
                                 @endif
@@ -275,6 +277,28 @@ Get Mark
                 </table>
                 </div>
             </form>
+
+        <div class="modal fade" id="blankMarksModal" tabindex="-1" aria-labelledby="blankMarksModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="blankMarksModalLabel">Blank marks detected</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <p id="blankMarksSummary" class="mb-2"></p>
+                        <p class="text-muted mb-0">Some mark fields are still blank. You may confirm the marks anyway, save the current entries as a draft, or return to complete the missing fields.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal" id="blankMarksGoBack">Go Back</button>
+                        <button type="button" class="btn btn-success" id="blankMarksSaveDraft">Save as Draft</button>
+                        <button type="button" class="btn btn-warning" id="blankMarksConfirmAnyway">Confirm Anyway</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     @else
     <div class="alert alert-info">
         Sorry! No data found
@@ -333,10 +357,86 @@ document.addEventListener('DOMContentLoaded', function() {
         limitInput(input, maxPractical);
     });
 
+    const draftRoute = @json(route('marks.draft.save'));
+    const confirmRoute = @json(route('marks.subject.confirm'));
+    const form = document.querySelector('form');
+    const submissionActionInput = document.getElementById('submission_action');
+    const confirmBlankMarksInput = document.getElementById('confirm_blank_marks');
+    const confirmButton = document.querySelector('.js-confirm-subject');
+    const modalElement = document.getElementById('blankMarksModal');
+    const blankSummary = document.getElementById('blankMarksSummary');
+    const modalConfirmAnyway = document.getElementById('blankMarksConfirmAnyway');
+    const modalSaveDraft = document.getElementById('blankMarksSaveDraft');
+    const modalGoBack = document.getElementById('blankMarksGoBack');
+    const modalInstance = (window.jQuery && modalElement) ? window.jQuery(modalElement) : null;
+
+    if (modalInstance) {
+        modalInstance.modal({backdrop: 'static', show: false});
+    }
+
+    let submitInProgress = false;
+
+    function resetSubmissionIntent() {
+        if (submissionActionInput) submissionActionInput.value = '';
+        if (confirmBlankMarksInput) confirmBlankMarksInput.value = '0';
+    }
+
+    function scanBlankMarks() {
+        const rows = Array.from(document.querySelectorAll('.marks-entry-table tbody tr'));
+        let blankFieldCount = 0;
+        let blankStudentCount = 0;
+
+        rows.forEach(function(row) {
+            const markInputs = Array.from(row.querySelectorAll('input[name="cqMarks[]"], input[name="mcqMarks[]"], input[name="practical[]"]'))
+                .filter(function(input) {
+                    return input.type !== 'hidden' && !input.disabled;
+                });
+
+            if (!markInputs.length) return;
+
+            let rowBlank = 0;
+            markInputs.forEach(function(input) {
+                if (String(input.value ?? '').trim() === '') {
+                    rowBlank++;
+                }
+            });
+
+            if (rowBlank > 0) {
+                blankStudentCount++;
+                blankFieldCount += rowBlank;
+            }
+        });
+
+        return {blankFieldCount, blankStudentCount};
+    }
+
+    function submitWithIntent(action, targetRoute) {
+        if (!form || submitInProgress) return;
+        submitInProgress = true;
+        if (submissionActionInput) submissionActionInput.value = action;
+        if (confirmBlankMarksInput) confirmBlankMarksInput.value = action === 'confirm_with_blanks' ? '1' : '0';
+        form.setAttribute('action', targetRoute);
+        form.submit();
+    }
+
+    function openBlankModal(summary) {
+        if (!modalInstance) {
+            return submitWithIntent('confirm_with_blanks', confirmRoute);
+        }
+        blankSummary.textContent = summary;
+        modalInstance.modal('show');
+    }
+
     // Prevent form submit if any value is greater than allowed
-    var form = document.querySelector('form');
     if(form) {
         form.addEventListener('submit', function(e) {
+            if (submitInProgress) {
+                return;
+            }
+
+            const submitter = e.submitter || document.activeElement;
+            const isConfirmSubmit = !!(submitter && submitter.classList && submitter.classList.contains('js-confirm-subject'));
+
             var error = false;
             document.querySelectorAll('input[name="cqMarks[]"]').forEach(function(input) {
                 var val = parseFloat(input.value);
@@ -368,7 +468,53 @@ document.addEventListener('DOMContentLoaded', function() {
             if(error) {
                 alert('One or more marks fields exceed the allowed maximum value.');
                 e.preventDefault();
+                submitInProgress = false;
+                return;
             }
+
+            if (!isConfirmSubmit) {
+                if (submissionActionInput) submissionActionInput.value = 'draft';
+                if (confirmBlankMarksInput) confirmBlankMarksInput.value = '0';
+                form.setAttribute('action', draftRoute);
+                return;
+            }
+
+            const blankStats = scanBlankMarks();
+            if (blankStats.blankFieldCount <= 0) {
+                if (submissionActionInput) submissionActionInput.value = 'confirm';
+                if (confirmBlankMarksInput) confirmBlankMarksInput.value = '0';
+                form.setAttribute('action', confirmRoute);
+                return;
+            }
+
+            e.preventDefault();
+            const summary = `${blankStats.blankFieldCount} mark fields for ${blankStats.blankStudentCount} students are still blank. Confirming may treat these records according to the system's blank-mark policy.`;
+            openBlankModal(summary);
+        });
+    }
+
+    if (modalConfirmAnyway) {
+        modalConfirmAnyway.addEventListener('click', function() {
+            submitWithIntent('confirm_with_blanks', confirmRoute);
+        });
+    }
+
+    if (modalSaveDraft) {
+        modalSaveDraft.addEventListener('click', function() {
+            submitWithIntent('draft', draftRoute);
+        });
+    }
+
+    if (modalGoBack) {
+        modalGoBack.addEventListener('click', function() {
+            resetSubmissionIntent();
+        });
+    }
+
+    if (modalElement) {
+        modalElement.addEventListener('hidden.bs.modal', function() {
+            submitInProgress = false;
+            resetSubmissionIntent();
         });
     }
 });

@@ -80,8 +80,9 @@ class MarksEntryTest extends TestCase
         $trueCases = [
             'Class 9', 'Class Nine', 'Nine', 'Class 10', 'Class XI',
             'নবম শ্রেণি', 'দশম শ্রেণি', 'SSC Batch', 'HSC Batch',
+            'Class 09', '09', 'Class-09',
         ];
-        $falseCases = ['Class 8', 'Class 1', 'Class 19', 'Batch 2019', 'Roll 10'];
+        $falseCases = ['Class 8', 'Class 1', 'Class 19', 'Batch 2019', 'Roll 10', 'Class 019'];
 
         foreach ($trueCases as $case) {
             $this->assertTrue($detector->isDepartmentBasedClass($case), 'Expected true for: '.$case);
@@ -649,6 +650,34 @@ class MarksEntryTest extends TestCase
         $this->assertArrayHasKey('requires_department', $classes[$classEight->id]);
         $this->assertFalse((bool) $classes[$classEight->id]['requires_department']);
         $this->assertTrue((bool) $classes[$classNine->id]['requires_department']);
+        $this->assertArrayHasKey('supports_group', $classes[$classEight->id]);
+        $this->assertSame(0, (int) $classes[$classEight->id]['supports_group']);
+        $this->assertSame(1, (int) $classes[$classNine->id]['supports_group']);
+    }
+
+    public function test_add_marks_page_contains_department_visibility_contract_hooks(): void
+    {
+        $this->createSession();
+        $this->createClass('Class 8');
+        $this->createClass('Class 9');
+        $this->createExam('Half Yearly');
+
+        $response = app(MarksheetController::class)->addMarks();
+
+        $this->assertInstanceOf(View::class, $response);
+        $html = $response->render();
+
+        $this->assertStringContainsString('id="marks_class_select"', $html);
+        $this->assertStringContainsString('id="optional_group_wrapper"', $html);
+        $this->assertStringContainsString('id="marks_optional_group_select"', $html);
+        $this->assertStringContainsString('function applyDepartmentVisibility()', $html);
+        $this->assertStringContainsString('option.dataset.supportsGroup', $html);
+        $this->assertStringContainsString("optionalGroupWrapper.classList.toggle('d-none', !visible)", $html);
+        $this->assertStringContainsString('optionalGroupSelect.disabled = !visible;', $html);
+        $this->assertStringContainsString('optionalGroupSelect.required = visible;', $html);
+        $this->assertStringContainsString("optionalGroupSelect.value = '';", $html);
+        $this->assertStringContainsString("event.target && event.target.id === 'marks_class_select'", $html);
+        $this->assertStringContainsString("window.addEventListener('pageshow'", $html);
     }
 
     public function test_teacher_gender_scope_all_returns_both_male_and_female_students(): void

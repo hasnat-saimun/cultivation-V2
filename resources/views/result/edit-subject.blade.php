@@ -50,6 +50,18 @@ Edit Subject
                                         </select>
                                     </div>
                                     <div class="col-12 form-group">
+                                        <label>Assign Class *</label>
+                                        <select name="classId" id="" class="form-control">
+                                            <option value="">Select Class</option>
+                                            <option value="0" {{ old('classId', (string) ($item->assign_class ?? '')) === '0' ? 'selected' : '' }}>All</option>
+                                            @if(($classList ?? collect([]))->count() > 0)
+                                                @foreach($classList as $class)
+                                                    <option value="{{ $class->id }}" {{ old('classId', (string) ($item->assign_class ?? '')) === (string) $class->id ? 'selected' : '' }}>{{ $class->className }}</option>
+                                                @endforeach
+                                            @endif
+                                        </select>
+                                    </div>
+                                    <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         @php
                                             $features = $item->availableFeature ? explode(',', $item->availableFeature) : [];

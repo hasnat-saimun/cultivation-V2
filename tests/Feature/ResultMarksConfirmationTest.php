@@ -52,18 +52,91 @@ class ResultMarksConfirmationTest extends TestCase
             );
             $this->fail('Missing marks should block.');
         } catch (ResultLifecycleException $exception) {
-            $this->assertSame('ScopeIncomplete', $exception->failure);
+            $this->assertSame('BlankMarksConfirmationRequired', $exception->failure);
         }
 
         app(ResultMarksDraftService::class)->save(
             $this->lifecycleInput($data, null) + ['scope_revision' => 1],
             $actor,
         );
-        $this->expectException(ResultLifecycleException::class);
-        app(ResultMarksConfirmationService::class)->confirm(
-            $this->lifecycleInput($data) + ['scope_revision' => 2],
+        try {
+            app(ResultMarksConfirmationService::class)->confirm(
+                $this->lifecycleInput($data) + ['scope_revision' => 2],
+                $actor,
+            );
+            $this->fail('Blank marks without explicit override should request confirmation override.');
+        } catch (ResultLifecycleException $exception) {
+            $this->assertSame('BlankMarksConfirmationRequired', $exception->failure);
+        }
+    }
+
+    public function test_confirm_with_blanks_override_succeeds_and_keeps_blank_and_zero_semantics(): void
+    {
+        $data = $this->lifecycleScope(2);
+        $actor = $this->lifecycleActor();
+
+        app(ResultMarksDraftService::class)->save([
+            'sessionId' => $data['session']->id,
+            'classId' => $data['class']->id,
+            'groupId' => $data['section']->id,
+            'examId' => $data['exam']->id,
+            'subjectId' => $data['subject']->id,
+            'studentId' => $data['students']->pluck('id')->all(),
+            'cqMarks' => ['', '0'],
+            'mcqMarks' => ['', ''],
+            'practical' => ['', ''],
+            'gender' => 'all',
+            'scope_revision' => 1,
+        ], $actor);
+
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $data['students'][0]->id,
+            'subjectMarks' => null,
+        ]);
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $data['students'][1]->id,
+            'subjectMarks' => 0.0,
+        ]);
+
+        $result = app(ResultMarksConfirmationService::class)->confirm(
+            $this->lifecycleInput($data) + ['scope_revision' => 2, 'confirm_blank_marks' => 1],
             $actor,
         );
+
+        $this->assertSame('confirmed', $result['status']);
+        $this->assertDatabaseHas('marks_scope_states', [
+            'sessionId' => $data['session']->id,
+            'classId' => $data['class']->id,
+            'groupId' => $data['section']->id,
+            'examId' => $data['exam']->id,
+            'subjectId' => $data['subject']->id,
+            'status' => 'confirmed',
+        ]);
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $data['students'][0]->id,
+            'subjectMarks' => null,
+        ]);
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $data['students'][1]->id,
+            'subjectMarks' => 0.0,
+        ]);
+    }
+
+    public function test_unauthorized_confirm_with_blanks_is_rejected(): void
+    {
+        $data = $this->lifecycleScope();
+        $general = $this->lifecycleActor();
+        app(ResultMarksDraftService::class)->save($this->lifecycleInput($data, null) + ['scope_revision' => 1], $general);
+
+        try {
+            app(ResultMarksConfirmationService::class)->confirm(
+                $this->lifecycleInput($data) + ['scope_revision' => 2, 'confirm_blank_marks' => 1],
+                $this->lifecycleActor(CultivationAdmin::ROLE_CASH),
+            );
+            $this->fail('Cash admin should not confirm with blank override.');
+        } catch (ResultLifecycleException $exception) {
+            $this->assertSame(403, $exception->httpStatus);
+        }
     }
 
     public function test_confirmation_is_idempotent_but_stale_and_published_are_rejected(): void

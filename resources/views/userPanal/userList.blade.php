@@ -32,6 +32,10 @@ User List
 	.assignment-label {
 		font-weight: 700;
 	}
+
+	.assignment-subject {
+		display: inline;
+	}
 </style>
 @endpush
 <!-- Dashboard summary Start Here -->
@@ -77,7 +81,10 @@ User List
 										: 'None';
 									$assignmentExportText = $subjectAssignments
 										->map(function ($item) {
-											$subjects = implode(', ', (array) ($item['subjects'] ?? []));
+											$subjectItems = collect((array) ($item['subject_items'] ?? []));
+											$subjects = $subjectItems->isNotEmpty()
+												? $subjectItems->pluck('name')->filter()->implode(', ')
+												: implode(', ', (array) ($item['subjects'] ?? []));
 											return trim((string) ($item['label'] ?? '')) . ': ' . $subjects;
 										})
 										->filter()
@@ -91,9 +98,39 @@ User List
 									<td data-export="{{ $assignmentExportText !== '' ? $assignmentExportText : 'None' }}">
 										@if($subjectAssignments->isNotEmpty())
 											@foreach($subjectAssignments as $assignment)
+												@php
+													$subjectItems = collect((array) ($assignment['subject_items'] ?? []));
+													$subjectDisplay = $subjectItems->isNotEmpty()
+														? $subjectItems->map(function ($subject) {
+															return [
+																'id' => (int) ($subject['id'] ?? 0),
+																'name' => trim((string) ($subject['name'] ?? '')),
+																'sources' => implode(',', (array) ($subject['sources'] ?? [])),
+															];
+														})
+														->filter(fn ($subject) => $subject['id'] > 0 && $subject['name'] !== '')
+														->values()
+														: collect((array) ($assignment['subjects'] ?? []))->map(function ($name) {
+															return [
+																'id' => 0,
+																'name' => trim((string) $name),
+																'sources' => '',
+															];
+														})->filter(fn ($subject) => $subject['name'] !== '')->values();
+												@endphp
 												<div class="assignment-item">
 													<span class="assignment-label">{{ $assignment['label'] ?? 'Assignment' }}:</span>
-													{{ implode(', ', (array) ($assignment['subjects'] ?? [])) }}
+													@foreach($subjectDisplay as $index => $subject)
+														<span
+															class="assignment-subject"
+															@if(($subject['id'] ?? 0) > 0)
+																data-subject-id="{{ $subject['id'] }}"
+															@endif
+															@if(($subject['sources'] ?? '') !== '')
+																data-subject-sources="{{ $subject['sources'] }}"
+															@endif
+														>{{ $subject['name'] }}</span>@if($index < $subjectDisplay->count() - 1), @endif
+													@endforeach
 												</div>
 											@endforeach
 										@else

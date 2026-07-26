@@ -677,6 +677,137 @@ class TeacherAssignmentTest extends TestCase
         $this->assertDatabaseCount('teacher_class_subjects', 1);
     }
 
+    public function test_exact_section_common_rows_do_not_suppress_class_wide_common_subjects(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('A');
+        $science = $this->createDepartment('Science');
+
+        $exactSectionCommon = $this->createSubject('Exact Section Common');
+        $classWideCommon = $this->createSubject('Class Wide Common');
+
+        $this->insertMapping($session->id, $class->id, $section->id, null, $exactSectionCommon->id, 1);
+        $this->insertMapping($session->id, $class->id, null, null, $classWideCommon->id, 2);
+
+        $response = app(CultivationController::class)->assignmentAvailability(Request::create('/api/teacher/assignment-availability', 'POST', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $section->id,
+            'optionalGroupId' => $science->id,
+            'departmentScope' => 'specific',
+            'genderScope' => 'all',
+        ]));
+
+        $subjects = collect($response->getData(true)['subjects'] ?? []);
+        $this->assertTrue($subjects->contains('id', $exactSectionCommon->id));
+        $this->assertTrue($subjects->contains('id', $classWideCommon->id));
+    }
+
+    public function test_optional_and_religious_candidates_are_available_as_supplemental_subjects(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('B');
+        $science = $this->createDepartment('Science');
+
+        $mappedMain = $this->createSubject('Mapped Main');
+        $religious = $this->createSubject('Supplemental Religious');
+        $religious->isReligious = 1;
+        $religious->assign_class = (string) $class->id;
+        $religious->save();
+
+        $optional = $this->createSubject('Supplemental Optional');
+        $optional->subjectType = 'Optional';
+        $optional->assign_class = (string) $class->id;
+        $optional->save();
+
+        $this->insertMapping($session->id, $class->id, $section->id, null, $mappedMain->id, 1);
+
+        $response = app(CultivationController::class)->assignmentAvailability(Request::create('/api/teacher/assignment-availability', 'POST', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $section->id,
+            'optionalGroupId' => $science->id,
+            'departmentScope' => 'specific',
+            'genderScope' => 'all',
+        ]));
+
+        $subjects = collect($response->getData(true)['subjects'] ?? []);
+        $this->assertTrue($subjects->contains('id', $mappedMain->id));
+        $this->assertTrue($subjects->contains('id', $religious->id));
+        $this->assertTrue($subjects->contains('id', $optional->id));
+    }
+
+    public function test_assignment_availability_and_save_validation_share_the_same_catalog_set(): void
+    {
+        $session = $this->ensureSession();
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('C');
+        $science = $this->createDepartment('Science');
+        $business = $this->createDepartment('Business Studies');
+
+        $common = $this->createSubject('Aligned Common');
+        $scienceOnly = $this->createSubject('Aligned Science');
+        $businessOnly = $this->createSubject('Aligned Business');
+
+        $this->insertMapping($session->id, $class->id, $section->id, null, $common->id, 1);
+        $this->insertMapping($session->id, $class->id, null, $science->id, $scienceOnly->id, 2);
+        $this->insertMapping($session->id, $class->id, null, $business->id, $businessOnly->id, 3);
+
+        $availability = app(CultivationController::class)->assignmentAvailability(Request::create('/api/teacher/assignment-availability', 'POST', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $section->id,
+            'optionalGroupId' => $science->id,
+            'departmentScope' => 'specific',
+            'genderScope' => 'all',
+        ]));
+        $availableIds = collect($availability->getData(true)['subjects'] ?? [])->pluck('id')->map(fn ($id) => (int) $id)->all();
+
+        app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+            'userName' => 'catalog-align-pass',
+            'userMail' => 'catalog-align-pass@example.test',
+            'assignmentSessionId' => $session->id,
+            'className' => [$class->id],
+            'section' => [$section->id],
+            'optionalGroup' => [$science->id],
+            'departmentScope' => ['specific'],
+            'genderScope' => ['all'],
+            'subject' => [$scienceOnly->id],
+        ])));
+
+        $this->assertContains($scienceOnly->id, $availableIds);
+
+        try {
+            app(CultivationController::class)->saveUser(Request::create('/save/admin', 'POST', $this->teacherPayload([
+                'userName' => 'catalog-align-reject',
+                'userMail' => 'catalog-align-reject@example.test',
+                'assignmentSessionId' => $session->id,
+                'className' => [$class->id],
+                'section' => [$section->id],
+                'optionalGroup' => [$science->id],
+                'departmentScope' => ['specific'],
+                'genderScope' => ['all'],
+                'subject' => [$businessOnly->id],
+            ])));
+            $this->fail('Expected unavailable cross-department subject to be rejected by save-time validation.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('subject', $exception->errors());
+        }
+    }
+
+    public function test_create_and_edit_forms_use_the_same_assignment_availability_endpoint(): void
+    {
+        $createView = file_get_contents(resource_path('views/admin-modern/users/create.blade.php'));
+        $editView = file_get_contents(resource_path('views/admin-modern/users/edit.blade.php'));
+
+        $this->assertIsString($createView);
+        $this->assertIsString($editView);
+        $this->assertStringContainsString("route('api.teacher.assignment-availability')", $createView);
+        $this->assertStringContainsString("route('api.teacher.assignment-availability')", $editView);
+    }
+
     private function teacherPayload(array $overrides = []): array
     {
         return array_merge([

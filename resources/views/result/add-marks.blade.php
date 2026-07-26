@@ -170,6 +170,16 @@ Add New Marks
                 const option = document.createElement('option');
                 option.value = String(row.id);
                 option.textContent = row.name || row.subjectName || '';
+
+                const supportsGroup = Object.prototype.hasOwnProperty.call(row, 'supports_group')
+                    ? row.supports_group
+                    : (Object.prototype.hasOwnProperty.call(row, 'requires_department')
+                        ? row.requires_department
+                        : row.requiresOptionalGroup);
+                if (supportsGroup !== undefined) {
+                    option.dataset.supportsGroup = supportsGroup ? '1' : '0';
+                }
+
                 element.appendChild(option);
             });
 
@@ -200,13 +210,22 @@ Add New Marks
         }
 
         function classNeedsOptionalGroup() {
+            const selectedOption = classSelect.options[classSelect.selectedIndex];
+            if (selectedOption && selectedOption.dataset && selectedOption.dataset.supportsGroup !== undefined) {
+                return selectedOption.dataset.supportsGroup === '1';
+            }
+
             return Boolean(classRequirementMap[String(classSelect.value || '')]);
         }
 
-        function syncOptionalGroupVisibility() {
-            const visible = classNeedsOptionalGroup();
+        function applyDepartmentVisibility() {
+            const supportsGroup = classNeedsOptionalGroup();
+            const hasClass = Boolean(classSelect.value);
+            const visible = hasClass && supportsGroup;
+
             optionalGroupWrapper.classList.toggle('d-none', !visible);
             optionalGroupSelect.disabled = !visible;
+            optionalGroupSelect.required = visible;
 
             if (!visible) {
                 optionalGroupSelect.value = '';
@@ -232,7 +251,7 @@ Add New Marks
             replaceOptions(sectionSelect, 'Select class first', true);
             replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
             replaceOptions(subjectSelect, 'Select section first', true);
-            syncOptionalGroupVisibility();
+            applyDepartmentVisibility();
             updateSubmitState();
         }
 
@@ -241,14 +260,14 @@ Add New Marks
             replaceOptions(sectionSelect, 'Select class first', true);
             replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
             replaceOptions(subjectSelect, 'Select section first', true);
-            syncOptionalGroupVisibility();
+            applyDepartmentVisibility();
             updateSubmitState();
         }
 
         function resetAfterSection() {
             replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
             replaceOptions(subjectSelect, 'Select section first', true);
-            syncOptionalGroupVisibility();
+            applyDepartmentVisibility();
             updateSubmitState();
         }
 
@@ -275,10 +294,13 @@ Add New Marks
                 rows.forEach(row => {
                     const requiresDepartment = Object.prototype.hasOwnProperty.call(row, 'requires_department')
                         ? row.requires_department
-                        : row.requiresOptionalGroup;
+                        : (Object.prototype.hasOwnProperty.call(row, 'supports_group')
+                            ? row.supports_group
+                            : row.requiresOptionalGroup);
                     classRequirementMap[String(row.id)] = Boolean(requiresDepartment);
                 });
                 addOptions(classSelect, rows, restoreOld ? oldValues.classId : '');
+                applyDepartmentVisibility();
 
                 if (restoreOld && classSelect.value) {
                     await loadSections(true);
@@ -297,7 +319,7 @@ Add New Marks
             const version = ++requestVersion;
 
             resetAfterClass();
-            syncOptionalGroupVisibility();
+            applyDepartmentVisibility();
 
             if (!classId || !sessionId) return;
 
@@ -336,7 +358,7 @@ Add New Marks
             const version = ++requestVersion;
 
             resetAfterSection();
-            syncOptionalGroupVisibility();
+            applyDepartmentVisibility();
 
             if (!classId || !sessionId || (sectionRequired && !sectionId)) return;
 
@@ -414,17 +436,32 @@ Add New Marks
         function bindChange(element, handler) {
             if (window.jQuery) {
                 window.jQuery(element).off('.marksEntry').on('change.marksEntry', handler);
-            } else {
-                element.addEventListener('change', handler);
+                return;
             }
+
+            element.addEventListener('change', handler);
         }
 
         bindChange(examSelect, function () { loadClasses(false); });
         bindChange(sessionSelect, function () { loadClasses(false); });
-        bindChange(classSelect, function () { loadSections(false); });
+        bindChange(classSelect, function () {
+            applyDepartmentVisibility();
+            loadSections(false);
+        });
         bindChange(sectionSelect, function () { loadGroups(false); });
         bindChange(optionalGroupSelect, function () { loadSubjects(false); });
         bindChange(subjectSelect, updateSubmitState);
+
+        document.addEventListener('change', function (event) {
+            if (event.target && event.target.id === 'marks_class_select') {
+                applyDepartmentVisibility();
+            }
+        });
+
+        window.addEventListener('pageshow', function () {
+            applyDepartmentVisibility();
+            updateSubmitState();
+        });
 
         (async function initialize() {
             resetAfterSession();
@@ -438,6 +475,7 @@ Add New Marks
                 await loadClasses(true);
             }
 
+            applyDepartmentVisibility();
             updateSubmitState();
         })();
     });

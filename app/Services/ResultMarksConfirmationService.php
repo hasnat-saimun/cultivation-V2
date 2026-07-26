@@ -39,6 +39,7 @@ class ResultMarksConfirmationService
         $subject = Subject::find($scope['subjectId']);
         $exam = Exam::find($scope['examId']);
         if (!$subject || !$exam) throw ResultLifecycleException::missing();
+        $confirmWithBlanks = (string) ($input['confirm_blank_marks'] ?? '0') === '1';
         $students = $this->population->resolve(
             $scope,
             $subject,
@@ -50,9 +51,9 @@ class ResultMarksConfirmationService
         if ($students->isEmpty()) {
             throw ResultLifecycleException::invalid('ScopeIncomplete', 'No applicable active students were found for this subject scope.');
         }
-        $preflight = $this->verifyComplete($scope, $students, $exam, $subject);
+        $preflight = $this->verifyComplete($scope, $students, $exam, $subject, false, $confirmWithBlanks);
 
-        return DB::transaction(function () use ($scope, $revision, $preflight, $students, $exam, $subject, $actor, $ipAddress) {
+        return DB::transaction(function () use ($scope, $revision, $preflight, $students, $exam, $subject, $actor, $ipAddress, $confirmWithBlanks) {
             $state = $this->scopes->query($scope)->lockForUpdate()->first();
             if (!$state) throw ResultLifecycleException::missing();
             $this->scopes->assertNotPublished($scope);
@@ -66,7 +67,7 @@ class ResultMarksConfirmationService
             if ((int) $state->revision !== $revision) {
                 throw ResultLifecycleException::conflict('ScopeRevisionConflict', 'Marks changed during confirmation.');
             }
-            $locked = $this->verifyComplete($scope, $students, $exam, $subject, true);
+            $locked = $this->verifyComplete($scope, $students, $exam, $subject, true, $confirmWithBlanks);
             if ($locked['fingerprint'] !== $preflight['fingerprint']) {
                 throw ResultLifecycleException::conflict('ScopeRevisionConflict', 'Marks changed during confirmation.');
             }
@@ -88,7 +89,11 @@ class ResultMarksConfirmationService
                     'confirmed_by' => (int) $actor->id,
                     'confirmed_at' => $state->confirmed_at?->toISOString(),
                 ],
-                ['student_count' => $students->count(), 'marks_fingerprint' => $locked['fingerprint']],
+                [
+                    'student_count' => $students->count(),
+                    'marks_fingerprint' => $locked['fingerprint'],
+                    'blank_override' => $confirmWithBlanks,
+                ],
                 null,
                 $ipAddress,
             );
@@ -96,7 +101,14 @@ class ResultMarksConfirmationService
         }, 3);
     }
 
-    private function verifyComplete(array $scope, $students, Exam $exam, Subject $subject, bool $lock = false): array
+    private function verifyComplete(
+        array $scope,
+        $students,
+        Exam $exam,
+        Subject $subject,
+        bool $lock = false,
+        bool $allowBlankConfirmation = false
+    ): array
     {
         $query = Marksheet::query()
             ->where('sessionId', (string) $scope['sessionId'])
@@ -109,6 +121,8 @@ class ResultMarksConfirmationService
         if ($lock) $query->lockForUpdate();
         $marks = $query->get()->keyBy(fn ($mark) => (int) $mark->studentId);
         $errors = [];
+        $blankFieldCount = 0;
+        $blankStudentIds = [];
         $fingerprintRows = [];
         foreach ($students as $student) {
             $mark = $marks->get((int) $student->id);
@@ -116,12 +130,25 @@ class ResultMarksConfirmationService
                 $errors[] = ['studentId' => (int) $student->id, 'issue' => 'missing_marks_row'];
                 continue;
             }
+
+            $subjectBlank = $mark->subjectMarks === null;
+            $mcqBlank = $mark->objectMarks === null;
+            $practicalBlank = $mark->practicalMarks === null;
+            $studentBlankCount = (int) $subjectBlank + (int) $mcqBlank + (int) $practicalBlank;
+            if ($studentBlankCount > 0) {
+                $blankFieldCount += $studentBlankCount;
+                $blankStudentIds[] = (int) $student->id;
+            }
+
             $result = $this->calculator->calculateSubject($student, $exam, $mark, $subject);
             if ($result->status === 'Incomplete') {
-                $errors[] = ['studentId' => (int) $student->id, 'issue' => 'incomplete_components'];
-                continue;
+                if (!$allowBlankConfirmation) {
+                    $errors[] = ['studentId' => (int) $student->id, 'issue' => 'incomplete_components'];
+                    continue;
+                }
             }
-            if (!$this->cacheMatches($mark, $result)) {
+            if (!$this->cacheMatches($mark, $result)
+                && !($allowBlankConfirmation && $result->status === 'Incomplete')) {
                 $errors[] = ['studentId' => (int) $student->id, 'issue' => 'compatibility_cache_mismatch'];
                 continue;
             }
@@ -132,6 +159,23 @@ class ResultMarksConfirmationService
                 $mark->practicalMarks === null ? null : (float) $mark->practicalMarks,
             ];
         }
+
+        $hasBlankRelatedError = collect($errors)->contains(fn ($error) => in_array($error['issue'] ?? '', ['missing_marks_row', 'incomplete_components'], true));
+        if ($hasBlankRelatedError && !$allowBlankConfirmation) {
+            $blankStudentIds = array_values(array_unique($blankStudentIds));
+            $sampleStudentIds = array_slice($blankStudentIds, 0, 5);
+            throw ResultLifecycleException::invalid(
+                'BlankMarksConfirmationRequired',
+                'Some mark fields are blank. Confirm with blank-mark override or save as draft.',
+                [
+                    'requires_override' => true,
+                    'blank_student_count' => count($blankStudentIds),
+                    'blank_field_count' => $blankFieldCount,
+                    'sample_student_ids' => $sampleStudentIds,
+                ]
+            );
+        }
+
         if ($errors !== []) {
             $summary = collect($errors)->countBy('issue')->map(fn ($count, $issue) => ['issue' => $issue, 'count' => $count])->values()->all();
             throw ResultLifecycleException::invalid(

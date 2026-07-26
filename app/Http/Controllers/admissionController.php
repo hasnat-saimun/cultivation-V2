@@ -219,6 +219,7 @@ class AdmissionController extends Controller
             'sessions' => sessionManage::query()->orderBy('id')->get(['id', 'session']),
             'sections' => sectionManage::query()->orderBy('id')->get(['id', 'section']),
             'departments' => Department::query()->orderBy('id')->get(['id', 'departmentName']),
+            'genderOptions' => $this->studentGenderOptions(),
             'latestTestimonialIds' => $latestTestimonialIds,
             'latestTransferCertificateIds' => $latestTransferCertificateIds,
         ]);
@@ -278,6 +279,9 @@ class AdmissionController extends Controller
         if (!empty($filters['departmentId'])) {
             $q->where('new_admissions.departmentName', $filters['departmentId']);
         }
+        if (!empty($filters['gender'])) {
+            $q->where('new_admissions.gender', $filters['gender']);
+        }
         if (!empty($filters['search'])) {
             $s = $filters['search'];
             $q->where(function($w) use ($s){
@@ -304,6 +308,7 @@ class AdmissionController extends Controller
             'sessionId' => 'nullable|integer|min:1',
             'sectionId' => 'nullable|integer|min:1',
             'departmentId' => 'nullable|integer|min:1',
+            'gender' => 'nullable|in:1,2,3',
             'search' => 'nullable|string|max:100',
         ]);
 
@@ -314,7 +319,17 @@ class AdmissionController extends Controller
             'sessionId' => isset($safe['sessionId']) ? (int) $safe['sessionId'] : null,
             'sectionId' => isset($safe['sectionId']) ? (int) $safe['sectionId'] : null,
             'departmentId' => isset($safe['departmentId']) ? (int) $safe['departmentId'] : null,
+            'gender' => isset($safe['gender']) ? (string) $safe['gender'] : null,
             'search' => isset($safe['search']) ? trim((string) $safe['search']) : null,
+        ];
+    }
+
+    private function studentGenderOptions(): array
+    {
+        return [
+            '1' => 'Male',
+            '2' => 'Female',
+            '3' => 'Others',
         ];
     }
 
@@ -1073,7 +1088,7 @@ class AdmissionController extends Controller
      */
     public function bulkStudentUpdateStore(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'students' => 'required|array',
             'students.*.id' => 'required|exists:new_admissions,id',
             'students.*.fullName' => 'nullable|string|max:255',
@@ -1097,45 +1112,86 @@ class AdmissionController extends Controller
             'students.*.relationGurdian' => 'nullable|integer',
         ]);
 
+        $fields = [
+            'fullName',
+            'sureName',
+            'father',
+            'mother',
+            'gender',
+            'dob',
+            'mail',
+            'phone',
+            'address',
+            'sessName',
+            'className',
+            'departmentName',
+            'sectionName',
+            'religiousSubjectId',
+            'fourthSubjectId',
+            'rollNumber',
+            'gurdianName',
+            'gurdianMobile',
+            'relationGurdian',
+        ];
+        $numericNullableFields = [
+            'sessName',
+            'className',
+            'departmentName',
+            'sectionName',
+            'religiousSubjectId',
+            'fourthSubjectId',
+            'relationGurdian',
+        ];
+
         $updated = 0;
-        foreach ($request->input('students', []) as $studentData) {
-            $student = newAdmission::find($studentData['id'] ?? null);
-            if (!$student) {
-                continue;
-            }
-            $fields = [
-                'fullName',
-                'sureName',
-                'father',
-                'mother',
-                'gender',
-                'dob',
-                'mail',
-                'phone',
-                'address',
-                'sessName',
-                'className',
-                'departmentName',
-                'sectionName',
-                'religiousSubjectId',
-                'fourthSubjectId',
-                'rollNumber',
-                'gurdianName',
-                'gurdianMobile',
-                'relationGurdian',
-            ];
+        $unchanged = 0;
 
-            foreach ($fields as $field) {
-                if (array_key_exists($field, $studentData)) {
-                    $student->{$field} = $studentData[$field];
+        DB::transaction(function () use (&$updated, &$unchanged, $validated, $fields, $numericNullableFields) {
+            foreach (($validated['students'] ?? []) as $studentData) {
+                $student = newAdmission::query()->find($studentData['id'] ?? null);
+                if (!$student) {
+                    continue;
                 }
-            }
 
-            $student->save();
-            $updated++;
+                foreach ($fields as $field) {
+                    if (!array_key_exists($field, $studentData)) {
+                        continue;
+                    }
+
+                    $value = $studentData[$field];
+                    if (in_array($field, $numericNullableFields, true) && $value === '') {
+                        $value = null;
+                    }
+
+                    $student->{$field} = $value;
+                }
+
+                if (!$student->isDirty()) {
+                    $unchanged++;
+                    continue;
+                }
+
+                if (!$student->save()) {
+                    throw new \RuntimeException('Student bulk update failed for ID '.$student->id);
+                }
+
+                $updated++;
+            }
+        });
+
+        if ($updated === 0) {
+            return redirect()->route('studentBulkUpdate')->with(
+                'error',
+                $unchanged > 0
+                    ? 'No changes were saved because all submitted values matched current records.'
+                    : 'No student records were updated.'
+            );
         }
 
-        return redirect()->route('studentBulkUpdate')->with('success', "Successfully updated {$updated} student(s)");
+        return redirect()->route('studentBulkUpdate')->with(
+            'success',
+            "Successfully updated {$updated} student(s).".($unchanged > 0 ? " {$unchanged} row(s) unchanged." : '')
+        );
     }
 
 

@@ -1352,6 +1352,18 @@ h6 {
   width: 100%;
   z-index: 9999999;
 }
+
+#preloader.preloader-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#preloader.preloader-hidden,
+#preloader[aria-hidden='true'] {
+  background-image: none;
+}
+
 #scrollUp {
   background-color: #042954;
   bottom: 20px;

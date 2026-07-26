@@ -16,6 +16,7 @@
                 'sessionId' => request()->get('sessionId'),
                 'sectionId' => request()->get('sectionId'),
                 'departmentId' => request()->get('departmentId'),
+                'gender' => request()->get('gender'),
                 'search' => request()->get('search'),
             ], function ($v) { return $v !== null && $v !== ''; });
         @endphp
@@ -63,6 +64,16 @@
                     <option value="">All</option>
                     @foreach($departments as $d)
                         <option value="{{ $d->id }}" {{ request()->get('departmentId') == $d->id ? 'selected' : '' }}>{{ $d->departmentName }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div>
+                <label style="display:block; margin-bottom:0.3rem; font-size:0.85rem;">Gender</label>
+                <select name="gender" class="form-control">
+                    <option value="">All</option>
+                    @foreach(($genderOptions ?? []) as $genderValue => $genderLabel)
+                        <option value="{{ $genderValue }}" {{ request()->get('gender') === (string) $genderValue ? 'selected' : '' }}>{{ $genderLabel }}</option>
                     @endforeach
                 </select>
             </div>

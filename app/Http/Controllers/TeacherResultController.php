@@ -11,6 +11,7 @@ use App\Services\TeacherResultWorkspaceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class TeacherResultController extends Controller
@@ -73,10 +74,40 @@ class TeacherResultController extends Controller
 
     public function confirm(Request $request): RedirectResponse
     {
-        $request->validate(['scope_revision' => ['required', 'integer', 'min:1']]);
+        $request->validate([
+            'scope_revision' => ['required', 'integer', 'min:1'],
+            'submission_action' => ['nullable', Rule::in(['confirm', 'confirm_with_blanks', 'draft'])],
+            'confirm_blank_marks' => ['nullable', 'boolean'],
+        ]);
         try {
             $authorized = $this->workspace->authorize($this->teacher(), $request->all());
             $input = $this->workspace->serviceInput($request->all(), $authorized['scope']);
+            $action = (string) ($request->input('submission_action') ?: 'confirm');
+
+            if ($action === 'draft') {
+                $this->validateMarks($request);
+                $result = $this->drafts->save($input, $this->teacher(), $request->ip());
+                return redirect()->route('teacher.results.workspace', $this->query($authorized['scope']))
+                    ->with('success', $result['changed_student_count'] > 0
+                        ? 'Draft marks saved successfully.'
+                        : 'Draft marks are already up to date.');
+            }
+
+            if ($request->filled('studentId')) {
+                $this->validateMarks($request);
+                $draftResult = $this->drafts->save($input, $this->teacher(), $request->ip());
+                $scopeRevisions = (array) ($draftResult['current_revisions'] ?? []);
+                if ($scopeRevisions !== []) {
+                    $singleScopeRevision = count($scopeRevisions) === 1 ? reset($scopeRevisions) : null;
+                    if ($singleScopeRevision !== false && $singleScopeRevision !== null) {
+                        $input['scope_revision'] = (int) $singleScopeRevision;
+                    }
+                    $input['scope_revisions'] = $scopeRevisions;
+                }
+            }
+
+            $input['confirm_blank_marks'] = ($action === 'confirm_with_blanks' || (string) $request->input('confirm_blank_marks') === '1') ? 1 : 0;
+
             $this->confirmations->confirm($input, $this->teacher(), $request->ip());
             return redirect()->route('teacher.results.workspace', $this->query($authorized['scope']))
                 ->with('success', 'Subject marks confirmed successfully.');
@@ -108,6 +139,7 @@ class TeacherResultController extends Controller
             'ScopeRevisionConflict' => 'This workspace is stale. Reload it before submitting again.',
             'ScopeAlreadyConfirmed' => 'Confirmed marks are read-only.',
             'ScopePublished' => 'Published results are read-only.',
+            'BlankMarksConfirmationRequired' => 'Some mark fields are blank. Choose Confirm Anyway or save as Draft.',
             'ScopeIncomplete' => 'The scope is incomplete and cannot be confirmed.',
             default => 'The result operation could not be completed for this assigned scope.',
         };

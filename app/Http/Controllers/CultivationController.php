@@ -1433,67 +1433,205 @@ class CultivationController extends Controller
         $subjectNames = Subject::query()->pluck('subjectName', 'id');
         $sessionNames = sessionManage::query()->pluck('session', 'id');
 
-        $assignmentBuckets = [];
+        $legacySubjectIdsByTeacher = [];
+        $legacyClassIdsByTeacher = [];
+        if (!empty($teacherIds)) {
+            $legacySubjectRows = DB::table('teacher_subjects')
+                ->whereIn('teacher_id', $teacherIds)
+                ->get(['teacher_id', 'subject_id']);
+
+            foreach ($legacySubjectRows as $row) {
+                $teacherId = (int) $row->teacher_id;
+                $subjectId = (int) $row->subject_id;
+                if ($teacherId <= 0 || $subjectId <= 0) {
+                    continue;
+                }
+
+                $legacySubjectIdsByTeacher[$teacherId] = $legacySubjectIdsByTeacher[$teacherId] ?? [];
+                $legacySubjectIdsByTeacher[$teacherId][$subjectId] = true;
+            }
+
+            $legacyClassRows = DB::table('teacher_classes')
+                ->whereIn('teacher_id', $teacherIds)
+                ->get(['teacher_id', 'class_id']);
+
+            foreach ($legacyClassRows as $row) {
+                $teacherId = (int) $row->teacher_id;
+                $classId = (int) $row->class_id;
+                if ($teacherId <= 0 || $classId <= 0) {
+                    continue;
+                }
+
+                $legacyClassIdsByTeacher[$teacherId] = $legacyClassIdsByTeacher[$teacherId] ?? [];
+                $legacyClassIdsByTeacher[$teacherId][$classId] = true;
+            }
+        }
+
+        $scopeBuckets = [];
+        $ensureScope = function (
+            int $teacherId,
+            ?int $sessionId,
+            ?int $classId,
+            ?int $sectionId,
+            ?int $departmentId,
+            string $genderLabel
+        ) use (&$scopeBuckets, $sessionNames, $classNames, $sectionNames, $groupNames): string {
+            $key = implode('|', [
+                $teacherId,
+                $sessionId ?? 0,
+                $classId ?? 0,
+                $sectionId ?? 0,
+                $departmentId ?? 0,
+                $genderLabel,
+            ]);
+
+            if (isset($scopeBuckets[$teacherId][$key])) {
+                return $key;
+            }
+
+            $sessionName = $sessionId ? ($sessionNames[$sessionId] ?? ('Session '.$sessionId)) : 'Legacy Session';
+            $className = $classId ? ($classNames[$classId] ?? ('Class '.$classId)) : null;
+            $sectionName = $sectionId ? ($sectionNames[$sectionId] ?? ('Section '.$sectionId)) : null;
+            $groupName = $departmentId ? ($groupNames[$departmentId] ?? ('Group '.$departmentId)) : null;
+
+            $labelParts = [$sessionName];
+            if ($className) {
+                $labelParts[] = $className;
+            }
+            if ($sectionName) {
+                $labelParts[] = $sectionName;
+            }
+            if ($groupName) {
+                $labelParts[] = $groupName;
+            }
+            $labelParts[] = 'Gender: '.$genderLabel;
+
+            $scopeBuckets[$teacherId][$key] = [
+                'scope_key' => $key,
+                'teacher_id' => $teacherId,
+                'session_id' => $sessionId,
+                'class_id' => $classId,
+                'section_id' => $sectionId,
+                'department_id' => $departmentId,
+                'gender_label' => $genderLabel,
+                'label' => implode(' / ', $labelParts),
+                'subjects' => [],
+            ];
+
+            return $key;
+        };
+
+        $attachSubject = function (int $teacherId, string $scopeKey, int $subjectId, string $source) use (&$scopeBuckets, $subjectNames): void {
+            if ($subjectId <= 0 || !isset($scopeBuckets[$teacherId][$scopeKey])) {
+                return;
+            }
+
+            $subjectName = trim((string) ($subjectNames[$subjectId] ?? ('Subject '.$subjectId)));
+            if ($subjectName === '') {
+                $subjectName = 'Subject '.$subjectId;
+            }
+
+            if (!isset($scopeBuckets[$teacherId][$scopeKey]['subjects'][$subjectId])) {
+                $scopeBuckets[$teacherId][$scopeKey]['subjects'][$subjectId] = [
+                    'id' => $subjectId,
+                    'name' => $subjectName,
+                    'sources' => [],
+                ];
+            }
+
+            if (!in_array($source, $scopeBuckets[$teacherId][$scopeKey]['subjects'][$subjectId]['sources'], true)) {
+                $scopeBuckets[$teacherId][$scopeKey]['subjects'][$subjectId]['sources'][] = $source;
+            }
+        };
+
         foreach ($compositeRows as $row) {
             $teacherId = (int) $row->teacher_id;
-            $rowSessionId = property_exists($row, 'session_id') ? $row->session_id : null;
-            $sessionName = $rowSessionId ? ($sessionNames[(int) $rowSessionId] ?? ('Session '.$rowSessionId)) : 'Legacy Session';
-            $className = $classNames[(int) $row->class_id] ?? ('Class '.$row->class_id);
-            $sectionName = $row->section_id ? ($sectionNames[(int) $row->section_id] ?? ('Section '.$row->section_id)) : null;
-            $groupName = $row->group_id ? ($groupNames[(int) $row->group_id] ?? ('Group '.$row->group_id)) : null;
+            $rowSessionId = property_exists($row, 'session_id') && $row->session_id !== null
+                ? (int) $row->session_id
+                : null;
+            $classId = $row->class_id !== null ? (int) $row->class_id : null;
+            $sectionId = $row->section_id !== null ? (int) $row->section_id : null;
+            $groupId = $row->group_id !== null ? (int) $row->group_id : null;
             $genderScope = $this->normalizeGenderScopeValue($row->gender_scope ?? 'all');
             $genderLabel = (new \App\Models\TeacherClassSubject(['gender_scope' => $genderScope]))->gender_scope_label;
 
-            $label = $sessionName.' / '.$className;
-            if ($sectionName) {
-                $label .= ' / '.$sectionName;
-            }
-            if ($groupName) {
-                $label .= ' / '.$groupName;
-            }
-            $label .= ' / Gender: '.$genderLabel;
-
-            $subjectName = $row->subject_id ? ($subjectNames[(int) $row->subject_id] ?? ('Subject '.$row->subject_id)) : null;
-            if (!$subjectName) {
+            $subjectId = $row->subject_id !== null ? (int) $row->subject_id : null;
+            if ($teacherId <= 0 || $classId === null || $subjectId === null || $subjectId <= 0) {
                 continue;
             }
 
-            $assignmentBuckets[$teacherId][$label][] = $subjectName;
+            $scopeKey = $ensureScope($teacherId, $rowSessionId, $classId, $sectionId, $groupId, $genderLabel);
+            $attachSubject($teacherId, $scopeKey, $subjectId, 'composite');
         }
 
         foreach ($userList as $user) {
             $teacherId = (int) $user->id;
-            $summary = [];
-
-            if (isset($assignmentBuckets[$teacherId])) {
-                foreach ($assignmentBuckets[$teacherId] as $label => $subjects) {
-                    $subjects = array_values(array_unique(array_filter($subjects)));
-                    sort($subjects);
-                    $summary[] = [
-                        'label' => $label,
-                        'subjects' => $subjects,
-                    ];
+            if ((int) $user->userType === CultivationAdmin::ROLE_TEACHER) {
+                $legacySubjectIds = array_map('intval', array_keys($legacySubjectIdsByTeacher[$teacherId] ?? []));
+                if (empty($legacySubjectIds)) {
+                    $legacySubjectIds = $user->subjects->pluck('id')->map(fn ($id) => (int) $id)->filter()->values()->all();
                 }
-            }
 
-            if (empty($summary) && (int) $user->userType === CultivationAdmin::ROLE_TEACHER) {
-                $legacyClasses = $user->classes->pluck('className')->filter()->values()->all();
-                $legacySubjects = $user->subjects->pluck('subjectName')->filter()->unique()->values()->all();
+                $legacyClassIds = array_map('intval', array_keys($legacyClassIdsByTeacher[$teacherId] ?? []));
+                if (empty($legacyClassIds)) {
+                    $legacyClassIds = $user->classes->pluck('id')->map(fn ($id) => (int) $id)->filter()->values()->all();
+                }
 
-                if (!empty($legacyClasses) && !empty($legacySubjects)) {
-                    foreach ($legacyClasses as $legacyClassName) {
-                        $summary[] = [
-                            'label' => $legacyClassName,
-                            'subjects' => $legacySubjects,
-                        ];
+                $legacySubjectIds = array_values(array_unique(array_filter($legacySubjectIds, fn ($id) => $id > 0)));
+                $legacyClassIds = array_values(array_unique(array_filter($legacyClassIds, fn ($id) => $id > 0)));
+
+                if (!empty($legacySubjectIds)) {
+                    if (!empty($legacyClassIds)) {
+                        foreach ($legacyClassIds as $legacyClassId) {
+                            $scopeKey = $ensureScope($teacherId, null, $legacyClassId, null, null, 'All');
+                            foreach ($legacySubjectIds as $subjectId) {
+                                $attachSubject($teacherId, $scopeKey, $subjectId, 'legacy');
+                            }
+                        }
+                    } else {
+                        $scopeKey = $ensureScope($teacherId, null, null, null, null, 'All');
+                        $scopeBuckets[$teacherId][$scopeKey]['label'] = 'General Assignment';
+
+                        foreach ($legacySubjectIds as $subjectId) {
+                            $attachSubject($teacherId, $scopeKey, $subjectId, 'legacy');
+                        }
                     }
-                } elseif (!empty($legacySubjects)) {
-                    $summary[] = [
-                        'label' => 'General Assignment',
-                        'subjects' => $legacySubjects,
-                    ];
                 }
             }
+
+            $summary = [];
+            $teacherScopes = $scopeBuckets[$teacherId] ?? [];
+            foreach ($teacherScopes as $scope) {
+                $subjectItems = array_values($scope['subjects']);
+                usort($subjectItems, function ($left, $right) {
+                    return ($left['id'] <=> $right['id']) ?: strcmp((string) $left['name'], (string) $right['name']);
+                });
+
+                $subjectNamesForDisplay = array_map(function (array $subjectItem): string {
+                    return (string) $subjectItem['name'];
+                }, $subjectItems);
+
+                $subjectNamesForDisplay = array_values(array_unique(array_filter($subjectNamesForDisplay, fn ($name) => trim((string) $name) !== '')));
+                if (empty($subjectItems) || empty($subjectNamesForDisplay)) {
+                    continue;
+                }
+
+                $summary[] = [
+                    'scope_key' => (string) $scope['scope_key'],
+                    'label' => (string) $scope['label'],
+                    'subjects' => $subjectNamesForDisplay,
+                    'subject_items' => $subjectItems,
+                    'teacher_id' => $scope['teacher_id'],
+                    'session_id' => $scope['session_id'],
+                    'class_id' => $scope['class_id'],
+                    'section_id' => $scope['section_id'],
+                    'department_id' => $scope['department_id'],
+                ];
+            }
+
+            usort($summary, function ($left, $right) {
+                return strcmp((string) ($left['label'] ?? ''), (string) ($right['label'] ?? ''));
+            });
 
             $user->setAttribute('subject_assignment_summary', $summary);
         }

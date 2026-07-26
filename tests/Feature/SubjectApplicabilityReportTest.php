@@ -132,6 +132,7 @@ class SubjectApplicabilityReportTest extends TestCase
         $ids = $subjects->pluck('id')->all();
 
         $this->assertSame([
+            $legacyHistoryCommon->id,
             $bangla->id,
             $math->id,
             $physics->id,
@@ -141,7 +142,7 @@ class SubjectApplicabilityReportTest extends TestCase
 
         $this->assertNotContains($accounting->id, $ids);
         $this->assertNotContains($history->id, $ids);
-        $this->assertNotContains($legacyHistoryCommon->id, $ids);
+        $this->assertSame(5, (int) $subjects->firstWhere('id', $legacyHistoryCommon->id)?->applicability_order);
 
         $this->assertSame(10, (int) $subjects->firstWhere('id', $bangla->id)?->applicability_order);
         $this->assertSame(20, (int) $subjects->firstWhere('id', $math->id)?->applicability_order);

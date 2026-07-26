@@ -110,14 +110,6 @@ class CurriculumSubjectMappingService
             return collect();
         }
 
-        $hasExactSectionCommonRows = $resolvedRows->contains(function (array $item) use ($exactSectionScope, $commonDepartmentScope): bool {
-            if ((string) $item['section_scope'] !== $exactSectionScope) {
-                return false;
-            }
-
-            return in_array((string) $item['department_scope'], [$commonDepartmentScope, 'department:all'], true);
-        });
-
         $bySubject = [];
         foreach ($resolvedRows as $resolved) {
             $row = $resolved['row'];
@@ -133,7 +125,7 @@ class CurriculumSubjectMappingService
                 $exactDepartmentScope,
                 $commonDepartmentScope,
                 $departmentBasedClass,
-                !$hasExactSectionCommonRows
+                true
             );
 
             if ($rank === 0) {

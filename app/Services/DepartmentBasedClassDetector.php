@@ -28,11 +28,19 @@ class DepartmentBasedClassDetector
             '9ম', '10ম', '11তম', '12তম',
         ];
 
-        if (in_array($normalized, $singleTokenIndicators, true)) {
+        if (in_array($this->normalizeToken($normalized), $singleTokenIndicators, true)) {
             return true;
         }
 
         $tokens = preg_split('/\s+/u', $normalized, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (empty($tokens)) {
+            return false;
+        }
+
+        $tokens = array_map(function (string $token): string {
+            return $this->normalizeToken($token);
+        }, $tokens);
+        $tokens = array_values(array_filter($tokens, fn (string $token): bool => $token !== ''));
         if (empty($tokens)) {
             return false;
         }
@@ -78,5 +86,19 @@ class DepartmentBasedClassDetector
         $normalized = preg_replace('/\s+/u', ' ', $normalized) ?? $normalized;
 
         return trim($normalized);
+    }
+
+    private function normalizeToken(string $token): string
+    {
+        $normalized = preg_replace('/[^\p{L}\p{M}\p{N}]+/u', '', trim($token)) ?? '';
+        if ($normalized === '') {
+            return '';
+        }
+
+        if (preg_match('/^0+([0-9]+)$/', $normalized, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return $normalized;
     }
 }

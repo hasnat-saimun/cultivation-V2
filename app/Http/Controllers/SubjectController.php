@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\classManage;
 use App\Models\Subject;
 use App\Models\ReligiousSubjectDefault;
+use Illuminate\Validation\Rule;
 
 class SubjectController extends Controller
 {
@@ -17,21 +18,22 @@ class SubjectController extends Controller
     }
 
     public function confirmSubject(Request $requ){
-        $chk = Subject::where(['subjectName'=>$requ->subjectName]);
+        $validated = $this->validateSubjectPayload($requ);
+        $chk = Subject::where(['subjectName'=>$validated['subjectName']]);
         if($chk->exists()):
-            return back()->with('error','Alias already exist');
+            return back()->withInput()->with('error','Alias already exist');
         else:
             $subject = new Subject();
-            $aliasCreate = str_replace(' ','_',$requ->subjectName);
+            $aliasCreate = str_replace(' ','_',$validated['subjectName']);
             $alias = strtolower($aliasCreate);
 
-            $subject->subjectName   = $requ->subjectName;
-            $subject->subjectType   = $requ->subjectType;
+            $subject->subjectName   = $validated['subjectName'];
+            $subject->subjectType   = $validated['subjectType'];
             $subject->passingSystem = $requ->passingSystem;
-            $subject->assign_class  = $requ->classId;
-            $subject->CQ            = $requ->cqValue;
-            $subject->MCQ           = $requ->mcqValue;
-            $subject->Practical     = $requ->practicalValue;
+            $subject->assign_class  = $validated['classId'] ?? null;
+            $subject->CQ            = $validated['cqValue'] ?? null;
+            $subject->MCQ           = $validated['mcqValue'] ?? null;
+            $subject->Practical     = $validated['practicalValue'] ?? null;
             $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
@@ -67,17 +69,19 @@ class SubjectController extends Controller
     
 
     public function updateSubject(Request $requ){
-        $subject = Subject::find($requ->itemId);
+        $validated = $this->validateSubjectPayload($requ, true);
+        $subject = Subject::find($validated['itemId']);
         if(!empty($subject) && $subject->exists()):
-            $aliasCreate = str_replace(' ','_',$requ->subjectName);
+            $aliasCreate = str_replace(' ','_',$validated['subjectName']);
             $alias = strtolower($aliasCreate);
 
-            $subject->subjectName   = $requ->subjectName;
-            $subject->subjectType   = $requ->subjectType;
+            $subject->subjectName   = $validated['subjectName'];
+            $subject->subjectType   = $validated['subjectType'];
             $subject->passingSystem = $requ->passingSystem;
-            $subject->CQ            = $requ->cqValue;
-            $subject->MCQ           = $requ->mcqValue;
-            $subject->Practical     = $requ->practicalValue;
+            $subject->assign_class  = $validated['classId'] ?? null;
+            $subject->CQ            = $validated['cqValue'] ?? null;
+            $subject->MCQ           = $validated['mcqValue'] ?? null;
+            $subject->Practical     = $validated['practicalValue'] ?? null;
             $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
@@ -106,6 +110,39 @@ class SubjectController extends Controller
         else:
             return back()->with('error','No alias found for update');
         endif;
+    }
+
+    private function validateSubjectPayload(Request $requ, bool $isUpdate = false): array
+    {
+        $subjectId = $isUpdate && $requ->filled('itemId') ? (int) $requ->input('itemId') : null;
+
+        return $requ->validate([
+            'itemId' => [$isUpdate ? 'required' : 'nullable', 'integer', 'exists:subjects,id'],
+            'subjectName' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('subjects', 'subjectName')->ignore($subjectId),
+            ],
+            'subjectType' => ['required', 'string', 'max:255'],
+            'classId' => [
+                'nullable',
+                function (string $attribute, $value, $fail) {
+                    if ($value === null || $value === '' || $value === '0') {
+                        return;
+                    }
+
+                    if (!is_numeric($value) || !classManage::whereKey((int) $value)->exists()) {
+                        $fail('The selected class is invalid.');
+                    }
+                },
+            ],
+            'cqValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'mcqValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'practicalValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'defaultReligiousClasses' => ['nullable', 'array'],
+            'defaultReligiousClasses.*' => ['integer', 'exists:class_manages,id'],
+        ]);
     }
 
     public function delSubject($id){

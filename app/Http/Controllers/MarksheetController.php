@@ -39,6 +39,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class MarksheetController extends Controller
@@ -280,13 +281,15 @@ class MarksheetController extends Controller
         $classes = $this->marksContext
             ->classesForContext($this->adminResolver->current())
             ->map(function ($class) {
+                $supportsGroup = $this->marksContext
+                    ->classRequiresOptionalGroup((string) $class->className);
+
                 return [
                     'id' => (int) $class->id,
                     'name' => (string) $class->className,
-                    'requires_department' => $this->marksContext
-                        ->classRequiresOptionalGroup((string) $class->className),
-                    'requiresOptionalGroup' => $this->marksContext
-                        ->classRequiresOptionalGroup((string) $class->className),
+                    'requires_department' => $supportsGroup,
+                    'requiresOptionalGroup' => $supportsGroup,
+                    'supports_group' => $supportsGroup,
                 ];
             })
             ->values();
@@ -572,34 +575,7 @@ class MarksheetController extends Controller
 
     public function saveDraftMarks(Request $request, bool $legacy = false)
     {
-        $subjectForValidation = Subject::find((int) $request->input('subjectId'));
-        $legacyAllComponents = $subjectForValidation
-            && $subjectForValidation->CQ === null
-            && $subjectForValidation->MCQ === null
-            && $subjectForValidation->Practical === null;
-        $cqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->CQ ?? 0);
-        $mcqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->MCQ ?? 0);
-        $practicalMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->Practical ?? 0);
-        $request->validate([
-            'examId' => 'required|integer',
-            'classId' => 'required|integer',
-            'subjectId' => 'required|integer',
-            'sessionId' => 'required|integer',
-            'groupId' => 'nullable|integer',
-            'optionalGroupId' => 'nullable|integer',
-            'gender' => 'nullable|string|in:all,1,2,3',
-            'studentId' => 'required|array|min:1|max:500',
-            'studentId.*' => 'required|integer|distinct',
-            'cqMarks' => 'nullable|array|max:500',
-            'cqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$cqMaximum],
-            'mcqMarks' => 'nullable|array|max:500',
-            'mcqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$mcqMaximum],
-            'practical' => 'nullable|array|max:500',
-            'practical.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$practicalMaximum],
-            'scope_revision' => 'nullable|integer|min:1',
-            'scope_revisions' => 'nullable|array',
-            'scope_revisions.*' => 'integer|min:1',
-        ]);
+        $this->validateDraftSubmissionPayload($request);
         $actor = $this->adminResolver->current();
         if (!$actor) abort(403);
 
@@ -626,17 +602,95 @@ class MarksheetController extends Controller
             'groupId' => 'nullable|integer',
             'optionalGroupId' => 'nullable|integer',
             'scope_revision' => 'required|integer|min:1',
+            'submission_action' => ['nullable', Rule::in(['confirm', 'confirm_with_blanks', 'draft'])],
+            'confirm_blank_marks' => 'nullable|boolean',
+            'studentId' => 'nullable|array|min:1|max:500',
+            'studentId.*' => 'nullable|integer|distinct',
+            'cqMarks' => 'nullable|array|max:500',
+            'mcqMarks' => 'nullable|array|max:500',
+            'practical' => 'nullable|array|max:500',
+            'scope_revisions' => 'nullable|array',
+            'scope_revisions.*' => 'integer|min:1',
         ]);
         $actor = $this->adminResolver->current();
         if (!$actor) abort(403);
         try {
-            $result = $this->marksConfirmation->confirm($request->all(), $actor, $request->ip());
+            $action = (string) ($request->input('submission_action') ?: 'confirm');
+            if ($action === 'draft') {
+                $this->validateDraftSubmissionPayload($request);
+                $result = $this->draftMarks->save($request->all(), $actor, $request->ip());
+
+                if ($request->expectsJson()) {
+                    return response()->json($result);
+                }
+
+                $message = $result['changed_student_count'] > 0
+                    ? 'Draft marks saved successfully (Changed: '.$result['changed_student_count'].', Unchanged: '.$result['unchanged_student_count'].').'
+                    : 'Draft marks are already up to date.';
+
+                return redirect()->route('addMarks')->with('success', $message);
+            }
+
+            // Keep confirm actions aligned with current form state by persisting submitted rows first.
+            if ($request->filled('studentId')) {
+                $this->validateDraftSubmissionPayload($request);
+                $draftResult = $this->draftMarks->save($request->all(), $actor, $request->ip());
+                $scopeRevisions = (array) ($draftResult['current_revisions'] ?? []);
+                if ($scopeRevisions !== []) {
+                    $singleScopeRevision = count($scopeRevisions) === 1 ? reset($scopeRevisions) : null;
+                    if ($singleScopeRevision !== false && $singleScopeRevision !== null) {
+                        $request->merge(['scope_revision' => (int) $singleScopeRevision]);
+                    }
+                    $request->merge(['scope_revisions' => $scopeRevisions]);
+                }
+            }
+
+            $confirmWithBlanks = $action === 'confirm_with_blanks'
+                || (string) $request->input('confirm_blank_marks') === '1';
+
+            $payload = $request->all();
+            $payload['confirm_blank_marks'] = $confirmWithBlanks ? 1 : 0;
+
+            $result = $this->marksConfirmation->confirm($payload, $actor, $request->ip());
             return $request->expectsJson()
                 ? response()->json($result)
                 : redirect()->route('addMarks')->with('success', 'Subject marks confirmed successfully.');
         } catch (ResultLifecycleException $exception) {
             return $this->lifecycleFailure($request, $exception);
         }
+    }
+
+    private function validateDraftSubmissionPayload(Request $request): void
+    {
+        $subjectForValidation = Subject::find((int) $request->input('subjectId'));
+        $legacyAllComponents = $subjectForValidation
+            && $subjectForValidation->CQ === null
+            && $subjectForValidation->MCQ === null
+            && $subjectForValidation->Practical === null;
+        $cqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->CQ ?? 0);
+        $mcqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->MCQ ?? 0);
+        $practicalMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->Practical ?? 0);
+
+        $request->validate([
+            'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'subjectId' => 'required|integer',
+            'sessionId' => 'required|integer',
+            'groupId' => 'nullable|integer',
+            'optionalGroupId' => 'nullable|integer',
+            'gender' => 'nullable|string|in:all,1,2,3',
+            'studentId' => 'required|array|min:1|max:500',
+            'studentId.*' => 'required|integer|distinct',
+            'cqMarks' => 'nullable|array|max:500',
+            'cqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$cqMaximum],
+            'mcqMarks' => 'nullable|array|max:500',
+            'mcqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$mcqMaximum],
+            'practical' => 'nullable|array|max:500',
+            'practical.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$practicalMaximum],
+            'scope_revision' => 'nullable|integer|min:1',
+            'scope_revisions' => 'nullable|array',
+            'scope_revisions.*' => 'integer|min:1',
+        ]);
     }
 
     public function reopenSubjectMarks(Request $request)
