@@ -191,6 +191,21 @@ class CentralizedPromotionReverterTest extends TestCase
             'subjectType'=>'Main','assign_class'=>(string)$scope['class']->id,'CQ'=>100,'MCQ'=>0,'Practical'=>0]);
         $student=newAdmission::create(['stdId'=>(string)random_int(100000,9999999),'fullName'=>'Student','sessName'=>$scope['session']->id,
             'className'=>$scope['class']->id,'sectionName'=>$scope['section']->id,'rollNumber'=>(string)random_int(1000,999999)]);
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $scope['session']->id,
+            'class_id' => (string) $scope['class']->id,
+            'section_id' => (string) $scope['section']->id,
+            'department_id' => null,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => 1,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $mark=Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
             'groupId'=>$scope['section']->id,'examId'=>$scope['exam']->id,'subjectId'=>$subject->id,
             'subjectMarks'=>80,'totalMarks'=>80,'gradePoint'=>5,'laterGrade'=>'A+']);
@@ -219,7 +234,7 @@ class CentralizedPromotionReverterTest extends TestCase
     {
         $session=new sessionManage();$session->session='2026';$session->save();
         $toSession=new sessionManage();$toSession->session='2027';$toSession->save();
-        $class=new classManage();$class->className='10';$class->save();
+        $class=new classManage();$class->className='8';$class->save();
         $toClass=new classManage();$toClass->className='11';$toClass->save();
         $section=new sectionManage();$section->section='A';$section->save();
         $toSection=new sectionManage();$toSection->section='B';$toSection->save();

@@ -7,6 +7,7 @@ use App\Http\Middleware\Roles;
 use App\Http\Middleware\VerifyCsrfToken;
 use App\Models\classManage;
 use App\Models\CultivationAdmin;
+use App\Models\Department;
 use App\Models\sessionManage;
 use App\Models\sectionManage;
 use App\Models\Subject;
@@ -46,6 +47,22 @@ class AdminManagementTest extends TestCase
         $this->assertArrayHasKey('initialAssignmentSessionId', $response->original->getData());
         $this->assertNull($response->original->getData()['initialAssignmentSessionId']);
         $response->assertSee('const initialAssignmentSessionId = null;', false);
+    }
+
+    public function test_group_enabled_admin_forms_offer_all_departments_before_concrete_departments_with_explicit_scope_contract(): void
+    {
+        $generalAdmin = $this->createAdmin(['userType' => CultivationAdmin::ROLE_GENERAL]);
+        $this->createClass('Class 9');
+        foreach (['Science', 'Business Studies'] as $name) {
+            $department = new Department();
+            $department->forceFill(['departmentName' => $name])->save();
+        }
+
+        $response = $this->withSession(['cultivationAdmin' => $generalAdmin->id])->get(route('userType'));
+        $response->assertOk()
+            ->assertSeeInOrder(['All Departments', 'Science', 'Business Studies'])
+            ->assertSee("hiddenDepartmentScope.name='departmentScope[]'", false)
+            ->assertSee("groupSelect.value === '__all__' ? 'all' : 'specific'", false);
     }
 
     public function test_edit_teacher_admin_form_prefills_existing_assignment_session_when_single_context_exists(): void

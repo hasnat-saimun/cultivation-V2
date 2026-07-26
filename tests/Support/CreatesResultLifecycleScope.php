@@ -11,6 +11,7 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use App\Services\ResultMarksDraftService;
 use App\Services\ResultMarksConfirmationService;
 
@@ -41,6 +42,21 @@ trait CreatesResultLifecycleScope
         $subject->subjectType = 'Theory';
         $subject->CQ = 100;
         $subject->save();
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => (string) $section->id,
+            'department_id' => null,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => 1,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
         $students = collect();
         for ($i = 1; $i <= $studentCount; $i++) {
             $student = new newAdmission([

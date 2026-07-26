@@ -249,6 +249,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $section->id,
             'group_id' => null,
@@ -313,6 +314,7 @@ class MarksEntryTest extends TestCase
     public function test_legacy_subject_assignments_work_without_composite_rows_and_are_filtered_by_selected_class(): void
     {
         $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+        $session = $this->createSession();
         $classA = $this->createClass('Class 8');
         $classB = $this->createClass('Class 9');
         $subjectA = $this->createSubject('Legacy Subject A');
@@ -355,6 +357,7 @@ class MarksEntryTest extends TestCase
     public function test_composite_assignments_take_precedence_over_legacy_subjects(): void
     {
         $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+        $session = $this->createSession();
         $classA = $this->createClass('Class 8');
         $classB = $this->createClass('Class 9');
         $section = $this->createSection('A');
@@ -375,6 +378,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $classA->id,
             'section_id' => $section->id,
             'group_id' => null,
@@ -386,6 +390,7 @@ class MarksEntryTest extends TestCase
         Session::put('cultivationAdmin', $teacher->id);
 
         $forClassA = $this->postJson(route('api.marks.subjects'), [
+            'sessionId' => $session->id,
             'classId' => $classA->id,
             'sectionId' => $section->id,
         ]);
@@ -405,12 +410,14 @@ class MarksEntryTest extends TestCase
     public function test_subject_endpoint_accepts_form_camel_case_parameter_names(): void
     {
         $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+        $session = $this->createSession();
         $classA = $this->createClass('Class 8');
         $sectionA = $this->createSection('A');
         $subject = $this->createSubject('Contract Subject');
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $classA->id,
             'section_id' => $sectionA->id,
             'group_id' => null,
@@ -422,6 +429,7 @@ class MarksEntryTest extends TestCase
         Session::put('cultivationAdmin', $teacher->id);
 
         $response = $this->postJson(route('api.marks.subjects'), [
+            'sessionId' => $session->id,
             'classId' => $classA->id,
             'sectionId' => $sectionA->id,
             'optionalGroupId' => null,
@@ -437,6 +445,7 @@ class MarksEntryTest extends TestCase
     public function test_mixed_teacher_profile_uses_legacy_fallback_for_contexts_without_composite_rows(): void
     {
         $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);
+        $session = $this->createSession();
         $classWithComposite = $this->createClass('Class 8');
         $classLegacyOnly = $this->createClass('Class 9');
         $section = $this->createSection('A');
@@ -457,6 +466,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $classWithComposite->id,
             'section_id' => $section->id,
             'group_id' => null,
@@ -468,6 +478,7 @@ class MarksEntryTest extends TestCase
         Session::put('cultivationAdmin', $teacher->id);
 
         $compositeResponse = $this->postJson(route('api.marks.subjects'), [
+            'sessionId' => $session->id,
             'classId' => $classWithComposite->id,
             'sectionId' => $section->id,
         ]);
@@ -588,6 +599,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $sectionA->id,
             'group_id' => null,
@@ -649,6 +661,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $section->id,
             'group_id' => $dept->id,
@@ -683,6 +696,7 @@ class MarksEntryTest extends TestCase
 
         DB::table('teacher_class_subjects')->insert([
             'teacher_id' => $teacher->id,
+            'session_id' => $session->id,
             'class_id' => $class->id,
             'section_id' => $section->id,
             'group_id' => $dept->id,
@@ -763,6 +777,7 @@ class MarksEntryTest extends TestCase
         DB::table('teacher_class_subjects')->insert([
             [
                 'teacher_id' => $teacher->id,
+                'session_id' => $session->id,
                 'class_id' => $class->id,
                 'section_id' => null,
                 'group_id' => $science->id,
@@ -773,6 +788,7 @@ class MarksEntryTest extends TestCase
             ],
             [
                 'teacher_id' => $teacher->id,
+                'session_id' => $session->id,
                 'class_id' => $class->id,
                 'section_id' => null,
                 'group_id' => $commerce->id,

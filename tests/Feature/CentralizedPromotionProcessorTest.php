@@ -20,6 +20,7 @@ use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Http\Controllers\AdmissionController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Session;
 use Tests\TestCase;
 
@@ -159,6 +160,7 @@ class CentralizedPromotionProcessorTest extends TestCase
         $scope=$this->scope();$scope['exam']->passingSystem=1;$scope['exam']->save();
         $subject=Subject::create(['subjectName'=>'Components','alias'=>'components','subjectType'=>'Main','assign_class'=>'0','CQ'=>50,'MCQ'=>25,'Practical'=>25]);
         $student=$this->student($scope,'01');
+        $this->ensureCurriculumMapping($scope, $subject);
         Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
             'groupId'=>$scope['section']->id,'examId'=>$scope['exam']->id,'subjectId'=>$subject->id,
             'subjectMarks'=>30,'objectMarks'=>1,'practicalMarks'=>20,'totalMarks'=>51,'gradePoint'=>3,'laterGrade'=>'B']);
@@ -223,10 +225,11 @@ class CentralizedPromotionProcessorTest extends TestCase
     private function processor():CentralizedPromotionProcessor{return app(CentralizedPromotionProcessor::class);}
     private function args(array $s,array $ids,bool $dryRun=false,array $rolls=[]):array{return[$s['exam']->id,$s['class']->id,$s['session']->id,$s['toClass']->id,$s['toSession']->id,$s['toSection']->id,$s['section']->id,null,null,$ids,$rolls,$dryRun,'test'];}
     private function assertBlocked(callable $call,string $code):void{try{$call();$this->fail("Expected {$code}");}catch(PromotionProcessingException $e){$this->assertContains($code,collect($e->report['blockingErrors'])->pluck('code')->all());}}
-    private function scope():array{$session=new sessionManage();$session->session='2026';$session->save();$toSession=new sessionManage();$toSession->session='2027';$toSession->save();$class=new classManage();$class->className='10';$class->save();$toClass=new classManage();$toClass->className='11';$toClass->save();$section=new sectionManage();$section->section='A';$section->save();$toSection=new sectionManage();$toSection->section='B';$toSection->save();$exam=new Exam();$exam->examName='Annual';$exam->passingSystem=2;$exam->save();return compact('session','toSession','class','toClass','section','toSection','exam');}
+    private function scope():array{$session=new sessionManage();$session->session='2026';$session->save();$toSession=new sessionManage();$toSession->session='2027';$toSession->save();$class=new classManage();$class->className='8';$class->save();$toClass=new classManage();$toClass->className='11';$toClass->save();$section=new sectionManage();$section->section='A';$section->save();$toSection=new sectionManage();$toSection->section='B';$toSection->save();$exam=new Exam();$exam->examName='Annual';$exam->passingSystem=2;$exam->save();return compact('session','toSession','class','toClass','section','toSection','exam');}
     private function student(array $s,string $roll):newAdmission{return newAdmission::create(['stdId'=>(string)random_int(100000,9999999),'fullName'=>'Student','sessName'=>$s['session']->id,'className'=>$s['class']->id,'sectionName'=>$s['section']->id,'rollNumber'=>$roll]);}
     private function subject(string $n,string $t,float $cq):Subject{return Subject::create(['subjectName'=>$n,'alias'=>strtolower($n),'subjectType'=>$t,'assign_class'=>'0','CQ'=>$cq,'MCQ'=>0,'Practical'=>0]);}
-    private function mark(newAdmission $st,array $s,Subject $sub,float $cq,?Exam $exam=null):Marksheet{return Marksheet::create(['studentId'=>$st->id,'classId'=>$s['class']->id,'sessionId'=>$s['session']->id,'groupId'=>$s['section']->id,'examId'=>($exam??$s['exam'])->id,'subjectId'=>$sub->id,'subjectMarks'=>$cq,'totalMarks'=>$cq,'gradePoint'=>$cq>=80?5:0,'laterGrade'=>$cq>=33?'A+':'F']);}
+    private function mark(newAdmission $st,array $s,Subject $sub,float $cq,?Exam $exam=null):Marksheet{$this->ensureCurriculumMapping($s,$sub);return Marksheet::create(['studentId'=>$st->id,'classId'=>$s['class']->id,'sessionId'=>$s['session']->id,'groupId'=>$s['section']->id,'examId'=>($exam??$s['exam'])->id,'subjectId'=>$sub->id,'subjectMarks'=>$cq,'totalMarks'=>$cq,'gradePoint'=>$cq>=80?5:0,'laterGrade'=>$cq>=33?'A+':'F']);}
+    private function ensureCurriculumMapping(array $s, Subject $sub): void {$exists=DB::table('curriculum_subject_mappings')->where('session_id',(string)$s['session']->id)->where('class_id',(string)$s['class']->id)->where('section_id',(string)$s['section']->id)->whereNull('department_id')->where('subject_id',(int)$sub->id)->exists(); if($exists)return; $next=(int)(DB::table('curriculum_subject_mappings')->where('session_id',(string)$s['session']->id)->where('class_id',(string)$s['class']->id)->where('section_id',(string)$s['section']->id)->whereNull('department_id')->max('sort_order')??0)+1; DB::table('curriculum_subject_mappings')->insert(['session_id'=>(string)$s['session']->id,'class_id'=>(string)$s['class']->id,'section_id'=>(string)$s['section']->id,'department_id'=>null,'subject_id'=>(int)$sub->id,'mapping_type'=>'main','sort_order'=>$next,'is_active'=>1,'source'=>'test-fixture','created_at'=>now(),'updated_at'=>now()]);}
     private function publish(array $s):void{ResultPublish::create(['examId'=>$s['exam']->id,'classId'=>$s['class']->id,'sessionId'=>$s['session']->id,'groupId'=>$s['section']->id]);}
     private function placement(newAdmission $st,array $s):Placement{return Placement::create(['studentId'=>$st->id,'classId'=>$s['class']->id,'sessionId'=>$s['session']->id,'groupId'=>$s['section']->id,'examId'=>$s['exam']->id,'subjectsCount'=>1,'totalGradePoints'=>5,'gpa'=>5,'totalMarks'=>80,'position'=>1,'status'=>'Pass']);}
 }

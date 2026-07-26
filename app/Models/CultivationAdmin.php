@@ -3,14 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 use App\Models\classManage as ClassManage;
 use App\Models\Subject;
 use App\Models\sectionManage as SectionManage;
 use App\Models\TeacherClassSubject;
 use Illuminate\Support\Facades\DB;
 
-class CultivationAdmin extends Model
+class CultivationAdmin extends Authenticatable
 {
     // Role constants
     public const ROLE_TEACHER = 1;
@@ -84,6 +84,11 @@ class CultivationAdmin extends Model
     }
     
     use HasFactory;
+
+    public function getAuthPassword(): string
+    {
+        return (string) ($this->loginPassword ?? '');
+    }
 
     // Check whether this teacher may teach a specific class+subject+(optional)section+(optional)group
     public function canTeachClassSubject(int $classId, int $subjectId, $sectionId = null, $optionalGroupId = null): bool

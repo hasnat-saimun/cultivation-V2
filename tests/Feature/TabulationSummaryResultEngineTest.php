@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Http\Controllers\MarksheetController;
 use App\Models\classManage;
 use App\Models\Exam;
+use App\Models\Department;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\Placement;
@@ -267,9 +268,9 @@ class TabulationSummaryResultEngineTest extends TestCase
         }
 
         $expected = [
-            'tabulation' => [1 => [15, 0], 5 => [15, 0], 25 => [15, 0]],
-            'glance' => [1 => [15, 0], 5 => [15, 0], 25 => [15, 0]],
-            'summary' => [1 => [15, 0], 5 => [15, 0], 25 => [15, 0]],
+            'tabulation' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
+            'glance' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
+            'summary' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
         ];
         $this->assertSame($expected, $metrics);
     }
@@ -340,10 +341,43 @@ class TabulationSummaryResultEngineTest extends TestCase
         $data = app(MarksheetController::class)->allMarksheet($this->request($scope))->getData();
         $columns = $data['subjects']->pluck('subjectName')->all();
 
-        $this->assertContains($missing->subjectName, $columns);
+        $this->assertNotContains($missing->subjectName, $columns);
         $this->assertCount(2, $data['tabulationRows']);
         $this->assertSame(array_keys($data['tabulationRows'][0]['cells']), array_keys($data['tabulationRows'][1]['cells']));
-        $this->assertCount(2, $data['tabulationRows'][0]['subjects']);
+        $this->assertCount(1, $data['tabulationRows'][0]['subjects']);
+    }
+
+    public function test_presenter_subject_column_order_keeps_common_before_science_and_science_sequence(): void
+    {
+        $scope = $this->scope();
+        $bangla1 = $this->subject('Bangla 1st Paper', 'Main', 100, 0, 0, 'bangla_1st_paper');
+        $bangla2 = $this->subject('Bangla 2nd Paper', 'Main', 100, 0, 0, 'bangla_2nd_paper');
+        $english1 = $this->subject('English 1st Paper', 'Main', 100, 0, 0, 'english_1st_paper');
+        $english2 = $this->subject('English 2nd Paper', 'Main', 100, 0, 0, 'english_2nd_paper');
+        $math = $this->subject('Mathematics', 'Main', 100);
+        $ict = $this->subject('ICT', 'Main', 100);
+        $bgs = $this->subject('Bangladesh and Global Studies', 'Main', 100);
+        $religion = $this->subject('Islam and moral education-111', 'Main', 100); $religion->isReligious = true; $religion->save();
+        $physics = $this->subject('Physics', 'Main', 100);
+        $chemistry = $this->subject('Chemistry', 'Main', 100);
+        $biology = $this->subject('Biology', 'Main', 100);
+
+        $student = $this->student($scope, '01');
+        $student->religiousSubjectId = $religion->id;
+        $student->save();
+
+        foreach ([
+            [$bangla1, 1], [$bangla2, 2], [$english1, 3], [$english2, 4], [$math, 5],
+            [$ict, 6], [$bgs, 7], [$religion, 8], [$physics, 20], [$chemistry, 21], [$biology, 22],
+        ] as [$subject, $order]) {
+            $this->mapWithOrder($scope, $subject, $order);
+            $this->mark($student, $scope, $subject, 80);
+        }
+
+        $data = app(MarksheetController::class)->allMarksheet($this->request($scope))->getData();
+        $columns = collect($data['subjects'])->pluck('subjectName')->values()->all();
+
+        $this->assertSame(['Bangla', 'English', 'Mathematics', 'ICT', 'Bangladesh and Global Studies', 'Islam and moral education-111', 'Physics', 'Chemistry', 'Biology'], $columns);
     }
 
     public function test_summary_pagination_metadata_uses_full_scope_aggregates(): void
@@ -422,9 +456,9 @@ class TabulationSummaryResultEngineTest extends TestCase
 
         $this->assertSame(['CQ'], collect($columns['CQ Only']->componentColumns)->pluck('label')->all());
         $this->assertSame(['CQ', 'MCQ'], collect($columns['CQ MCQ']->componentColumns)->pluck('label')->all());
-        $this->assertSame(['CQ', 'MCQ', 'PR'], collect($columns['All Components']->componentColumns)->pluck('label')->all());
+        $this->assertArrayNotHasKey('All Components', $columns->all());
         $this->assertSame(0.0, $data['tabulationRows'][0]['cells']['CQ Only']['cq']);
-        $this->assertSame('-', $data['tabulationRows'][0]['cells']['All Components']['cq']);
+        $this->assertArrayNotHasKey('All Components', $data['tabulationRows'][0]['cells']);
         $this->assertStringContainsString('CQ Only', $html);
     }
 
@@ -454,8 +488,34 @@ class TabulationSummaryResultEngineTest extends TestCase
 
     private function rowData(array $presented): array { return collect(array_merge($presented['mainRows'], $presented['optionalRows']))->map(fn($r)=>[$r['name'],$r['total'],$r['grade'],$r['gradePoint'],$r['status'],$r['componentFailures']])->all(); }
     private function request(array $scope): Request { return Request::create('/marksheet/all','GET',['examId'=>$scope['exam']->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'sectionId'=>$scope['section']->id]); }
-    private function scope(int $passingSystem=2): array { $session=new sessionManage();$session->session='2026';$session->save();$class=new classManage();$class->className='Class 10';$class->save();$section=new sectionManage();$section->section='A';$section->save();$exam=new Exam();$exam->examName='Annual';$exam->passingSystem=$passingSystem;$exam->save();return compact('session','class','section','exam'); }
-    private function student(array $scope,string $roll,?int $fourth=null): newAdmission { $s=new newAdmission();$s->stdId=(string)random_int(100000,999999999);$s->fullName='Output Student';$s->sessName=$scope['session']->id;$s->className=$scope['class']->id;$s->sectionName=$scope['section']->id;$s->rollNumber=$roll;$s->fourthSubjectId=$fourth;$s->save();return $s; }
+    private function scope(int $passingSystem=2): array { $session=new sessionManage();$session->session='2026';$session->save();$class=new classManage();$class->className='Class 10';$class->save();$section=new sectionManage();$section->section='A';$section->save();$department=new Department();$department->departmentName='Science';$department->save();$exam=new Exam();$exam->examName='Annual';$exam->passingSystem=$passingSystem;$exam->save();return compact('session','class','section','department','exam'); }
+    private function student(array $scope,string $roll,?int $fourth=null): newAdmission { $s=new newAdmission();$s->stdId=(string)random_int(100000,999999999);$s->fullName='Output Student';$s->sessName=$scope['session']->id;$s->className=$scope['class']->id;$s->sectionName=$scope['section']->id;$s->departmentName=$scope['department']->id;$s->rollNumber=$roll;$s->fourthSubjectId=$fourth;$s->save();return $s; }
     private function subject(string $name,string $type,float $cq,float $mcq=0,float $pr=0,?string $alias=null): Subject { $s=new Subject();$s->subjectName=$name;$s->alias=$alias??strtolower(str_replace(' ','_',$name));$s->subjectType=$type;$s->assign_class='0';$s->CQ=$cq;$s->MCQ=$mcq;$s->Practical=$pr;$s->save();return $s; }
-    private function mark(newAdmission $student,array $scope,Subject $subject,float $cq,?float $mcq=null,?float $pr=null,?Exam $exam=null): Marksheet { return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'groupId'=>$scope['section']->id,'examId'=>($exam??$scope['exam'])->id,'subjectId'=>$subject->id,'subjectMarks'=>$cq,'objectMarks'=>$mcq,'practicalMarks'=>$pr,'totalMarks'=>$cq+($mcq??0)+($pr??0),'gradePoint'=>99,'laterGrade'=>'Stored']); }
+    private function mark(newAdmission $student,array $scope,Subject $subject,float $cq,?float $mcq=null,?float $pr=null,?Exam $exam=null): Marksheet { $this->ensureCurriculumMapping($scope,$subject); return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'groupId'=>$scope['section']->id,'examId'=>($exam??$scope['exam'])->id,'subjectId'=>$subject->id,'subjectMarks'=>$cq,'objectMarks'=>$mcq,'practicalMarks'=>$pr,'totalMarks'=>$cq+($mcq??0)+($pr??0),'gradePoint'=>99,'laterGrade'=>'Stored']); }
+    private function ensureCurriculumMapping(array $scope, Subject $subject): void { $exists=DB::table('curriculum_subject_mappings')->where('session_id',(string)$scope['session']->id)->where('class_id',(string)$scope['class']->id)->where('section_id',(string)$scope['section']->id)->where('department_id',(string)$scope['department']->id)->where('subject_id',(int)$subject->id)->exists(); if($exists) return; $next=(int)(DB::table('curriculum_subject_mappings')->where('session_id',(string)$scope['session']->id)->where('class_id',(string)$scope['class']->id)->where('section_id',(string)$scope['section']->id)->where('department_id',(string)$scope['department']->id)->max('sort_order')??0)+1; DB::table('curriculum_subject_mappings')->insert(['session_id'=>(string)$scope['session']->id,'class_id'=>(string)$scope['class']->id,'section_id'=>(string)$scope['section']->id,'department_id'=>(string)$scope['department']->id,'subject_id'=>(int)$subject->id,'mapping_type'=>'main','sort_order'=>$next,'is_active'=>1,'source'=>'test-fixture','created_at'=>now(),'updated_at'=>now()]); }
+
+    private function mapWithOrder(array $scope, Subject $subject, int $sortOrder): void
+    {
+        DB::table('curriculum_subject_mappings')
+            ->where('session_id', (string) $scope['session']->id)
+            ->where('class_id', (string) $scope['class']->id)
+            ->where('section_id', (string) $scope['section']->id)
+            ->where('department_id', (string) $scope['department']->id)
+            ->where('subject_id', (int) $subject->id)
+            ->delete();
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $scope['session']->id,
+            'class_id' => (string) $scope['class']->id,
+            'section_id' => (string) $scope['section']->id,
+            'department_id' => (string) $scope['department']->id,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => $sortOrder,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
 }
