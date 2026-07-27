@@ -146,8 +146,12 @@ class TranscriptResultPresenter
         $values = [];
         foreach ($subjects as $index => $subject) {
             if ((float) ($subject->{$fullField} ?? 0) <= 0) continue;
-            $value = $marks->get($index)?->{$markField};
-            $values[] = is_numeric($value) ? (float) $value : null;
+            $mark = $marks->get($index);
+            $values[] = EffectiveComponentMarkResolver::resolve(
+                $mark?->{$markField},
+                true,
+                (bool) ($mark?->confirmed_blank_override ?? false),
+            );
         }
         if ($values === [] || in_array(null, $values, true)) return '-';
         if (!$paired) return $values[0];

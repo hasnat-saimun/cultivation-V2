@@ -8,7 +8,10 @@ use Illuminate\Support\Collection;
 
 class ResultCalculationInputBuilder
 {
-    public function __construct(private AcademicSubjectApplicabilityService $applicability) {}
+    public function __construct(
+        private AcademicSubjectApplicabilityService $applicability,
+        private ConfirmedBlankOverrideResolver $confirmedBlankOverrides,
+    ) {}
     /**
      * Load applicable subjects once for a set of students whose exam-scoped
      * marks have already been eager-loaded.
@@ -17,11 +20,13 @@ class ResultCalculationInputBuilder
      */
     public function subjectsForStudents(iterable $students): array
     {
+        $students = collect($students);
+        $this->confirmedBlankOverrides->annotate($students);
         return $this->applicability->subjectsForStudents($students);
     }
 
     public function subjectsForStudent(newAdmission $student): Collection
     {
-        return $this->applicability->subjectsForStudent($student);
+        return $this->subjectsForStudents([$student])[(int) $student->id] ?? collect();
     }
 }

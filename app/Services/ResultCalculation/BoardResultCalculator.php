@@ -115,7 +115,11 @@ final class BoardResultCalculator
             foreach ($this->components() as $key => [$fullField, $markField]) {
                 $max = $this->numeric($this->value($subject, $fullField)) ?? 0.0; $full[$key] += $max;
                 if ($max <= 0) continue;
-                $value = $this->numeric($this->value($mark, $markField));
+                $value = EffectiveComponentMarkResolver::resolve(
+                    $this->value($mark, $markField),
+                    true,
+                    (bool) $this->value($mark, 'confirmed_blank_override'),
+                );
                 if ($value === null) { $missing = true; continue; }
                 if ($value < 0 || $value > $max) {
                     $warnings[] = "Subject {$sid} {$key} marks are outside 0-{$max}."; $missing = true; continue;

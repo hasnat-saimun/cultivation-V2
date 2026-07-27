@@ -268,9 +268,9 @@ class TabulationSummaryResultEngineTest extends TestCase
         }
 
         $expected = [
-            'tabulation' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
-            'glance' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
-            'summary' => [1 => [18, 0], 5 => [18, 0], 25 => [18, 0]],
+            'tabulation' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
+            'glance' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
+            'summary' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
         ];
         $this->assertSame($expected, $metrics);
     }

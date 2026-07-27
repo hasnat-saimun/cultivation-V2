@@ -116,7 +116,7 @@ class ResultPublishTest extends TestCase
         $this->assertSame(1, ResultLifecycleEvent::where('action', 'result_published')
             ->pluck('correlation_uuid')->unique()->count());
         $this->assertLessThan(70, $queryCount);
-        $this->assertSame(54, $queryCount);
+        $this->assertSame(62, $queryCount);
     }
 
     public function test_genuinely_sectionless_scope_publishes_as_class_identity(): void
@@ -163,7 +163,7 @@ class ResultPublishTest extends TestCase
         $count = count(DB::getQueryLog());
         DB::disableQueryLog();
         $this->assertLessThan(40, $count);
-        $this->assertSame(30, $count);
+        $this->assertSame(34, $count);
     }
 
     private function twoSectionScope(bool $confirmSecond): array
