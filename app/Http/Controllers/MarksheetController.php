@@ -446,6 +446,7 @@ class MarksheetController extends Controller
         }
 
         $studentList = $studentQuery
+            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
             ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
             ->orderBy('id','ASC')
             ->get();
@@ -456,6 +457,7 @@ class MarksheetController extends Controller
             if($sessionText){
                 $studentList = (clone $studentBaseQuery)
                     ->where('sessName', $sessionText)
+                    ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
                     ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
                     ->orderBy('id','ASC')
                     ->get();
@@ -1235,6 +1237,7 @@ class MarksheetController extends Controller
             if ($sectionId) { $q->where('sectionName', (int)$sectionId); }
             if ($departmentId) { $q->where('departmentName', (int)$departmentId); }
             $students = $q
+                ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
                 ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
                 ->orderBy('id','ASC')
                 ->get();
@@ -1280,6 +1283,7 @@ class MarksheetController extends Controller
                     $q->orWhereIn('id', $numericIds);
                 }
             })
+            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
             ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
             ->orderBy('id', 'ASC')
             ->get();

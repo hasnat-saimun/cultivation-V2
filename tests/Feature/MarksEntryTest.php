@@ -304,7 +304,7 @@ class MarksEntryTest extends TestCase
         ]));
 
         $studentIds = $response->getData()['studentList']->pluck('id')->all();
-        $this->assertSame([$studentA->id, $studentB->id], $studentIds);
+        $this->assertSame([$studentB->id, $studentA->id], $studentIds);
         $this->assertDatabaseHas('marksheets', [
             'id' => $marksheet->id,
             'studentId' => $studentA->id,

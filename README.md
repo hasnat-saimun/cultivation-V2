@@ -70,8 +70,8 @@ Includes:
 
 ### Clone & Backend Setup
 ```bash
-git clone https://github.com/hasnat-saimun/cultivation-V2.git
-cd cultivation-V2
+git clone https://github.com/Virtual-IT-Professional/cultivation-v.2.0.0.git
+cd cultivation-v.2.0.0
 composer install
 ```
 
@@ -105,7 +105,7 @@ npm run dev
 ```bash
 php artisan serve
 ```
-- XAMPP/Apache: point DocumentRoot to `public/` or visit `http://localhost/cultivation-V2/public` if placed under `htdocs`.
+- XAMPP/Apache: point DocumentRoot to `public/` or visit `http://localhost/cultivation-v.2.0.0/public` if placed under `htdocs`.
 
 ---
 

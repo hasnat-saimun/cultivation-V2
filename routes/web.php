@@ -2029,6 +2029,18 @@ Route::middleware(['adminGuard'])->group (function(){
         CurriculumSubjectMappingController::class,
         'copy',
     ])->name('copyResultCurriculumMapping');
+    Route::post('/result/curriculum-mapping/classes', [
+        CurriculumSubjectMappingController::class,
+        'lookupClasses',
+    ])->name('api.resultCurriculumMapping.classes');
+    Route::post('/result/curriculum-mapping/sections', [
+        CurriculumSubjectMappingController::class,
+        'lookupSections',
+    ])->name('api.resultCurriculumMapping.sections');
+    Route::post('/result/curriculum-mapping/departments', [
+        CurriculumSubjectMappingController::class,
+        'lookupDepartments',
+    ])->name('api.resultCurriculumMapping.departments');
 
     Route::get('/admit-card/creation',[
         ExamController::class,

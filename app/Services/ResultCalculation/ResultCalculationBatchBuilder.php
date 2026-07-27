@@ -62,6 +62,7 @@ class ResultCalculationBatchBuilder
             ->when($sectionId, fn ($query) => $query->where('sectionName', $sectionId))
             ->when($sectionlessOnly, fn ($query) => $query->whereNull('sectionName'))
             ->when($departmentId, fn ($query) => $query->where('departmentName', $departmentId))
+            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
             ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
             ->orderBy('id')
             ->get();

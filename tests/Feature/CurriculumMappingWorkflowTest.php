@@ -177,6 +177,19 @@ class CurriculumMappingWorkflowTest extends TestCase
 
         $copy->assertRedirect();
 
+        $repeatCopy = $this->post(route('copyResultCurriculumMapping'), [
+            'sourceSessionId' => $session->id,
+            'sourceClassId' => $class->id,
+            'sourceSectionId' => $sourceSection,
+            'sourceDepartmentId' => $department->id,
+            'targetSessionId' => $session->id,
+            'targetClassId' => $class->id,
+            'targetSectionId' => $targetSection,
+            'targetDepartmentId' => $department->id,
+        ]);
+
+        $repeatCopy->assertRedirect();
+
         $this->assertDatabaseHas('curriculum_subject_mappings', [
             'session_id' => (string) $session->id,
             'class_id' => (string) $class->id,
@@ -193,6 +206,206 @@ class CurriculumMappingWorkflowTest extends TestCase
             'department_id' => (string) $department->id,
             'subject_id' => $physics->id,
             'mapping_type' => 'main',
+        ]);
+
+        $this->assertSame(2, CurriculumSubjectMapping::query()
+            ->where('session_id', (string) $session->id)
+            ->where('class_id', (string) $class->id)
+            ->where('section_id', (string) $targetSection)
+            ->where('department_id', (string) $department->id)
+            ->where('mapping_type', 'main')
+            ->count());
+    }
+
+    public function test_copy_form_renders_target_dropdowns_and_lookup_endpoints(): void
+    {
+        $this->withoutMiddleware();
+
+        $session = $this->makeSession('2026');
+        $class = $this->makeClass('Class 10');
+        $sectionId = DB::table('section_manages')->insertGetId(['section' => 'A', 'created_at' => now(), 'updated_at' => now()]);
+        $department = $this->makeDepartment('Science');
+
+        $response = $this->get(route('resultCurriculumMappingManage', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $sectionId,
+            'departmentId' => $department->id,
+            'mappingType' => CurriculumSubjectMapping::TYPE_MAIN,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('name="targetSessionId"', false);
+        $response->assertSee('name="targetClassId"', false);
+        $response->assertSee('name="targetSectionId"', false);
+        $response->assertSee('name="targetDepartmentId"', false);
+
+        $classes = $this->postJson(route('api.resultCurriculumMapping.classes'), [
+            'sessionId' => $session->id,
+        ]);
+        $classes->assertOk()->assertJsonStructure(['classes' => [['id', 'name', 'requires_department']]]);
+
+        $sections = $this->postJson(route('api.resultCurriculumMapping.sections'), [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+        ]);
+        $sections->assertOk()->assertJsonStructure(['sections' => [['id', 'name']]]);
+
+        $departments = $this->postJson(route('api.resultCurriculumMapping.departments'), [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $sectionId,
+        ]);
+        $departments->assertOk()->assertJsonStructure(['departments' => [['id', 'name']]]);
+    }
+
+    public function test_section_all_uses_explicit_ui_state_contract(): void
+    {
+        $this->withoutMiddleware();
+
+        $session = $this->makeSession('2026');
+        $class = $this->makeClass('Class 9');
+        $sectionId = DB::table('section_manages')->insertGetId(['section' => 'A', 'created_at' => now(), 'updated_at' => now()]);
+        $department = $this->makeDepartment('Science');
+
+        $response = $this->get(route('resultCurriculumMappingManage', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'sectionId' => $sectionId,
+            'departmentId' => $department->id,
+            'mappingType' => CurriculumSubjectMapping::TYPE_MAIN,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('value=""', false);
+        $response->assertSee('All', false);
+        $response->assertSee('const ALL_SECTION_VALUE = \'\';', false);
+        $response->assertSee('function hasValidSectionScope(sectionValue)', false);
+        $response->assertSee('syncDepartmentState(restoreSelection);', false);
+        $response->assertSee('bindChange(sectionSelect, function () {', false);
+        $response->assertSee('syncDepartmentState(false);', false);
+    }
+
+    public function test_class_nine_all_sections_supports_science_business_and_humanities_department_scopes(): void
+    {
+        $this->withoutMiddleware();
+
+        $session = $this->makeSession('2026');
+        $class = $this->makeClass('Class 9');
+        $science = $this->makeDepartment('Science');
+        $business = $this->makeDepartment('Business');
+        $humanities = $this->makeDepartment('Humanities');
+        $subject = Subject::create(['subjectName' => 'Bangla', 'subjectType' => 'Main', 'CQ' => 100]);
+
+        foreach ([$science, $business, $humanities] as $department) {
+            $response = $this->post(route('saveResultCurriculumMapping'), [
+                'sessionId' => $session->id,
+                'classId' => $class->id,
+                'sectionId' => null,
+                'departmentId' => $department->id,
+                'subjectIds' => [$subject->id],
+            ]);
+
+            $response->assertRedirect();
+        }
+
+        $this->assertDatabaseHas('curriculum_subject_mappings', [
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => null,
+            'department_id' => (string) $science->id,
+            'subject_id' => $subject->id,
+        ]);
+
+        $this->assertDatabaseHas('curriculum_subject_mappings', [
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => null,
+            'department_id' => (string) $business->id,
+            'subject_id' => $subject->id,
+        ]);
+
+        $this->assertDatabaseHas('curriculum_subject_mappings', [
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => null,
+            'department_id' => (string) $humanities->id,
+            'subject_id' => $subject->id,
+        ]);
+    }
+
+    public function test_reload_preserves_section_all_and_department_selection(): void
+    {
+        $this->withoutMiddleware();
+
+        $session = $this->makeSession('2026');
+        $class = $this->makeClass('Class 9');
+        $department = $this->makeDepartment('Science');
+        $subject = Subject::create(['subjectName' => 'Bangla', 'subjectType' => 'Main', 'CQ' => 100]);
+
+        CurriculumSubjectMapping::query()->create([
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => null,
+            'department_id' => (string) $department->id,
+            'subject_id' => (int) $subject->id,
+            'mapping_type' => CurriculumSubjectMapping::TYPE_MAIN,
+            'sort_order' => 1,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+        ]);
+
+        $response = $this->get(route('resultCurriculumMappingManage', [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'departmentId' => $department->id,
+            'mappingType' => CurriculumSubjectMapping::TYPE_MAIN,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('Section:</strong> All Sections', false);
+        $response->assertSee('Department:</strong> Science', false);
+        $response->assertSee('name="departmentId"', false);
+    }
+
+    public function test_copy_mapping_rejects_identical_source_and_target_scope(): void
+    {
+        $this->withoutMiddleware();
+
+        $session = $this->makeSession('2026');
+        $class = $this->makeClass('Class 10');
+        $sectionId = DB::table('section_manages')->insertGetId(['section' => 'A', 'created_at' => now(), 'updated_at' => now()]);
+        $department = $this->makeDepartment('Science');
+
+        $subject = Subject::create(['subjectName' => 'Bangla', 'subjectType' => 'Main', 'CQ' => 100]);
+
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $session->id,
+            'class_id' => (string) $class->id,
+            'section_id' => (string) $sectionId,
+            'department_id' => (string) $department->id,
+            'subject_id' => $subject->id,
+            'mapping_type' => 'main',
+            'sort_order' => 1,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->post(route('copyResultCurriculumMapping'), [
+            'sourceSessionId' => $session->id,
+            'sourceClassId' => $class->id,
+            'sourceSectionId' => $sectionId,
+            'sourceDepartmentId' => $department->id,
+            'targetSessionId' => $session->id,
+            'targetClassId' => $class->id,
+            'targetSectionId' => $sectionId,
+            'targetDepartmentId' => $department->id,
+        ]);
+
+        $response->assertSessionHasErrors([
+            'targetSessionId' => 'Source and Target mapping cannot be identical.',
         ]);
     }
 

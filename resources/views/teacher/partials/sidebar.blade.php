@@ -1,6 +1,6 @@
 <aside class="tp-sidebar" id="teacher-sidebar" aria-label="Teacher portal navigation">
     <div class="tp-brand">
-        <img src="{{ asset('assets/images/logo.png') }}" alt="">
+        <img src="{{ asset('public/assets/images/logo.png') }}" alt="">
         <div><strong>Teacher Portal</strong><span>{{ $instituteName }}</span></div>
     </div>
     <nav class="tp-nav">

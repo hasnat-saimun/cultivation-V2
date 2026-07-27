@@ -16,6 +16,13 @@ Curriculum Subject Mapping
             @if(session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
+            @if(isset($errors) && $errors->any())
+                <div class="alert alert-danger">
+                    @foreach($errors->all() as $error)
+                        <div>{{ $error }}</div>
+                    @endforeach
+                </div>
+            @endif
 
             @php
                 $mappedBySubject = $scopeMappings->keyBy(fn($row) => (int) $row->subject_id);
@@ -166,55 +173,59 @@ Curriculum Subject Mapping
                     <div class="row g-2">
                         <div class="col-md-3">
                             <label class="form-label">Source Session</label>
-                            <select class="form-control" name="sourceSessionId" required>
+                            <select class="form-control curriculum-copy-select" id="copy_source_session" name="sourceSessionId" required>
+                                <option value="">Select</option>
                                 @foreach($sessions as $session)
-                                    <option value="{{ $session->id }}">{{ $session->session }}</option>
+                                    <option value="{{ $session->id }}" @selected((int) ($selected['sessionId'] ?? 0) === (int) $session->id)>{{ $session->session }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Source Class</label>
-                            <select class="form-control" name="sourceClassId" required>
-                                @foreach($classes as $class)
-                                    <option value="{{ $class->id }}">{{ $class->className }}</option>
-                                @endforeach
+                            <select class="form-control curriculum-copy-select" id="copy_source_class" name="sourceClassId" required disabled>
+                                <option value="">Select session first</option>
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Source Section</label>
-                            <select class="form-control" name="sourceSectionId">
+                            <select class="form-control curriculum-copy-select" id="copy_source_section" name="sourceSectionId" disabled>
                                 <option value="">All</option>
-                                @foreach($sections as $section)
-                                    <option value="{{ $section->id }}">{{ $section->section }}</option>
-                                @endforeach
                             </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Source Department</label>
-                            <select class="form-control" name="sourceDepartmentId">
+                            <select class="form-control curriculum-copy-select" id="copy_source_department" name="sourceDepartmentId" disabled>
                                 <option value="">All</option>
-                                @foreach($departments as $department)
-                                    <option value="{{ $department->id }}">{{ $department->departmentName }}</option>
-                                @endforeach
                             </select>
                         </div>
                     </div>
                     <div class="row g-2 mt-1">
                         <div class="col-md-3">
                             <label class="form-label">Target Session</label>
-                            <input class="form-control" type="number" name="targetSessionId" value="{{ (int) $selected['sessionId'] }}" required>
+                            <select class="form-control curriculum-copy-select" id="copy_target_session" name="targetSessionId" required>
+                                <option value="">Select</option>
+                                @foreach($sessions as $session)
+                                    <option value="{{ $session->id }}" @selected((int) ($selected['sessionId'] ?? 0) === (int) $session->id)>{{ $session->session }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Target Class</label>
-                            <input class="form-control" type="number" name="targetClassId" value="{{ (int) $selected['classId'] }}" required>
+                            <select class="form-control curriculum-copy-select" id="copy_target_class" name="targetClassId" required disabled>
+                                <option value="">Select session first</option>
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Target Section</label>
-                            <input class="form-control" type="number" name="targetSectionId" value="{{ $selected['sectionId'] }}">
+                            <select class="form-control curriculum-copy-select" id="copy_target_section" name="targetSectionId" disabled>
+                                <option value="">All</option>
+                            </select>
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Target Department</label>
-                            <input class="form-control" type="number" name="targetDepartmentId" value="{{ $selected['departmentId'] }}">
+                            <select class="form-control curriculum-copy-select" id="copy_target_department" name="targetDepartmentId" disabled>
+                                <option value="">All</option>
+                            </select>
                         </div>
                     </div>
                     <button type="submit" class="btn btn-outline-primary mt-3">Copy Mapping</button>
@@ -223,4 +234,262 @@ Curriculum Subject Mapping
         </div>
     </div>
 </div>
+@if(!empty($selected['sessionId']) || !empty($selected['classId']))
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const csrfToken = @json(csrf_token());
+            const classEndpoint = @json(route('api.resultCurriculumMapping.classes', [], false));
+            const sectionEndpoint = @json(route('api.resultCurriculumMapping.sections', [], false));
+            const departmentEndpoint = @json(route('api.resultCurriculumMapping.departments', [], false));
+            const ALL_SECTION_VALUE = '';
+
+            function refreshSelect(select) {
+                if (window.jQuery && window.jQuery.fn && window.jQuery.fn.select2) {
+                    window.jQuery(select).trigger('change.select2');
+                }
+            }
+
+            function replaceOptions(select, placeholder, disabled = true) {
+                select.innerHTML = '';
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = placeholder;
+                select.appendChild(option);
+                select.disabled = disabled;
+                refreshSelect(select);
+            }
+
+            function populateOptions(select, rows, selectedValue = '') {
+                rows.forEach(function (row) {
+                    const option = document.createElement('option');
+                    option.value = String(row.id);
+                    option.textContent = row.name || '';
+                    if (row.requires_department !== undefined) {
+                        option.dataset.requiresDepartment = row.requires_department ? '1' : '0';
+                    }
+                    select.appendChild(option);
+                });
+
+                if (selectedValue && Array.from(select.options).some(function (option) {
+                    return option.value === String(selectedValue);
+                })) {
+                    select.value = String(selectedValue);
+                }
+
+                refreshSelect(select);
+            }
+
+            async function postJson(url, payload) {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed with status ' + response.status);
+                }
+
+                return response.json();
+            }
+
+            function bindScope(prefix) {
+                const sessionSelect = document.getElementById(prefix + '_session');
+                const classSelect = document.getElementById(prefix + '_class');
+                const sectionSelect = document.getElementById(prefix + '_section');
+                const departmentSelect = document.getElementById(prefix + '_department');
+
+                if (!sessionSelect || !classSelect || !sectionSelect || !departmentSelect) {
+                    return;
+                }
+
+                const defaults = {
+                    sessionId: sessionSelect.value || '',
+                    classId: classSelect.value || '',
+                    sectionId: sectionSelect.value || '',
+                    departmentId: departmentSelect.value || '',
+                };
+
+                let requestVersion = 0;
+                let sectionLoading = false;
+
+                function classSupportsDepartment() {
+                    const selectedOption = classSelect.options[classSelect.selectedIndex];
+                    return Boolean(selectedOption && selectedOption.dataset && selectedOption.dataset.requiresDepartment === '1');
+                }
+
+                function hasValidSectionScope(sectionValue) {
+                    return sectionValue === ALL_SECTION_VALUE || /^[1-9]\d*$/.test(String(sectionValue));
+                }
+
+                function setDepartmentDisabled(placeholder) {
+                    replaceOptions(departmentSelect, placeholder, true);
+                }
+
+                async function syncDepartmentState(restoreSelection = false) {
+                    const sessionId = sessionSelect.value || '';
+                    const classId = classSelect.value || '';
+                    const sectionValue = sectionSelect.value ?? '';
+
+                    if (!sessionId || !classId) {
+                        setDepartmentDisabled('All');
+                        return;
+                    }
+
+                    if (sectionLoading) {
+                        setDepartmentDisabled('Loading departments...');
+                        return;
+                    }
+
+                    if (!classSupportsDepartment()) {
+                        setDepartmentDisabled('All');
+                        return;
+                    }
+
+                    if (!hasValidSectionScope(sectionValue)) {
+                        setDepartmentDisabled('All');
+                        return;
+                    }
+
+                    await loadDepartments(restoreSelection);
+                }
+
+                function resetClasses() {
+                    replaceOptions(classSelect, 'Select session first', true);
+                    replaceOptions(sectionSelect, 'All', true);
+                    setDepartmentDisabled('All');
+                }
+
+                function resetSections() {
+                    replaceOptions(sectionSelect, 'All', true);
+                    setDepartmentDisabled('All');
+                }
+
+                function resetDepartments() {
+                    setDepartmentDisabled('All');
+                }
+
+                async function loadClasses(restoreSelection = false) {
+                    const sessionId = sessionSelect.value || '';
+                    const version = ++requestVersion;
+                    resetClasses();
+
+                    if (!sessionId) {
+                        return;
+                    }
+
+                    replaceOptions(classSelect, 'Loading classes...', true);
+
+                    try {
+                        const json = await postJson(classEndpoint, { sessionId });
+                        if (version !== requestVersion) return;
+
+                        const rows = Array.isArray(json?.classes) ? json.classes : [];
+                        replaceOptions(classSelect, rows.length ? 'Select' : 'No class found', rows.length === 0);
+                        populateOptions(classSelect, rows, restoreSelection ? defaults.classId : '');
+
+                        if (classSelect.value) {
+                            await loadSections(restoreSelection);
+                        }
+                    } catch (error) {
+                        if (version !== requestVersion) return;
+                        replaceOptions(classSelect, 'Unable to load classes', true);
+                    }
+                }
+
+                async function loadSections(restoreSelection = false) {
+                    const sessionId = sessionSelect.value || '';
+                    const classId = classSelect.value || '';
+                    const version = ++requestVersion;
+                    sectionLoading = true;
+                    resetSections();
+
+                    if (!sessionId || !classId) {
+                        sectionLoading = false;
+                        return;
+                    }
+
+                    replaceOptions(sectionSelect, 'Loading sections...', true);
+
+                    try {
+                        const json = await postJson(sectionEndpoint, { sessionId, classId });
+                        if (version !== requestVersion) return;
+
+                        const rows = Array.isArray(json?.sections) ? json.sections : [];
+                        replaceOptions(sectionSelect, 'All', false);
+                        populateOptions(sectionSelect, rows, restoreSelection ? defaults.sectionId : '');
+                        sectionLoading = false;
+                        await syncDepartmentState(restoreSelection);
+                    } catch (error) {
+                        if (version !== requestVersion) return;
+                        sectionLoading = false;
+                        replaceOptions(sectionSelect, 'Unable to load sections', true);
+                    }
+                }
+
+                async function loadDepartments(restoreSelection = false) {
+                    const sessionId = sessionSelect.value || '';
+                    const classId = classSelect.value || '';
+                    const sectionId = sectionSelect.value || '';
+                    const version = ++requestVersion;
+                    resetDepartments();
+
+                    if (!sessionId || !classId || !classSupportsDepartment() || !hasValidSectionScope(sectionId)) {
+                        return;
+                    }
+
+                    replaceOptions(departmentSelect, 'Loading departments...', true);
+
+                    try {
+                        const json = await postJson(departmentEndpoint, { sessionId, classId, sectionId });
+                        if (version !== requestVersion) return;
+
+                        const rows = Array.isArray(json?.departments) ? json.departments : [];
+                        replaceOptions(departmentSelect, 'All', false);
+                        populateOptions(departmentSelect, rows, restoreSelection ? defaults.departmentId : '');
+                    } catch (error) {
+                        if (version !== requestVersion) return;
+                        replaceOptions(departmentSelect, 'Unable to load departments', true);
+                    }
+                }
+
+                function bindChange(select, handler) {
+                    if (window.jQuery) {
+                        window.jQuery(select).off('.curriculumCopy').on('change.curriculumCopy', handler);
+                        return;
+                    }
+
+                    select.addEventListener('change', handler);
+                }
+
+                bindChange(sessionSelect, function () {
+                    loadClasses(false);
+                });
+
+                bindChange(classSelect, function () {
+                    resetSections();
+                    loadSections(false);
+                });
+
+                bindChange(sectionSelect, function () {
+                    syncDepartmentState(false);
+                });
+
+                if (sessionSelect.value) {
+                    loadClasses(true);
+                } else {
+                    resetClasses();
+                }
+            }
+
+            bindScope('copy_source');
+            bindScope('copy_target');
+        });
+    </script>
+@endif
 @endsection

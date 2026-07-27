@@ -47,7 +47,7 @@ class ResultMarksPopulationService
         $this->religiousSubjects->applyStudentReligiousSubjectFilter($base, $subject);
         $this->fourthSubjects->applyStudentFourthSubjectFilter($base, $subject, $academic);
 
-        $complete = (clone $base)->orderBy('id')->get();
+        $complete = $this->applyStudentOrder(clone $base)->get();
         if (!$actor || !$actor->isTeacher()) return $this->genderFilter($complete, $gender);
 
         $authorized = clone $base;
@@ -64,7 +64,7 @@ class ResultMarksPopulationService
             throw ResultLifecycleException::forbidden();
         }
 
-        $authorized = $authorized->orderBy('id')->get();
+        $authorized = $this->applyStudentOrder($authorized)->get();
         if ($requireCompleteTeacherCoverage) {
             $completeIds = $complete->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
             $authorizedIds = $authorized->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
@@ -81,5 +81,13 @@ class ResultMarksPopulationService
     {
         if ($gender === 'all') return $students;
         return $students->filter(fn ($student) => (string) $student->gender === $gender)->values();
+    }
+
+    private function applyStudentOrder(Builder $query): Builder
+    {
+        return $query
+            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
+            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
+            ->orderBy('id');
     }
 }

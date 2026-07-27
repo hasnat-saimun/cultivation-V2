@@ -21,6 +21,52 @@ class CurriculumSubjectMappingController extends Controller
 {
     public function __construct(private DepartmentBasedClassDetector $departmentBasedClasses) {}
 
+    public function lookupClasses(Request $request): JsonResponse
+    {
+        $request->validate([
+            'sessionId' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json([
+            'classes' => classManage::orderBy('id')->get(['id', 'className'])->map(fn ($class) => [
+                'id' => (int) $class->id,
+                'name' => (string) $class->className,
+                'requires_department' => $this->departmentBasedClasses->isDepartmentBasedClass((string) $class->className),
+            ])->values(),
+        ]);
+    }
+
+    public function lookupSections(Request $request): JsonResponse
+    {
+        $request->validate([
+            'sessionId' => ['nullable', 'integer', 'min:1'],
+            'classId' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json([
+            'sections' => sectionManage::orderBy('id')->get(['id', 'section'])->map(fn ($section) => [
+                'id' => (int) $section->id,
+                'name' => (string) $section->section,
+            ])->values(),
+        ]);
+    }
+
+    public function lookupDepartments(Request $request): JsonResponse
+    {
+        $request->validate([
+            'sessionId' => ['nullable', 'integer', 'min:1'],
+            'classId' => ['nullable', 'integer', 'min:1'],
+            'sectionId' => ['nullable', 'integer', 'min:1'],
+        ]);
+
+        return response()->json([
+            'departments' => Department::orderBy('id')->get(['id', 'departmentName'])->map(fn ($department) => [
+                'id' => (int) $department->id,
+                'name' => (string) $department->departmentName,
+            ])->values(),
+        ]);
+    }
+
     public function index(Request $request): View
     {
         $sessionId = $request->filled('sessionId') ? (int) $request->input('sessionId') : null;
@@ -335,16 +381,45 @@ class CurriculumSubjectMappingController extends Controller
             'targetDepartmentId' => ['nullable', 'integer', 'min:1'],
         ]);
 
+        $sourceClass = classManage::findOrFail((int) $data['sourceClassId']);
+        $targetClass = classManage::findOrFail((int) $data['targetClassId']);
+
+        $sourceDepartmentId = $this->normalizeDepartmentForClass($sourceClass, $this->normalizeNullableInt($data['sourceDepartmentId'] ?? null));
+        $targetDepartmentId = $this->normalizeDepartmentForClass($targetClass, $this->normalizeNullableInt($data['targetDepartmentId'] ?? null));
+
+        if (
+            (int) $data['sourceSessionId'] === (int) $data['targetSessionId']
+            && (int) $data['sourceClassId'] === (int) $data['targetClassId']
+            && $this->normalizeNullableInt($data['sourceSectionId'] ?? null) === $this->normalizeNullableInt($data['targetSectionId'] ?? null)
+            && $sourceDepartmentId === $targetDepartmentId
+        ) {
+            throw ValidationException::withMessages([
+                'targetSessionId' => ['Source and Target mapping cannot be identical.'],
+            ]);
+        }
+
         return [
             'sourceSessionId' => (int) $data['sourceSessionId'],
             'sourceClassId' => (int) $data['sourceClassId'],
-            'sourceSectionId' => isset($data['sourceSectionId']) ? (int) $data['sourceSectionId'] : null,
-            'sourceDepartmentId' => isset($data['sourceDepartmentId']) ? (int) $data['sourceDepartmentId'] : null,
+            'sourceSectionId' => $this->normalizeNullableInt($data['sourceSectionId'] ?? null),
+            'sourceDepartmentId' => $sourceDepartmentId,
             'targetSessionId' => (int) $data['targetSessionId'],
             'targetClassId' => (int) $data['targetClassId'],
-            'targetSectionId' => isset($data['targetSectionId']) ? (int) $data['targetSectionId'] : null,
-            'targetDepartmentId' => isset($data['targetDepartmentId']) ? (int) $data['targetDepartmentId'] : null,
+            'targetSectionId' => $this->normalizeNullableInt($data['targetSectionId'] ?? null),
+            'targetDepartmentId' => $targetDepartmentId,
         ];
+    }
+
+    private function normalizeDepartmentForClass(classManage $class, ?int $departmentId): ?int
+    {
+        return $this->departmentBasedClasses->isDepartmentBasedClass((string) $class->className)
+            ? $departmentId
+            : null;
+    }
+
+    private function normalizeNullableInt(mixed $value): ?int
+    {
+        return is_numeric($value) && (int) $value > 0 ? (int) $value : null;
     }
 
     private function applyScopeFilter($query, ?int $sectionId, ?int $departmentId): void

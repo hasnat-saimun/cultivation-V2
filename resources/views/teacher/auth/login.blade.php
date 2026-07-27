@@ -10,7 +10,7 @@
         body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:linear-gradient(145deg,#e6f5f7,#f8fbfc 55%,#dff2ec); }
         .card { width:min(100%,430px); padding:36px; border:1px solid #d5e5e8; border-radius:20px; background:#fff; box-shadow:0 24px 70px rgba(21,49,59,.13); }
         .brand { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
-        .brand img { width:58px; height:58px; object-fit:contain; }
+        .brand img { width:100%; height:58px; object-fit:contain; }
         h1 { margin:0; font-size:1.65rem; }
         .subtitle { margin:5px 0 0; color:var(--muted); }
         label { display:block; margin:18px 0 7px; font-weight:650; }
@@ -28,8 +28,8 @@
 <body>
 <main class="card">
     <div class="brand">
-        <img src="{{ asset('assets/images/logo.png') }}" alt="Cultivation">
         <div>
+            <img src="{{ asset('public/assets/images/logo.png') }}" alt="Cultivation">
             <h1>Teacher Portal</h1>
             <p class="subtitle">Sign in to your secure workspace</p>
         </div>
