@@ -6,13 +6,17 @@ use App\Models\GradeList;
 
 class TabulationResultPresenter
 {
-    public function __construct(private TranscriptResultPresenter $transcriptPresenter) {}
+    public function __construct(
+        private TranscriptResultPresenter $transcriptPresenter,
+        private ResultMeritPositionService $meritPositionService,
+    ) {}
 
     public function present(array $entries): array
     {
         $rows = [];
         $columnDefinitions = [];
         $gradeRows = GradeList::all();
+        $meritPositions = $this->meritPositionService->positions($entries);
         foreach ($entries as $entry) {
             /** @var StudentResult $result */
             $result = $entry['result'];
@@ -55,12 +59,18 @@ class TabulationResultPresenter
                 'finalGpa' => $result->gpa === null ? null : number_format($result->gpa, 2),
                 'finalLetter' => $presented['letterGrade'],
                 'status' => $result->status,
+                'classification' => $presented['classification'],
+                'reportStatus' => $presented['classification'] === 'Complete'
+                    ? $result->status
+                    : $presented['classification'],
+                'meritPosition' => $meritPositions[(int) $entry['student']->id] ?? null,
                 'isFail' => $result->status === 'Fail', 'isIncomplete' => $result->status === 'Incomplete',
                 'subjectFails' => count($result->failedCompulsorySubjects),
                 'subjectMissing' => count($result->missingCompulsorySubjects),
                 'optionalBonus' => $result->optionalBonus,
                 'failedCompulsorySubjects' => $result->failedCompulsorySubjects,
                 'missingCompulsorySubjects' => $result->missingCompulsorySubjects,
+                'missingSubjectNames' => $presented['missingSubjects'],
                 'componentFailures' => $presented['componentFailures'],
                 '_studentResult' => $result,
             ];
@@ -73,23 +83,40 @@ class TabulationResultPresenter
             $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));
         }
         unset($row);
-        $sections = ['Pass' => [], 'Fail' => [], 'Incomplete' => []];
-        foreach ($rows as $row) $sections[$row['status']][] = $row;
+        $sections = ['Complete' => [], 'Incomplete' => [], 'Absent' => []];
+        foreach ($rows as $row) $sections[$row['classification']][] = $row;
+        usort($sections['Complete'], fn ($a, $b) =>
+            ($a['meritPosition'] ?? PHP_INT_MAX) <=> ($b['meritPosition'] ?? PHP_INT_MAX)
+            ?: ((int) $a['studentIdentity']['roll'] <=> (int) $b['studentIdentity']['roll']));
         $failureBuckets = [];
-        foreach ($sections['Fail'] as $row) {
+        foreach ($sections['Complete'] as $row) {
+            if (!$row['isFail']) continue;
             $count = (int) $row['subjectFails'];
             if ($count > 0) $failureBuckets[$count] = ($failureBuckets[$count] ?? 0) + 1;
         }
         ksort($failureBuckets);
         $tabulationPages = $this->pageRowsByStatus($sections, 18);
+        $reportSections = ['Pass' => [], 'Fail' => [], 'Incomplete' => [], 'Absent' => []];
+        foreach ($rows as $row) $reportSections[$row['reportStatus']][] = $row;
+        $orderedGlanceRows = array_merge(...array_values($reportSections));
+        $failedGroups = [];
+        foreach ($reportSections['Fail'] as $row) {
+            $failedGroups[(int) $row['subjectFails']][] = $row;
+        }
+        ksort($failedGroups);
+        $subjectWisePages = $this->pageSubjectWiseRows($reportSections, $failedGroups, 18);
         $glancePageSize = collect($columns)->sum('componentColumnCount') >= 14 ? 18 : 24;
-        $glancePages = $this->pageRows($rows, $glancePageSize);
+        $glancePages = $this->pageRows($orderedGlanceRows, $glancePageSize);
         return [
             'rows' => $rows,
+            'glanceRows' => $orderedGlanceRows,
             'subjects' => collect($columns),
             'sections' => $sections,
+            'reportSections' => $reportSections,
+            'failedGroups' => $failedGroups,
             'failureBuckets' => $failureBuckets,
             'tabulationPages' => $tabulationPages,
+            'subjectWisePages' => $subjectWisePages,
             'glancePages' => $glancePages,
         ];
     }
@@ -97,17 +124,19 @@ class TabulationResultPresenter
     public function summarize(array $rows, $subjects): array
     {
         $total = count($rows);
-        $counts = ['Pass' => 0, 'Fail' => 0, 'Incomplete' => 0];
-        $gpaDistribution = ['5.00' => 0, '4.00-4.99' => 0, '3.50-3.99' => 0, '3.00-3.49' => 0, '2.00-2.99' => 0, '1.00-1.99' => 0, 'Fail' => 0, 'Incomplete' => 0];
+        $counts = ['Pass' => 0, 'Fail' => 0, 'Incomplete' => 0, 'Absent' => 0];
+        $gpaDistribution = ['5.00' => 0, '4.00-4.99' => 0, '3.50-3.99' => 0, '3.00-3.49' => 0, '2.00-2.99' => 0, '1.00-1.99' => 0, 'Fail' => 0, 'Incomplete' => 0, 'Absent' => 0];
         $gradeDistribution = [];
         $failureBuckets = [];
         foreach ($rows as $row) {
-            $status = $row['status']; $counts[$status]++;
+            $classification = $row['classification'] ?? (($row['status'] ?? null) === 'Incomplete' ? 'Incomplete' : 'Complete');
+            $status = $classification === 'Complete' ? $row['status'] : $classification;
+            $counts[$status]++;
             if ($status !== 'Pass') $gpaDistribution[$status]++;
             else $gpaDistribution[$this->gpaBucket((float) $row['finalGpa'])]++;
             $gradeDistribution[$row['finalLetter']] = ($gradeDistribution[$row['finalLetter']] ?? 0) + 1;
             $failed = (int) $row['subjectFails'];
-            if ($failed > 0) $failureBuckets[$failed] = ($failureBuckets[$failed] ?? 0) + 1;
+            if ($status === 'Fail' && $failed > 0) $failureBuckets[$failed] = ($failureBuckets[$failed] ?? 0) + 1;
         }
         ksort($failureBuckets);
 
@@ -125,7 +154,7 @@ class TabulationResultPresenter
                 'failRate' => $appeared ? round($fail / $appeared * 100, 2) : 0.0];
         }
         return [
-            'overallSummary' => ['total' => $total, 'present' => $counts['Pass'] + $counts['Fail'], 'absent' => $counts['Incomplete'],
+            'overallSummary' => ['total' => $total, 'present' => $counts['Pass'] + $counts['Fail'] + $counts['Incomplete'], 'absent' => $counts['Absent'],
                 'pass' => $counts['Pass'], 'fail' => $counts['Fail'], 'incomplete' => $counts['Incomplete'],
                 'passPercentage' => $total ? round($counts['Pass'] / $total * 100, 2) : 0.0,
                 'failPercentage' => $total ? round($counts['Fail'] / $total * 100, 2) : 0.0,
@@ -140,8 +169,10 @@ class TabulationResultPresenter
     private function pageRowsByStatus(array $sections, int $size): array
     {
         $pages = [];
-        foreach (['Pass', 'Fail', 'Incomplete'] as $status) {
-            foreach (array_chunk($sections[$status], $size) as $rows) {
+        foreach (['Complete', 'Incomplete', 'Absent'] as $status) {
+            $chunks = array_chunk($sections[$status], $size);
+            if ($chunks === []) $chunks = [[]];
+            foreach ($chunks as $rows) {
                 $pages[] = ['status' => $status, 'rows' => $rows];
             }
         }
@@ -151,6 +182,28 @@ class TabulationResultPresenter
     private function pageRows(array $rows, int $size): array
     {
         return $this->numberPages(array_map(fn ($chunk) => ['rows' => $chunk], array_chunk($rows, $size)));
+    }
+
+    private function pageSubjectWiseRows(array $reportSections, array $failedGroups, int $size): array
+    {
+        $groups = [['title' => 'All Subject Pass', 'rows' => $reportSections['Pass']]];
+        foreach ($failedGroups as $failedCount => $rows) {
+            $groups[] = [
+                'title' => 'Failed in '.$failedCount.' Subject'.($failedCount === 1 ? '' : 's'),
+                'rows' => $rows,
+            ];
+        }
+        $groups[] = ['title' => 'Incomplete', 'rows' => $reportSections['Incomplete']];
+        $groups[] = ['title' => 'Absent', 'rows' => $reportSections['Absent']];
+
+        $pages = [];
+        foreach ($groups as $group) {
+            $chunks = array_chunk($group['rows'], $size);
+            if ($chunks === []) $chunks = [[]];
+            foreach ($chunks as $rows) $pages[] = ['title' => $group['title'], 'rows' => $rows];
+        }
+
+        return $this->numberPages($pages);
     }
 
     private function pageSubjectRows(array $rows, int $size): array

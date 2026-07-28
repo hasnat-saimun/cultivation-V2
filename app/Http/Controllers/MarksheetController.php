@@ -26,6 +26,7 @@ use App\Services\ResultCalculation\TranscriptResultPresenter;
 use App\Services\ResultCalculation\ResultCalculationInputBuilder;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
+use App\Services\ResultCalculation\ResultMeritPositionService;
 use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultMarksDraftService;
 use App\Services\ResultMarksConfirmationService;
@@ -55,6 +56,7 @@ class MarksheetController extends Controller
     private BulkTranscriptResultBuilder $bulkTranscriptResultBuilder;
     private ResultCalculationBatchBuilder $resultCalculationBatchBuilder;
     private TabulationResultPresenter $tabulationResultPresenter;
+    private ResultMeritPositionService $meritPositionService;
     private ResultMarksDraftService $draftMarks;
     private ResultMarksConfirmationService $marksConfirmation;
     private ResultMarksReopenService $marksReopen;
@@ -74,6 +76,7 @@ class MarksheetController extends Controller
         BulkTranscriptResultBuilder $bulkTranscriptResultBuilder,
         ResultCalculationBatchBuilder $resultCalculationBatchBuilder,
         TabulationResultPresenter $tabulationResultPresenter,
+        ResultMeritPositionService $meritPositionService,
         ResultMarksDraftService $draftMarks,
         ResultMarksConfirmationService $marksConfirmation,
         ResultMarksReopenService $marksReopen,
@@ -93,6 +96,7 @@ class MarksheetController extends Controller
         $this->bulkTranscriptResultBuilder = $bulkTranscriptResultBuilder;
         $this->resultCalculationBatchBuilder = $resultCalculationBatchBuilder;
         $this->tabulationResultPresenter = $tabulationResultPresenter;
+        $this->meritPositionService = $meritPositionService;
         $this->draftMarks = $draftMarks;
         $this->marksConfirmation = $marksConfirmation;
         $this->marksReopen = $marksReopen;
@@ -944,21 +948,26 @@ class MarksheetController extends Controller
     {
         $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
         $presented = $this->tabulationResultPresenter->present($batch['entries']);
-        $passResults = $presented['sections']['Pass'];
-        $failResults = $presented['sections']['Fail'];
+        $passResults = array_values(array_filter($presented['sections']['Complete'], fn ($row) => $row['status'] === 'Pass'));
+        $failResults = array_values(array_filter($presented['sections']['Complete'], fn ($row) => $row['status'] === 'Fail'));
         $incompleteResults = $presented['sections']['Incomplete'];
+        $absentResults = $presented['sections']['Absent'];
         $compactMode = (bool) $request->get('compact');
         $viewName = $request->routeIs('atGlanceResult') ? 'result.atGlanceResult' : 'result.allMarksheet';
         return view($viewName, [
             'subjects' => $presented['subjects'], 'passResults' => $passResults, 'failResults' => $failResults,
             'incompleteResults' => $incompleteResults, 'passResultsCompact' => $passResults,
             'failResultsCompact' => $failResults, 'incompleteResultsCompact' => $incompleteResults,
+            'absentResults' => $absentResults,
             'compactMode' => $compactMode, 'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId,
             'sectionId' => $sectionId, 'departmentId' => $departmentId, 'studentsLoaded' => true,
             'exam' => $batch['exam'], 'usingCentralizedTabulation' => true,
             'tabulationRows' => $presented['rows'], 'tabulationSections' => $presented['sections'],
+            'glanceRows' => $presented['glanceRows'], 'reportSections' => $presented['reportSections'],
+            'failedGroups' => $presented['failedGroups'],
             'failureBuckets' => $presented['failureBuckets'],
-            'tabulationPages' => $presented['tabulationPages'], 'glancePages' => $presented['glancePages'],
+            'tabulationPages' => $presented['tabulationPages'],
+            'subjectWisePages' => $presented['subjectWisePages'], 'glancePages' => $presented['glancePages'],
         ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam']));
     }
 
@@ -1110,7 +1119,7 @@ class MarksheetController extends Controller
         } elseif ($stdIdInput !== '') {
             $studentQuery->where(function ($query) use ($stdIdInput) {
                 $query->where('stdId',$stdIdInput)->orWhereRaw('TRIM(stdId) = ?',[$stdIdInput]);
-                if (ctype_digit($stdIdInput)) $query->orWhereKey((int)$stdIdInput);
+                if (ctype_digit($stdIdInput)) $query->orWhere('id', (int) $stdIdInput);
             });
         } else {
             $studentQuery->whereRaw('1 = 0');
@@ -1131,6 +1140,20 @@ class MarksheetController extends Controller
             $transcriptResult = $this->transcriptResultPresenter->present(
                 $calculated, $subjects, $scopedMarks
             );
+            $meritRank = null;
+            $sessionId = is_numeric($student->sessName ?? null)
+                ? (int) $student->sessName
+                : (int) (sessionManage::where('session', (string) ($student->sessName ?? ''))->value('id') ?? 0);
+            if ($sessionId > 0) {
+                $meritBatch = $this->resultCalculationBatchBuilder->build(
+                    (int) $exam->id,
+                    (int) $student->className,
+                    $sessionId,
+                    is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null,
+                    is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : null,
+                );
+                $meritRank = $this->meritPositionService->positions($meritBatch['entries'])[(int) $student->id] ?? null;
+            }
             $transcriptResult['curriculumStatus'] = [
                 'configured' => (bool) ($student->curriculum_main_subjects_configured ?? false),
                 'reason' => (bool) ($student->curriculum_main_subjects_configured ?? false)
@@ -1175,7 +1198,7 @@ class MarksheetController extends Controller
                 'sectionName' => $sectionName,
                 'departmentName' => $departmentName,
                 'examName' => (string) $exam->examName,
-                'meritRank' => null,
+                'meritRank' => $meritRank,
                 'title' => $serverConfig?->transcript_title ?? 'Academic Transcript',
                 'institute' => [
                     'name' => $serverConfig?->instituteName ?? 'Jahanara Ayub Academy',
@@ -1203,7 +1226,7 @@ class MarksheetController extends Controller
             'studentDetails'=>$student,'examId'=>$examId,'config'=>$serverConfig,
             'maxMarkedSubjects'=>count($calculated->subjectResults),
             'studentMarkedSubjects'=>count($calculated->subjectResults),
-            'hideForMaxRule'=>$calculated->status === 'Incomplete','meritRank'=>null,
+            'hideForMaxRule'=>$calculated->status === 'Incomplete','meritRank'=>$meritRank,
             'usingNewResultEngine'=>true,'transcriptResult'=>$transcriptResult,
             'transcriptView'=>$transcriptView,
             'preloadedCultivationAdmin'=>$this->adminResolver->current(),

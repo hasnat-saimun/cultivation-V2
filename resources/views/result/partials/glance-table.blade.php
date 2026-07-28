@@ -2,7 +2,7 @@
     <thead>
         <tr><th rowspan="2">Roll</th><th rowspan="2">Student ID</th><th rowspan="2" class="name-col">Name</th>
             @foreach($subjects as $subject)<th colspan="{{ $subject->componentColumnCount }}">{{ $subject->subjectName }}{{ $subject->optional ? ' (4th)' : '' }}{{ $subject->paired ? ' (Combined)' : '' }}</th>@endforeach
-            <th rowspan="2">Total</th><th rowspan="2">GPA</th><th rowspan="2">Grade</th><th rowspan="2">Fail</th><th rowspan="2">Status</th>
+            <th rowspan="2">Merit Position</th><th rowspan="2">Total</th><th rowspan="2">GPA</th><th rowspan="2">Grade</th><th rowspan="2">Fail</th><th rowspan="2">Status</th>
         </tr>
         <tr>
             @foreach($subjects as $subject)
@@ -18,7 +18,7 @@
                     <td class="mini">{{ $row['cells'][$subject->subjectName][$component['key']] ?? '-' }}</td>
                 @endforeach
             @endforeach
-            <td>{{ $row['totalMarks'] }}</td><td>{{ $row['finalGpa'] ?? 'Incomplete' }}</td><td>{{ $row['finalLetter'] }}</td><td>{{ $row['subjectFails'] }}</td><td>{{ $row['status'] }}</td>
+            <td>{{ $row['meritPosition'] ?? '-' }}</td><td>{{ $row['totalMarks'] }}</td><td>{{ $row['finalGpa'] ?? $row['classification'] }}</td><td>{{ $row['finalLetter'] }}</td><td>{{ $row['subjectFails'] }}</td><td>{{ $row['reportStatus'] }}</td>
         </tr>
     @endforeach
     </tbody>

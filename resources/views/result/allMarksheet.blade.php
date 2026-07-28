@@ -22,20 +22,22 @@ All Marksheet
         <div class="d-print-none">
             @include('result.partials.passive-result-header')
             @if($studentsLoaded && empty($tabulationRows))<div class="alert alert-warning">No marks found for the selected filters.</div>@endif
-            @foreach(['Pass'=>'success','Fail'=>'danger','Incomplete'=>'warning'] as $statusLabel => $tone)
-                @if(!empty($tabulationSections[$statusLabel]))
-                    <h5 class="mt-4 text-{{ $tone }}">{{ $statusLabel }} Students ({{ count($tabulationSections[$statusLabel]) }})</h5>
-                    <div class="table-responsive mb-4">
-                        @include('result.partials.tabulation-table', ['tableRows' => $tabulationSections[$statusLabel]])
-                    </div>
-                @endif
+            <h5 class="mt-4 text-success">All Subject Pass ({{ count($reportSections['Pass']) }})</h5>
+            <div class="table-responsive mb-4">@include('result.partials.tabulation-table', ['tableRows' => $reportSections['Pass']])</div>
+            @foreach($failedGroups as $failedCount => $failedRows)
+                <h5 class="mt-4 text-danger">Failed in {{ $failedCount }} Subject{{ $failedCount === 1 ? '' : 's' }} ({{ count($failedRows) }})</h5>
+                <div class="table-responsive mb-4">@include('result.partials.tabulation-table', ['tableRows' => $failedRows])</div>
             @endforeach
+            <h5 class="mt-4 text-warning">Incomplete ({{ count($reportSections['Incomplete']) }})</h5>
+            <div class="table-responsive mb-4">@include('result.partials.tabulation-table', ['tableRows' => $reportSections['Incomplete']])</div>
+            <h5 class="mt-4 text-danger">Absent ({{ count($reportSections['Absent']) }})</h5>
+            <div class="table-responsive mb-4">@include('result.partials.tabulation-table', ['tableRows' => $reportSections['Absent']])</div>
         </div>
         <div class="d-none d-print-block">
-            @foreach($tabulationPages as $page)
+            @foreach($subjectWisePages as $page)
                 <section class="result-print-page">
                     @include('result.partials.passive-result-header')
-                    <h5>{{ $page['status'] }} Students</h5>
+                    <h5>{{ $page['title'] }}</h5>
                     @include('result.partials.tabulation-table', ['tableRows' => $page['rows']])
                     @include('result.partials.passive-signatures')
                     <div class="page-footer">Page {{ $page['pageNumber'] }} of {{ $page['pageCount'] }}</div>

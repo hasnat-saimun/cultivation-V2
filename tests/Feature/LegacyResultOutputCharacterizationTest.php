@@ -81,7 +81,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($this->singleTranscriptHtml($zero, $scope['exam'])));
 
         $missing = $this->student($scope, '05');
-        $this->assertSame(['gpa' => 'Incomplete', 'letter' => 'Incomplete'], $this->summaryFromHtml($this->singleTranscriptHtml($missing, $scope['exam'])));
+        $this->assertSame(['gpa' => 'Absent', 'letter' => 'Absent'], $this->summaryFromHtml($this->singleTranscriptHtml($missing, $scope['exam'])));
 
         $theory = $this->student($scope, '06');
         $theorySubject = $this->subject('Theory Type', 'Theory', 100);
@@ -130,7 +130,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
             ['Incomplete', 'Incomplete'],
             ['Incomplete', 'Incomplete'],
             ['Incomplete', 'Incomplete'],
-            ['Incomplete', 'Incomplete'],
+            ['Absent', 'Absent'],
             ['Incomplete', 'Incomplete'],
         ], $summaries);
     }
@@ -218,8 +218,8 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $data = $response->getData();
 
         $this->assertSame([
-            'total' => 3, 'present' => 2, 'absent' => 1, 'pass' => 2, 'fail' => 0, 'incomplete' => 1,
-            'passPercentage' => 66.67, 'failPercentage' => 0.0, 'incompletePercentage' => 33.33,
+            'total' => 3, 'present' => 2, 'absent' => 1, 'pass' => 2, 'fail' => 0, 'incomplete' => 0,
+            'passPercentage' => 66.67, 'failPercentage' => 0.0, 'incompletePercentage' => 0.0,
         ], $data['overallSummary']);
         $this->assertSame([], $data['failureBuckets']);
     }

@@ -19,7 +19,7 @@ At a Glance Result
         <div class="d-print-none">
             @include('result.partials.passive-result-header')
             @if($studentsLoaded && empty($tabulationRows))<div class="alert alert-warning">No marks found for the selected filters.</div>
-            @else<div class="table-responsive">@include('result.partials.glance-table', ['tableRows' => $tabulationRows])</div>@endif
+            @else<div class="table-responsive">@include('result.partials.glance-table', ['tableRows' => $glanceRows])</div>@endif
         </div>
         <div class="d-none d-print-block">
             @foreach($glancePages as $page)

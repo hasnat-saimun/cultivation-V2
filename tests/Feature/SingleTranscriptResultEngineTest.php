@@ -63,6 +63,23 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertStringContainsString('Main Subject', $html);
     }
 
+    public function test_numeric_public_student_id_lookup_renders_transcript(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Numeric ID Main', 'Main', 100);
+        $student = $this->student($scope);
+        $student->stdId = '2025000175';
+        $student->save();
+        $this->mark($student, $scope, $subject, 80);
+
+        $response = $this->get(route('marksheetGenerate', [
+            'stdId' => $student->stdId,
+            'examId' => $scope['exam']->id,
+        ]));
+
+        $response->assertOk()->assertSee('Merit Position');
+    }
+
     public function test_view_receives_presenter_prepared_values_and_rendering_executes_no_queries(): void
     {
         $scope = $this->scope();
@@ -154,9 +171,9 @@ class SingleTranscriptResultEngineTest extends TestCase
 
         $html = $this->html($student, $scope['exam']);
 
-        $this->assertSummary($html, 'Incomplete', 'Incomplete');
-        $this->assertStringContainsString('No main subjects', $html);
-        $this->assertStringContainsString('Remark- Incomplete', $html);
+        $this->assertSummary($html, 'Absent', 'Absent');
+        $this->assertStringContainsString('No marks were entered for this student in this exam.', $html);
+        $this->assertStringContainsString('Remark- Absent', $html);
     }
 
     public function test_enabled_includes_compulsory_theory_subject(): void

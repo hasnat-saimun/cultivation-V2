@@ -2,7 +2,7 @@
     <thead><tr>
         <th>SL</th><th>Roll</th><th>Student ID</th><th class="name-col">Student Name</th>
         @foreach($subjects as $subject)<th>{{ $subject->subjectName }}{{ $subject->optional ? ' (4th)' : '' }}</th>@endforeach
-        <th>Total Marks</th><th>Optional Bonus</th><th>GPA</th><th>Grade</th><th>Failed</th><th>Missing</th><th>Status</th>
+        <th>Merit Position</th><th>Total Marks</th><th>Optional Bonus</th><th>GPA</th><th>Grade</th><th>Failed</th><th>Missing Required Subjects</th><th>Status</th>
     </tr></thead>
     <tbody>
     @foreach($tableRows as $row)
@@ -19,9 +19,11 @@
                     @endif
                 </td>
             @endforeach
-            <td>{{ $row['totalMarks'] }}</td><td>{{ number_format($row['optionalBonus'], 2) }}</td>
-            <td>{{ $row['finalGpa'] ?? 'Incomplete' }}</td><td>{{ $row['finalLetter'] }}</td>
-            <td>{{ $row['subjectFails'] }}</td><td>{{ $row['subjectMissing'] }}</td><td>{{ $row['status'] }}</td>
+            <td>{{ $row['meritPosition'] ?? '-' }}</td><td>{{ $row['totalMarks'] }}</td><td>{{ number_format($row['optionalBonus'], 2) }}</td>
+            <td>{{ $row['finalGpa'] ?? $row['classification'] }}</td><td>{{ $row['finalLetter'] }}</td>
+            <td>{{ $row['subjectFails'] }}</td>
+            <td>{{ $row['missingSubjectNames'] === [] ? '-' : implode(', ', $row['missingSubjectNames']) }}</td>
+            <td>{{ $row['classification'] }}</td>
         </tr>
     @endforeach
     </tbody>

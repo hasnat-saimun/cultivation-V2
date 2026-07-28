@@ -7,7 +7,10 @@ use Illuminate\Support\Collection;
 
 class TranscriptResultPresenter
 {
-    public function __construct(private ?TranscriptSubjectOrderingService $ordering = null) {}
+    public function __construct(
+        private ?TranscriptSubjectOrderingService $ordering = null,
+        private ?StudentResultClassificationService $classifier = null,
+    ) {}
 
     public function present(StudentResult $result, iterable $subjects, iterable $marks): array
     {
@@ -33,7 +36,7 @@ class TranscriptResultPresenter
             $row = $this->subjectRow($subjectResult, $subjectsById, $marksBySubject);
             $totalMarks += $subjectResult->obtainedMarks ?? 0.0;
             if ($subjectResult->status === 'Fail') $failedNames[] = $row['name'];
-            if ($subjectResult->missing) $missingNames[] = $row['name'];
+            if ($subjectResult->missing && $subjectResult->isCompulsory) $missingNames[] = $row['name'];
             if ($subjectResult->isOptional) $optionalRows[] = $row;
             else $mainRows[] = $row;
         }
@@ -41,9 +44,11 @@ class TranscriptResultPresenter
         $mainRows = $this->ordering()->sortMainRows($mainRows);
         $optionalRows = $this->ordering()->sortOptionalRows($optionalRows);
 
-        $letter = match ($result->status) {
-            'Fail' => 'F',
-            'Incomplete' => 'Incomplete',
+        $classification = $this->classifier()->classify($result, $marks);
+        $letter = match (true) {
+            $classification['classification'] === 'Absent' => 'Absent',
+            $result->status === 'Fail' => 'F',
+            $result->status === 'Incomplete' => 'Incomplete',
             default => $this->letterForGpa((float) $result->gpa, $gradeRows),
         };
 
@@ -52,11 +57,14 @@ class TranscriptResultPresenter
             'optionalRows' => $optionalRows,
             'totalMarks' => round($totalMarks, 2),
             'gpa' => $result->status === 'Incomplete' ? null : $result->gpa,
-            'gpaDisplay' => $result->status === 'Incomplete'
-                ? 'Incomplete'
+            'gpaDisplay' => $classification['classification'] !== 'Complete'
+                ? $classification['classification']
                 : number_format((float) $result->gpa, 2),
             'letterGrade' => $letter,
             'status' => $result->status,
+            'classification' => $classification['classification'],
+            'hasMainMarkEvidence' => $classification['hasMainMarkEvidence'],
+            'ignoredOptionalMissingSubjects' => $classification['ignoredOptionalMissingSubjectIds'],
             'optionalBonus' => $result->optionalBonus,
             'optionalBonusDisplay' => number_format($result->optionalBonus, 2),
             'failedSubjects' => array_values(array_unique($failedNames)),
@@ -175,6 +183,15 @@ class TranscriptResultPresenter
         }
 
         return $this->ordering;
+    }
+
+    private function classifier(): StudentResultClassificationService
+    {
+        if ($this->classifier === null) {
+            $this->classifier = app(StudentResultClassificationService::class);
+        }
+
+        return $this->classifier;
     }
 
 }

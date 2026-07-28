@@ -227,9 +227,13 @@ Marksheet Generate
                 </tbody>
             </table>
 
-            @if($transcriptResult['missingSubjectCount'] > 0)
+            @if($transcriptResult['classification'] === 'Incomplete')
                 <div class="alert alert-warning col-12">
                     Incomplete: missing marks for {{ implode(', ', $transcriptResult['missingSubjects']) }}.
+                </div>
+            @elseif($transcriptResult['classification'] === 'Absent')
+                <div class="alert alert-warning col-12">
+                    No marks were entered for this student in this exam.
                 </div>
             @endif
 
@@ -239,7 +243,7 @@ Marksheet Generate
                         <th width="20%">Total Marks: {{ $transcriptResult['totalMarks'] }}</th>
                         <th width="20%">Letter Grade: {{ $transcriptResult['letterGrade'] }}</th>
                         <th width="20%">Grade Point: {{ $transcriptResult['gpaDisplay'] }}</th>
-                        <th>Remark- {{ $transcriptResult['status'] }}</th>
+                        <th>Remark- {{ $transcriptResult['classification'] === 'Absent' ? 'Absent' : $transcriptResult['status'] }}</th>
                     </tr>
                 </thead>
             </table>

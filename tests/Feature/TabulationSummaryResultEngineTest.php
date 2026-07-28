@@ -65,11 +65,16 @@ class TabulationSummaryResultEngineTest extends TestCase
         $tab = app(MarksheetController::class)->allMarksheet($this->request($scope))->getData();
         $summary = app(MarksheetController::class)->resultSummary($this->request($scope))->getData();
 
-        $this->assertCount(2, $tab['passResults']); $this->assertCount(1, $tab['failResults']); $this->assertCount(1, $tab['incompleteResults']);
+        $this->assertCount(2, $tab['passResults']); $this->assertCount(1, $tab['failResults']); $this->assertCount(0, $tab['incompleteResults']);
+        $this->assertCount(1, $tab['absentResults']);
+        $this->assertSame(['Pass', 'Pass', 'Fail', 'Absent'], collect($tab['glanceRows'])->pluck('reportStatus')->all());
+        $this->assertCount(2, $tab['reportSections']['Pass']);
+        $this->assertCount(1, $tab['failedGroups'][1]);
+        $this->assertArrayNotHasKey(0, $tab['failedGroups']);
         $this->assertSame('5.00', $tab['passResults'][0]['finalGpa']);
         $this->assertSame(0, $tab['passResults'][1]['subjectFails']);
-        $this->assertSame(['total' => 4, 'present' => 3, 'absent' => 1, 'pass' => 2, 'fail' => 1, 'incomplete' => 1,
-            'passPercentage' => 50.0, 'failPercentage' => 25.0, 'incompletePercentage' => 25.0], $summary['overallSummary']);
+        $this->assertSame(['total' => 4, 'present' => 3, 'absent' => 1, 'pass' => 2, 'fail' => 1, 'incomplete' => 0,
+            'passPercentage' => 50.0, 'failPercentage' => 25.0, 'incompletePercentage' => 0.0], $summary['overallSummary']);
     }
 
     public function test_retired_controller_does_not_restore_legacy_paths_for_mixed_flags(): void
@@ -109,7 +114,8 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertSame($single['failedSubjects'], collect($row['subjects'])->where('status', 'Fail')->pluck('name')->values()->all());
         $this->assertSame($single['missingSubjects'], collect($row['subjects'])->where('status', 'Incomplete')->pluck('name')->values()->all());
         $this->assertSame($this->rowData($single), $this->rowData(['mainRows' => $row['subjects'], 'optionalRows' => []]));
-        $this->assertSame(1, $summary['overallSummary'][strtolower($result->status)]);
+        $summaryKey = strtolower($row['classification'] === 'Complete' ? $result->status : $row['classification']);
+        $this->assertSame(1, $summary['overallSummary'][$summaryKey]);
     }
 
     public static function parityScenarioProvider(): array
@@ -130,8 +136,9 @@ class TabulationSummaryResultEngineTest extends TestCase
 
         $this->assertSame(1, $data['gpaDistribution']['5.00']);
         $this->assertSame(1, $data['gpaDistribution']['Fail']);
-        $this->assertSame(1, $data['gpaDistribution']['Incomplete']);
-        $this->assertSame(['A+' => 1, 'F' => 1, 'Incomplete' => 1], $data['gradeDistribution']);
+        $this->assertSame(0, $data['gpaDistribution']['Incomplete']);
+        $this->assertSame(1, $data['gpaDistribution']['Absent']);
+        $this->assertSame(['A+' => 1, 'F' => 1, 'Absent' => 1], $data['gradeDistribution']);
         $this->assertSame(1, $stats['Main']['fail']); $this->assertSame(1, $stats['Main']['missing']);
         $this->assertSame(1, $stats['Optional']['fail']);
         $this->assertSame([1 => 1], $data['failureBuckets']);
@@ -268,9 +275,9 @@ class TabulationSummaryResultEngineTest extends TestCase
         }
 
         $expected = [
-            'tabulation' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
-            'glance' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
-            'summary' => [1 => [20, 0], 5 => [20, 0], 25 => [20, 0]],
+            'tabulation' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
+            'glance' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
+            'summary' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
         ];
         $this->assertSame($expected, $metrics);
     }
@@ -295,15 +302,18 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertSame('Incomplete', $rows[$partial->id]['status']);
         $this->assertSame('Incomplete', $rows[$noMarks->id]['status']);
         $this->assertSame('Incomplete', $rows[$inactive->id]['status']);
+        $this->assertSame('Incomplete', $rows[$partial->id]['classification']);
+        $this->assertSame('Absent', $rows[$noMarks->id]['classification']);
+        $this->assertSame('Absent', $rows[$inactive->id]['classification']);
         $this->assertSame(4, $summary['overallSummary']['total']);
     }
 
     public function test_approved_summary_denominator_contract_for_seventy_ten_twenty(): void
     {
         $rows = [];
-        foreach ([['Pass', 70], ['Fail', 10], ['Incomplete', 20]] as [$status, $count]) {
+        foreach ([['Pass', 'Complete', 70], ['Fail', 'Complete', 10], ['Incomplete', 'Incomplete', 20]] as [$status, $classification, $count]) {
             foreach (range(1, $count) as $index) {
-                $rows[] = ['status' => $status, 'finalGpa' => $status === 'Pass' ? '5.00' : '0.00',
+                $rows[] = ['status' => $status, 'classification' => $classification, 'finalGpa' => $status === 'Pass' ? '5.00' : '0.00',
                     'finalLetter' => $status === 'Pass' ? 'A+' : ($status === 'Fail' ? 'F' : 'Incomplete'),
                     'subjectFails' => $status === 'Fail' ? 1 : 0, 'subjects' => []];
             }
@@ -311,7 +321,7 @@ class TabulationSummaryResultEngineTest extends TestCase
         $summary = app(TabulationResultPresenter::class)->summarize($rows, collect());
 
         $this->assertSame([
-            'total' => 100, 'present' => 80, 'absent' => 20, 'pass' => 70, 'fail' => 10, 'incomplete' => 20,
+            'total' => 100, 'present' => 100, 'absent' => 0, 'pass' => 70, 'fail' => 10, 'incomplete' => 20,
             'passPercentage' => 70.0, 'failPercentage' => 10.0, 'incompletePercentage' => 20.0,
         ], $summary['overallSummary']);
     }
@@ -395,7 +405,7 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertSame(23, collect($data['summaryView']['subjectPages'])->sum(fn ($page) => count($page['subjectRows'])));
     }
 
-    public function test_current_presenter_preserves_roll_order_but_does_not_supply_a_merit_contract(): void
+    public function test_current_presenter_supplies_the_central_merit_contract(): void
     {
         $scope = $this->scope(); $subject = $this->subject('Main', 'Main', 100);
         $secondRoll = $this->student($scope, '02'); $firstRoll = $this->student($scope, '01');
@@ -407,12 +417,40 @@ class TabulationSummaryResultEngineTest extends TestCase
 
         $this->assertSame(['01', '02', '03', '04'], collect($data['tabulationRows'])->pluck('studentIdentity.roll')->all());
         foreach ($data['tabulationRows'] as $row) {
-            $this->assertArrayNotHasKey('meritRank', $row);
+            $this->assertArrayHasKey('meritPosition', $row);
             $this->assertArrayNotHasKey('classMerit', $row);
         }
     }
 
-    public function test_rendered_views_restore_a4_pages_wrappers_headers_signatures_and_exclude_merit(): void
+    public function test_subject_wise_and_at_glance_sections_are_exclusive_and_ordered(): void
+    {
+        $scope = $this->scope();
+        $first = $this->subject('Required One', 'Main', 100);
+        $second = $this->subject('Required Two', 'Main', 100);
+        $optional = $this->subject('Fourth Subject', 'Optional', 100);
+        $pass = $this->student($scope, '01', $optional->id);
+        $failTwo = $this->student($scope, '02');
+        $incomplete = $this->student($scope, '03');
+        $absent = $this->student($scope, '04');
+        foreach ([$first, $second] as $subject) $this->mark($pass, $scope, $subject, 80);
+        $this->mark($pass, $scope, $optional, 0);
+        foreach ([$first, $second] as $subject) $this->mark($failTwo, $scope, $subject, 0);
+        $this->mark($incomplete, $scope, $first, 80);
+
+        $data = app(MarksheetController::class)->allMarksheet($this->request($scope))->getData();
+        $ids = collect($data['reportSections'])->flatten(1)->pluck('studentIdentity.id');
+
+        $this->assertSame(['Pass', 'Fail', 'Incomplete', 'Absent'], collect($data['glanceRows'])->pluck('reportStatus')->unique()->values()->all());
+        $this->assertCount(1, $data['reportSections']['Pass']);
+        $this->assertCount(1, $data['failedGroups'][2]);
+        $this->assertCount(1, $data['reportSections']['Incomplete']);
+        $this->assertCount(1, $data['reportSections']['Absent']);
+        $this->assertSame(4, $ids->unique()->count());
+        $this->assertSame(4, $ids->count());
+        $this->assertSame(0, $data['reportSections']['Pass'][0]['subjectFails']);
+    }
+
+    public function test_rendered_views_restore_a4_pages_wrappers_headers_signatures_and_include_merit(): void
     {
         $scope = $this->scope(); $subject = $this->subject('Professional Long Subject Name', 'Main', 100);
         $student = $this->student($scope, '01'); $this->mark($student, $scope, $subject, 80);
@@ -434,7 +472,7 @@ class TabulationSummaryResultEngineTest extends TestCase
             $this->assertStringContainsString('Class Teacher', $html);
             $this->assertStringContainsString('Principal/Head Master', $html);
             $this->assertStringNotContainsString('Class Merit', $html);
-            $this->assertStringNotContainsString('Merit Position', $html);
+            if ($html !== $summaryHtml) $this->assertStringContainsString('Merit Position', $html);
         }
     }
 
