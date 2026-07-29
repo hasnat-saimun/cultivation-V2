@@ -26,6 +26,7 @@ final class StudentResultClassificationService
                     fn ($mark) => $this->numeric($this->value($mark, 'subjectMarks')) !== null
                         || $this->numeric($this->value($mark, 'objectMarks')) !== null
                         || $this->numeric($this->value($mark, 'practicalMarks')) !== null
+                        || (bool) $this->value($mark, 'confirmed_blank_override')
                 );
             });
         });

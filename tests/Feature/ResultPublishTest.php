@@ -8,10 +8,13 @@ use App\Models\Marksheet;
 use App\Models\MarksScopeState;
 use App\Models\ResultLifecycleEvent;
 use App\Models\ResultPublish;
+use App\Models\Subject;
 use App\Models\newAdmission;
 use App\Models\sectionManage;
+use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultMarksConfirmationService;
 use App\Services\ResultMarksDraftService;
+use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultPublishService;
 use App\Services\ResultUnpublishService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -58,6 +61,66 @@ class ResultPublishTest extends TestCase
         MarksScopeState::first()->forceFill(['status' => 'draft'])->save();
         $this->expectException(ResultPublicationException::class);
         app(ResultPublishService::class)->publish($input, $this->lifecycleActor());
+    }
+
+    public function test_confirm_anyway_publishes_without_confirming_or_changing_non_ready_marks(): void
+    {
+        [$data, $actor, $input] = $this->confirmedLifecycleScope();
+        $state = MarksScopeState::firstOrFail();
+        $state->forceFill(['status' => MarksScopeState::STATUS_DRAFT])->save();
+        $markBefore = Marksheet::firstOrFail()->getAttributes();
+        $stateBefore = $state->fresh()->getAttributes();
+
+        $result = app(ResultPublishService::class)->publish(
+            $input + ['confirm_anyway' => true],
+            $actor,
+            '127.0.0.1',
+        );
+
+        $this->assertSame('published', $result['publications'][0]['status']);
+        $this->assertSame($markBefore, Marksheet::firstOrFail()->getAttributes());
+        $this->assertSame($stateBefore, $state->fresh()->getAttributes());
+        $batch = app(ResultCalculationBatchBuilder::class)->build(
+            $data['exam']->id,
+            $data['class']->id,
+            $data['session']->id,
+            $data['section']->id,
+        );
+        $this->assertSame('Pass', $batch['entries'][$data['students']->first()->id]['result']->status);
+        $event = ResultLifecycleEvent::where('action', 'result_published')->firstOrFail();
+        $this->assertTrue((bool) data_get($event->change_set, 'confirmed_anyway'));
+        $this->assertNotEmpty(data_get($event->change_set, 'non_ready_scopes'));
+    }
+
+    public function test_publication_guard_blocks_admin_then_unpublish_restores_draft_workflow(): void
+    {
+        [$data, $actor, $input] = $this->confirmedLifecycleScope();
+        $state = MarksScopeState::firstOrFail();
+        $state->forceFill(['status' => MarksScopeState::STATUS_DRAFT])->save();
+        app(ResultPublishService::class)->publish($input + ['confirm_anyway' => true], $actor);
+
+        try {
+            app(ResultMarksDraftService::class)->save(
+                $this->lifecycleInput($data) + ['scope_revision' => $state->revision],
+                $actor,
+            );
+            $this->fail('Published marks must be read-only.');
+        } catch (\App\Exceptions\ResultLifecycleException $exception) {
+            $this->assertSame(
+                'This result has already been published. Please unpublish it before making any changes.',
+                $exception->getMessage(),
+            );
+        }
+
+        app(ResultUnpublishService::class)->unpublish(
+            $input + ['publication_revision' => 1, 'reason' => 'Correction required'],
+            $actor,
+        );
+        $saved = app(ResultMarksDraftService::class)->save(
+            $this->lifecycleInput($data) + ['scope_revision' => $state->revision],
+            $actor,
+        );
+        $this->assertTrue($saved['success']);
     }
 
     public function test_already_published_is_idempotent_and_republish_increments_revision(): void
@@ -164,6 +227,149 @@ class ResultPublishTest extends TestCase
         DB::disableQueryLog();
         $this->assertLessThan(40, $count);
         $this->assertSame(34, $count);
+    }
+
+    public function test_publish_lifecycle_preserves_authoritative_marks_and_classifications_when_confirm_anyway_is_used(): void
+    {
+        [$data, $actor, $input] = $this->confirmedLifecycleScope(80, 4);
+        $students = $data['students']->values();
+        $data['exam']->passingSystem = 2;
+        $data['exam']->save();
+        $data['subject']->subjectType = 'Main';
+        $data['subject']->save();
+
+        $secondSubject = new Subject();
+        $secondSubject->subjectName = 'English';
+        $secondSubject->subjectType = 'Main';
+        $secondSubject->CQ = 100;
+        $secondSubject->save();
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $data['session']->id,
+            'class_id' => (string) $data['class']->id,
+            'section_id' => (string) $data['section']->id,
+            'department_id' => null,
+            'subject_id' => (int) $secondSubject->id,
+            'mapping_type' => 'main',
+            'sort_order' => 2,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        Marksheet::query()->where('studentId', $students[1]->id)->update([
+            'subjectMarks' => 0,
+            'totalMarks' => 0,
+        ]);
+        Marksheet::query()->where('studentId', $students[3]->id)->delete();
+        foreach ([$students[0], $students[1], $students[2]] as $student) {
+            Marksheet::create([
+                'studentId' => $student->id,
+                'classId' => $data['class']->id,
+                'sessionId' => $data['session']->id,
+                'groupId' => $data['section']->id,
+                'examId' => $data['exam']->id,
+                'subjectId' => $secondSubject->id,
+                'subjectMarks' => 80,
+                'objectMarks' => null,
+                'practicalMarks' => null,
+                'totalMarks' => 80,
+                'gradePoint' => 99,
+                'laterGrade' => 'Stored',
+            ]);
+        }
+
+        $finalScopeRevision = (int) MarksScopeState::query()->value('revision');
+        MarksScopeState::query()->update([
+            'status' => MarksScopeState::STATUS_DRAFT,
+            'confirmed_at' => null,
+            'confirmed_by' => null,
+        ]);
+
+        $snapshotBeforePublish = $this->scopeSnapshot($data);
+        $this->assertSame(6, $snapshotBeforePublish['marksCount']);
+        $this->assertSame(4, array_sum($snapshotBeforePublish['counts']));
+        $this->assertGreaterThanOrEqual(1, $snapshotBeforePublish['counts']['Absent']);
+
+        $published = app(ResultPublishService::class)->publish($input + ['confirm_anyway' => true], $actor);
+        $this->assertFalse($published['idempotent']);
+
+        $event = ResultLifecycleEvent::where('action', 'result_published')->latest('id')->firstOrFail();
+        $this->assertTrue((bool) data_get($event->change_set, 'confirmed_anyway'));
+
+        $snapshotAfterPublish = $this->scopeSnapshot($data);
+        $this->assertSame($snapshotBeforePublish['marksCount'], $snapshotAfterPublish['marksCount']);
+        $this->assertSame($snapshotBeforePublish['rowsByStudent'], $snapshotAfterPublish['rowsByStudent']);
+        $this->assertSame($snapshotBeforePublish['counts'], $snapshotAfterPublish['counts']);
+
+        $repeatPublish = app(ResultPublishService::class)->publish(
+            $input + ['confirm_anyway' => true, 'publication_revision' => 1],
+            $actor,
+        );
+        $this->assertTrue($repeatPublish['idempotent']);
+        $this->assertSame($snapshotAfterPublish, $this->scopeSnapshot($data));
+
+        app(ResultUnpublishService::class)->unpublish(
+            $input + ['publication_revision' => 1, 'reason' => 'Regression verification'],
+            $actor,
+        );
+        $snapshotAfterUnpublish = $this->scopeSnapshot($data);
+        $this->assertSame($snapshotBeforePublish, $snapshotAfterUnpublish);
+
+        app(ResultPublishService::class)->publish(
+            $input + ['confirm_anyway' => true, 'publication_revision' => 2],
+            $actor,
+        );
+        $snapshotAfterRepublish = $this->scopeSnapshot($data);
+        $this->assertSame($snapshotBeforePublish, $snapshotAfterRepublish);
+
+        $this->assertSame(MarksScopeState::STATUS_DRAFT, MarksScopeState::query()->value('status'));
+        $this->assertSame($finalScopeRevision, (int) MarksScopeState::query()->value('revision'));
+    }
+
+    private function scopeSnapshot(array $data): array
+    {
+        $examId = (int) $data['exam']->id;
+        $classId = (int) $data['class']->id;
+        $sessionId = (int) $data['session']->id;
+        $groupId = (int) $data['section']->id;
+
+        $batch = app(ResultCalculationBatchBuilder::class)->build($examId, $classId, $sessionId, $groupId);
+        $presented = app(TabulationResultPresenter::class)->present($batch['entries']);
+
+        $rows = collect($presented['rows'])->keyBy('student.id');
+        $studentIds = collect($data['students'])->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $rowsByStudent = [];
+        foreach ($studentIds as $studentId) {
+            $row = $rows[$studentId];
+            $rowsByStudent[$studentId] = [
+                'status' => $row['status'],
+                'classification' => $row['classification'],
+                'finalLetter' => $row['finalLetter'],
+                'finalGpa' => $row['finalGpa'],
+                'subjectFails' => (int) $row['subjectFails'],
+                'totalMarks' => (float) $row['totalMarks'],
+                'optionalBonus' => (float) $row['optionalBonus'],
+            ];
+        }
+
+        $marksCount = Marksheet::query()
+            ->where('examId', (string) $examId)
+            ->where('classId', (string) $classId)
+            ->where('sessionId', (string) $sessionId)
+            ->where('groupId', (string) $groupId)
+            ->count();
+
+        return [
+            'marksCount' => $marksCount,
+            'counts' => [
+                'Pass' => count($presented['reportSections']['Pass']),
+                'Fail' => count($presented['reportSections']['Fail']),
+                'Incomplete' => count($presented['reportSections']['Incomplete']),
+                'Absent' => count($presented['reportSections']['Absent']),
+            ],
+            'rowsByStudent' => $rowsByStudent,
+        ];
     }
 
     private function twoSectionScope(bool $confirmSecond): array

@@ -11,6 +11,7 @@ use App\Models\newAdmission;
 use App\Models\Placement;
 use App\Models\ResultArchive;
 use App\Models\ResultPublish;
+use App\Models\MarksScopeState;
 use App\Models\PromotionAuditLog;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
@@ -21,6 +22,7 @@ use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -198,6 +200,46 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertSummary($html, '5.00', 'A+');
         $this->assertStringContainsString('(80 + 80) = 160', $html);
         $this->assertSame(1, substr_count($html, '<td>Bangla</td>'));
+    }
+
+    public function test_enabled_paired_mcq_one_sided_displays_numeric_only(): void
+    {
+        config(['result_engine.transcript_enabled' => true]);
+        $scope = $this->scope();
+        $first = $this->subject('English 1st Paper', 'Main', 0, 50, 0, 'english_1st_paper');
+        $second = $this->subject('English 2nd Paper', 'Main', 0, 50, 0, 'english_2nd_paper');
+        $student = $this->student($scope);
+        $this->mark($student, $scope, $first, 0, 16, null);
+        $this->mark($student, $scope, $second, 0, null, null);
+
+        $html = $this->html($student, $scope['exam']);
+
+        $this->assertMatchesRegularExpression(
+            '/English<\/td>\s*<td>-<\/td>\s*<td>16<\/td>\s*<td>-<\/td>/s',
+            $html
+        );
+        $this->assertStringNotContainsString('(16 +', $html);
+    }
+
+    public function test_enabled_paired_confirmed_blank_displays_effective_zero(): void
+    {
+        config(['result_engine.transcript_enabled' => true]);
+        $scope = $this->scope();
+        $first = $this->subject('English 1st Paper', 'Main', 0, 50, 0, 'english_1st_paper');
+        $second = $this->subject('English 2nd Paper', 'Main', 0, 50, 0, 'english_2nd_paper');
+        $student = $this->student($scope);
+        $mark1 = $this->mark($student, $scope, $first, 0, null, null);
+        $mark2 = $this->mark($student, $scope, $second, 0, null, null);
+
+        $this->annotateConfirmedBlankOverride($scope, $first);
+        $this->annotateConfirmedBlankOverride($scope, $second);
+
+        $html = $this->html($student, $scope['exam']);
+
+        $this->assertStringContainsString('(0 + 0) = 0', $html);
+        $this->assertStringContainsString('Total Marks: 0', $html);
+        $this->assertNotNull($mark1->fresh());
+        $this->assertNotNull($mark2->fresh());
     }
 
     public function test_presenter_orders_common_then_science_and_keeps_pairs_stable(): void
@@ -470,6 +512,47 @@ class SingleTranscriptResultEngineTest extends TestCase
             'source' => 'test-fixture',
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+    }
+
+    private function annotateConfirmedBlankOverride(array $scope, Subject $subject): void
+    {
+        DB::table('marks_scope_states')->insert([
+            'sessionId' => (string) $scope['session']->id,
+            'classId' => (string) $scope['class']->id,
+            'groupId' => (string) $scope['section']->id,
+            'examId' => (string) $scope['exam']->id,
+            'subjectId' => (string) $subject->id,
+            'status' => MarksScopeState::STATUS_CONFIRMED,
+            'revision' => 1,
+            'confirmed_by' => null,
+            'confirmed_at' => now(),
+            'reopened_by' => null,
+            'reopened_at' => null,
+            'reopen_reason' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('result_lifecycle_events')->insert([
+            'event_uuid' => (string) Str::uuid(),
+            'correlation_uuid' => null,
+            'actor_id' => null,
+            'actor_role' => 'test',
+            'action' => 'subject_confirmed',
+            'entity_type' => 'subject_scope',
+            'sessionId' => (string) $scope['session']->id,
+            'classId' => (string) $scope['class']->id,
+            'groupId' => (string) $scope['section']->id,
+            'examId' => (string) $scope['exam']->id,
+            'subjectId' => (string) $subject->id,
+            'studentId' => null,
+            'before_state' => json_encode(['status' => 'draft', 'revision' => 1]),
+            'after_state' => json_encode(['status' => 'confirmed', 'revision' => 1]),
+            'change_set' => json_encode(['blank_override' => true]),
+            'reason' => null,
+            'ip_address' => '127.0.0.1',
+            'created_at' => now(),
         ]);
     }
 

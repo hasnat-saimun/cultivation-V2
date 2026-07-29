@@ -104,6 +104,52 @@ class ConfirmedBlankPairedTranscriptTest extends TestCase
         $this->assertSame('Incomplete', $this->transcript($data)['result']['status']);
     }
 
+    public function test_paired_component_keeps_one_sided_numeric_value_instead_of_dash(): void
+    {
+        [$data, $actor, $paper1, $paper2] = $this->pairedScope();
+        $paper2->update(['MCQ' => 0]);
+        $this->savePaper($data, $actor, $paper1, 33, 17, null);
+        $this->savePaper($data, $actor, $paper2, 26, null, null);
+        $this->confirmPaper($data, $actor, $paper1, false);
+        $this->confirmPaper($data, $actor, $paper2, false);
+
+        $row = $this->transcript($data)['result']['mainRows'][0];
+        $this->assertSame('(33 + 26) = 59', $row['cq']);
+        $this->assertSame(17.0, $row['mcq']);
+        $this->assertSame('-', $row['practical']);
+        $this->assertSame(76.0, $row['total']);
+    }
+
+    public function test_real_single_transcript_route_shows_one_sided_numeric_for_paired_component(): void
+    {
+        [$data, $actor, $paper1, $paper2] = $this->pairedScope();
+        $paper2->update(['MCQ' => 0]);
+        DB::table('new_admissions')->where('id', $data['student']->id)->update([
+            'id' => 376,
+            'stdId' => '26000376',
+        ]);
+        $data['student'] = \App\Models\newAdmission::findOrFail(376);
+        $data['students'] = collect([$data['student']]);
+
+        $this->savePaper($data, $actor, $paper1, 33, 17, null);
+        $this->savePaper($data, $actor, $paper2, 26, null, null);
+        $this->confirmPaper($data, $actor, $paper1, false);
+        $this->confirmPaper($data, $actor, $paper2, false);
+
+        $response = $this->withSession(['cultivationAdmin' => $actor->id])
+            ->get(route('marksheetGenerate', [
+                'stdId' => '26000376',
+                'studentId' => $data['student']->id,
+                'examId' => $data['exam']->id,
+            ]));
+
+        $response->assertOk()
+            ->assertSee('(33 + 26) = 59', false)
+            ->assertSee('<td>17</td>', false)
+            ->assertSee('<td>-</td>', false)
+            ->assertSee('<td>76</td>', false);
+    }
+
     public function test_disabled_components_numeric_zero_both_blank_and_reopen_semantics(): void
     {
         [$data, $actor, $paper1, $paper2] = $this->pairedScope();

@@ -176,9 +176,66 @@ class BoardResultCalculatorTest extends TestCase
         $this->assertNull($result->obtainedMarks);
     }
 
-    private function calculate(array $subjects, array $marks, ?int $fourthId = null, int $passingSystem = 2)
+    public function test_scope_profile_ignores_component_when_blank_for_everyone(): void
     {
-        return $this->calculator->calculate(['id' => 1, 'fourthSubjectId' => $fourthId], ['id' => 1, 'passingSystem' => $passingSystem], $marks, $subjects);
+        $result = $this->calculate(
+            [$this->subject(1, 'Main', 50, 50)],
+            [$this->mark(1, 40, null)],
+            null,
+            2,
+            ['1' => ['cq' => true, 'mcq' => false, 'practical' => false]],
+        );
+
+        $this->assertSame('Pass', $result->status);
+        $this->assertSame([], $result->missingCompulsorySubjects);
+    }
+
+    public function test_scope_profile_marks_student_incomplete_when_required_component_is_missing(): void
+    {
+        $result = $this->calculate(
+            [$this->subject(1, 'Main', 50, 50)],
+            [$this->mark(1, 40, null)],
+            null,
+            2,
+            ['1' => ['cq' => true, 'mcq' => true, 'practical' => false]],
+        );
+
+        $this->assertSame('Incomplete', $result->status);
+        $this->assertSame(['1'], $result->missingCompulsorySubjects);
+    }
+
+    public function test_scope_profile_does_not_suppress_assigned_optional_subject_without_marks(): void
+    {
+        $result = $this->calculate(
+            [$this->subject(1, 'Main', 100), $this->subject(2, 'Optional', 100)],
+            [$this->mark(1, 70)],
+            2,
+            2,
+            [
+                '1' => ['cq' => true, 'mcq' => false, 'practical' => false],
+                '2' => ['cq' => false, 'mcq' => false, 'practical' => false],
+            ],
+        );
+
+        $optional = collect($result->subjectResults)->firstWhere('subjectId', '2');
+        $this->assertNotNull($optional);
+        $this->assertTrue($optional->isOptional);
+        $this->assertTrue($optional->missing);
+        $this->assertSame('Incomplete', $optional->status);
+        $this->assertSame('Pass', $result->status);
+        $this->assertSame([], $result->missingCompulsorySubjects);
+        $this->assertSame(0.0, $result->optionalBonus);
+    }
+
+    private function calculate(array $subjects, array $marks, ?int $fourthId = null, int $passingSystem = 2, array $componentRequirementProfile = [])
+    {
+        return $this->calculator->calculate(
+            ['id' => 1, 'fourthSubjectId' => $fourthId],
+            ['id' => 1, 'passingSystem' => $passingSystem],
+            $marks,
+            $subjects,
+            $componentRequirementProfile,
+        );
     }
 
     private function subject(int $id, string $type, float $cq, float $mcq = 0, float $practical = 0, ?string $alias = null, ?string $name = null): array

@@ -11,10 +11,12 @@ use App\Models\newAdmission;
 use App\Models\Placement;
 use App\Models\ResultArchive;
 use App\Models\ResultPublish;
+use App\Models\ServerConfig;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Subject;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
+use App\Services\ResultCalculation\BoardResultCalculator;
 use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultCalculation\ResultCalculationInputBuilder;
 use App\Services\ResultCalculation\TabulationResultPresenter;
@@ -247,7 +249,7 @@ class TabulationSummaryResultEngineTest extends TestCase
         $classQueries = count(DB::getQueryLog());
         DB::disableQueryLog();
 
-        $this->assertLessThanOrEqual(12, $classQueries);
+        $this->assertLessThanOrEqual(13, $classQueries);
     }
 
     public function test_exact_active_path_query_counts_for_one_five_and_twenty_five_students(): void
@@ -275,9 +277,9 @@ class TabulationSummaryResultEngineTest extends TestCase
         }
 
         $expected = [
-            'tabulation' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
-            'glance' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
-            'summary' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
+            'tabulation' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
+            'glance' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
+            'summary' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
         ];
         $this->assertSame($expected, $metrics);
     }
@@ -450,6 +452,215 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertSame(0, $data['reportSections']['Pass'][0]['subjectFails']);
     }
 
+    public function test_scope_wide_component_requirements_ignore_fully_blank_component_and_enforce_partially_entered_component(): void
+    {
+        $scopeA = $this->scope();
+        $ictA = $this->subject('ICT', 'Main', 50, 50);
+        $a1 = $this->student($scopeA, '01');
+        $a2 = $this->student($scopeA, '02');
+        $this->mark($a1, $scopeA, $ictA, 40, null);
+        $this->mark($a2, $scopeA, $ictA, 35, null);
+
+        $caseA = app(MarksheetController::class)->allMarksheet($this->request($scopeA))->getData();
+        $caseARows = collect($caseA['tabulationRows'])->keyBy('student.id');
+
+        $this->assertSame('Complete', $caseARows[$a1->id]['classification']);
+        $this->assertSame('Complete', $caseARows[$a2->id]['classification']);
+
+        $scopeB = $this->scope();
+        $ictB = $this->subject('ICT', 'Main', 50, 50);
+        $b1 = $this->student($scopeB, '01');
+        $b2 = $this->student($scopeB, '02');
+        $this->mark($b1, $scopeB, $ictB, 40, 30);
+        $this->mark($b2, $scopeB, $ictB, 35, null);
+
+        $caseB = app(MarksheetController::class)->allMarksheet($this->request($scopeB))->getData();
+        $caseBRows = collect($caseB['tabulationRows'])->keyBy('student.id');
+
+        $this->assertSame('Complete', $caseBRows[$b1->id]['classification']);
+        $this->assertSame('Incomplete', $caseBRows[$b2->id]['classification']);
+        $this->assertSame('Incomplete', $caseBRows[$b2->id]['status']);
+    }
+
+    public function test_subject_wise_report_tables_follow_required_columns_and_print_contract(): void
+    {
+        $scope = $this->scope();
+        $config = new ServerConfig();
+        $config->forceFill([
+            'instituteName' => 'Verified Academy',
+            'address' => '12 Test Avenue',
+            'officeMobile' => '01700000000',
+            'officeEmail' => 'verified@example.test',
+        ])->save();
+        $first = $this->subject('Bangladesh and Global Studies-150', 'Main', 100);
+        $second = $this->subject('General Science-127', 'Main', 100);
+        $optional = $this->subject('Higher Mathematics-126', 'Optional', 100);
+        $pass = $this->student($scope, '01', $optional->id);
+        $fail = $this->student($scope, '02');
+        $incomplete = $this->student($scope, '03');
+        $absent = $this->student($scope, '04');
+
+        foreach ([$first, $second] as $subject) {
+            $this->mark($pass, $scope, $subject, 80);
+        }
+        $this->mark($pass, $scope, $optional, 0);
+        $this->mark($fail, $scope, $first, 0);
+        $this->mark($fail, $scope, $second, 80);
+        $this->mark($incomplete, $scope, $first, 80);
+
+        $request = $this->request($scope);
+        $request->setRouteResolver(fn () => Route::getRoutes()->getByName('allMarksheet'));
+        $html = app(MarksheetController::class)->allMarksheet($request)->render();
+
+        $this->assertStringContainsString('Optional Marks', $html);
+        $this->assertStringNotContainsString('Optional Bonus', $html);
+    $this->assertStringContainsString('Verified Academy', $html);
+    $this->assertStringContainsString('12 Test Avenue', $html);
+    $this->assertStringContainsString('01700000000', $html);
+    $this->assertStringContainsString('verified@example.test', $html);
+    $this->assertStringContainsString('Subject-wise Result', $html);
+    $this->assertStringContainsString('header-meta-label">Department</div>', $html);
+    $this->assertStringNotContainsString('Jahanara Ayub Academy', $html);
+    $this->assertStringNotContainsString('Total Failed', $html);
+    $this->assertStringContainsString('background:#fff!important', $html);
+    $this->assertStringContainsString('background-image:none!important', $html);
+
+        preg_match('/All Subject Pass.*?<table class="result-table">(.*?)<\/table>/s', $html, $passMatch);
+        preg_match('/Failed in 1 Subject.*?<table class="result-table">(.*?)<\/table>/s', $html, $failMatch);
+        preg_match('/Incomplete.*?<table class="result-table">(.*?)<\/table>/s', $html, $incompleteMatch);
+        preg_match('/Absent.*?<table class="result-table">(.*?)<\/table>/s', $html, $absentMatch);
+
+        $passTable = $passMatch[1] ?? '';
+        $failTable = $failMatch[1] ?? '';
+        $incompleteTable = $incompleteMatch[1] ?? '';
+        $absentTable = $absentMatch[1] ?? '';
+        $normalizedIncompleteTable = preg_replace('/\s+/', ' ', $incompleteTable) ?? $incompleteTable;
+        $normalizedAbsentTable = preg_replace('/\s+/', ' ', $absentTable) ?? $absentTable;
+
+        $this->assertStringNotContainsString('<th>Status</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Failed</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Missing Required Subjects</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Class</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Section</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Group/Department</th>', $passTable);
+        $this->assertStringNotContainsString('<th>Status</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Missing Required Subjects</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Class</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Section</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Group/Department</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Total Failed</th>', $failTable);
+        $this->assertStringNotContainsString('<th>Failed Subject(s)</th>', $failTable);
+        $this->assertStringContainsString('<th class="sl-col">SL</th><th class="roll-col">Roll</th><th class="id-col">Student ID</th><th class="name-col">Student Name</th>', $failTable);
+        $this->assertStringContainsString('Grade</th><th>Merit Position</th>', $failTable);
+        $this->assertStringContainsString('<th class="d-print-none">Transcript</th>', $failTable);
+        $this->assertMatchesRegularExpression('/<a class="btn btn-outline-primary btn-sm d-print-none transcript-print-btn"[^>]*>View<\/a>/', $failTable);
+        $this->assertStringContainsString('class="failed-subject-cell"', $failTable);
+        $this->assertStringNotContainsString('failed-subject-chip', $failTable);
+        $this->assertStringContainsString('<th class="sl-col">SL</th><th class="roll-col">Roll</th><th class="id-col">Student ID</th><th class="name-col">Student Name</th>', $passTable);
+        $this->assertStringContainsString('Grade</th><th>Merit Position</th>', $passTable);
+        $this->assertStringContainsString('<th class="d-print-none">Transcript</th>', $passTable);
+        $this->assertMatchesRegularExpression('/<a class="btn btn-outline-primary btn-sm d-print-none transcript-print-btn"[^>]*>View<\/a>/', $passTable);
+        $this->assertStringContainsString('<th title="Bangladesh and Global Studies">B.G.S.</th>', $passTable);
+        $this->assertStringContainsString('<th title="General Science">G.S.</th>', $passTable);
+        $this->assertStringContainsString('<th title="Higher Mathematics">H.M. (4th)</th>', $passTable);
+        $this->assertStringContainsString('>View<', $html);
+        $this->assertStringContainsString('transcript-print-btn', $html);
+        $this->assertStringContainsString('/marksheet/generate?', $html);
+        $this->assertStringNotContainsString('Bangladesh and Global Studies-150', $passTable);
+        $this->assertStringNotContainsString('General Science-127', $passTable);
+        $this->assertStringNotContainsString('Higher Mathematics-126', $passTable);
+
+        $this->assertStringContainsString('<th class="sl-col">SL</th><th class="roll-col">Roll</th><th class="id-col">Student ID</th><th class="name-col">Student Name</th> <th>Missing Subject(s)</th>', $normalizedIncompleteTable);
+        $this->assertStringNotContainsString('Transcript</th>', $incompleteTable);
+        $this->assertStringNotContainsString('transcript-print-btn', $incompleteTable);
+        $this->assertStringContainsString('title="General Science"', $incompleteTable);
+        $this->assertMatchesRegularExpression('/>\s*G\.S\.\s*</', $incompleteTable);
+        $this->assertStringContainsString('<th class="sl-col">SL</th><th class="roll-col">Roll</th><th class="id-col">Student ID</th><th class="name-col">Student Name</th>', $normalizedAbsentTable);
+        $this->assertStringNotContainsString('<th>Missing Subject(s)</th>', $absentTable);
+        $this->assertStringNotContainsString('Transcript</th>', $absentTable);
+        $this->assertStringNotContainsString('transcript-print-btn', $absentTable);
+        foreach ([$incompleteTable, $absentTable] as $table) {
+            $this->assertStringNotContainsString('<th>Total Marks</th>', $table);
+            $this->assertStringNotContainsString('<th>Optional Marks</th>', $table);
+            $this->assertStringNotContainsString('<th>GPA</th>', $table);
+            $this->assertStringNotContainsString('<th>Grade</th>', $table);
+            $this->assertStringNotContainsString('<th>Total Failed</th>', $table);
+            $this->assertStringNotContainsString('<th>Failed Subject(s)</th>', $table);
+            $this->assertStringNotContainsString('<th>Merit Position</th>', $table);
+            $this->assertStringNotContainsString('<th>Status</th>', $table);
+            $this->assertStringNotContainsString('<th>Class</th>', $table);
+            $this->assertStringNotContainsString('<th>Section</th>', $table);
+            $this->assertStringNotContainsString('<th>Group/Department</th>', $table);
+        }
+
+        $this->assertStringContainsString('@page { size: A4 landscape; margin: 5mm; }', $html);
+        $this->assertStringContainsString('result-print-page', $html);
+    }
+
+    #[DataProvider('subjectWisePrintPaginationProvider')]
+    public function test_subject_wise_print_pagination_uses_ten_rows_per_page_and_skips_empty_sections(int $studentCount, array $expectedRowsPerPage): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Pagination Main', 'Main', 100);
+
+        foreach (range(1, $studentCount) as $roll) {
+            $student = $this->student($scope, str_pad((string) $roll, 2, '0', STR_PAD_LEFT));
+            $this->mark($student, $scope, $subject, 80);
+        }
+
+        $request = $this->request($scope);
+        $request->setRouteResolver(fn () => Route::getRoutes()->getByName('allMarksheet'));
+        $response = app(MarksheetController::class)->allMarksheet($request);
+        $data = $response->getData();
+        $html = $response->render();
+
+        $this->assertCount(count($expectedRowsPerPage), $data['subjectWisePages']);
+        $this->assertSame(
+            $expectedRowsPerPage,
+            collect($data['subjectWisePages'])->map(fn ($page) => count($page['rows']))->all()
+        );
+        $expectedSlStarts = [];
+        $nextSl = 1;
+        foreach ($expectedRowsPerPage as $rowCount) {
+            $expectedSlStarts[] = $nextSl;
+            $nextSl += $rowCount;
+        }
+        $this->assertSame($expectedSlStarts, collect($data['subjectWisePages'])->pluck('slStart')->all());
+        $this->assertTrue(
+            collect($data['subjectWisePages'])->every(fn ($page) => count($page['rows']) > 0 && count($page['rows']) <= 10)
+        );
+        $this->assertSame(
+            ['All Subject Pass'],
+            collect($data['subjectWisePages'])->pluck('title')->unique()->values()->all()
+        );
+
+        $this->assertStringNotContainsString('<h5>Failed in 1 Subject</h5>', $html);
+        $this->assertStringNotContainsString('<h5>Incomplete</h5>', $html);
+        $this->assertStringNotContainsString('<h5>Absent</h5>', $html);
+        $this->assertStringContainsString('@page { size: A4 landscape; margin: 5mm; }', $html);
+
+        $this->assertSame(count($expectedRowsPerPage), substr_count($html, '<section class="result-print-page">'));
+        $this->assertSame(count($expectedRowsPerPage), substr_count($html, '<div class="result-signatures">'));
+        foreach ($expectedSlStarts as $slStart) {
+            $this->assertStringContainsString('<td class="sl-col">'.$slStart.'</td>', $html);
+        }
+        foreach ($expectedRowsPerPage as $index => $_rowCount) {
+            $pageNo = $index + 1;
+            $this->assertStringContainsString('Page '.$pageNo.' of '.count($expectedRowsPerPage), $html);
+        }
+    }
+
+    public static function subjectWisePrintPaginationProvider(): array
+    {
+        return [
+            'fewer_than_ten' => [9, [9]],
+            'exactly_ten' => [10, [10]],
+            'eleven' => [11, [10, 1]],
+            'twenty' => [20, [10, 10]],
+            'twenty_one' => [21, [10, 10, 1]],
+        ];
+    }
+
     public function test_rendered_views_restore_a4_pages_wrappers_headers_signatures_and_include_merit(): void
     {
         $scope = $this->scope(); $subject = $this->subject('Professional Long Subject Name', 'Main', 100);
@@ -495,7 +706,7 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertSame(['CQ'], collect($columns['CQ Only']->componentColumns)->pluck('label')->all());
         $this->assertSame(['CQ', 'MCQ'], collect($columns['CQ MCQ']->componentColumns)->pluck('label')->all());
         $this->assertArrayNotHasKey('All Components', $columns->all());
-        $this->assertSame(0.0, $data['tabulationRows'][0]['cells']['CQ Only']['cq']);
+        $this->assertSame(0.0, $data['tabulationRows'][0]['cells'][$columns['CQ Only']->cellKey]['cq']);
         $this->assertArrayNotHasKey('All Components', $data['tabulationRows'][0]['cells']);
         $this->assertStringContainsString('CQ Only', $html);
     }
@@ -515,6 +726,95 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertGreaterThanOrEqual(2, substr_count($html, '<td>1</td><td>1</td><td>0</td>'));
     }
 
+    public function test_subject_wise_fourth_subject_flow_uses_assigned_optional_per_student_and_matches_authoritative_calculation(): void
+    {
+        $scope = $this->scope();
+        $mainA = $this->subject('Required A', 'Main', 100);
+        $mainB = $this->subject('Required B', 'Main', 100);
+        $optA = $this->subject('Applied Mathematics', 'Optional', 100);
+        $optB = $this->subject('Higher English', 'Optional', 100);
+
+        $passOptional = $this->student($scope, '01', $optA->id);
+        $failOptional = $this->student($scope, '02', $optA->id);
+        $missingOptional = $this->student($scope, '03', $optB->id);
+        $withoutOptional = $this->student($scope, '04', null);
+
+        foreach ([$passOptional, $failOptional, $missingOptional, $withoutOptional] as $student) {
+            $this->mark($student, $scope, $mainA, 70);
+            $this->mark($student, $scope, $mainB, 65);
+        }
+
+        $this->markRaw($passOptional, $scope, $optA, 80);
+        $this->markRaw($failOptional, $scope, $optA, 0);
+        // Intentionally no mark row for $missingOptional optional subject.
+
+        $response = app(MarksheetController::class)->allMarksheet($this->request($scope));
+        $data = $response->getData();
+        $rowsById = collect($data['tabulationRows'])->keyBy('student.id');
+        $subjectsByName = collect($data['subjects'])->keyBy('subjectName');
+        $html = $response->render();
+
+        $this->assertTrue((bool) ($subjectsByName['Applied Mathematics']->optional ?? false));
+        $this->assertTrue((bool) ($subjectsByName['Higher English']->optional ?? false));
+        $this->assertSame((string) $optA->id, (string) $subjectsByName['Applied Mathematics']->subject_id);
+        $this->assertSame((string) $optB->id, (string) $subjectsByName['Higher English']->subject_id);
+        $this->assertSame([(string) $optA->id, (string) $optB->id], collect($data['subjects'])->filter(fn ($subject) => (bool) ($subject->is_fourth_subject ?? false))->pluck('cellKey')->unique()->values()->all());
+
+        $appliedMathKey = $subjectsByName['Applied Mathematics']->cellKey;
+        $higherEnglishKey = $subjectsByName['Higher English']->cellKey;
+
+        $this->assertArrayHasKey($appliedMathKey, $rowsById[$passOptional->id]['cells']);
+        $this->assertArrayHasKey($appliedMathKey, $rowsById[$failOptional->id]['cells']);
+        $this->assertArrayHasKey($higherEnglishKey, $rowsById[$missingOptional->id]['cells']);
+        $this->assertArrayNotHasKey($appliedMathKey, $rowsById[$withoutOptional->id]['cells']);
+        $this->assertArrayNotHasKey($higherEnglishKey, $rowsById[$withoutOptional->id]['cells']);
+
+        $this->assertSame(80.0, $rowsById[$passOptional->id]['cells'][$appliedMathKey]['total']);
+        $this->assertSame('F', $rowsById[$failOptional->id]['cells'][$appliedMathKey]['grade']);
+        $this->assertSame(0.0, $rowsById[$failOptional->id]['cells'][$appliedMathKey]['total']);
+        $this->assertSame('-', $rowsById[$missingOptional->id]['cells'][$higherEnglishKey]['total']);
+        $this->assertSame('-', $rowsById[$passOptional->id]['cells'][$higherEnglishKey]['total'] ?? '-');
+        $this->assertSame('-', $rowsById[$failOptional->id]['cells'][$higherEnglishKey]['total'] ?? '-');
+        $this->assertSame('-', $rowsById[$missingOptional->id]['cells'][$appliedMathKey]['total'] ?? '-');
+        $this->assertSame('-', $rowsById[$withoutOptional->id]['cells'][$appliedMathKey]['total'] ?? '-');
+        $this->assertSame('-', $rowsById[$withoutOptional->id]['cells'][$higherEnglishKey]['total'] ?? '-');
+
+        $this->assertSame('Complete', $rowsById[$missingOptional->id]['classification']);
+        $this->assertSame('Pass', $rowsById[$missingOptional->id]['status']);
+        $this->assertSame(0, $rowsById[$failOptional->id]['subjectFails']);
+        $this->assertSame(0, $rowsById[$missingOptional->id]['subjectFails']);
+
+        $this->assertGreaterThan(0, (float) $rowsById[$passOptional->id]['optionalBonus']);
+        $this->assertSame(0.0, (float) $rowsById[$failOptional->id]['optionalBonus']);
+        $this->assertSame(0.0, (float) $rowsById[$missingOptional->id]['optionalBonus']);
+        $this->assertSame(0.0, (float) $rowsById[$withoutOptional->id]['optionalBonus']);
+
+        $calculator = app(BoardResultCalculator::class);
+        $inputBuilder = app(ResultCalculationInputBuilder::class);
+        foreach ([$passOptional, $failOptional, $missingOptional, $withoutOptional] as $student) {
+            $scopedMarks = Marksheet::query()
+                ->where('studentId', $student->id)
+                ->where('examId', $scope['exam']->id)
+                ->where('classId', $scope['class']->id)
+                ->where('sessionId', $scope['session']->id)
+                ->where('groupId', $scope['section']->id)
+                ->orderBy('subjectId')
+                ->get();
+            $student->setRelation('marksheet', $scopedMarks);
+            $subjects = $inputBuilder->subjectsForStudent($student);
+            $authoritative = $calculator->calculate($student, $scope['exam'], $scopedMarks, $subjects);
+            $tabRow = $rowsById[$student->id];
+
+            $this->assertSame($authoritative->status, $tabRow['status']);
+            $this->assertSame(number_format((float) $authoritative->optionalBonus, 2), number_format((float) $tabRow['optionalBonus'], 2));
+            $this->assertSame($authoritative->failedCompulsorySubjects, $tabRow['failedCompulsorySubjects']);
+            $this->assertSame($authoritative->missingCompulsorySubjects, $tabRow['missingCompulsorySubjects']);
+        }
+
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'title="Applied Mathematics"'));
+        $this->assertGreaterThanOrEqual(2, substr_count($html, 'title="Higher English"'));
+    }
+
     private function scenario(string $scenario): array
     {
         $scope = $this->scope(str_ends_with($scenario, '_failure') ? 1 : 2); $student = $this->student($scope, '01');
@@ -530,6 +830,7 @@ class TabulationSummaryResultEngineTest extends TestCase
     private function student(array $scope,string $roll,?int $fourth=null): newAdmission { $s=new newAdmission();$s->stdId=(string)random_int(100000,999999999);$s->fullName='Output Student';$s->sessName=$scope['session']->id;$s->className=$scope['class']->id;$s->sectionName=$scope['section']->id;$s->departmentName=$scope['department']->id;$s->rollNumber=$roll;$s->fourthSubjectId=$fourth;$s->save();return $s; }
     private function subject(string $name,string $type,float $cq,float $mcq=0,float $pr=0,?string $alias=null): Subject { $s=new Subject();$s->subjectName=$name;$s->alias=$alias??strtolower(str_replace(' ','_',$name));$s->subjectType=$type;$s->assign_class='0';$s->CQ=$cq;$s->MCQ=$mcq;$s->Practical=$pr;$s->save();return $s; }
     private function mark(newAdmission $student,array $scope,Subject $subject,float $cq,?float $mcq=null,?float $pr=null,?Exam $exam=null): Marksheet { $this->ensureCurriculumMapping($scope,$subject); return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'groupId'=>$scope['section']->id,'examId'=>($exam??$scope['exam'])->id,'subjectId'=>$subject->id,'subjectMarks'=>$cq,'objectMarks'=>$mcq,'practicalMarks'=>$pr,'totalMarks'=>$cq+($mcq??0)+($pr??0),'gradePoint'=>99,'laterGrade'=>'Stored']); }
+    private function markRaw(newAdmission $student,array $scope,Subject $subject,float $cq,?float $mcq=null,?float $pr=null,?Exam $exam=null): Marksheet { return Marksheet::create(['studentId'=>$student->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,'groupId'=>$scope['section']->id,'examId'=>($exam??$scope['exam'])->id,'subjectId'=>$subject->id,'subjectMarks'=>$cq,'objectMarks'=>$mcq,'practicalMarks'=>$pr,'totalMarks'=>$cq+($mcq??0)+($pr??0),'gradePoint'=>99,'laterGrade'=>'Stored']); }
     private function ensureCurriculumMapping(array $scope, Subject $subject): void { $exists=DB::table('curriculum_subject_mappings')->where('session_id',(string)$scope['session']->id)->where('class_id',(string)$scope['class']->id)->where('section_id',(string)$scope['section']->id)->where('department_id',(string)$scope['department']->id)->where('subject_id',(int)$subject->id)->exists(); if($exists) return; $next=(int)(DB::table('curriculum_subject_mappings')->where('session_id',(string)$scope['session']->id)->where('class_id',(string)$scope['class']->id)->where('section_id',(string)$scope['section']->id)->where('department_id',(string)$scope['department']->id)->max('sort_order')??0)+1; DB::table('curriculum_subject_mappings')->insert(['session_id'=>(string)$scope['session']->id,'class_id'=>(string)$scope['class']->id,'section_id'=>(string)$scope['section']->id,'department_id'=>(string)$scope['department']->id,'subject_id'=>(int)$subject->id,'mapping_type'=>'main','sort_order'=>$next,'is_active'=>1,'source'=>'test-fixture','created_at'=>now(),'updated_at'=>now()]); }
 
     private function mapWithOrder(array $scope, Subject $subject, int $sortOrder): void

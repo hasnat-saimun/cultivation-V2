@@ -60,11 +60,12 @@ class ResultPublishService
         if ($pending->isEmpty()) {
             return ['success' => true, 'publications' => $idempotent->values()->all(), 'idempotent' => true];
         }
-        $evidence = $this->readiness->prepareAll($pending);
+        $confirmAnyway = filter_var($input['confirm_anyway'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $evidence = $this->readiness->prepareAll($pending, $confirmAnyway);
 
         try {
             $published = DB::transaction(function () use (
-                $input, $actor, $ipAddress, $scopes, $pending, $evidence, $idempotent
+                $input, $actor, $ipAddress, $scopes, $pending, $evidence, $idempotent, $confirmAnyway
             ) {
                 $locked = collect();
                 foreach ($scopes as $scope) {
@@ -99,7 +100,7 @@ class ResultPublishService
                 }
 
                 $this->readiness->lockAndAssertSubjectStates($evidence);
-                $finalEvidence = $this->readiness->prepareAll($pending);
+                $finalEvidence = $this->readiness->prepareAll($pending, $confirmAnyway);
                 foreach ($evidence as $index => $item) {
                     if ($item['subject_revisions'] !== $finalEvidence[$index]['subject_revisions']) {
                         throw ResultPublicationException::conflict(
@@ -143,6 +144,8 @@ class ResultPublishService
                             'student_count' => $itemEvidence['student_count'],
                             'subject_count' => $itemEvidence['subject_count'],
                             'outcomes' => $itemEvidence['outcomes'],
+                            'non_ready_scopes' => $itemEvidence['non_ready_scopes'],
+                            'confirmed_anyway' => $confirmAnyway,
                         ],
                         null,
                         $ipAddress,

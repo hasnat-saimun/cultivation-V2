@@ -59,7 +59,12 @@ class BulkTranscriptResultEngineTest extends TestCase
         $subject = $this->subject('Main', 'Main', 100);
         $student = $this->student($scope, '01');
         $this->mark($student, $scope, $subject, 80);
-        $fake = new class(app(BoardResultCalculator::class), app(TranscriptResultPresenter::class), app(ResultCalculationInputBuilder::class)) extends BulkTranscriptResultBuilder {
+        $fake = new class(
+            app(BoardResultCalculator::class),
+            app(TranscriptResultPresenter::class),
+            app(ResultCalculationInputBuilder::class),
+            app(\App\Services\ResultCalculation\ComponentRequirementProfileBuilder::class),
+        ) extends BulkTranscriptResultBuilder {
             public int $calls = 0;
             public array $studentIds = [];
             public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows): array
@@ -182,7 +187,12 @@ class BulkTranscriptResultEngineTest extends TestCase
                 return parent::presentWithGradeRows($result, $subjects, $marks, $gradeRows);
             }
         };
-        $builder = new BulkTranscriptResultBuilder(app(BoardResultCalculator::class), $presenter, app(ResultCalculationInputBuilder::class));
+        $builder = new BulkTranscriptResultBuilder(
+            app(BoardResultCalculator::class),
+            $presenter,
+            app(ResultCalculationInputBuilder::class),
+            app(\App\Services\ResultCalculation\ComponentRequirementProfileBuilder::class),
+        );
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('simulated');

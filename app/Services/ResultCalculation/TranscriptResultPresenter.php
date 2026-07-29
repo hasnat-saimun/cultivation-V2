@@ -112,6 +112,7 @@ class TranscriptResultPresenter
 
         return [
             'id' => $result->subjectId,
+            'cellKey' => $result->subjectId,
             'sourceIds' => $result->sourceSubjectIds,
             'type' => $result->subjectType,
             'isOptional' => $result->isOptional,
@@ -152,18 +153,30 @@ class TranscriptResultPresenter
     private function componentDisplay(Collection $subjects, Collection $marks, string $fullField, string $markField, bool $paired): string|float
     {
         $values = [];
+        $effectiveValues = [];
         foreach ($subjects as $index => $subject) {
             if ((float) ($subject->{$fullField} ?? 0) <= 0) continue;
             $mark = $marks->get($index);
-            $values[] = EffectiveComponentMarkResolver::resolve(
+            $resolved = EffectiveComponentMarkResolver::resolve(
                 $mark?->{$markField},
                 true,
                 (bool) ($mark?->confirmed_blank_override ?? false),
             );
+            $values[] = $resolved;
+            if ($resolved !== null) {
+                $effectiveValues[] = $resolved;
+            }
         }
-        if ($values === [] || in_array(null, $values, true)) return '-';
-        if (!$paired) return $values[0];
-        return '('.implode(' + ', $values).') = '.array_sum($values);
+
+        if ($effectiveValues === []) {
+            return '-';
+        }
+
+        if (!$paired || count($effectiveValues) === 1) {
+            return $effectiveValues[0];
+        }
+
+        return '('.implode(' + ', $effectiveValues).') = '.array_sum($effectiveValues);
     }
 
     private function displayName(SubjectResult $result, Collection $subjects): string

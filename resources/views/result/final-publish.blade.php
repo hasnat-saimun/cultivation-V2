@@ -139,4 +139,57 @@ Final Result Publish
         </div>
     </div>
 </div>
+
+@php
+    $nonReadyScopes = collect(session('publication_errors', []))
+        ->firstWhere('issue', 'non_ready_scopes')['scopes'] ?? [];
+@endphp
+@if(count($nonReadyScopes) > 0)
+<div class="modal fade" id="publishAnywayModal" tabindex="-1" role="dialog" aria-labelledby="publishAnywayTitle" aria-modal="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="publishAnywayTitle">Result is not fully ready.</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-2">The following scopes are not confirmed:</p>
+                <ul class="list-unstyled mb-4">
+                    @foreach($nonReadyScopes as $scope)
+                        <li class="mb-3">
+                            <strong>&bull; {{ $scope['scope'] ?? '-' }}</strong><br>
+                            <span class="ml-3">Status: {{ $scope['status'] ?? 'Not Confirmed' }}</span>
+                        </li>
+                    @endforeach
+                </ul>
+                <p class="mb-2">If you publish now:</p>
+                <ul class="list-unstyled mb-0">
+                    <li>&#10003; Completed students will publish normally.</li>
+                    <li>&#10003; Affected students will appear as Incomplete.</li>
+                    <li>&#10003; Marks will NOT be modified.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ route('result.publish') }}">
+                    @csrf
+                    <input type="hidden" name="examId" value="{{ old('examId') }}">
+                    <input type="hidden" name="sessionId" value="{{ old('sessionId') }}">
+                    <input type="hidden" name="classId" value="{{ old('classId') }}">
+                    <input type="hidden" name="groupId" value="{{ old('groupId') }}">
+                    <input type="hidden" name="publication_revision" value="{{ old('publication_revision') }}">
+                    <input type="hidden" name="exact_scope" value="{{ old('exact_scope') }}">
+                    <input type="hidden" name="confirm_anyway" value="1">
+                    <button type="submit" class="btn btn-warning">Publish Anyway</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(function () {
+        $('#publishAnywayModal').modal('show');
+    });
+</script>
+@endif
 @endsection

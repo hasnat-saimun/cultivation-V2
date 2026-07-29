@@ -76,7 +76,7 @@ class ResultMarksScopeService
 
         if ($published) throw ResultLifecycleException::conflict(
             'ScopePublished',
-            'Published results are read-only.'
+            'This result has already been published. Please unpublish it before making any changes.'
         );
     }
 

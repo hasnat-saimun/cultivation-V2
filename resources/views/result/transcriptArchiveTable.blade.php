@@ -28,12 +28,10 @@
         if($isPaired){
             $p1 = $row['paper1'];
             $p2 = $row['paper2'];
-            $theory     = $fmtComponent($p1['cq'] ?? null, $p2['cq'] ?? null);
-            $mcq        = $fmtComponent($p1['mcq'] ?? null, $p2['mcq'] ?? null);
-            $practical  = $fmtComponent($p1['practical'] ?? null, $p2['practical'] ?? null);
-            $totalVal1  = is_numeric($p1['total'] ?? null) ? (float)$p1['total'] : null;
-            $totalVal2  = is_numeric($p2['total'] ?? null) ? (float)$p2['total'] : null;
-            $totalDisp  = ($totalVal1 !== null && $totalVal2 !== null) ? '(' . $totalVal1 . ' + ' . $totalVal2 . ') = ' . ($totalVal1 + $totalVal2) : ($row['total'] ?? '-');
+            $theory     = $row['cq'] ?? $fmtComponent($p1['cq'] ?? null, $p2['cq'] ?? null);
+            $mcq        = $row['mcq'] ?? $fmtComponent($p1['mcq'] ?? null, $p2['mcq'] ?? null);
+            $practical  = $row['practical'] ?? $fmtComponent($p1['practical'] ?? null, $p2['practical'] ?? null);
+            $totalDisp  = $row['total'] ?? '-';
             $grade      = $row['grade'] ?? '-';
             $point      = isset($row['gradePoint']) && is_numeric($row['gradePoint']) ? number_format($row['gradePoint'],2) : ($grade === 'F' ? '0.00' : '-');
         } else {

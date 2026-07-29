@@ -31,7 +31,13 @@ final class BoardResultCalculator
     }
 
     /** Pure calculation over already-loaded records; performs no queries or writes. */
-    public function calculate(object|array $student, object|array $exam, iterable $marks, iterable $subjects): StudentResult
+    public function calculate(
+        object|array $student,
+        object|array $exam,
+        iterable $marks,
+        iterable $subjects,
+        array $componentRequirementProfile = [],
+    ): StudentResult
     {
         $warnings = [];
         $subjects = collect($subjects)->values();
@@ -63,11 +69,19 @@ final class BoardResultCalculator
             $optional = $unitSubjects->contains(fn ($s) => $this->isOptional($s));
             $ids = $unitSubjects->map(fn ($s) => (string) $this->value($s, 'id'))->all();
             if ($optional && ($fourthId === null || !in_array((string) $fourthId, $ids, true))) continue;
-            $results[] = $this->calculateUnit($unit['id'], $unitSubjects, $marksBySubject, $exam, $optional, $warnings);
+            $results[] = $this->calculateUnit(
+                $unit['id'],
+                $unitSubjects,
+                $marksBySubject,
+                $exam,
+                $optional,
+                $warnings,
+                $componentRequirementProfile,
+            );
         }
 
-        $compulsory = array_values(array_filter($results, fn ($r) => $r->isCompulsory));
-        $optional = array_values(array_filter($results, fn ($r) => $r->isOptional));
+        $compulsory = array_values(array_filter($results, fn ($r) => $r->isCompulsory && $r->includedInResult));
+        $optional = array_values(array_filter($results, fn ($r) => $r->isOptional && $r->includedInResult));
         $failed = array_values(array_map(fn ($r) => $r->subjectId, array_filter($compulsory, fn ($r) => $r->status === 'Fail')));
         $missing = array_values(array_map(fn ($r) => $r->subjectId, array_filter($compulsory, fn ($r) => $r->missing)));
         $sum = array_sum(array_map(fn ($r) => $r->gradePoint, $compulsory));
@@ -102,19 +116,51 @@ final class BoardResultCalculator
         return ['F', 0.0];
     }
 
-    private function calculateUnit(string $id, Collection $subjects, Collection $marksBySubject, object|array $exam, bool $optional, array &$warnings): SubjectResult
+    private function calculateUnit(
+        string $id,
+        Collection $subjects,
+        Collection $marksBySubject,
+        object|array $exam,
+        bool $optional,
+        array &$warnings,
+        array $componentRequirementProfile = [],
+    ): SubjectResult
     {
         $full = $got = ['cq' => 0.0, 'mcq' => 0.0, 'practical' => 0.0];
         $missing = false; $paperFailures = []; $sourceIds = [];
+        $includedInResult = false;
         $featureWise = (int) $this->value($exam, 'passingSystem') === 1;
         foreach ($subjects as $subject) {
             $sid = (string) $this->value($subject, 'id'); $sourceIds[] = $sid;
             $rows = $marksBySubject->get($sid, collect());
             $mark = $rows->sortBy(fn ($r) => (int) ($this->value($r, 'id') ?? 0))->last();
-            if (!$mark) { $missing = true; continue; }
+            // Keep optional/fourth-subject behavior aligned with the authoritative rule:
+            // evaluate configured components for that optional subject directly.
+            $requiredComponents = $optional ? null : ($componentRequirementProfile[$sid] ?? null);
+            $subjectHasRequiredComponent = $requiredComponents === null
+                ? collect($this->components())->contains(fn ($fields) => ($this->numeric($this->value($subject, $fields[0])) ?? 0.0) > 0)
+                : in_array(true, $requiredComponents, true);
+            if ($subjectHasRequiredComponent) {
+                $includedInResult = true;
+            }
+            if (!$mark) {
+                if ($subjectHasRequiredComponent) {
+                    $missing = true;
+                }
+                continue;
+            }
             foreach ($this->components() as $key => [$fullField, $markField]) {
-                $max = $this->numeric($this->value($subject, $fullField)) ?? 0.0; $full[$key] += $max;
+                $max = $this->numeric($this->value($subject, $fullField)) ?? 0.0;
+                $isRequired = ($requiredComponents[$key] ?? null);
+                if ($requiredComponents === null) {
+                    $isRequired = $max > 0;
+                }
+                if (!$isRequired) {
+                    continue;
+                }
                 if ($max <= 0) continue;
+                $includedInResult = true;
+                $full[$key] += $max;
                 $value = EffectiveComponentMarkResolver::resolve(
                     $this->value($mark, $markField),
                     true,
@@ -128,10 +174,30 @@ final class BoardResultCalculator
                 if (($value / $max) * 100 < 33) $paperFailures[] = "paper:{$sid}:{$key}";
             }
         }
+
+        if (!$includedInResult) {
+            return new SubjectResult(
+                $id,
+                $optional ? 'Optional' : (string) ($this->value($subjects->first(), 'subjectType') ?: 'Compulsory'),
+                null,
+                0.0,
+                null,
+                '-',
+                0.0,
+                'Pass',
+                $optional,
+                !$optional,
+                [],
+                false,
+                $sourceIds,
+                false,
+            );
+        }
+
         $fullMarks = array_sum($full); $obtained = array_sum($got);
         if ($fullMarks <= 0) { $warnings[] = "Subject {$id} has no positive configured full marks."; $missing = true; }
         $type = $optional ? 'Optional' : (string) ($this->value($subjects->first(), 'subjectType') ?: 'Compulsory');
-        if ($missing) return new SubjectResult($id, $type, null, $fullMarks, null, '-', 0.0, 'Incomplete', $optional, !$optional, array_values(array_unique($paperFailures)), true, $sourceIds);
+        if ($missing) return new SubjectResult($id, $type, null, $fullMarks, null, '-', 0.0, 'Incomplete', $optional, !$optional, array_values(array_unique($paperFailures)), true, $sourceIds, true);
 
         $percentage = ($obtained / $fullMarks) * 100;
         [$letter, $point] = $this->gradeForPercentage($percentage);
@@ -139,7 +205,7 @@ final class BoardResultCalculator
         if ($featureWise) foreach ($got as $key => $value) if ($full[$key] > 0 && ($value / $full[$key]) * 100 < 33) $combinedFailures[] = $key;
         $fails = $letter === 'F' || ($featureWise && $combinedFailures !== []);
         if ($fails) { $letter = 'F'; $point = 0.0; }
-        return new SubjectResult($id, $type, round($obtained, 2), round($fullMarks, 2), round($percentage, 4), $letter, $point, $fails ? 'Fail' : 'Pass', $optional, !$optional, array_values(array_unique(array_merge($combinedFailures, $paperFailures))), false, $sourceIds);
+        return new SubjectResult($id, $type, round($obtained, 2), round($fullMarks, 2), round($percentage, 4), $letter, $point, $fails ? 'Fail' : 'Pass', $optional, !$optional, array_values(array_unique(array_merge($combinedFailures, $paperFailures))), false, $sourceIds, true);
     }
 
     /** @return array{0:array,1:array} */

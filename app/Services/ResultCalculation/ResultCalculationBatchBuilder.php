@@ -5,6 +5,7 @@ namespace App\Services\ResultCalculation;
 use App\Models\Exam;
 use App\Models\newAdmission;
 use App\Models\sessionManage;
+use App\Services\PublishedResultReadyMarksService;
 use Illuminate\Support\Collection;
 
 class ResultCalculationBatchBuilder
@@ -12,6 +13,8 @@ class ResultCalculationBatchBuilder
     public function __construct(
         private BoardResultCalculator $calculator,
         private ResultCalculationInputBuilder $inputBuilder,
+        private ComponentRequirementProfileBuilder $componentProfileBuilder,
+        private ?PublishedResultReadyMarksService $publishedMarks = null,
     ) {}
 
     /** @return array{exam:Exam,students:Collection,entries:array<int,array>} */
@@ -73,7 +76,30 @@ class ResultCalculationBatchBuilder
                 ->when($sectionlessOnly, fn ($marks) => $marks->whereNull('groupId'))
                 ->orderBy('subjectId');
         }]);
+        $studentGroups = $sectionId !== null || $sectionlessOnly
+            ? collect([$students])
+            : $students->groupBy(fn ($student) => is_numeric($student->sectionName ?? null)
+                ? (string) (int) $student->sectionName
+                : 'class')->values();
+        foreach ($studentGroups as $scopeStudents) {
+            $filterGroupId = $sectionlessOnly
+                ? null
+                : (is_numeric($scopeStudents->first()?->sectionName ?? null)
+                    ? (int) $scopeStudents->first()->sectionName
+                    : $sectionId);
+            $filteredMarks = $this->publishedMarks()->filter(
+                $scopeStudents->flatMap(fn ($student) => $student->marksheet),
+                $examId,
+                $sessionId,
+                $classId,
+                $filterGroupId,
+            )->groupBy(fn ($mark) => (int) $mark->studentId);
+            foreach ($scopeStudents as $student) {
+                $student->setRelation('marksheet', $filteredMarks->get((int) $student->id, collect())->values());
+            }
+        }
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
+        $componentRequirementProfile = $this->componentProfileBuilder->build($students, $subjectsByStudent);
         $entries = []; $errors = [];
         foreach ($students as $student) {
             $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
@@ -81,7 +107,13 @@ class ResultCalculationBatchBuilder
                 $entries[(int) $student->id] = [
                     'student' => $student,
                     'subjects' => $subjects,
-                    'result' => $this->calculator->calculate($student, $exam, $student->marksheet, $subjects),
+                    'result' => $this->calculator->calculate(
+                        $student,
+                        $exam,
+                        $student->marksheet,
+                        $subjects,
+                        $componentRequirementProfile,
+                    ),
                 ];
             } catch (\Throwable $exception) {
                 if (!$tolerant) throw $exception;
@@ -93,4 +125,10 @@ class ResultCalculationBatchBuilder
         }
         return compact('exam', 'students', 'entries', 'errors');
     }
+
+    private function publishedMarks(): PublishedResultReadyMarksService
+    {
+        return $this->publishedMarks ??= app(PublishedResultReadyMarksService::class);
+    }
+
 }

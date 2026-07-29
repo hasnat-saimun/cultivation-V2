@@ -36,6 +36,7 @@ use App\Exceptions\ResultLifecycleException;
 use App\Exceptions\ResultPublicationException;
 use App\Services\ResultPublishService;
 use App\Services\ResultUnpublishService;
+use App\Services\PublishedResultReadyMarksService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -63,6 +64,7 @@ class MarksheetController extends Controller
     private ResultMarksScopeService $marksScopes;
     private ResultPublishService $resultPublisher;
     private ResultUnpublishService $resultUnpublisher;
+    private PublishedResultReadyMarksService $publishedMarks;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
@@ -82,7 +84,8 @@ class MarksheetController extends Controller
         ResultMarksReopenService $marksReopen,
         ResultMarksScopeService $marksScopes,
         ResultPublishService $resultPublisher,
-        ResultUnpublishService $resultUnpublisher
+        ResultUnpublishService $resultUnpublisher,
+        PublishedResultReadyMarksService $publishedMarks
     )
     {
         $this->adminResolver = $adminResolver;
@@ -103,6 +106,7 @@ class MarksheetController extends Controller
         $this->marksScopes = $marksScopes;
         $this->resultPublisher = $resultPublisher;
         $this->resultUnpublisher = $resultUnpublisher;
+        $this->publishedMarks = $publishedMarks;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -863,6 +867,7 @@ class MarksheetController extends Controller
             'publication_revisions.*' => 'integer|min:1',
             'exact_scope' => 'nullable|boolean',
             'reason' => $unpublish ? 'required|string|max:500' : 'nullable|string|max:500',
+            'confirm_anyway' => $unpublish ? 'nullable' : 'nullable|boolean',
         ]);
         $classId = $request->input('classId');
         if ($classId !== 'all' && (!is_numeric($classId) || (int) $classId <= 0)) {
@@ -881,7 +886,8 @@ class MarksheetController extends Controller
                 'details' => $exception->details,
             ], $exception->httpStatus);
         }
-        return back()->with('error', $exception->getMessage())
+        return back()->withInput()->with('error', $exception->getMessage())
+            ->with('publication_failure', $exception->failure)
             ->with('publication_errors', $exception->details);
     }
 
@@ -1134,9 +1140,41 @@ class MarksheetController extends Controller
         try {
             $exam = Exam::findOrFail($examId);
             $scopedMarks = $this->scopedTranscriptMarks($student, (int) $exam->id);
+            $sessionIdForMarks = is_numeric($student->sessName ?? null)
+                ? (int) $student->sessName
+                : (int) (sessionManage::where('session', (string) ($student->sessName ?? ''))->value('id') ?? 0);
+            if ($sessionIdForMarks > 0) {
+                $scopedMarks = $this->publishedMarks->filter(
+                    $scopedMarks,
+                    (int) $exam->id,
+                    $sessionIdForMarks,
+                    (int) $student->className,
+                    is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null,
+                );
+            }
             $student->setRelation('marksheet', $scopedMarks);
             $subjects = $this->resultCalculationInputBuilder->subjectsForStudent($student);
-            $calculated = $this->boardResultCalculator->calculate($student, $exam, $scopedMarks, $subjects);
+            $meritBatch = null;
+            $calculated = null;
+            $scopeSectionId = is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null;
+            $scopeDepartmentId = is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : null;
+            if ($sessionIdForMarks > 0) {
+                $meritBatch = $this->resultCalculationBatchBuilder->build(
+                    (int) $exam->id,
+                    (int) $student->className,
+                    $sessionIdForMarks,
+                    $scopeSectionId,
+                    $scopeDepartmentId,
+                );
+                $entry = $meritBatch['entries'][(int) $student->id] ?? null;
+                if ($entry !== null) {
+                    $subjects = $entry['subjects'];
+                    $calculated = $entry['result'];
+                }
+            }
+            if ($calculated === null) {
+                $calculated = $this->boardResultCalculator->calculate($student, $exam, $scopedMarks, $subjects);
+            }
             $transcriptResult = $this->transcriptResultPresenter->present(
                 $calculated, $subjects, $scopedMarks
             );
@@ -1145,12 +1183,12 @@ class MarksheetController extends Controller
                 ? (int) $student->sessName
                 : (int) (sessionManage::where('session', (string) ($student->sessName ?? ''))->value('id') ?? 0);
             if ($sessionId > 0) {
-                $meritBatch = $this->resultCalculationBatchBuilder->build(
+                $meritBatch ??= $this->resultCalculationBatchBuilder->build(
                     (int) $exam->id,
                     (int) $student->className,
                     $sessionId,
-                    is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null,
-                    is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : null,
+                    $scopeSectionId,
+                    $scopeDepartmentId,
                 );
                 $meritRank = $this->meritPositionService->positions($meritBatch['entries'])[(int) $student->id] ?? null;
             }

@@ -88,7 +88,7 @@ class SingleMarksheetDepartmentIsolationRegressionTest extends TestCase
         $this->assertSame($optionalNames, $optionalNamesFromHtml);
 
         // Keep query growth bounded for this real route.
-        $this->assertLessThanOrEqual(30, $queryCount);
+        $this->assertLessThanOrEqual(32, $queryCount);
     }
 
     public function test_all_department_tabulation_uses_per_student_applicability_matrix(): void

@@ -2,6 +2,7 @@
 
 namespace App\Services\ResultCalculation;
 
+use App\Models\Subject;
 use App\Models\GradeList;
 
 class TabulationResultPresenter
@@ -31,7 +32,12 @@ class TabulationResultPresenter
                 if ($sourceSubjects->contains(fn ($subject) => (float) ($subject->MCQ ?? 0) > 0)) $components[] = ['key' => 'mcq', 'label' => 'MCQ'];
                 if ($sourceSubjects->contains(fn ($subject) => (float) ($subject->Practical ?? 0) > 0)) $components[] = ['key' => 'practical', 'label' => 'PR'];
                 if ($components === []) $components[] = ['key' => 'total', 'label' => 'Total'];
-                $columnDefinitions[$subjectRow['name']] ??= [
+                $columnDefinitions[$subjectRow['cellKey']] ??= [
+                    'cellKey' => $subjectRow['cellKey'],
+                    'subject_id' => $subjectRow['cellKey'],
+                    'display_name' => SubjectHeaderFormatter::shortLabel((string) $subjectRow['name']),
+                    'full_name' => SubjectHeaderFormatter::normalizeName((string) $subjectRow['name']),
+                    'is_fourth_subject' => $subjectRow['isOptional'],
                     'subjectName' => $subjectRow['name'],
                     'paired' => $subjectRow['paired'],
                     'optional' => $subjectRow['isOptional'],
@@ -40,8 +46,9 @@ class TabulationResultPresenter
                     'sortOrder' => (int) ($subjectRow['sortOrder'] ?? PHP_INT_MAX),
                 ];
                 $subjectRows[] = [
+                    'cellKey' => $subjectRow['cellKey'],
                     'name' => $subjectRow['name'],
-                    'type' => $this->subjectType($subjectRow['name'], $presented['optionalRows']),
+                    'type' => $subjectRow['type'],
                     'cq' => $subjectRow['cq'], 'mcq' => $subjectRow['mcq'], 'practical' => $subjectRow['practical'],
                     'total' => $subjectRow['total'], 'grade' => $subjectRow['grade'], 'gradePoint' => $subjectRow['gradePoint'],
                     'status' => $subjectRow['status'], 'componentFailures' => $subjectRow['componentFailures'],
@@ -75,11 +82,12 @@ class TabulationResultPresenter
                 '_studentResult' => $result,
             ];
         }
+        $columnDefinitions = $this->mergeAssignedFourthSubjectColumns($entries, $columnDefinitions);
         $columns = array_map(fn ($definition) => (object) $definition, array_values($columnDefinitions));
         usort($columns, fn ($a, $b) => $a->sortOrder <=> $b->sortOrder
             ?: strcasecmp($a->subjectName, $b->subjectName));
         foreach ($rows as &$row) {
-            $row['cells'] = collect($row['subjects'])->keyBy('name')->all();
+            $row['cells'] = collect($row['subjects'])->keyBy('cellKey')->all();
             $row['subjectsCompact'] = array_values(array_filter($row['subjects'], fn ($subject) => is_numeric($subject['total'])));
         }
         unset($row);
@@ -104,7 +112,7 @@ class TabulationResultPresenter
             $failedGroups[(int) $row['subjectFails']][] = $row;
         }
         ksort($failedGroups);
-        $subjectWisePages = $this->pageSubjectWiseRows($reportSections, $failedGroups, 18);
+        $subjectWisePages = $this->pageSubjectWiseRows($reportSections, $failedGroups, 10);
         $glancePageSize = collect($columns)->sum('componentColumnCount') >= 14 ? 18 : 24;
         $glancePages = $this->pageRows($orderedGlanceRows, $glancePageSize);
         return [
@@ -119,6 +127,62 @@ class TabulationResultPresenter
             'subjectWisePages' => $subjectWisePages,
             'glancePages' => $glancePages,
         ];
+    }
+
+    private function mergeAssignedFourthSubjectColumns(array $entries, array $columnDefinitions): array
+    {
+        $assignedFourthIds = collect($entries)
+            ->map(fn ($entry) => is_numeric($entry['student']->fourthSubjectId ?? null) ? (int) $entry['student']->fourthSubjectId : null)
+            ->filter(fn ($id) => $id !== null && $id > 0)
+            ->unique()
+            ->values();
+
+        if ($assignedFourthIds->isEmpty()) {
+            return $columnDefinitions;
+        }
+
+        $fourthSubjects = collect($entries)
+            ->flatMap(fn ($entry) => $entry['subjects'])
+            ->filter(fn ($subject) => in_array((int) ($subject->id ?? 0), $assignedFourthIds->all(), true))
+            ->keyBy(fn ($subject) => (int) $subject->id);
+
+        $missingIds = $assignedFourthIds->reject(fn ($id) => $fourthSubjects->has((int) $id));
+        if ($missingIds->isNotEmpty()) {
+            $loaded = Subject::query()->whereIn('id', $missingIds->all())->get();
+            foreach ($loaded as $subject) {
+                $fourthSubjects->put((int) $subject->id, $subject);
+            }
+        }
+
+        foreach ($assignedFourthIds as $subjectId) {
+            $subject = $fourthSubjects->get((int) $subjectId);
+            if (!$subject) {
+                continue;
+            }
+
+            $cellKey = (string) $subjectId;
+            $componentColumns = [];
+            if ((float) ($subject->CQ ?? 0) > 0) $componentColumns[] = ['key' => 'cq', 'label' => 'CQ'];
+            if ((float) ($subject->MCQ ?? 0) > 0) $componentColumns[] = ['key' => 'mcq', 'label' => 'MCQ'];
+            if ((float) ($subject->Practical ?? 0) > 0) $componentColumns[] = ['key' => 'practical', 'label' => 'PR'];
+            if ($componentColumns === []) $componentColumns[] = ['key' => 'total', 'label' => 'Total'];
+
+            $columnDefinitions[$cellKey] ??= [
+                'cellKey' => $cellKey,
+                'subject_id' => $subjectId,
+                'display_name' => SubjectHeaderFormatter::shortLabel((string) $subject->subjectName),
+                'full_name' => SubjectHeaderFormatter::normalizeName((string) $subject->subjectName),
+                'is_fourth_subject' => true,
+                'subjectName' => (string) $subject->subjectName,
+                'paired' => false,
+                'optional' => true,
+                'componentColumns' => $componentColumns,
+                'componentColumnCount' => count($componentColumns),
+                'sortOrder' => 900000 + (int) $subjectId,
+            ];
+        }
+
+        return $columnDefinitions;
     }
 
     public function summarize(array $rows, $subjects): array
@@ -144,7 +208,7 @@ class TabulationResultPresenter
         foreach ($subjects as $subject) {
             $name = (string) $subject->subjectName; $appeared = $pass = $fail = $missing = 0;
             foreach ($rows as $row) {
-                $cell = collect($row['subjects'])->firstWhere('name', $name);
+                $cell = $row['cells'][$subject->cellKey] ?? null;
                 if (!$cell || ($cell['status'] ?? null) === 'Incomplete') { $missing++; continue; }
                 $appeared++;
                 if (($cell['status'] ?? null) === 'Fail') $fail++; else $pass++;
@@ -198,9 +262,17 @@ class TabulationResultPresenter
 
         $pages = [];
         foreach ($groups as $group) {
+            if ($group['rows'] === []) {
+                continue;
+            }
             $chunks = array_chunk($group['rows'], $size);
-            if ($chunks === []) $chunks = [[]];
-            foreach ($chunks as $rows) $pages[] = ['title' => $group['title'], 'rows' => $rows];
+            foreach ($chunks as $chunkIndex => $rows) {
+                $pages[] = [
+                    'title' => $group['title'],
+                    'rows' => $rows,
+                    'slStart' => ($chunkIndex * $size) + 1,
+                ];
+            }
         }
 
         return $this->numberPages($pages);
@@ -232,11 +304,6 @@ class TabulationResultPresenter
             $parts[] = $failed.' Subject'.($failed === 1 ? '' : 's').'-'.str_pad((string) $students, 2, '0', STR_PAD_LEFT);
         }
         return implode(', ', $parts);
-    }
-
-    private function subjectType(string $name, array $optionalRows): string
-    {
-        return collect($optionalRows)->contains(fn ($row) => $row['name'] === $name) ? 'Optional' : 'Main';
     }
 
     private function gpaBucket(float $gpa): string

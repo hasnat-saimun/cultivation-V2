@@ -14,7 +14,7 @@ class ResultPublicationReadinessService
         private ResultPublicationScopeService $scopes,
     ) {}
 
-    public function prepare(array $scope): array
+    public function prepare(array $scope, bool $allowNonReady = false): array
     {
         try {
             $batch = $scope['groupId'] === null
@@ -70,7 +70,34 @@ class ResultPublicationReadinessService
         $incomplete = collect($batch['entries'])->filter(
             fn ($entry) => $entry['result']->status === 'Incomplete'
         )->keys()->values();
-        if ($unconfirmed->isNotEmpty() || $incomplete->isNotEmpty()) {
+        $subjectNames = collect($batch['entries'])
+            ->flatMap(fn ($entry) => $entry['subjects'])
+            ->mapWithKeys(fn ($subject) => [
+                (int) $subject->id => (string) ($subject->subjectName ?: 'Subject '.$subject->id),
+            ]);
+        $nonReadyScopes = $unconfirmed->map(function ($subjectId) use ($states, $subjectNames) {
+            $state = $states->get($subjectId);
+            return [
+                'scope' => (string) ($subjectNames->get($subjectId) ?: 'Subject '.$subjectId),
+                'subjectId' => (int) $subjectId,
+                'status' => $state === null
+                    ? 'Missing'
+                    : ($state->status === MarksScopeState::STATUS_DRAFT ? 'Draft' : 'Not Confirmed'),
+                'reason' => $state === null
+                    ? 'No lifecycle scope exists.'
+                    : 'The subject scope is not Confirmed.',
+            ];
+        })->values();
+        foreach ($incomplete as $studentId) {
+            $nonReadyScopes->push([
+                'scope' => 'Student '.$studentId,
+                'studentId' => (int) $studentId,
+                'status' => 'Missing',
+                'reason' => 'Required result evidence is incomplete.',
+            ]);
+        }
+
+        if (!$allowNonReady && $nonReadyScopes->isNotEmpty()) {
             $details = [];
             if ($unconfirmed->isNotEmpty()) {
                 $details[] = [
@@ -82,6 +109,11 @@ class ResultPublicationReadinessService
             if ($incomplete->isNotEmpty()) {
                 $details[] = ['issue' => 'incomplete_students', 'count' => $incomplete->count()];
             }
+            $details[] = [
+                'issue' => 'non_ready_scopes',
+                'count' => $nonReadyScopes->count(),
+                'scopes' => $nonReadyScopes->all(),
+            ];
             throw ResultPublicationException::invalid(
                 $unconfirmed->isNotEmpty() ? 'PublicationUnconfirmed' : 'PublicationIncomplete',
                 'The result scope is not ready for publication.',
@@ -89,9 +121,10 @@ class ResultPublicationReadinessService
             );
         }
 
-        $revisions = $subjectIds->mapWithKeys(
-            fn ($subjectId) => [(string) $subjectId => (int) $states->get($subjectId)->revision]
-        )->all();
+        $revisions = $subjectIds
+            ->filter(fn ($subjectId) => $states->get($subjectId)?->status === MarksScopeState::STATUS_CONFIRMED)
+            ->mapWithKeys(fn ($subjectId) => [(string) $subjectId => (int) $states->get($subjectId)->revision])
+            ->all();
         $outcomes = collect($batch['entries'])->countBy(fn ($entry) => $entry['result']->status)->all();
 
         return [
@@ -101,13 +134,14 @@ class ResultPublicationReadinessService
             'subject_count' => $subjectIds->count(),
             'subject_revisions' => $revisions,
             'outcomes' => $outcomes,
+            'non_ready_scopes' => $nonReadyScopes->all(),
         ];
     }
 
     /** @return Collection<int,array> */
-    public function prepareAll(Collection $scopes): Collection
+    public function prepareAll(Collection $scopes, bool $allowNonReady = false): Collection
     {
-        return $scopes->map(fn ($scope) => $this->prepare($scope));
+        return $scopes->map(fn ($scope) => $this->prepare($scope, $allowNonReady));
     }
 
     public function lockAndAssertSubjectStates(Collection $evidence): void

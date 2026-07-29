@@ -18,6 +18,7 @@ final class SubjectResult
         public readonly array $componentFailures = [],
         public readonly bool $missing = false,
         public readonly array $sourceSubjectIds = [],
+        public readonly bool $includedInResult = true,
     ) {}
 
     public function toArray(): array { return get_object_vars($this); }
