@@ -28,7 +28,9 @@
         .grade-scale th, .grade-scale td { text-align: center; font-size: 10px; }
         .section-title { margin: 8px 0 4px 0; font-size: 14px; font-weight: 700; }
         .failed-subjects h4 { margin: 6px 0 2px 0; color: #b91c1c; }
-        .failed-subjects ul { margin: 4px 0 0 0; padding-left: 14px; columns: 2; column-gap: 10px; }
+        .failed-subject-grid { width: 100%; margin: 4px 0 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
+        .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 2px 10px 2px 0; vertical-align: top; overflow-wrap: anywhere; word-break: normal; }
+        .failed-subject-empty { visibility: hidden; }
         .signature-row { width: 100%; margin-top: 14px; }
         .signature-row td { width: 33.33%; border: 0 !important; text-align: center; vertical-align: bottom; height: 72px; }
         .signature-line { border-top: 1px solid #111827; width: 75%; margin: 0 auto; }
@@ -121,12 +123,7 @@
                 </tr></thead>
             </table>
 
-            @if($transcript['result']['failedSubjectCount'] > 0)
-                <div class="failed-subjects">
-                    <h4>Failed Subjects ({{ $transcript['result']['failedSubjectCount'] }})</h4>
-                    <ul>@foreach($transcript['result']['failedSubjects'] as $subject)<li>{{ $subject }}</li>@endforeach</ul>
-                </div>
-            @endif
+            @include('result.partials.failed-subjects', ['result' => $transcript['result']])
 
             <table class="signature-row"><tr>
                 <td><div>Guardian</div><div class="signature-line"></div><div class="small">Signature</div></td>

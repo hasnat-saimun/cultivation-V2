@@ -45,6 +45,7 @@ class TranscriptResultPresenter
         $optionalRows = $this->ordering()->sortOptionalRows($optionalRows);
 
         $classification = $this->classifier()->classify($result, $marks);
+        $failedSubjects = array_values(array_unique($failedNames));
         $letter = match (true) {
             $classification['classification'] === 'Absent' => 'Absent',
             $result->status === 'Fail' => 'F',
@@ -67,8 +68,12 @@ class TranscriptResultPresenter
             'ignoredOptionalMissingSubjects' => $classification['ignoredOptionalMissingSubjectIds'],
             'optionalBonus' => $result->optionalBonus,
             'optionalBonusDisplay' => number_format($result->optionalBonus, 2),
-            'failedSubjects' => array_values(array_unique($failedNames)),
-            'failedSubjectCount' => count(array_unique($failedNames)),
+            'failedSubjects' => $failedSubjects,
+            'failedSubjectRows' => collect($failedSubjects)->chunk(3)
+                ->map(fn (Collection $row) => $row->values()->all())
+                ->values()
+                ->all(),
+            'failedSubjectCount' => count($failedSubjects),
             'missingSubjects' => array_values(array_unique($missingNames)),
             'missingSubjectCount' => count(array_unique($missingNames)),
             'isIncomplete' => $result->status === 'Incomplete',

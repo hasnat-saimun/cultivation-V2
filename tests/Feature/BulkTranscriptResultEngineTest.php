@@ -17,6 +17,7 @@ use App\Services\ResultCalculation\BoardResultCalculator;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use App\Services\ResultCalculation\ResultCalculationInputBuilder;
 use App\Services\ResultCalculation\StudentResult;
+use App\Services\ResultCalculation\SubjectResult;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -263,6 +264,86 @@ class BulkTranscriptResultEngineTest extends TestCase
         DB::disableQueryLog();
 
         $this->assertLessThanOrEqual($oneStudentQueries + 2, $classQueries);
+    }
+
+    #[DataProvider('failedSubjectRowCountProvider')]
+    public function test_presenter_chunks_failed_subjects_into_ordered_rows_of_at_most_three(int $count): void
+    {
+        $names = collect(range(1, $count))
+            ->map(fn (int $index) => $index === $count
+                ? "Very Long Failed Subject Name {$index}-".str_repeat('X', 48)
+                : "Failed Subject {$index}-10{$index}")
+            ->all();
+        $subjects = collect($names)->map(fn (string $name, int $index) => (object) [
+            'id' => $index + 1,
+            'subjectName' => $name,
+            'subjectType' => 'Main',
+            'CQ' => 100,
+            'MCQ' => 0,
+            'Practical' => 0,
+        ]);
+        $subjectResults = $subjects->map(fn ($subject) => new SubjectResult(
+            (string) $subject->id, 'Main', 20, 100, 20, 'F', 0, 'Fail',
+            false, true, [], false, [(string) $subject->id],
+        ))->all();
+        $marks = $subjects->map(fn ($subject) => (object) [
+            'id' => $subject->id,
+            'subjectId' => $subject->id,
+            'subjectMarks' => 20,
+            'objectMarks' => null,
+            'practicalMarks' => null,
+        ]);
+        $presented = app(TranscriptResultPresenter::class)->present(
+            new StudentResult($subjectResults, 0, $count, null, 0, array_map('strval', range(1, $count)), [], 0, 'Fail'),
+            $subjects,
+            $marks,
+        );
+
+        $this->assertSame($names, $presented['failedSubjects']);
+        $this->assertSame($count, $presented['failedSubjectCount']);
+        $this->assertSame($names, collect($presented['failedSubjectRows'])->flatten()->all());
+        $this->assertTrue(collect($presented['failedSubjectRows'])->every(fn (array $row) => count($row) <= 3));
+        $this->assertCount((int) ceil($count / 3), $presented['failedSubjectRows']);
+
+        $html = view('result.partials.failed-subjects', ['result' => $presented])->render();
+        $this->assertSame((int) ceil($count / 3), substr_count($html, 'data-failed-subject-row='));
+        $this->assertSame($count, substr_count($html, 'data-failed-subject-item'));
+        $this->assertStringNotContainsString('<li', $html);
+        $this->assertStringContainsString($names[$count - 1], $html);
+    }
+
+    public static function failedSubjectRowCountProvider(): array
+    {
+        return [[1], [3], [4], [8]];
+    }
+
+    public function test_single_and_multiple_student_bulk_views_share_the_three_column_failed_subject_grid(): void
+    {
+        $result = [
+            'mainRows' => [], 'optionalRows' => [], 'missingSubjectCount' => 0, 'missingSubjects' => [],
+            'totalMarks' => 0, 'letterGrade' => 'F', 'gpaDisplay' => '0.00', 'status' => 'Fail',
+            'failedSubjects' => ['Math-109', 'Bangladesh and Global Studies-150', 'Physics-136', 'Biology-138'],
+            'failedSubjectRows' => [
+                ['Math-109', 'Bangladesh and Global Studies-150', 'Physics-136'],
+                ['Biology-138'],
+            ],
+            'failedSubjectCount' => 4,
+        ];
+        $transcript = [
+            'studentIdentity' => ['studentId' => '1', 'studentName' => 'Student', 'fatherName' => '', 'motherName' => '', 'rollNumber' => '01'],
+            'metadata' => ['sessionName' => '2026', 'className' => 'Ten', 'sectionName' => 'A', 'departmentName' => 'Science'],
+            'meritRank' => null,
+            'result' => $result,
+        ];
+        $exam = new Exam();
+        $exam->examName = 'Annual';
+
+        foreach ([[$transcript], [$transcript, $transcript]] as $transcripts) {
+            $html = $this->render($transcripts, $exam);
+            $this->assertSame(count($transcripts) * 2, substr_count($html, 'data-failed-subject-row='));
+            $this->assertSame(count($transcripts) * 4, substr_count($html, 'data-failed-subject-item'));
+            $this->assertStringNotContainsString('<li', $html);
+        }
     }
 
     private function scenario(string $scenario): array

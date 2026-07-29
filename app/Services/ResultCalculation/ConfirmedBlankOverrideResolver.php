@@ -45,10 +45,7 @@ final class ConfirmedBlankOverrideResolver
             $event = $events->get($key);
             $accepted = $state?->status === MarksScopeState::STATUS_CONFIRMED
                 && (bool) data_get($event?->change_set, 'blank_override', false);
-            $mark->setAttribute(
-                'component_scope_tracked',
-                $state?->status === MarksScopeState::STATUS_CONFIRMED
-            );
+            $mark->setAttribute('component_scope_tracked', $state !== null);
             $mark->setAttribute('confirmed_blank_override', $accepted);
         }
     }

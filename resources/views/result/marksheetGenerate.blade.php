@@ -41,8 +41,7 @@ Marksheet Generate
         }
         .failed-subjects { font-size: 11px !important; }
         .failed-subjects h4 { margin-bottom: 4px !important; }
-        .failed-subjects ul { columns: 2 !important; column-gap: 12px !important; list-style-position: inside !important; margin: 4px 0 !important; padding-left: 0 !important; }
-        .failed-subjects li { break-inside: avoid !important; margin: 0 0 3px !important; padding: 0 !important; }
+        .failed-subject-grid { margin: 4px 0 !important; }
     }
     .marksheet .transcript { background: #fff; padding: 16px; border: 1px solid #e5e7eb; }
     .marksheet table.table, .marksheet table.table-bordered { font-size: 12px; border-collapse: collapse; }
@@ -59,7 +58,9 @@ Marksheet Generate
     .student-info th { width: 140px; white-space: nowrap; }
     .student-info td { word-break: break-word; overflow-wrap: anywhere; }
     .failed-subjects h4 { margin-bottom: 6px; }
-    .failed-subjects ul { margin: 6px 0; }
+    .failed-subject-grid { width: 100%; margin: 6px 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
+    .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 2px 12px 2px 0; vertical-align: top; overflow-wrap: anywhere; word-break: normal; }
+    .failed-subject-empty { visibility: hidden; }
     .report-header { display: block; width: 100%; text-align: center; margin: 0 auto 8px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
     .report-header .hdr-logo { height: 60px; width: 60px; object-fit: contain; display: inline-block; margin: 0; }
     .report-header .logo-wrap { width: 100%; display: block; text-align: center; margin: 0 auto 6px; }
@@ -248,16 +249,11 @@ Marksheet Generate
                 </thead>
             </table>
 
-            @if($transcriptResult['failedSubjectCount'] > 0)
-                <div class="col-12 mb-3 failed-subjects">
-                    <h4 class="fw-bold text-danger">Failed Subjects ({{ $transcriptResult['failedSubjectCount'] }})</h4>
-                    <ul class="mb-0">
-                        @foreach($transcriptResult['failedSubjects'] as $failedSubject)
-                            <li>{{ $failedSubject }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
+            @include('result.partials.failed-subjects', [
+                'result' => $transcriptResult,
+                'containerClass' => 'col-12 mb-3',
+                'headingClass' => 'fw-bold text-danger',
+            ])
 
             <div class="signature-row">
                 <div class="signature-box">
