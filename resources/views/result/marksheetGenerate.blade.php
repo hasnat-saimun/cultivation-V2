@@ -6,7 +6,7 @@ Marksheet Generate
 
 @section('backIndex')
 <style>
-    @page { size: A4 portrait; margin: 12mm; }
+    @page { size: A4 portrait; margin: 8mm; }
     html, body { background: #fff; }
     @media print {
         html, body { background: #fff !important; }
@@ -15,18 +15,19 @@ Marksheet Generate
         .breadcrumbs-area, .header-menu-one, .navbar { display: none !important; }
         .marksheet .card { box-shadow: none !important; border: none !important; }
         .marksheet .transcript { border: none !important; }
-        .signature-row { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px !important; width: 100% !important; }
+        .transcript-page { page-break-inside: avoid !important; break-inside: avoid !important; }
+        .signature-row { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 12px !important; width: 100% !important; }
         .marksheet table.table, .marksheet table.table-bordered { border-collapse: collapse !important; }
         .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #e5e7eb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { border: 1px solid #000 !important; }
-        .report-header { gap: 6px !important; margin-bottom: 6px !important; padding-bottom: 4px !important; border-bottom: 1px solid #cbd5e1 !important; }
-        .report-header .hdr-logo { height: 48px !important; }
-        .report-header .name { font-size: 18px !important; }
-        .report-header .subline, .report-header .contacts { font-size: 11px !important; }
+        .report-header { margin-bottom: 4px !important; padding-bottom: 3px !important; border-bottom: 1px solid #cbd5e1 !important; }
+        .report-header .hdr-logo { height: 42px !important; width: 42px !important; }
+        .report-header .name { font-size: 17px !important; margin: 2px 0 !important; }
+        .report-header .subline, .report-header .contacts { font-size: 10px !important; margin-top: 1px !important; }
         .transcript-information-grid {
             display: grid !important;
             grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) !important;
-            gap: 16px !important;
+            gap: 10px !important;
             align-items: start !important;
         }
         .student-information,
@@ -39,28 +40,42 @@ Marksheet Generate
             page-break-inside: avoid !important;
             width: 100% !important;
         }
-        .failed-subjects { font-size: 11px !important; }
+        .failed-subjects { font-size: 10px !important; }
         .failed-subjects h4 { margin-bottom: 4px !important; }
         .failed-subject-grid { margin: 4px 0 !important; }
+        .transcript-footer,
+        .failed-subjects,
+        .grading-table-wrap,
+        .signature-row { page-break-inside: avoid !important; break-inside: avoid !important; }
     }
-    .marksheet .transcript { background: #fff; padding: 16px; border: 1px solid #e5e7eb; }
-    .marksheet table.table, .marksheet table.table-bordered { font-size: 12px; border-collapse: collapse; }
+    .marksheet .transcript { background: #fff; padding: 10px 12px; border: 1px solid #e5e7eb; }
+    .marksheet table.table, .marksheet table.table-bordered { font-size: 11px; border-collapse: collapse; }
     .marksheet table.table thead th, .marksheet table.table-bordered thead th { background: #f3f4f6; font-weight: 700; }
-    .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { padding: 6px; border: 1px solid #2d3748; }
-    .marksheet h3 { margin-top: 8px; margin-bottom: 8px; }
-    .signature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; width: 100%; }
-    .signature-box { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 90px; page-break-inside: avoid; }
-    .signature-space { height: 60px; }
+    .marksheet table.table th, .marksheet table.table td, .marksheet table.table-bordered th, .marksheet table.table-bordered td { padding: 4px 5px; border: 1px solid #2d3748; }
+    .marksheet h3 { margin-top: 5px; margin-bottom: 4px; font-size: 16px; }
+    .signature-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 9px; width: 100%; }
+    .signature-box { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 58px; page-break-inside: avoid; }
+    .signature-space { height: 30px; }
     .signature-line { width: 80%; border-bottom: 1px solid #2d3748; }
     .signature-role { font-weight: 600; margin-bottom: 6px; }
     .signature-label { margin-top: 6px; font-size: 11px; color: #4a5568; }
     .sign-image { height: 44px; width: auto; max-width: 140px; object-fit: contain; margin-bottom: 8px; }
     .student-info th { width: 140px; white-space: nowrap; }
     .student-info td { word-break: break-word; overflow-wrap: anywhere; }
-    .failed-subjects h4 { margin-bottom: 6px; }
-    .failed-subject-grid { width: 100%; margin: 6px 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
-    .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 2px 12px 2px 0; vertical-align: top; overflow-wrap: anywhere; word-break: normal; }
+    .failed-subjects { margin: 0; padding: 5px 7px; border-left: 3px solid #b91c1c; background: #fff7f7; }
+    .failed-subjects h4 { margin: 0 0 3px; font-size: 12px; line-height: 1.2; }
+    .failed-subject-grid { width: 100%; margin: 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
+    .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 1px 10px 1px 0; vertical-align: top; line-height: 1.25; overflow-wrap: anywhere; word-break: normal; }
     .failed-subject-empty { visibility: hidden; }
+    .grading-table-wrap { border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; background: #fff; }
+    .grading-table-title { padding: 4px 6px; color: #fff; background: #334155; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .grading-table { width: 100%; border-collapse: collapse; margin: 0; font-size: 10px; text-align: center; }
+    .marksheet .grading-table th, .marksheet .grading-table td { padding: 2px 4px; border: 0; border-bottom: 1px solid #e2e8f0; }
+    .grading-table th { color: #334155; background: #f1f5f9; font-weight: 700; }
+    .grading-table tbody tr:nth-child(even) { background: #f8fafc; }
+    .grading-table tbody tr:last-child td { border-bottom: 0; }
+    .grading-letter, .grading-point { font-weight: 700; }
+    .transcript-footer { page-break-inside: avoid; break-inside: avoid; }
     .report-header { display: block; width: 100%; text-align: center; margin: 0 auto 8px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
     .report-header .hdr-logo { height: 60px; width: 60px; object-fit: contain; display: inline-block; margin: 0; }
     .report-header .logo-wrap { width: 100%; display: block; text-align: center; margin: 0 auto 6px; }
@@ -119,7 +134,7 @@ Marksheet Generate
     </button>
 </div>
 
-<div class="row gutters-20 mb-4 marksheet">
+<div class="row gutters-20 mb-2 marksheet transcript-page">
     <div class="card height-auto col-12 mx-auto">
         <div class="card-body row transcript">
             <div class="col-12 mb-3">
@@ -134,7 +149,7 @@ Marksheet Generate
                 </div>
             </div>
 
-            <div class="col-12 mb-4 transcript-information-grid">
+            <div class="col-12 mb-2 transcript-information-grid">
                 <div class="student-information">
                     <table class="student-info">
                         <tbody>
@@ -156,18 +171,7 @@ Marksheet Generate
                     </table>
                 </div>
                 <div class="grading-information">
-                    <table class="table-bordered text-center grading-table">
-                        <thead>
-                            <tr><th>Range of Marks</th><th>Grade</th><th>Point</th></tr>
-                        </thead>
-                        <tbody>
-                            @forelse($transcriptView['gradeLegend'] as $grade)
-                                <tr><td>{{ $grade['range'] }}</td><td>{{ $grade['grade'] }}</td><td>{{ $grade['point'] }}</td></tr>
-                            @empty
-                                <tr><td colspan="3">No grading legend configured</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    @include('result.partials.grading-table', ['gradeLegend' => $transcriptView['gradeLegend']])
                 </div>
             </div>
 
@@ -184,7 +188,7 @@ Marksheet Generate
                 </div>
             @endif
 
-            <h3 class="mt-4 mb-2 fw-bold">Main Subject</h3>
+            <h3 class="mt-2 mb-1 fw-bold">Main Subject</h3>
             <table class="table table-bordered col-12 text-center">
                 <thead>
                     <tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr>
@@ -206,7 +210,7 @@ Marksheet Generate
                 </tbody>
             </table>
 
-            <h3 class="mt-4 mb-2 fw-bold">Optional Subject</h3>
+            <h3 class="mt-2 mb-1 fw-bold">Optional Subject</h3>
             <table class="table table-bordered col-12 text-center">
                 <thead>
                     <tr><th>Subject Name</th><th>Theory</th><th>M.C.Q</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr>
@@ -249,11 +253,12 @@ Marksheet Generate
                 </thead>
             </table>
 
-            @include('result.partials.failed-subjects', [
-                'result' => $transcriptResult,
-                'containerClass' => 'col-12 mb-3',
-                'headingClass' => 'fw-bold text-danger',
-            ])
+            <div class="transcript-footer col-12">
+                @include('result.partials.failed-subjects', [
+                    'result' => $transcriptResult,
+                    'containerClass' => 'mb-1',
+                    'headingClass' => 'fw-bold text-danger',
+                ])
 
             <div class="signature-row">
                 <div class="signature-box">
@@ -277,6 +282,7 @@ Marksheet Generate
                     <div class="signature-line"></div>
                     <div class="signature-label">Signature</div>
                 </div>
+            </div>
             </div>
         </div>
     </div>

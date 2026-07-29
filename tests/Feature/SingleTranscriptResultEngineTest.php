@@ -319,10 +319,13 @@ class SingleTranscriptResultEngineTest extends TestCase
     {
         [$html] = $this->singleMainResult('Grid Main', 'Main', 100, 80);
 
-        $this->assertStringContainsString('class="col-12 mb-4 transcript-information-grid"', $html);
+        $this->assertStringContainsString('class="col-12 mb-2 transcript-information-grid"', $html);
         $this->assertStringContainsString('class="student-information"', $html);
         $this->assertStringContainsString('class="grading-information"', $html);
-        $this->assertStringContainsString('class="table-bordered text-center grading-table"', $html);
+        $this->assertStringContainsString('class="grading-table-wrap"', $html);
+        $this->assertStringContainsString('class="grading-table"', $html);
+        $this->assertStringContainsString('marksheet transcript-page', $html);
+        $this->assertStringContainsString('class="transcript-footer col-12"', $html);
         $this->assertStringContainsString('grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);', $html);
     }
 

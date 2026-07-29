@@ -223,6 +223,9 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->assertDatabaseCount('marksheets', 3);
         $this->assertSame(2, substr_count($html, 'transcript-page marksheet'));
         $this->assertStringContainsString('@page { size: A4 portrait', $html);
+        $this->assertStringContainsString('page-break-after: always', $html);
+        $this->assertStringContainsString('class="grading-table-wrap"', $html);
+        $this->assertSame(2, substr_count($html, 'class="transcript-footer"'));
         $this->assertStringContainsString('Output Student', $html);
     }
 

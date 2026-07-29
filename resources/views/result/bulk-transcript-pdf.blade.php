@@ -4,38 +4,47 @@
     <meta charset="utf-8">
     <title>Bulk Academic Transcript</title>
     <style>
-        @page { size: A4 portrait; margin: 10mm; }
-        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #111827; margin: 0; }
-        .transcript-page { page-break-after: always; page-break-inside: avoid; }
+        @page { size: A4 portrait; margin: 8mm; }
+        body { font-family: DejaVu Sans, sans-serif; font-size: 10px; color: #111827; margin: 0; }
+        .transcript-page { page-break-after: always; break-after: page; page-break-inside: avoid; break-inside: avoid; }
         .transcript-page:last-child { page-break-after: auto; }
-        .marksheet .transcript { background: #fff; padding: 10px; border: 2px solid #111827; }
+        .marksheet .transcript { background: #fff; padding: 7px 9px; border: 1px solid #334155; }
         .marksheet table { width: 100%; border-collapse: collapse; }
-        .marksheet table th, .marksheet table td { border: 1px solid #111827; padding: 4px 5px; }
+        .marksheet table th, .marksheet table td { border: 1px solid #64748b; padding: 3px 4px; line-height: 1.2; }
         .marksheet table thead th { background: #f3f4f6; font-weight: 700; }
-        .report-header { text-align: center; margin-bottom: 8px; padding-bottom: 6px; }
-        .hdr-logo { display: inline-block; max-height: 70px; max-width: 90px; margin-bottom: 5px; }
-        .report-header h2 { margin: 0; font-size: 20px; }
-        .report-header p { margin: 2px 0; }
-        .title { text-align: center; margin: 4px 0 8px 0; }
-        .title h3 { margin: 0; font-size: 18px; text-transform: uppercase; }
-        .title p { margin: 4px 0 0 0; font-weight: 700; }
-        .meta-wrap { width: 100%; margin-bottom: 8px; }
+        .report-header { text-align: center; margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1; }
+        .hdr-logo { display: inline-block; max-height: 42px; max-width: 64px; margin-bottom: 2px; }
+        .report-header h2 { margin: 0; font-size: 17px; }
+        .report-header p { margin: 1px 0; }
+        .title { text-align: center; margin: 2px 0 4px; }
+        .title h3 { margin: 0; font-size: 15px; text-transform: uppercase; }
+        .title p { margin: 2px 0 0; font-weight: 700; }
+        .meta-wrap { width: 100%; margin-bottom: 4px; }
         .meta-wrap td { border: 0 !important; vertical-align: top; padding: 0; }
-        .meta-left { width: 62%; padding-right: 10px !important; }
+        .meta-left { width: 62%; padding-right: 7px !important; }
         .meta-right { width: 38%; }
         .student-info th { width: auto; text-align: left; white-space: nowrap; border: 0 !important; }
         .student-info td { word-break: break-word; border: 0 !important; }
-        .grade-scale th, .grade-scale td { text-align: center; font-size: 10px; }
-        .section-title { margin: 8px 0 4px 0; font-size: 14px; font-weight: 700; }
-        .failed-subjects h4 { margin: 6px 0 2px 0; color: #b91c1c; }
-        .failed-subject-grid { width: 100%; margin: 4px 0 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
-        .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 2px 10px 2px 0; vertical-align: top; overflow-wrap: anywhere; word-break: normal; }
+        .section-title { margin: 4px 0 2px; font-size: 12px; font-weight: 700; }
+        .grading-table-wrap { border: 1px solid #cbd5e1; overflow: hidden; background: #fff; page-break-inside: avoid; break-inside: avoid; }
+        .grading-table-title { padding: 3px 5px; color: #fff; background: #334155; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .grading-table { width: 100%; border-collapse: collapse; margin: 0; font-size: 9px; text-align: center; }
+        .marksheet .grading-table th, .marksheet .grading-table td { padding: 2px 3px; border: 0; border-bottom: 1px solid #e2e8f0; }
+        .grading-table th { color: #334155; background: #f1f5f9; font-weight: 700; }
+        .grading-table tbody tr:nth-child(even) { background: #f8fafc; }
+        .grading-table tbody tr:last-child td { border-bottom: 0; }
+        .grading-letter, .grading-point { font-weight: 700; }
+        .failed-subjects { margin: 4px 0 0; padding: 4px 6px; border-left: 3px solid #b91c1c; background: #fff7f7; page-break-inside: avoid; break-inside: avoid; }
+        .failed-subjects h4 { margin: 0 0 2px; color: #b91c1c; font-size: 11px; line-height: 1.2; }
+        .failed-subject-grid { width: 100%; margin: 0; table-layout: fixed; border-collapse: collapse; page-break-inside: avoid; }
+        .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 1px 8px 1px 0; vertical-align: top; line-height: 1.2; overflow-wrap: anywhere; word-break: normal; }
         .failed-subject-empty { visibility: hidden; }
-        .signature-row { width: 100%; margin-top: 14px; }
-        .signature-row td { width: 33.33%; border: 0 !important; text-align: center; vertical-align: bottom; height: 72px; }
+        .transcript-footer { page-break-inside: avoid; break-inside: avoid; }
+        .signature-row { width: 100%; margin-top: 7px; page-break-inside: avoid; break-inside: avoid; }
+        .signature-row td { width: 33.33%; border: 0 !important; text-align: center; vertical-align: bottom; height: 48px; }
         .signature-line { border-top: 1px solid #111827; width: 75%; margin: 0 auto; }
-        .small { font-size: 11px; color: #4b5563; }
-        .sign-image { height: 40px; width: auto; max-width: 130px; object-fit: contain; margin: 0 auto 6px; display: block; }
+        .small { font-size: 9px; color: #4b5563; }
+        .sign-image { height: 30px; width: auto; max-width: 110px; object-fit: contain; margin: 0 auto 3px; display: block; }
         @media print { .print-button { display: none; } }
     </style>
 </head>
@@ -74,14 +83,7 @@
                         </tbody></table>
                     </td>
                     <td class="meta-right">
-                        <table class="grade-scale">
-                            <thead><tr><th>Range of Marks</th><th>Grade</th><th>Point</th></tr></thead>
-                            <tbody>
-                            @foreach($bulkView['gradeLegend'] as $grade)
-                                <tr><td>{{ $grade['range'] }}</td><td>{{ $grade['grade'] }}</td><td>{{ $grade['point'] }}</td></tr>
-                            @endforeach
-                            </tbody>
-                        </table>
+                        @include('result.partials.grading-table', ['gradeLegend' => $bulkView['gradeLegend']])
                     </td>
                 </tr>
             </table>
@@ -123,6 +125,7 @@
                 </tr></thead>
             </table>
 
+            <div class="transcript-footer">
             @include('result.partials.failed-subjects', ['result' => $transcript['result']])
 
             <table class="signature-row"><tr>
@@ -134,6 +137,7 @@
                     <div class="signature-line"></div><div class="small">Signature</div>
                 </td>
             </tr></table>
+            </div>
         </div>
     </div>
 @endforeach
