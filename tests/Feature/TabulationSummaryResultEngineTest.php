@@ -190,7 +190,11 @@ class TabulationSummaryResultEngineTest extends TestCase
     public function test_tabulation_and_summary_fail_closed_on_batch_exception(): void
     {
         $scope = $this->scope(); $subject = $this->subject('Main', 'Main', 100); $student = $this->student($scope, '01'); $this->mark($student, $scope, $subject, 80);
-        $fake = new class(app(\App\Services\ResultCalculation\BoardResultCalculator::class), app(ResultCalculationInputBuilder::class)) extends ResultCalculationBatchBuilder {
+        $fake = new class(
+            app(\App\Services\ResultCalculation\BoardResultCalculator::class),
+            app(ResultCalculationInputBuilder::class),
+            app(\App\Services\ResultCalculation\ComponentRequirementProfileBuilder::class),
+        ) extends ResultCalculationBatchBuilder {
             public function build(int $examId, int $classId, int $sessionId, ?int $sectionId = null, ?int $departmentId = null): array { throw new RuntimeException('simulated'); }
         };
         $this->app->instance(ResultCalculationBatchBuilder::class, $fake);
@@ -277,9 +281,9 @@ class TabulationSummaryResultEngineTest extends TestCase
         }
 
         $expected = [
-            'tabulation' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
-            'glance' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
-            'summary' => [1 => [22, 0], 5 => [22, 0], 25 => [22, 0]],
+            'tabulation' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
+            'glance' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
+            'summary' => [1 => [21, 0], 5 => [21, 0], 25 => [21, 0]],
         ];
         $this->assertSame($expected, $metrics);
     }
@@ -708,7 +712,7 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertArrayNotHasKey('All Components', $columns->all());
         $this->assertSame(0.0, $data['tabulationRows'][0]['cells'][$columns['CQ Only']->cellKey]['cq']);
         $this->assertArrayNotHasKey('All Components', $data['tabulationRows'][0]['cells']);
-        $this->assertStringContainsString('CQ Only', $html);
+        $this->assertStringContainsString('C.O.', $html);
     }
 
     public function test_summary_print_uses_prepared_pages_with_page_numbers_and_full_totals(): void

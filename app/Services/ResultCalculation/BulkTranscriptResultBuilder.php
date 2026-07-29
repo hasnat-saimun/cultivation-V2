@@ -34,7 +34,7 @@ class BulkTranscriptResultBuilder
     {
         $students = collect($students)->values();
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
-        $componentRequirementProfile = $this->componentProfileBuilder->build($students, $subjectsByStudent);
+        $componentProfilesByStudent = $this->componentProfileBuilder->buildByStudent($students, $subjectsByStudent);
         $sessionNames = sessionManage::whereIn('id', $students->pluck('sessName')->filter())->pluck('session', 'id');
         $classIds = $students->pluck('className')->filter()->unique();
         $classNames = classManage::whereIn('id', $classIds)->pluck('className', 'id');
@@ -42,7 +42,7 @@ class BulkTranscriptResultBuilder
         $sectionNames = sectionManage::whereIn('id', $students->pluck('sectionName')->filter())->pluck('section', 'id');
         $departmentIds = $students->map(fn ($student) => $student->departmentName ?? $student->departmentId ?? null)->filter()->unique();
         $departmentNames = Department::whereIn('id', $departmentIds)->pluck('departmentName', 'id');
-        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentRequirementProfile, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows) {
+        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentProfilesByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows) {
             $classId = (int) ($student->className ?? 0);
             $departmentId = (int) ($student->departmentName ?? $student->departmentId ?? 0);
             $transcript = $this->baseTranscript($student, [
@@ -58,7 +58,7 @@ class BulkTranscriptResultBuilder
                     $exam,
                     $student->marksheet,
                     $subjects,
-                    $componentRequirementProfile,
+                    $componentProfilesByStudent[(int) $student->id] ?? [],
                 );
                 $transcript['result'] = $this->presenter->presentWithGradeRows($result, $subjects, $student->marksheet, $gradeRows);
                 $transcript['usingBulkResultEngine'] = true;

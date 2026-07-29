@@ -7,6 +7,36 @@ use Illuminate\Support\Collection;
 final class ComponentRequirementProfileBuilder
 {
     /**
+     * Build an independent component profile for every academic scope. Evidence-
+     * derived requirements are shared inside a section/department, but must never
+     * leak to another section.
+     *
+     * @param array<int, Collection> $subjectsByStudent
+     * @return array<int,array<string,array{cq:bool,mcq:bool,practical:bool}>>
+     */
+    public function buildByStudent(Collection $students, array $subjectsByStudent): array
+    {
+        $profiles = [];
+        $students->groupBy(fn ($student) => implode('|', [
+            (string) ($student->sessName ?? ''),
+            (string) ($student->className ?? ''),
+            (string) ($student->sectionName ?? ''),
+            (string) ($student->departmentName ?? ''),
+        ]))->each(function (Collection $scopeStudents) use ($subjectsByStudent, &$profiles) {
+            $scopeSubjects = $scopeStudents->mapWithKeys(function ($student) use ($subjectsByStudent) {
+                $studentId = (int) $student->id;
+                return [$studentId => $subjectsByStudent[$studentId] ?? collect()];
+            })->all();
+            $scopeProfile = $this->build($scopeStudents, $scopeSubjects);
+            foreach ($scopeStudents as $student) {
+                $profiles[(int) $student->id] = $scopeProfile;
+            }
+        });
+
+        return $profiles;
+    }
+
+    /**
     * A component is required when the subject configuration enables it (full mark > 0).
     * Effective evidence can additionally mark components as required, but never disable
     * configured components.
@@ -26,6 +56,18 @@ final class ComponentRequirementProfileBuilder
                     'mcq' => (float) ($subject->MCQ ?? 0) > 0,
                     'practical' => (float) ($subject->Practical ?? 0) > 0,
                 ];
+            }
+        }
+
+        $marksBySubject = $students
+            ->flatMap(fn ($student) => $student->marksheet ?? [])
+            ->groupBy(fn ($mark) => (string) ($mark->subjectId ?? ''));
+        foreach ($marksBySubject as $subjectId => $marks) {
+            if ($subjectId !== '' && array_key_exists($subjectId, $profiles)
+                && !$marks->contains(fn ($mark) => (bool) ($mark->component_scope_tracked ?? false))) {
+                // Legacy rows without a lifecycle scope use scope evidence. Once a
+                // lifecycle scope exists, configured requirements remain authoritative.
+                $profiles[$subjectId] = ['cq' => false, 'mcq' => false, 'practical' => false];
             }
         }
 

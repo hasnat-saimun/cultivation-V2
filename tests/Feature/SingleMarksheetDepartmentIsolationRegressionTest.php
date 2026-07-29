@@ -133,7 +133,7 @@ class SingleMarksheetDepartmentIsolationRegressionTest extends TestCase
         $this->assertNotNull($scienceRow);
 
         $cells = $scienceRow['cells'] ?? [];
-        $this->assertArrayHasKey('Physics-136', $cells);
+        $this->assertArrayHasKey((string) $subjects['physics']->id, $cells);
 
         // Business and Humanities cells can exist as columns globally but must not carry marks for science student.
         foreach (['Accounting-146', 'Finance and Banking-152', 'Business Entrepreneurship-143', 'History of Bangladesh and World Civilization-153', 'Civics and Citizenship-140', 'Geography and Environment-110'] as $name) {

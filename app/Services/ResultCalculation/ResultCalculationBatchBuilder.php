@@ -99,7 +99,7 @@ class ResultCalculationBatchBuilder
             }
         }
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
-        $componentRequirementProfile = $this->componentProfileBuilder->build($students, $subjectsByStudent);
+        $componentProfilesByStudent = $this->componentProfileBuilder->buildByStudent($students, $subjectsByStudent);
         $entries = []; $errors = [];
         foreach ($students as $student) {
             $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
@@ -112,7 +112,7 @@ class ResultCalculationBatchBuilder
                         $exam,
                         $student->marksheet,
                         $subjects,
-                        $componentRequirementProfile,
+                        $componentProfilesByStudent[(int) $student->id] ?? [],
                     ),
                 ];
             } catch (\Throwable $exception) {
