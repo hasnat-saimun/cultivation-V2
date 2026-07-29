@@ -52,41 +52,13 @@
 @foreach($transcripts as $transcript)
     <div class="transcript-page marksheet">
         <div class="transcript">
-            <div class="report-header">
-                @if(!empty($bulkView['institute']['logoUrl']))
-                    <img src="{{ $bulkView['institute']['logoUrl'] }}" alt="Institute Logo" class="hdr-logo">
-                @endif
-                <h2>{{ $bulkView['institute']['name'] }}</h2>
-                @if(!empty($bulkView['institute']['address']))<p>{{ $bulkView['institute']['address'] }}</p>@endif
-                @if(!empty($bulkView['institute']['mobile']) || !empty($bulkView['institute']['email']))
-                    <p>{{ $bulkView['institute']['mobile'] }}{{ !empty($bulkView['institute']['mobile']) && !empty($bulkView['institute']['email']) ? ' | ' : '' }}{{ $bulkView['institute']['email'] }}</p>
-                @endif
-            </div>
-
-            <div class="title">
-                <h3>{{ $bulkView['title'] }}</h3>
-                <p>{{ $bulkView['examName'] }}</p>
-            </div>
-
-            <table class="meta-wrap">
-                <tr>
-                    <td class="meta-left">
-                        <table class="student-info"><tbody>
-                            <tr><th>Student ID</th><td>:</td><td colspan="4">{{ $transcript['studentIdentity']['studentId'] ?: '-' }}</td></tr>
-                            <tr><th>Name</th><td>:</td><td colspan="4">{{ $transcript['studentIdentity']['studentName'] }}</td></tr>
-                            <tr><th>Father Name</th><td>:</td><td colspan="4">{{ $transcript['studentIdentity']['fatherName'] }}</td></tr>
-                            <tr><th>Mother Name</th><td>:</td><td colspan="4">{{ $transcript['studentIdentity']['motherName'] }}</td></tr>
-                            <tr><th>Roll Number</th><td>:</td><td>{{ $transcript['studentIdentity']['rollNumber'] }}</td><th>Session</th><td>:</td><td>{{ $transcript['metadata']['sessionName'] }}</td></tr>
-                            <tr><th>Class</th><td>:</td><td>{{ $transcript['metadata']['className'] }}</td><th>Section</th><td>:</td><td>{{ $transcript['metadata']['sectionName'] }}</td></tr>
-                            <tr><th>Department</th><td>:</td><td colspan="4">{{ $transcript['metadata']['departmentName'] }}</td></tr>
-                            <tr><th>Merit Position</th><td>:</td><td colspan="4">{{ $transcript['meritRank'] ?? '01' }}</td></tr>
-                        </tbody></table>
-                    </td>
-                    <td class="meta-right">
-                        @include('result.partials.grading-table', ['gradeLegend' => $bulkView['gradeLegend']])
-                    </td>
-                </tr>
-            </table>
+            @include('result.partials.transcript-header', ['header' => $bulkView])
+            @include('result.partials.transcript-information', [
+                'identity' => $transcript['studentIdentity'],
+                'metadata' => $transcript['metadata'],
+                'meritRank' => $transcript['meritRank'] ?? '01',
+                'gradeLegend' => $bulkView['gradeLegend'],
+            ])
 
             <div class="section-title">Main Subject</div>
             <table>
@@ -128,15 +100,9 @@
             <div class="transcript-footer">
             @include('result.partials.failed-subjects', ['result' => $transcript['result']])
 
-            <table class="signature-row"><tr>
-                <td><div>Guardian</div><div class="signature-line"></div><div class="small">Signature</div></td>
-                <td><div>Class Teacher</div><div class="signature-line"></div><div class="small">Signature</div></td>
-                <td>
-                    <div>Principal/Head Master</div>
-                    @if(!empty($bulkView['principalSignatureUrl']))<img src="{{ $bulkView['principalSignatureUrl'] }}" alt="Principal Signature" class="sign-image">@endif
-                    <div class="signature-line"></div><div class="small">Signature</div>
-                </td>
-            </tr></table>
+            @include('result.partials.transcript-signatures', [
+                'principalSignatureUrl' => $bulkView['principalSignatureUrl'],
+            ])
             </div>
         </div>
     </div>
