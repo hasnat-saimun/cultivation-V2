@@ -6,6 +6,9 @@
         .dashboard-content-one .table-responsive {
             -webkit-overflow-scrolling: touch;
         }
+        .bg-secondary {
+            color: #ffffff !important;
+        }
 
         .dashboard-content-one table th,
         .dashboard-content-one table td {
