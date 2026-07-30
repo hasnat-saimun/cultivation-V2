@@ -35,7 +35,7 @@
 <main class="card">
     <div class="brand">
         <div class="logo-frame">
-            <img src="{{ $instituteLogoUrl }}" alt="{{ $instituteName }} logo">
+            <img src="{{ asset('/public/upload/image/cultivation/'.$instituteLogoUrl) }}" alt="{{ $instituteName }} logo">
         </div>
         <div class="institute">{{ $instituteName }}</div>
         @if(filled($academicSession))
