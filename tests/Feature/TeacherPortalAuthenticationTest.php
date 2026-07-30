@@ -10,6 +10,7 @@ use App\Models\TeacherClassSubject;
 use App\Services\CultivationAdminResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
@@ -45,6 +46,41 @@ class TeacherPortalAuthenticationTest extends TestCase
                 'Teacher Portal',
                 'Sign in to your secure workspace',
             ]);
+    }
+
+    public function test_login_page_displays_institute_logo_active_session_and_footer_branding(): void
+    {
+        $config = new ServerConfig();
+        $config->forceFill([
+            'instituteName' => 'North Shyampur High School',
+            'logo' => 'north-shyampur.png',
+        ]);
+        $config->save();
+
+        DB::table('academic_sessions')->insert([
+            'name' => '2026',
+            'is_current' => true,
+            'status' => 'active',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->get(route('teacher.login'))
+            ->assertOk()
+            ->assertSee('North Shyampur High School logo')
+            ->assertSee(asset('public/upload/image/cultivation/north-shyampur.png'), false)
+            ->assertSee('Academic Session: 2026')
+            ->assertSee('Powered by Cultivation®')
+            ->assertSee('School Management System');
+    }
+
+    public function test_login_page_uses_default_logo_and_hides_unavailable_session(): void
+    {
+        $this->get(route('teacher.login'))
+            ->assertOk()
+            ->assertSee(asset('public/assets/images/logo.png'), false)
+            ->assertDontSee('Academic Session:')
+            ->assertSee('Powered by Cultivation®');
     }
 
     public function test_active_teacher_can_login_with_each_verified_identifier(): void

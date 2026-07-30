@@ -9,9 +9,11 @@
         * { box-sizing:border-box; }
         body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; font-family:system-ui,-apple-system,"Segoe UI",sans-serif; color:var(--ink); background:linear-gradient(145deg,#e6f5f7,#f8fbfc 55%,#dff2ec); }
         .card { width:min(100%,430px); padding:36px; border:1px solid #d5e5e8; border-radius:20px; background:#fff; box-shadow:0 24px 70px rgba(21,49,59,.13); }
-        .brand { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
-        .brand img { width:100%; height:58px; object-fit:contain; }
-        .institute { margin:10px 0 6px; color:var(--brand-dark); font-size:1.25rem; line-height:1.25; font-weight:750; }
+        .brand { margin-bottom:24px; text-align:center; }
+        .logo-frame { display:grid; place-items:center; width:86px; height:86px; margin:0 auto 12px; padding:7px; border:1px solid #d5e5e8; border-radius:50%; background:#fff; }
+        .logo-frame img { display:block; max-width:100%; max-height:72px; width:auto; height:auto; object-fit:contain; border-radius:14px; }
+        .institute { margin:0 0 5px; color:var(--brand-dark); font-size:1.25rem; line-height:1.3; font-weight:750; overflow-wrap:anywhere; }
+        .academic-session { margin:0 0 15px; color:var(--muted); font-size:.84rem; line-height:1.35; }
         h1 { margin:0; font-size:1.65rem; }
         .subtitle { margin:5px 0 0; color:var(--muted); }
         label { display:block; margin:18px 0 7px; font-weight:650; }
@@ -24,17 +26,23 @@
         .submit:hover { background:var(--brand-dark); }
         .error { margin:0 0 14px; padding:11px 12px; border-radius:9px; color:var(--danger); background:#fff0ee; }
         .back { display:block; margin-top:20px; color:var(--brand); text-align:center; }
+        .powered-by { margin-top:22px; padding-top:16px; border-top:1px solid #e4edef; color:var(--muted); text-align:center; font-size:.78rem; line-height:1.45; }
+        .powered-by strong { color:#425f69; font-weight:700; }
+        @media (max-width:480px) { body { padding:14px; } .card { padding:28px 22px; } }
     </style>
 </head>
 <body>
 <main class="card">
     <div class="brand">
-        <div>
-            <img src="{{ asset('public/assets/images/logo.png') }}" alt="Cultivation">
-            <div class="institute">{{ $instituteName }}</div>
-            <h1>Teacher Portal</h1>
-            <p class="subtitle">Sign in to your secure workspace</p>
+        <div class="logo-frame">
+            <img src="{{ $instituteLogoUrl }}" alt="{{ $instituteName }} logo">
         </div>
+        <div class="institute">{{ $instituteName }}</div>
+        @if(filled($academicSession))
+            <p class="academic-session">Academic Session: {{ $academicSession }}</p>
+        @endif
+        <h1>Teacher Portal</h1>
+        <p class="subtitle">Sign in to your secure workspace</p>
     </div>
 
     @if ($errors->any())
@@ -57,6 +65,10 @@
         <button class="submit" type="submit">Sign in</button>
     </form>
     <a class="back" href="{{ route('adminLogin') }}">Back to main login</a>
+    <footer class="powered-by">
+        <strong>Powered by Cultivation®</strong><br>
+        School Management System
+    </footer>
 </main>
 <script>
 document.getElementById('toggle-password').addEventListener('click', function () {
