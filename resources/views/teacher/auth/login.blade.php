@@ -42,7 +42,9 @@
     <form method="POST" action="{{ route('teacher.login.submit') }}">
         @csrf
         <label for="identifier">Email / Teacher ID / Mobile</label>
-        <input id="identifier" name="identifier" type="text" value="{{ old('identifier') }}" required autofocus autocomplete="username">
+        <input id="identifier" name="identifier" type="text" value="{{ old('identifier') }}" required autofocus
+               maxlength="255" autocomplete="username" autocapitalize="none" autocorrect="off"
+               spellcheck="false" inputmode="text">
 
         <label for="password">Password</label>
         <div class="password">

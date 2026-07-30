@@ -10,6 +10,7 @@ use App\Services\CultivationAdminResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Tests\TestCase;
 
 class TeacherPortalAuthenticationTest extends TestCase
@@ -21,7 +22,12 @@ class TeacherPortalAuthenticationTest extends TestCase
         $this->get(route('teacher.login'))
             ->assertOk()
             ->assertSee('Teacher Portal')
-            ->assertSee('Email / Teacher ID / Mobile');
+            ->assertSee('Email / Teacher ID / Mobile')
+            ->assertSee('autocomplete="username"', false)
+            ->assertSee('autocapitalize="none"', false)
+            ->assertSee('autocorrect="off"', false)
+            ->assertSee('spellcheck="false"', false)
+            ->assertSee('autocomplete="current-password"', false);
     }
 
     public function test_active_teacher_can_login_with_each_verified_identifier(): void
@@ -40,6 +46,57 @@ class TeacherPortalAuthenticationTest extends TestCase
 
             $response->assertRedirect(route('teacher.dashboard'));
             $this->assertSame($teacher->id, Auth::guard('teacher')->id());
+            Auth::guard('teacher')->logout();
+            $teacher->delete();
+        }
+    }
+
+    public function test_teacher_id_login_normalizes_case_and_invisible_edge_characters(): void
+    {
+        foreach ([
+            'salrnashs',
+            'Salrnashs',
+            'SALRNASHs',
+            'salrnashs ',
+            "salrnashs\u{00A0}",
+            "salr\u{200B}nashs",
+        ] as $identifier) {
+            $teacher = $this->teacher(['adminUser' => 'salrnashs']);
+
+            $this->post(route('teacher.login.submit'), [
+                'identifier' => $identifier,
+                'password' => 'teacher-secret',
+            ])->assertRedirect(route('teacher.dashboard'));
+
+            $this->assertAuthenticatedAs($teacher, 'teacher');
+            Auth::guard('teacher')->logout();
+            $teacher->delete();
+        }
+    }
+
+    public function test_email_login_is_case_insensitive(): void
+    {
+        $teacher = $this->teacher(['adminMail' => 'teacher@example.test']);
+
+        $this->post(route('teacher.login.submit'), [
+            'identifier' => 'TEACHER@EXAMPLE.TEST',
+            'password' => 'teacher-secret',
+        ])->assertRedirect(route('teacher.dashboard'));
+
+        $this->assertAuthenticatedAs($teacher, 'teacher');
+    }
+
+    public function test_bangladesh_mobile_login_accepts_equivalent_prefixes(): void
+    {
+        foreach (['01700000001', '8801700000001', '+8801700000001'] as $identifier) {
+            $teacher = $this->teacher(['adminMobile' => '01700000001']);
+
+            $this->post(route('teacher.login.submit'), [
+                'identifier' => $identifier,
+                'password' => 'teacher-secret',
+            ])->assertRedirect(route('teacher.dashboard'));
+
+            $this->assertAuthenticatedAs($teacher, 'teacher');
             Auth::guard('teacher')->logout();
             $teacher->delete();
         }
@@ -78,7 +135,7 @@ class TeacherPortalAuthenticationTest extends TestCase
     public function test_ambiguous_identifier_is_rejected_safely(): void
     {
         $this->teacher(['adminUser' => 'shared-value']);
-        $this->teacher(['adminUser' => 'T-2002', 'adminMail' => 'shared-value']);
+        $this->teacher(['adminUser' => 'shared-value', 'adminMail' => 'other@example.test']);
 
         $this->post(route('teacher.login.submit'), [
             'identifier' => 'shared-value',
@@ -203,6 +260,26 @@ class TeacherPortalAuthenticationTest extends TestCase
             $this->assertAuthenticatedAs($teacher, 'teacher');
             Auth::guard('teacher')->logout();
         }
+    }
+
+    public function test_successful_login_clears_only_its_matching_failure_bucket(): void
+    {
+        $teacher = $this->teacher();
+        $ip = '203.0.113.30';
+        $matchingKey = 'teacher-login:'.hash('sha256', mb_strtolower($teacher->adminUser)).'|'.$ip;
+        $otherKey = 'teacher-login:'.hash('sha256', 'another-teacher').'|'.$ip;
+
+        RateLimiter::hit($matchingKey, 60);
+        RateLimiter::hit($otherKey, 60);
+
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->post(route('teacher.login.submit'), [
+                'identifier' => $teacher->adminUser,
+                'password' => 'teacher-secret',
+            ])->assertRedirect(route('teacher.dashboard'));
+
+        $this->assertSame(0, RateLimiter::attempts($matchingKey));
+        $this->assertSame(1, RateLimiter::attempts($otherKey));
     }
 
     public function test_teacher_login_route_does_not_count_successes_in_route_middleware(): void
