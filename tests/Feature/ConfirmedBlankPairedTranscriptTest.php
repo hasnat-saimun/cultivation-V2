@@ -89,13 +89,13 @@ class ConfirmedBlankPairedTranscriptTest extends TestCase
             ->assertDontSee('Incomplete: missing marks for Bangla', false);
     }
 
-    public function test_draft_or_ambiguous_legacy_confirmation_does_not_normalize_blank(): void
+    public function test_draft_scope_does_not_enforce_blank_but_confirmed_scope_does(): void
     {
         [$data, $actor, $paper1, $paper2] = $this->pairedScope();
         $this->savePaper($data, $actor, $paper1, 47, null);
         $this->savePaper($data, $actor, $paper2, 35, 20);
 
-        $this->assertSame('Incomplete', $this->transcript($data)['result']['status']);
+        $this->assertSame('Pass', $this->transcript($data)['result']['status']);
 
         MarksScopeState::where('subjectId', (string) $paper1->id)
             ->update(['status' => MarksScopeState::STATUS_CONFIRMED]);
@@ -168,7 +168,7 @@ class ConfirmedBlankPairedTranscriptTest extends TestCase
             $this->scope($data, $paper1) + ['scope_revision' => 2, 'reason' => 'Correction required'],
             $actor,
         );
-        $this->assertSame('Incomplete', $this->transcript($data)['result']['status']);
+        $this->assertSame('Pass', $this->transcript($data)['result']['status']);
     }
 
     private function pairedScope(): array
