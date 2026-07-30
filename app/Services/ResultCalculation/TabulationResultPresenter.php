@@ -245,7 +245,15 @@ class TabulationResultPresenter
 
     private function pageRows(array $rows, int $size): array
     {
-        return $this->numberPages(array_map(fn ($chunk) => ['rows' => $chunk], array_chunk($rows, $size)));
+        $pages = [];
+        foreach (array_chunk($rows, $size) as $index => $chunk) {
+            $pages[] = [
+                'rows' => $chunk,
+                'slStart' => ($index * $size) + 1,
+            ];
+        }
+
+        return $this->numberPages($pages);
     }
 
     private function pageSubjectWiseRows(array $reportSections, array $failedGroups, int $size): array

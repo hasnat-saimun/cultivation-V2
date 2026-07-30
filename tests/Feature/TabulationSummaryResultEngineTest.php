@@ -678,17 +678,24 @@ class TabulationSummaryResultEngineTest extends TestCase
         $summaryHtml = app(MarksheetController::class)->resultSummary($this->request($scope))->render();
 
         $this->assertStringContainsString('@page { size: A4 landscape', $tabHtml);
-        $this->assertStringContainsString('@page{size:A4 landscape', $glanceHtml);
+        $this->assertStringContainsString('@page { size: A4 landscape; margin: 8mm; }', $glanceHtml);
         $this->assertStringContainsString('@page{size:A4 portrait', $summaryHtml);
         foreach ([$tabHtml, $glanceHtml, $summaryHtml] as $html) {
             $this->assertStringContainsString('result-print-page', $html);
-            $this->assertStringContainsString('page-break-after:auto', $html);
+            $this->assertMatchesRegularExpression('/page-break-after:\\s*auto/', $html);
             $this->assertStringContainsString('table-header-group', $html);
             $this->assertStringContainsString('Class Teacher', $html);
             $this->assertStringContainsString('Principal/Head Master', $html);
             $this->assertStringNotContainsString('Class Merit', $html);
             if ($html !== $summaryHtml) $this->assertStringContainsString('Merit Position', $html);
         }
+        $this->assertStringContainsString('At-a-Glance Result', $glanceHtml);
+        $this->assertStringContainsString('result-filter-form', $glanceHtml);
+        $this->assertStringContainsString('print-report', $glanceHtml);
+        $this->assertStringContainsString('Student Name', $glanceHtml);
+        $this->assertStringContainsString('Result Status', $glanceHtml);
+        $this->assertStringContainsString('thead { display: table-header-group; }', $glanceHtml);
+        $this->assertStringContainsString('break-inside: avoid', $glanceHtml);
     }
 
     public function test_glance_component_columns_are_subject_specific_and_zero_differs_from_missing(): void

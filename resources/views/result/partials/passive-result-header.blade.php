@@ -12,7 +12,13 @@
     ]));
 @endphp
 
-@if($headerVariant === 'subject-wise')
+@if(in_array($headerVariant, ['subject-wise', 'at-a-glance'], true))
+    @php
+        $reportLabel = $headerVariant === 'at-a-glance' ? 'Result Report' : 'Subject-wise Result';
+        $reportTitle = $headerVariant === 'at-a-glance'
+            ? 'At-a-Glance Result'
+            : 'Tabulation Sheet for '.$resultHeader['examName'];
+    @endphp
     <section class="result-page-header">
         <div class="header-surface">
             <div class="header-logo-wrap">
@@ -30,8 +36,8 @@
                 @endif
             </div>
             <div class="header-title-block">
-                <div class="header-report-label">Subject-wise Result</div>
-                <h2 class="header-report-title">Tabulation Sheet for {{ $resultHeader['examName'] }}</h2>
+                <div class="header-report-label">{{ $reportLabel }}</div>
+                <h2 class="header-report-title">{{ $reportTitle }}</h2>
                 <div class="header-report-timestamp d-none d-print-inline"><strong>Printed:</strong> {{ $resultHeader['printedAt'] }}</div>
             </div>
         </div>

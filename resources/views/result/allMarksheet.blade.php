@@ -13,11 +13,10 @@ All Marksheet
     @media print{*,*::before,*::after{background:transparent!important;background-image:none!important;box-shadow:none!important}html,body,main,.container,.container-fluid,.container-fluid.mb-4,.card,.card-body,.row,.col,.main-website,.main-content,.print-wrapper,.page-wrapper,.report-wrapper,.result-wrapper,.d-print-block,.result-print-page,.result-page-header,.header-surface,.header-meta-row,.table-responsive,.result-table,.result-table th,.result-table td,.d-print-block [class^="bg-"],.d-print-block [class*=" bg-"],.d-print-block [class*="bg-"]{background:#fff!important;background-image:none!important;box-shadow:none!important}.result-page-header{break-inside:avoid;page-break-inside:avoid;margin-bottom:14px}.header-surface{display:grid!important;grid-template-columns:auto 1fr auto!important;align-items:center!important;gap:14px!important;padding:12px 14px!important}.header-meta-row{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:12px!important;padding:10px 14px!important;margin-top:10px!important}.header-meta-grid{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:8px 14px!important;flex:1}.header-title-block{text-align:right!important;min-width:220px!important}.header-actions{display:none!important}.header-institute-name{font-size:24px!important}.header-report-title{font-size:19px!important}.header-report-timestamp{display:none!important}.header-contact{font-size:12px!important}.header-meta-value{font-size:13px!important}.result-table th,.result-table td{padding:1.75px 3px;font-size:8.75px;line-height:1.17}.failed-subject-cell{background:#fff!important;background-image:none!important;color:#8b1d1d!important;border:2px solid #8b1d1d!important;font-weight:700}.navbar,.sidebar-main,.breadcrumbs-area,.footer-wrap-layout1,form,.d-print-none{display:none!important}.d-print-block{display:block!important}.container-fluid,.main-content,.dashboard-content-one{margin:0!important;padding:0!important;width:100%!important}}
 </style>
 <div class="main-website"><div class="main-content"><div class="container-fluid mb-4">
-    <form method="GET" action="{{ route('allMarksheet') }}" class="row g-2 align-items-end d-print-none">
-        @include('result.partials.result-filters')
-        <div class="col-md-2"><button class="btn btn-primary w-100">Show Result</button></div>
-        <div class="col-12"><label><input type="checkbox" name="compact" value="1" {{ $compactMode ? 'checked' : '' }}> Compact per-student subjects</label></div>
-    </form>
+    @include('result.partials.result-report-filter', [
+        'filterAction' => route('allMarksheet'),
+        'showCompactOption' => true,
+    ])
     @if(!$examId || !$classId || !$sessionId)
         <div class="alert alert-info">Please select required filters (Exam, Class & Session) to view results.</div>
     @else

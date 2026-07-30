@@ -183,10 +183,11 @@ Marksheet Generate
             <table class="col-12 mb-4 table table-bordered">
                 <thead>
                     <tr>
-                        <th width="20%">Total Marks: {{ $transcriptResult['totalMarks'] }}</th>
-                        <th width="20%">Letter Grade: {{ $transcriptResult['letterGrade'] }}</th>
-                        <th width="20%">Grade Point: {{ $transcriptResult['gpaDisplay'] }}</th>
-                        <th>Remark- {{ $transcriptResult['classification'] === 'Absent' ? 'Absent' : $transcriptResult['status'] }}</th>
+                        <th width="15%">Total Marks: {{ $transcriptResult['totalMarks'] }}</th>
+                        <th width="15%">Letter Grade: {{ $transcriptResult['letterGrade'] }}</th>
+                        <th width="15%">GPA: {{ $transcriptResult['gpaDisplay'] }}</th>
+                        <th width="15%">Status- {{ $transcriptResult['classification'] === 'Absent' ? 'Absent' : $transcriptResult['status'] }}</th>
+                        <th width="40%">Remark:</th>
                     </tr>
                 </thead>
             </table>
