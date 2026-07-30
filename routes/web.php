@@ -178,9 +178,7 @@ Route::get('/login',[
 Route::prefix('teacher')->name('teacher.')->group(function () {
     Route::middleware('teacher.guest')->group(function () {
         Route::get('/login', [TeacherAuthController::class, 'create'])->name('login');
-        Route::post('/login', [TeacherAuthController::class, 'store'])
-            ->middleware('throttle:teacher-login')
-            ->name('login.submit');
+        Route::post('/login', [TeacherAuthController::class, 'store'])->name('login.submit');
     });
 
     Route::middleware('teacher.auth')->group(function () {

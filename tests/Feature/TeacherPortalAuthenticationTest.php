@@ -184,6 +184,51 @@ class TeacherPortalAuthenticationTest extends TestCase
         ])->assertTooManyRequests();
     }
 
+    public function test_successful_logins_do_not_consume_shared_network_failure_quota(): void
+    {
+        $teacher = $this->teacher();
+
+        for ($device = 1; $device <= 8; $device++) {
+            $this->withServerVariables([
+                'REMOTE_ADDR' => '203.0.113.10',
+                'HTTP_USER_AGENT' => 'Supported Browser Device '.$device,
+            ])->post(route('teacher.login.submit'), [
+                'identifier' => $teacher->adminUser,
+                'password' => 'teacher-secret',
+            ])->assertRedirect(route('teacher.dashboard'));
+
+            $this->assertAuthenticatedAs($teacher, 'teacher');
+            Auth::guard('teacher')->logout();
+        }
+    }
+
+    public function test_teacher_login_route_does_not_count_successes_in_route_middleware(): void
+    {
+        $route = app('router')->getRoutes()->getByName('teacher.login.submit');
+
+        $this->assertNotNull($route);
+        $this->assertNotContains('throttle:teacher-login', $route->middleware());
+        $this->assertContains('web', $route->middleware());
+        $this->assertContains('teacher.guest', $route->middleware());
+    }
+
+    public function test_https_canonical_host_is_preserved_after_successful_login(): void
+    {
+        $teacher = $this->teacher();
+
+        $response = $this->withServerVariables([
+            'HTTP_HOST' => 'school.example.test',
+            'HTTPS' => 'on',
+            'SERVER_PORT' => 443,
+        ])->post('https://school.example.test/teacher/login', [
+            'identifier' => $teacher->adminUser,
+            'password' => 'teacher-secret',
+        ]);
+
+        $response->assertRedirect('https://school.example.test/teacher/dashboard');
+        $this->assertAuthenticatedAs($teacher, 'teacher');
+    }
+
     public function test_csrf_protection_is_active_on_login_and_logout_routes(): void
     {
         foreach (['teacher.login.submit', 'teacher.logout'] as $routeName) {

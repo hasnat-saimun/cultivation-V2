@@ -22,12 +22,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        RateLimiter::for('teacher-login', fn (Request $request) =>
-            Limit::perMinute(5)->by(
-                hash('sha256', mb_strtolower(trim((string) $request->input('identifier'))))
-                .'|'.$request->ip()
-            ));
-
         RateLimiter::for('result-draft', fn (Request $request) =>
             Limit::perMinute(30)->by($this->resultActorKey($request, 'result-draft'))
         );
