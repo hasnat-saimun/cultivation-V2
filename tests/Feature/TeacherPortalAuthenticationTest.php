@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\ClassManage;
 use App\Models\CultivationAdmin;
+use App\Models\ServerConfig;
 use App\Models\Subject;
 use App\Models\TeacherClassSubject;
 use App\Services\CultivationAdminResolver;
@@ -28,6 +29,22 @@ class TeacherPortalAuthenticationTest extends TestCase
             ->assertSee('autocorrect="off"', false)
             ->assertSee('spellcheck="false"', false)
             ->assertSee('autocomplete="current-password"', false);
+    }
+
+    public function test_login_page_displays_the_canonical_institute_name(): void
+    {
+        $config = new ServerConfig();
+        $config->forceFill(['instituteName' => 'Burichang Model Institute']);
+        $config->save();
+
+        $this->get(route('teacher.login'))
+            ->assertOk()
+            ->assertSee('Burichang Model Institute')
+            ->assertSeeInOrder([
+                'Burichang Model Institute',
+                'Teacher Portal',
+                'Sign in to your secure workspace',
+            ]);
     }
 
     public function test_active_teacher_can_login_with_each_verified_identifier(): void

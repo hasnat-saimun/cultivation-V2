@@ -14,10 +14,6 @@ class TeacherDashboardService
     /** @return array<string,mixed> */
     public function build(CultivationAdmin $teacher): array
     {
-        $instituteName = Schema::hasTable('server_configs')
-            ? ServerConfig::query()->latest('id')->value('instituteName')
-            : null;
-
         $statistics = [
             'classes' => 0,
             'subjects' => 0,
@@ -75,7 +71,7 @@ class TeacherDashboardService
             : collect();
 
         return [
-            'instituteName' => filled($instituteName) ? (string) $instituteName : 'Cultivation',
+            'instituteName' => $this->instituteName(),
             'statistics' => $statistics,
             'assignments' => $assignments,
             'currentSession' => $sessionName,
@@ -83,6 +79,15 @@ class TeacherDashboardService
             'avatarUrl' => $this->safeAvatarUrl($teacher),
             'avatarInitials' => $this->initials((string) ($teacher->adminName ?: $teacher->adminUser ?: 'Teacher')),
         ];
+    }
+
+    public function instituteName(): string
+    {
+        $instituteName = Schema::hasTable('server_configs')
+            ? ServerConfig::query()->latest('id')->value('instituteName')
+            : null;
+
+        return filled($instituteName) ? (string) $instituteName : 'Cultivation';
     }
 
     private function assignmentQuery(int $teacherId)

@@ -26,9 +26,11 @@ class TeacherAuthController extends Controller
         private TeacherIdentifierNormalizer $identifiers,
     ) {}
 
-    public function create(): View
+    public function create(TeacherDashboardService $dashboard): View
     {
-        return view('teacher.auth.login');
+        return view('teacher.auth.login', [
+            'instituteName' => $dashboard->instituteName(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
