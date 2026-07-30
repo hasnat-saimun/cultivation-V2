@@ -15,7 +15,7 @@ use Illuminate\View\View;
 class TeacherAuthController extends Controller
 {
     private const FAILURE_MESSAGE = 'Unable to sign in with the provided credentials.';
-    private const MAX_ATTEMPTS = 25;
+    private const MAX_ATTEMPTS = 5;
     private const DECAY_SECONDS = 60;
 
     public function __construct(private TeacherAuthenticationDiagnostics $diagnostics)

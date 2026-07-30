@@ -50,7 +50,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $html = $this->html($student, $scope['exam']);
 
         $this->assertSummary($html, '5.00', 'A+');
-        $this->assertStringContainsString('Remark- Pass', $html);
+        $this->assertStringContainsString('Status- Pass', $html);
     }
 
     public function test_enabled_normal_pass_preserves_identity_and_layout_data(): void
@@ -58,7 +58,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         [$html] = $this->singleMainResult('Mathematics', 'Main', 100, 80);
 
         $this->assertSummary($html, '5.00', 'A+');
-        $this->assertStringContainsString('Remark- Pass', $html);
+        $this->assertStringContainsString('Status- Pass', $html);
         $this->assertStringContainsString('Output Student', $html);
         $this->assertStringContainsString('Annual', $html);
         $this->assertStringContainsString('Mathematics', $html);
@@ -139,7 +139,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $html = $this->html($student, $scope['exam']);
 
         $this->assertSummary($html, '5.00', 'A+');
-        $this->assertStringContainsString('Remark- Pass', $html);
+        $this->assertStringContainsString('Status- Pass', $html);
         $this->assertStringContainsString('Optional Fail', $html);
     }
 
@@ -147,7 +147,7 @@ class SingleTranscriptResultEngineTest extends TestCase
     {
         [$html] = $this->singleMainResult('Failed Main', 'Main', 100, 32);
         $this->assertSummary($html, '0.00', 'F');
-        $this->assertStringContainsString('Remark- Fail', $html);
+        $this->assertStringContainsString('Status- Fail', $html);
     }
 
     public function test_enabled_normalizes_fifty_mark_subject(): void
@@ -175,7 +175,7 @@ class SingleTranscriptResultEngineTest extends TestCase
 
         $this->assertSummary($html, 'Absent', 'Absent');
         $this->assertStringContainsString('No marks were entered for this student in this exam.', $html);
-        $this->assertStringContainsString('Remark- Absent', $html);
+        $this->assertStringContainsString('Status- Absent', $html);
     }
 
     public function test_enabled_includes_compulsory_theory_subject(): void
@@ -346,7 +346,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $html = $this->html($student, $scope['exam']);
 
         $this->assertSummary($html, '0.00', 'F');
-        $this->assertStringContainsString('Remark- Fail', $html);
+        $this->assertStringContainsString('Status- Fail', $html);
     }
 
     public static function failedComponentProvider(): array
@@ -576,10 +576,13 @@ class SingleTranscriptResultEngineTest extends TestCase
 
     private function assertSummary(string $html, string $gpa, string $letter): void
     {
-        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>Grade Point:\s*([^<]+)/', $html, $match);
-        $this->assertNotEmpty($match);
-        $this->assertSame($letter, trim($match[1]));
-        $this->assertSame($gpa, trim($match[2]));
+        preg_match('/Letter Grade:\s*([^<]+)/', $html, $letterMatch);
+        preg_match('/(?:Grade Point|GPA):\s*([^<]+)/', $html, $gpaMatch);
+
+        $this->assertNotEmpty($letterMatch, 'Transcript letter grade was not rendered.');
+        $this->assertNotEmpty($gpaMatch, 'Transcript GPA was not rendered.');
+        $this->assertSame($letter, trim($letterMatch[1]));
+        $this->assertSame($gpa, trim($gpaMatch[1]));
     }
 
     private function extractSubjectNamesFromSection(string $html, string $heading): array

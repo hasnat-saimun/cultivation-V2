@@ -171,17 +171,20 @@ class TeacherPortalAuthenticationTest extends TestCase
 
     public function test_login_is_rate_limited(): void
     {
+        $ip = '203.0.113.20';
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $this->post(route('teacher.login.submit'), [
+            $this->withServerVariables(['REMOTE_ADDR' => $ip])
+                ->post(route('teacher.login.submit'), [
                 'identifier' => 'rate-limit@example.test',
                 'password' => 'wrong-password',
             ])->assertRedirect();
         }
 
-        $this->post(route('teacher.login.submit'), [
-            'identifier' => 'rate-limit@example.test',
-            'password' => 'wrong-password',
-        ])->assertTooManyRequests();
+        $this->withServerVariables(['REMOTE_ADDR' => $ip])
+            ->post(route('teacher.login.submit'), [
+                'identifier' => 'rate-limit@example.test',
+                'password' => 'wrong-password',
+            ])->assertTooManyRequests();
     }
 
     public function test_successful_logins_do_not_consume_shared_network_failure_quota(): void

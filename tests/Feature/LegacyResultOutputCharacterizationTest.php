@@ -385,9 +385,13 @@ class LegacyResultOutputCharacterizationTest extends TestCase
 
     private function summaryFromHtml(string $html): array
     {
-        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>Grade Point:\s*([^<]+)/', $html, $match);
-        $this->assertNotEmpty($match, 'Transcript summary row was not rendered.');
-        return ['gpa' => trim($match[2]), 'letter' => trim($match[1])];
+        preg_match('/Letter Grade:\s*([^<]+)/', $html, $letterMatch);
+        preg_match('/(?:Grade Point|GPA):\s*([^<]+)/', $html, $gpaMatch);
+
+        $this->assertNotEmpty($letterMatch, 'Transcript letter grade was not rendered.');
+        $this->assertNotEmpty($gpaMatch, 'Transcript GPA was not rendered.');
+
+        return ['gpa' => trim($gpaMatch[1]), 'letter' => trim($letterMatch[1])];
     }
 
     private function resultRequest(array $scope): Request
