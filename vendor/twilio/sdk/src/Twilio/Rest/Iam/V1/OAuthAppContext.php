@@ -21,6 +21,8 @@ use Twilio\Exceptions\TwilioException;
 use Twilio\Values;
 use Twilio\Version;
 use Twilio\InstanceContext;
+use Twilio\Http\Response;
+use Twilio\Metadata\ResourceMetadata;
 
 
 class OAuthAppContext extends InstanceContext
@@ -48,37 +50,112 @@ class OAuthAppContext extends InstanceContext
     }
 
     /**
+     * Helper function for Delete
+     *
+     
+     * @return Response Deleted Response
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    private function _delete(): Response
+    {
+        
+        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded' ]);
+        return $this->version->handleRequest('DELETE', $this->uri, [], [], $headers, "delete");
+    }
+
+    /**
      * Delete the OAuthAppInstance
      *
+     
      * @return bool True if delete succeeds, false otherwise
      * @throws TwilioException When an HTTP error occurs.
      */
     public function delete(): bool
     {
+        $response = $this->_delete();
+        
+        return true;
+    }
 
-        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded' ]);
-        return $this->version->delete('DELETE', $this->uri, [], [], $headers);
+    /**
+     * Delete the OAuthAppInstance with Metadata
+     *
+     
+     * @return ResourceMetadata The Deleted Resource with Metadata
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function deleteWithMetadata(): ResourceMetadata
+    {
+        $response = $this->_delete();
+        
+        
+        return new ResourceMetadata(
+            null,
+            $response->getStatusCode(),
+            $response->getHeaders()
+        );
     }
 
 
     /**
+     * Helper function for Update
+     *
+     
+     * @param IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest
+     
+     * @return Response Updated Response
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    private function _update(IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest): Response
+    {
+        
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
+        $data = $iamV1AccountVendorOauthAppUpdateRequest->toArray();
+        return $this->version->handleRequest('PUT', $this->uri, [], $data, $headers, "update");
+    }
+
+    /**
      * Update the OAuthAppInstance
      *
+     
      * @param IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest
+     
      * @return OAuthAppInstance Updated OAuthAppInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function update(IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest): OAuthAppInstance
     {
-
-        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
-        $data = $iamV1AccountVendorOauthAppUpdateRequest->toArray();
-        $payload = $this->version->update('PUT', $this->uri, [], $data, $headers);
-
+        $response = $this->_update( $iamV1AccountVendorOauthAppUpdateRequest);
         return new OAuthAppInstance(
             $this->version,
-            $payload,
+            $response->getContent(),
             $this->solution['sid']
+        );
+        
+    }
+
+    /**
+     * Update the OAuthAppInstance with Metadata
+     *
+     
+     * @param IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest
+     
+     * @return ResourceMetadata The Updated Resource with Metadata
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function updateWithMetadata(IamV1AccountVendorOauthAppUpdateRequest $iamV1AccountVendorOauthAppUpdateRequest): ResourceMetadata
+    {
+        $response = $this->_update( $iamV1AccountVendorOauthAppUpdateRequest);
+        $resource = new OAuthAppInstance(
+                        $this->version,
+                        $response->getContent(),
+                        $this->solution['sid']
+                    );
+        
+        return new ResourceMetadata(
+            $resource,
+            $response->getStatusCode(),
+            $response->getHeaders()
         );
     }
 

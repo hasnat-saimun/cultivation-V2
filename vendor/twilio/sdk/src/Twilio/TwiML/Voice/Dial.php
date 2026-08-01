@@ -83,7 +83,7 @@ class Dial extends TwiML {
      * @param array $attributes Optional attributes
      * @return Sip Child element.
      */
-    public function sip($sipUrl, $attributes = []): Sip {
+    public function sip($sipUrl = null, $attributes = []): Sip {
         return $this->nest(new Sip($sipUrl, $attributes));
     }
 
@@ -188,6 +188,15 @@ class Dial extends TwiML {
      */
     public function setRecordingStatusCallback($recordingStatusCallback): self {
         return $this->setAttribute('recordingStatusCallback', $recordingStatusCallback);
+    }
+
+    /**
+     * Add RecordingConfigurationId attribute.
+     *
+     * @param string $recordingConfigurationId Configuration for the recording
+     */
+    public function setRecordingConfigurationId($recordingConfigurationId): self {
+        return $this->setAttribute('recordingConfigurationId', $recordingConfigurationId);
     }
 
     /**

@@ -207,6 +207,20 @@ class Application extends SymfonyApplication implements ApplicationContract
     }
 
     /**
+     * Add an array of commands to the console.
+     *
+     * @param  array<int, \Symfony\Component\Console\Command\Command>  $commands
+     * @return void
+     */
+    #[\Override]
+    public function addCommands(array $commands): void
+    {
+        foreach ($commands as $command) {
+            $this->addCommand($command);
+        }
+    }
+
+    /**
      * Add a command to the console.
      *
      * @param  \Symfony\Component\Console\Command\Command  $command
@@ -214,6 +228,17 @@ class Application extends SymfonyApplication implements ApplicationContract
      */
     #[\Override]
     public function add(SymfonyCommand $command): ?SymfonyCommand
+    {
+        return $this->addCommand($command);
+    }
+
+    /**
+     * Add a command to the console.
+     *
+     * @param  \Symfony\Component\Console\Command\Command|callable  $command
+     * @return \Symfony\Component\Console\Command\Command|null
+     */
+    public function addCommand(SymfonyCommand|callable $command): ?SymfonyCommand
     {
         if ($command instanceof Command) {
             $command->setLaravel($this->laravel);
@@ -230,6 +255,10 @@ class Application extends SymfonyApplication implements ApplicationContract
      */
     protected function addToParent(SymfonyCommand $command)
     {
+        if (method_exists(SymfonyApplication::class, 'addCommand')) {
+            return parent::addCommand($command);
+        }
+
         return parent::add($command);
     }
 

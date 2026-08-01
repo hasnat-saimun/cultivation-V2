@@ -21,6 +21,8 @@ use Twilio\ListResource;
 use Twilio\Options;
 use Twilio\Values;
 use Twilio\Version;
+use Twilio\Http\Response;
+use Twilio\Metadata\ResourceMetadata;
 use Twilio\Serialize;
 
 
@@ -39,8 +41,28 @@ class MessagingGeopermissionsList extends ListResource
         // Path Solution
         $this->solution = [
         ];
-
         $this->uri = '/Messaging/GeoPermissions';
+    }
+
+    /**
+     * Helper function for Fetch
+     *
+     * @param array|Options $options Optional Arguments
+     * @return Response Fetched Response
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    private function _fetch(array $options = []): Response
+    {
+        
+        $options = new Values($options);
+
+        $params = Values::of([
+            'CountryCode' =>
+                $options['countryCode'],
+        ]);
+
+        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
+        return $this->version->handleRequest('GET', $this->uri, $params, [], $headers, "fetch");
     }
 
     /**
@@ -52,45 +74,95 @@ class MessagingGeopermissionsList extends ListResource
      */
     public function fetch(array $options = []): MessagingGeopermissionsInstance
     {
-
-        $options = new Values($options);
-
-        $params = Values::of([
-            'CountryCode' =>
-                $options['countryCode'],
-        ]);
-
-        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        $payload = $this->version->fetch('GET', $this->uri, $params, [], $headers);
-
+        $response = $this->_fetch($options);
         return new MessagingGeopermissionsInstance(
             $this->version,
-            $payload
+            $response->getContent()
+        );
+        
+    }
+
+    /**
+     * Fetch the MessagingGeopermissionsInstance with Metadata
+     *
+     * @param array|Options $options Optional Arguments
+     * @return ResourceMetadata The Fetched Resource with Metadata
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function fetchWithMetadata(array $options = []): ResourceMetadata
+    {
+        $response = $this->_fetch($options);
+        $resource = new MessagingGeopermissionsInstance(
+                        $this->version,
+                        $response->getContent()
+                    );
+        
+        return new ResourceMetadata(
+            $resource,
+            $response->getStatusCode(),
+            $response->getHeaders()
         );
     }
 
 
     /**
-     * Update the MessagingGeopermissionsInstance
+     * Helper function for Update
      *
      * @param array[] $permissions A list of objects where each object represents the Geo Permission to be updated. Each object contains the following fields: `country_code`, unique code for each country of Geo Permission; `type`, permission type of the Geo Permission i.e. country; `enabled`, configure true for enabling the Geo Permission, false for disabling the Geo Permission.
-     * @return MessagingGeopermissionsInstance Updated MessagingGeopermissionsInstance
+     
+     * @return Response Updated Response
      * @throws TwilioException When an HTTP error occurs.
      */
-    public function update(array $permissions): MessagingGeopermissionsInstance
+    private function _update(array $permissions): Response
     {
-
+        
         $data = Values::of([
             'Permissions' =>
                 Serialize::map($permissions,function ($e) { return Serialize::jsonObject($e); }),
         ]);
 
         $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        $payload = $this->version->update('PATCH', $this->uri, [], $data, $headers);
+        return $this->version->handleRequest('PATCH', $this->uri, [], $data, $headers, "update");
+    }
 
+    /**
+     * Update the MessagingGeopermissionsInstance
+     *
+     * @param array[] $permissions A list of objects where each object represents the Geo Permission to be updated. Each object contains the following fields: `country_code`, unique code for each country of Geo Permission; `type`, permission type of the Geo Permission i.e. country; `enabled`, configure true for enabling the Geo Permission, false for disabling the Geo Permission.
+     
+     * @return MessagingGeopermissionsInstance Updated MessagingGeopermissionsInstance
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function update(array $permissions): MessagingGeopermissionsInstance
+    {
+        $response = $this->_update($permissions);
         return new MessagingGeopermissionsInstance(
             $this->version,
-            $payload
+            $response->getContent()
+        );
+        
+    }
+
+    /**
+     * Update the MessagingGeopermissionsInstance with Metadata
+     *
+     * @param array[] $permissions A list of objects where each object represents the Geo Permission to be updated. Each object contains the following fields: `country_code`, unique code for each country of Geo Permission; `type`, permission type of the Geo Permission i.e. country; `enabled`, configure true for enabling the Geo Permission, false for disabling the Geo Permission.
+     
+     * @return ResourceMetadata The Updated Resource with Metadata
+     * @throws TwilioException When an HTTP error occurs.
+     */
+    public function updateWithMetadata(array $permissions): ResourceMetadata
+    {
+        $response = $this->_update($permissions);
+        $resource = new MessagingGeopermissionsInstance(
+                        $this->version,
+                        $response->getContent()
+                    );
+        
+        return new ResourceMetadata(
+            $resource,
+            $response->getStatusCode(),
+            $response->getHeaders()
         );
     }
 
