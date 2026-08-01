@@ -12,6 +12,8 @@ class NetscapeApplicationExtensionEncoder extends ApplicationExtensionEncoder
 {
     /**
      * Create new decoder instance
+     *
+     * @param NetscapeApplicationExtension $source
      */
     public function __construct(NetscapeApplicationExtension $source)
     {
@@ -20,6 +22,8 @@ class NetscapeApplicationExtensionEncoder extends ApplicationExtensionEncoder
 
     /**
      * Encode current source
+     *
+     * @return string
      */
     public function encode(): string
     {

@@ -29,6 +29,8 @@ class PlainTextExtension extends AbstractExtension
 
     /**
      * Add text
+     *
+     * @param string $text
      */
     public function addText(string $text): self
     {
@@ -51,6 +53,8 @@ class PlainTextExtension extends AbstractExtension
 
     /**
      * Determine if any text is present
+     *
+     * @return bool
      */
     public function hasText(): bool
     {

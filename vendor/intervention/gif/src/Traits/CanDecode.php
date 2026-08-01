@@ -12,9 +12,12 @@ trait CanDecode
     /**
      * Decode current instance
      *
+     * @param resource $source
+     * @param null|int $length
      * @throws DecoderException
+     * @return mixed
      */
-    public static function decode(mixed $source, ?int $length = null): mixed
+    public static function decode($source, ?int $length = null): mixed
     {
         return self::getDecoder($source, $length)->decode();
     }
@@ -22,22 +25,29 @@ trait CanDecode
     /**
      * Get decoder for current instance
      *
+     * @param resource $source
+     * @param null|int $length
      * @throws DecoderException
+     * @return AbstractDecoder
      */
-    protected static function getDecoder(mixed $source, ?int $length = null): AbstractDecoder
+    protected static function getDecoder($source, ?int $length = null): AbstractDecoder
     {
-        $classname = sprintf('Intervention\Gif\Decoders\%sDecoder', self::getShortClassname());
+        $classname = self::getDecoderClassname();
 
         if (!class_exists($classname)) {
             throw new DecoderException("Decoder for '" . static::class . "' not found.");
         }
 
-        $decoder = new $classname($source, $length);
+        return new $classname($source, $length);
+    }
 
-        if (!($decoder instanceof AbstractDecoder)) {
-            throw new DecoderException("Decoder for '" . static::class . "' not found.");
-        }
-
-        return $decoder;
+    /**
+     * Get classname of decoder for current classname
+     *
+     * @return string
+     */
+    protected static function getDecoderClassname(): string
+    {
+        return sprintf('Intervention\Gif\Decoders\%sDecoder', self::getShortClassname());
     }
 }

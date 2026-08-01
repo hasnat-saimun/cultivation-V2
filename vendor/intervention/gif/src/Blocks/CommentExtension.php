@@ -29,14 +29,19 @@ class CommentExtension extends AbstractExtension
 
     /**
      * Get one comment by key
+     *
+     * @param int $key
+     * @return mixed
      */
     public function getComment(int $key): mixed
     {
-        return $this->comments[$key] ?? null;
+        return array_key_exists($key, $this->comments) ? $this->comments[$key] : null;
     }
 
     /**
      * Set comment text
+     *
+     * @param string $value
      */
     public function addComment(string $value): self
     {

@@ -43,7 +43,6 @@ class RoleAssignmentPage extends Page
         return new RoleAssignmentInstance($this->version, $payload, $this->solution['organizationSid']);
     }
 
-
     /**
      * Provide a friendly representation
      *

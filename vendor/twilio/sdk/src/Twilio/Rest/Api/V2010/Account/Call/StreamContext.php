@@ -22,8 +22,6 @@ use Twilio\Stream;
 use Twilio\Values;
 use Twilio\Version;
 use Twilio\InstanceContext;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class StreamContext extends InstanceContext
@@ -61,75 +59,29 @@ class StreamContext extends InstanceContext
     }
 
     /**
-     * Helper function for Update
+     * Update the StreamInstance
      *
-     
-     
      * @param string $status
-     
-     * @return Response Updated Response
+     * @return StreamInstance Updated StreamInstance
      * @throws TwilioException When an HTTP error occurs.
      */
-    private function _update(string $status): Response
+    public function update(string $status): StreamInstance
     {
-        
+
         $data = Values::of([
             'Status' =>
                 $status,
         ]);
 
         $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "update");
-    }
+        $payload = $this->version->update('POST', $this->uri, [], $data, $headers);
 
-    /**
-     * Update the StreamInstance
-     *
-     
-     
-     * @param string $status
-     
-     * @return StreamInstance Updated StreamInstance
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function update(string $status): StreamInstance
-    {
-        $response = $this->_update( $status);
         return new StreamInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['accountSid'],
             $this->solution['callSid'],
             $this->solution['sid']
-        );
-        
-    }
-
-    /**
-     * Update the StreamInstance with Metadata
-     *
-     
-     
-     * @param string $status
-     
-     * @return ResourceMetadata The Updated Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function updateWithMetadata(string $status): ResourceMetadata
-    {
-        $response = $this->_update( $status);
-        $resource = new StreamInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['accountSid'],
-                        $this->solution['callSid'],
-                        $this->solution['sid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

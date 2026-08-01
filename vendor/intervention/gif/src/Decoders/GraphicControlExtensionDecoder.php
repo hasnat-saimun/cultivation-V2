@@ -14,6 +14,7 @@ class GraphicControlExtensionDecoder extends AbstractPackedBitDecoder
      * Decode given string to current instance
      *
      * @throws DecoderException
+     * @return GraphicControlExtension
      */
     public function decode(): GraphicControlExtension
     {
@@ -45,19 +46,19 @@ class GraphicControlExtensionDecoder extends AbstractPackedBitDecoder
     /**
      * Decode disposal method
      *
-     * @throws DecoderException
+     * @return DisposalMethod
      */
     protected function decodeDisposalMethod(string $byte): DisposalMethod
     {
         return DisposalMethod::from(
-            intval(bindec($this->getPackedBits($byte, 3, 3)))
+            bindec($this->getPackedBits($byte, 3, 3))
         );
     }
 
     /**
      * Decode user input flag
      *
-     * @throws DecoderException
+     * @return bool
      */
     protected function decodeUserInput(string $byte): bool
     {
@@ -67,7 +68,7 @@ class GraphicControlExtensionDecoder extends AbstractPackedBitDecoder
     /**
      * Decode transparent color existance
      *
-     * @throws DecoderException
+     * @return bool
      */
     protected function decodeTransparentColorExistance(string $byte): bool
     {
@@ -77,30 +78,20 @@ class GraphicControlExtensionDecoder extends AbstractPackedBitDecoder
     /**
      * Decode delay value
      *
-     * @throws DecoderException
+     * @return int
      */
     protected function decodeDelay(string $bytes): int
     {
-        $unpacked = unpack('v*', $bytes);
-        if ($unpacked === false || !array_key_exists(1, $unpacked)) {
-            throw new DecoderException('Unable to decode animation delay.');
-        }
-
-        return $unpacked[1];
+        return unpack('v*', $bytes)[1];
     }
 
     /**
      * Decode transparent color index
      *
-     * @throws DecoderException
+     * @return int
      */
     protected function decodeTransparentColorIndex(string $byte): int
     {
-        $unpacked = unpack('C', $byte);
-        if ($unpacked === false || !array_key_exists(1, $unpacked)) {
-            throw new DecoderException('Unable to decode transparent color index.');
-        }
-
-        return $unpacked[1];
+        return unpack('C', $byte)[1];
     }
 }

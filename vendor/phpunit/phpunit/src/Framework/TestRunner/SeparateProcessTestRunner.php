@@ -17,11 +17,11 @@ use function serialize;
 use function sys_get_temp_dir;
 use function tempnam;
 use function unlink;
+use function unserialize;
 use function var_export;
 use PHPUnit\Event\NoPreviousThrowableException;
 use PHPUnit\Runner\CodeCoverage;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
-use PHPUnit\TextUI\Configuration\SourceMapper;
 use PHPUnit\Util\GlobalState;
 use PHPUnit\Util\PHP\Job;
 use PHPUnit\Util\PHP\JobRunnerRegistry;
@@ -34,10 +34,8 @@ use SebastianBergmann\Template\Template;
  *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class SeparateProcessTestRunner
+final class SeparateProcessTestRunner implements IsolatedTestRunner
 {
-    private static ?string $sourceMapFile = null;
-
     /**
      * @throws \PHPUnit\Runner\Exception
      * @throws \PHPUnit\Util\Exception
@@ -46,7 +44,7 @@ final class SeparateProcessTestRunner
      * @throws NoPreviousThrowableException
      * @throws ProcessIsolationException
      */
-    public function run(TestCase $test, bool $runEntireClass, bool $preserveGlobalState, bool $requiresXdebug): void
+    public function run(TestCase $test, bool $runEntireClass, bool $preserveGlobalState): void
     {
         $class = new ReflectionClass($test);
 
@@ -103,8 +101,7 @@ final class SeparateProcessTestRunner
         $includePath             = "'." . $includePath . ".'";
         $offset                  = hrtime();
         $serializedConfiguration = $this->saveConfigurationForChildProcess();
-        $processResultFile       = $this->pathForCachedSourceMap();
-        $sourceMapFile           = $this->sourceMapFileForChildProcess();
+        $processResultFile       = tempnam(sys_get_temp_dir(), 'phpunit_');
 
         $file = $class->getFileName();
 
@@ -130,7 +127,6 @@ final class SeparateProcessTestRunner
             'offsetNanoseconds'              => (string) $offset[1],
             'serializedConfiguration'        => $serializedConfiguration,
             'processResultFile'              => $processResultFile,
-            'sourceMapFile'                  => $sourceMapFile,
         ];
 
         if (!$runEntireClass) {
@@ -143,44 +139,9 @@ final class SeparateProcessTestRunner
 
         assert($code !== '');
 
-        JobRunnerRegistry::runTestJob(new Job($code, requiresXdebug: $requiresXdebug), $processResultFile, $test);
+        JobRunnerRegistry::runTestJob(new Job($code), $processResultFile, $test);
 
         @unlink($serializedConfiguration);
-    }
-
-    private function sourceMapFileForChildProcess(): string
-    {
-        if (self::$sourceMapFile !== null) {
-            return self::$sourceMapFile;
-        }
-
-        if (!ConfigurationRegistry::get()->source()->notEmpty()) {
-            self::$sourceMapFile = '';
-
-            return self::$sourceMapFile;
-        }
-
-        $path = $this->pathForCachedSourceMap();
-
-        if ($path === false) {
-            // @codeCoverageIgnoreStart
-            self::$sourceMapFile = '';
-
-            return self::$sourceMapFile;
-            // @codeCoverageIgnoreEnd
-        }
-
-        if (!SourceMapper::saveTo($path, ConfigurationRegistry::get()->source())) {
-            // @codeCoverageIgnoreStart
-            self::$sourceMapFile = '';
-
-            return self::$sourceMapFile;
-            // @codeCoverageIgnoreEnd
-        }
-
-        self::$sourceMapFile = $path;
-
-        return self::$sourceMapFile;
     }
 
     /**
@@ -188,25 +149,16 @@ final class SeparateProcessTestRunner
      */
     private function saveConfigurationForChildProcess(): string
     {
-        $path = $this->pathForCachedSourceMap();
+        $path = tempnam(sys_get_temp_dir(), 'phpunit_');
 
         if ($path === false) {
-            // @codeCoverageIgnoreStart
             throw new ProcessIsolationException;
-            // @codeCoverageIgnoreEnd
         }
 
         if (!ConfigurationRegistry::saveTo($path)) {
-            // @codeCoverageIgnoreStart
             throw new ProcessIsolationException;
-            // @codeCoverageIgnoreEnd
         }
 
         return $path;
-    }
-
-    private function pathForCachedSourceMap(): false|string
-    {
-        return tempnam(sys_get_temp_dir(), 'phpunit_');
     }
 }

@@ -43,7 +43,6 @@ class QueryPage extends Page
         return new QueryInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

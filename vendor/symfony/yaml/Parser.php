@@ -26,8 +26,6 @@ class Parser
     public const TAG_PATTERN = '(?P<tag>![\w!.\/:-]+)';
     public const BLOCK_SCALAR_HEADER_PATTERN = '(?P<separator>\||>)(?P<modifiers>\+|\-|\d+|\+\d+|\-\d+|\d+\+|\d+\-)?(?P<comments> +#.*)?';
     public const REFERENCE_PATTERN = '#^&(?P<ref>[^ ]++) *+(?P<value>.*)#u';
-    public const DEFAULT_MAX_NESTING_LEVEL = 128;
-    public const DEFAULT_MAX_ALIASES_FOR_COLLECTIONS = 128;
 
     private ?string $filename = null;
     private int $offset = 0;
@@ -40,21 +38,6 @@ class Parser
     private array $skippedLineNumbers = [];
     private array $locallySkippedLineNumbers = [];
     private array $refsBeingParsed = [];
-    private ?ParserState $state = null;
-
-    public function __construct(int $maxNestingLevel = self::DEFAULT_MAX_NESTING_LEVEL, int $maxAliasesForCollections = self::DEFAULT_MAX_ALIASES_FOR_COLLECTIONS)
-    {
-        if ($maxNestingLevel < 1) {
-            throw new \InvalidArgumentException('The maximum nesting depth must be greater than 0.');
-        }
-
-        if ($maxAliasesForCollections < 0) {
-            throw new \InvalidArgumentException('The maximum number of collection aliases must be greater than or equal to 0.');
-        }
-
-        $this->getState()->maxNestingLevel = $maxNestingLevel;
-        $this->getState()->maxAliasesForCollections = $maxAliasesForCollections;
-    }
 
     /**
      * Parses a YAML file into a PHP value.
@@ -98,9 +81,6 @@ class Parser
         }
 
         $this->refs = [];
-        $state = $this->getState();
-        $state->reset();
-        $state->aliasesEnabled = 0 === (Yaml::PARSE_EXCEPTION_ON_ALIAS & $flags);
 
         try {
             $data = $this->doParse($value, $flags);
@@ -114,15 +94,9 @@ class Parser
             $this->skippedLineNumbers = [];
             $this->locallySkippedLineNumbers = [];
             $this->totalNumberOfLines = null;
-            $state->reset();
         }
 
         return $data;
-    }
-
-    private function getState(): ParserState
-    {
-        return $this->state ??= new ParserState();
     }
 
     private function doParse(string $value, int $flags): mixed
@@ -224,7 +198,7 @@ class Parser
                 }
             } elseif (
                 self::preg_match('#^(?P<key>(?:![^\s]++\s++)?(?:'.Inline::REGEX_QUOTED_STRING.'|[^ \'"\[\{!].*?)) *\:(( |\t)++(?P<value>.+))?$#u', rtrim($this->currentLine), $values)
-                && (!str_contains($values['key'], ' #') || \in_array($values['key'][0], ['"', "'"], true))
+                && (!str_contains($values['key'], ' #') || \in_array($values['key'][0], ['"', "'"]))
             ) {
                 if ($context && 'sequence' == $context) {
                     throw new ParseException('You cannot define a mapping item when in a sequence.', $this->currentLineNb + 1, $this->currentLine, $this->filename);
@@ -263,8 +237,6 @@ class Parser
                         }
 
                         $refValue = $this->refs[$refName];
-
-                        $this->getState()->countAlias($refValue, $this->getRealCurrentLineNb() + 1, $this->currentLine, $this->filename);
 
                         if (Yaml::PARSE_OBJECT_FOR_MAP & $flags && $refValue instanceof \stdClass) {
                             $refValue = (array) $refValue;
@@ -392,7 +364,7 @@ class Parser
                 }
 
                 try {
-                    return Inline::parse($this->lexInlineQuotedString(), $flags, $this->refs, $this->state);
+                    return Inline::parse($this->lexInlineQuotedString(), $flags, $this->refs);
                 } catch (ParseException $e) {
                     $e->setParsedLine($this->getRealCurrentLineNb() + 1);
                     $e->setSnippet($this->currentLine);
@@ -405,7 +377,7 @@ class Parser
                 }
 
                 try {
-                    $parsedMapping = Inline::parse($this->lexInlineMapping(), $flags, $this->refs, $this->state);
+                    $parsedMapping = Inline::parse($this->lexInlineMapping(), $flags, $this->refs);
 
                     while ($this->moveToNextLine()) {
                         if (!$this->isCurrentLineEmpty()) {
@@ -426,7 +398,7 @@ class Parser
                 }
 
                 try {
-                    $parsedSequence = Inline::parse($this->lexInlineSequence(), $flags, $this->refs, $this->state);
+                    $parsedSequence = Inline::parse($this->lexInlineSequence(), $flags, $this->refs);
 
                     while ($this->moveToNextLine()) {
                         if (!$this->isCurrentLineEmpty()) {
@@ -454,7 +426,7 @@ class Parser
                 // 1-liner optionally followed by newline(s)
                 if (\is_string($value) && $this->lines[0] === trim($value)) {
                     try {
-                        $value = Inline::parse($this->lines[0], $flags, $this->refs, $this->state);
+                        $value = Inline::parse($this->lines[0], $flags, $this->refs);
                     } catch (ParseException $e) {
                         $e->setParsedLine($this->getRealCurrentLineNb() + 1);
                         $e->setSnippet($this->currentLine);
@@ -510,7 +482,7 @@ class Parser
                     }
 
                     try {
-                        return Inline::parse(trim($value), 0, $this->refs, $this->state);
+                        return Inline::parse(trim($value));
                     } catch (ParseException) {
                         // fall-through to the ParseException thrown below
                     }
@@ -555,15 +527,8 @@ class Parser
         $parser->skippedLineNumbers = $skippedLineNumbers;
         $parser->refs = &$this->refs;
         $parser->refsBeingParsed = $this->refsBeingParsed;
-        $parser->state = $this->state;
 
-        $this->getState()->enterNestingLevel($offset + 1, $this->currentLine, $this->filename);
-
-        try {
-            return $parser->doParse($yaml, $flags);
-        } finally {
-            $this->getState()->leaveNestingLevel();
-        }
+        return $parser->doParse($yaml, $flags);
     }
 
     /**
@@ -759,8 +724,6 @@ class Parser
                 throw new ParseException(\sprintf('Reference "%s" does not exist.', $value), $this->currentLineNb + 1, $this->currentLine, $this->filename);
             }
 
-            $this->getState()->countAlias($this->refs[$value], $this->getRealCurrentLineNb() + 1, $this->currentLine, $this->filename);
-
             return $this->refs[$value];
         }
 
@@ -784,18 +747,18 @@ class Parser
             if ('' !== $value && '{' === $value[0]) {
                 $cursor = \strlen(rtrim($this->currentLine)) - \strlen(rtrim($value));
 
-                return Inline::parse($this->lexInlineMapping($cursor), $flags, $this->refs, $this->state);
+                return Inline::parse($this->lexInlineMapping($cursor), $flags, $this->refs);
             } elseif ('' !== $value && '[' === $value[0]) {
                 $cursor = \strlen(rtrim($this->currentLine)) - \strlen(rtrim($value));
 
-                return Inline::parse($this->lexInlineSequence($cursor), $flags, $this->refs, $this->state);
+                return Inline::parse($this->lexInlineSequence($cursor), $flags, $this->refs);
             }
 
             switch ($value[0] ?? '') {
                 case '"':
                 case "'":
                     $cursor = \strlen(rtrim($this->currentLine)) - \strlen(rtrim($value));
-                    $parsedValue = Inline::parse($this->lexInlineQuotedString($cursor), $flags, $this->refs, $this->state);
+                    $parsedValue = Inline::parse($this->lexInlineQuotedString($cursor), $flags, $this->refs);
 
                     if (isset($this->currentLine[$cursor]) && preg_replace('/\s*(#.*)?$/A', '', substr($this->currentLine, $cursor))) {
                         throw new ParseException(\sprintf('Unexpected characters near "%s".', substr($this->currentLine, $cursor)));
@@ -811,14 +774,6 @@ class Parser
                             $this->moveToPreviousLine();
 
                             break;
-                        }
-
-                        if ($this->isCurrentLineComment()) {
-                            break;
-                        }
-
-                        if ('mapping' === $context && str_contains($this->currentLine, ': ') && !$this->isCurrentLineComment()) {
-                            throw new ParseException('A colon cannot be used in an unquoted mapping value.', $this->getRealCurrentLineNb() + 1, $this->currentLine, $this->filename);
                         }
 
                         $lines[] = trim($this->currentLine);
@@ -839,7 +794,7 @@ class Parser
 
                     Inline::$parsedLineNumber = $this->getRealCurrentLineNb();
 
-                    $parsedValue = Inline::parse($value, $flags, $this->refs, $this->state);
+                    $parsedValue = Inline::parse($value, $flags, $this->refs);
 
                     if ('mapping' === $context && \is_string($parsedValue) && '"' !== $value[0] && "'" !== $value[0] && '[' !== $value[0] && '{' !== $value[0] && '!' !== $value[0] && str_contains($parsedValue, ': ')) {
                         throw new ParseException('A colon cannot be used in an unquoted mapping value.', $this->getRealCurrentLineNb() + 1, $value, $this->filename);
@@ -1028,11 +983,11 @@ class Parser
 
         // strip YAML header
         $count = 0;
-        $value = preg_replace('#^%YAML[: ][\d.]++[^\n]*+\n#u', '', $value, -1, $count);
+        $value = preg_replace('#^\%YAML[: ][\d\.]+.*\n#u', '', $value, -1, $count);
         $this->offset += $count;
 
         // remove leading comments
-        $trimmedValue = preg_replace('#^(?:\#[^\n]*+\n)++#', '', $value, -1, $count);
+        $trimmedValue = preg_replace('#^(\#.*?\n)+#s', '', $value, -1, $count);
         if (1 === $count) {
             // items have been removed, update the offset
             $this->offset += substr_count($value, "\n") - substr_count($trimmedValue, "\n");
@@ -1040,14 +995,14 @@ class Parser
         }
 
         // remove start of the document marker (---)
-        $trimmedValue = preg_replace('#^---[^\n]*+\n#', '', $value, -1, $count);
+        $trimmedValue = preg_replace('#^\-\-\-.*?\n#s', '', $value, -1, $count);
         if (1 === $count) {
             // items have been removed, update the offset
             $this->offset += substr_count($value, "\n") - substr_count($trimmedValue, "\n");
             $value = $trimmedValue;
 
             // remove end of the document marker (...)
-            $value = preg_replace('#\.\.\.\s*+$#', '', $value);
+            $value = preg_replace('#\.\.\.\s*$#', '', $value);
         }
 
         return $value;
@@ -1191,7 +1146,7 @@ class Parser
             if ($this->isCurrentLineBlank()) {
                 $previousLineWasNewline = true;
                 $previousLineWasTerminatedWithBackslash = false;
-            } elseif ('"' === $quotation && 1 === (\strlen($this->currentLine) - \strlen(rtrim($this->currentLine, '\\'))) % 2) {
+            } elseif ('\\' === $this->currentLine[-1]) {
                 $previousLineWasNewline = false;
                 $previousLineWasTerminatedWithBackslash = true;
             } else {
@@ -1211,8 +1166,8 @@ class Parser
     {
         $offset = $cursor;
 
-        while ($cursor < \strlen($this->currentLine)) {
-            if (\in_array($this->currentLine[$cursor], ['[', ']', '{', '}', ',', ':'], true)) {
+        while ($cursor < strlen($this->currentLine)) {
+            if (in_array($this->currentLine[$cursor], ['[', ']', '{', '}', ',', ':'], true)) {
                 break;
             }
 
@@ -1225,18 +1180,6 @@ class Parser
 
         if ($cursor === $offset) {
             throw new ParseException('Malformed unquoted YAML string.');
-        }
-
-        return substr($this->currentLine, $offset, $cursor - $offset);
-    }
-
-    private function lexInlineAnchorOrAlias(int &$cursor): string
-    {
-        $offset = $cursor;
-        ++$cursor;
-
-        while ($cursor < \strlen($this->currentLine) && !\in_array($this->currentLine[$cursor], [' ', "\t", ',', '[', ']', '{', '}'], true)) {
-            ++$cursor;
         }
 
         return substr($this->currentLine, $offset, $cursor - $offset);
@@ -1277,16 +1220,12 @@ class Parser
                     case '[':
                         $value .= $this->lexInlineSequence($cursor, false);
                         break;
-                    case '&':
-                    case '*':
-                        $value .= $this->lexInlineAnchorOrAlias($cursor);
-                        break;
                     case $closingTag:
                         $value .= $this->currentLine[$cursor];
                         ++$cursor;
 
-                        if ($consumeUntilEol && isset($this->currentLine[$cursor]) && ($whitespaces = strspn($this->currentLine, ' ', $cursor) + $cursor) < \strlen($this->currentLine) && '#' !== $this->currentLine[$whitespaces]) {
-                            throw new ParseException(\sprintf('Unexpected token "%s".', trim(substr($this->currentLine, $cursor))));
+                        if ($consumeUntilEol && isset($this->currentLine[$cursor]) && ($whitespaces = strspn($this->currentLine, ' ', $cursor) + $cursor) < strlen($this->currentLine) && '#' !== $this->currentLine[$whitespaces]) {
+                            throw new ParseException(sprintf('Unexpected token "%s".', trim(substr($this->currentLine, $cursor))));
                         }
 
                         return $value;

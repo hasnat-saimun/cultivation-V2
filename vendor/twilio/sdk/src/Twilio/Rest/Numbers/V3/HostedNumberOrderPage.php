@@ -16,11 +16,10 @@
 namespace Twilio\Rest\Numbers\V3;
 
 use Twilio\Http\Response;
-use Twilio\TokenPaginationPage;
-use Twilio\ApiV1Version;
+use Twilio\Page;
 use Twilio\Version;
 
-class HostedNumberOrderPage extends TokenPaginationPage
+class HostedNumberOrderPage extends Page
     {
     /**
      * @param Version $version Version that contains the resource
@@ -29,8 +28,7 @@ class HostedNumberOrderPage extends TokenPaginationPage
      */
     public function __construct(Version $version, Response $response, array $solution)
     {
-        $apiV1Version = new ApiV1Version($version->getDomain(), $version->version);
-        parent::__construct($apiV1Version, $response);
+        parent::__construct($version, $response);
 
         // Path Solution
         $this->solution = $solution;
@@ -44,7 +42,6 @@ class HostedNumberOrderPage extends TokenPaginationPage
     {
         return new HostedNumberOrderInstance($this->version, $payload);
     }
-
 
     /**
      * Provide a friendly representation

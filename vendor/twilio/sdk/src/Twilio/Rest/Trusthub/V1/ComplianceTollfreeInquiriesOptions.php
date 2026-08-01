@@ -55,8 +55,6 @@ abstract class ComplianceTollfreeInquiriesOptions
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string $externalReferenceId A legally recognized business registration number.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
-     * @param string $vettingId Unique identifier for the created Vetting .
-     * @param string $vettingProvider Name of the vetting provider.
      * @return CreateComplianceTollfreeInquiriesOptions Options builder
      */
     public static function create(
@@ -94,9 +92,7 @@ abstract class ComplianceTollfreeInquiriesOptions
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
         string $externalReferenceId = Values::NONE,
-        array $optInKeywords = Values::ARRAY_NONE,
-        string $vettingId = Values::NONE,
-        string $vettingProvider = Values::NONE
+        array $optInKeywords = Values::ARRAY_NONE
 
     ): CreateComplianceTollfreeInquiriesOptions
     {
@@ -134,9 +130,7 @@ abstract class ComplianceTollfreeInquiriesOptions
             $termsAndConditionsUrl,
             $ageGatedContent,
             $externalReferenceId,
-            $optInKeywords,
-            $vettingId,
-            $vettingProvider
+            $optInKeywords
         );
     }
 
@@ -179,8 +173,6 @@ class CreateComplianceTollfreeInquiriesOptions extends Options
      * @param bool $ageGatedContent Indicates if the content is age gated.
      * @param string $externalReferenceId A legally recognized business registration number.
      * @param string[] $optInKeywords List of keywords that users can text in to opt in to receive messages.
-     * @param string $vettingId Unique identifier for the created Vetting .
-     * @param string $vettingProvider Name of the vetting provider.
      */
     public function __construct(
         
@@ -217,9 +209,7 @@ class CreateComplianceTollfreeInquiriesOptions extends Options
         string $termsAndConditionsUrl = Values::NONE,
         bool $ageGatedContent = Values::BOOL_NONE,
         string $externalReferenceId = Values::NONE,
-        array $optInKeywords = Values::ARRAY_NONE,
-        string $vettingId = Values::NONE,
-        string $vettingProvider = Values::NONE
+        array $optInKeywords = Values::ARRAY_NONE
 
     ) {
         $this->options['customerProfileSid'] = $customerProfileSid;
@@ -256,8 +246,6 @@ class CreateComplianceTollfreeInquiriesOptions extends Options
         $this->options['ageGatedContent'] = $ageGatedContent;
         $this->options['externalReferenceId'] = $externalReferenceId;
         $this->options['optInKeywords'] = $optInKeywords;
-        $this->options['vettingId'] = $vettingId;
-        $this->options['vettingProvider'] = $vettingProvider;
     }
 
     /**
@@ -661,30 +649,6 @@ class CreateComplianceTollfreeInquiriesOptions extends Options
     public function setOptInKeywords(array $optInKeywords): self
     {
         $this->options['optInKeywords'] = $optInKeywords;
-        return $this;
-    }
-
-    /**
-     * Unique identifier for the created Vetting .
-     *
-     * @param string $vettingId Unique identifier for the created Vetting .
-     * @return $this Fluent Builder
-     */
-    public function setVettingId(string $vettingId): self
-    {
-        $this->options['vettingId'] = $vettingId;
-        return $this;
-    }
-
-    /**
-     * Name of the vetting provider.
-     *
-     * @param string $vettingProvider Name of the vetting provider.
-     * @return $this Fluent Builder
-     */
-    public function setVettingProvider(string $vettingProvider): self
-    {
-        $this->options['vettingProvider'] = $vettingProvider;
         return $this;
     }
 

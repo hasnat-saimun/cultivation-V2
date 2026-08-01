@@ -43,7 +43,6 @@ class BucketPage extends Page
         return new BucketInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

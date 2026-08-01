@@ -17,7 +17,19 @@ HTML attributes.
 
 *This document applies to the latest stable code which may not reflect the current 
 release. For released code please
-[navigate to the appropriate tag](https://github.com/dompdf/dompdf/releases).*
+[navigate to the appropriate tag](https://github.com/dompdf/dompdf/tags).*
+
+----
+
+**Check out the [demo](http://eclecticgeek.com/dompdf/debug.php) and ask any
+question on [StackOverflow](https://stackoverflow.com/questions/tagged/dompdf) or
+in [Discussions](https://github.com/dompdf/dompdf/discussions).**
+
+Follow us on [![Twitter](http://twitter-badges.s3.amazonaws.com/twitter-a.png)](http://www.twitter.com/dompdf).
+
+---
+
+
 
 ## Features
 
@@ -40,10 +52,15 @@ release. For released code please
  * MBString extension
  * php-font-lib
  * php-svg-lib
+ 
+Note that some required dependencies may have further dependencies 
+(notably php-svg-lib requires sabberworm/php-css-parser).
+
+### Recommendations
+
  * GD (for image processing)
    * Additionally, the IMagick or GMagick extension improves image processing performance for certain image types
- 
-Note that some required dependencies may have further dependencies.
+ * OPcache (OPcache, XCache, APC, etc.): improves performance
 
 Visit the wiki for more information:
 https://github.com/dompdf/dompdf/wiki/Requirements
@@ -104,9 +121,8 @@ require_once 'dompdf/autoload.inc.php';
 
 Note: packaged releases are named according using semantic
 versioning (_dompdf_MAJOR-MINOR-PATCH.zip_). So the 1.0.0 
-release would be dompdf_1-0-0.zip. Packaged releases include
-the dependency releases available at the time of release
-and are not necessarily updated to include updated dependencies.
+release would be dompdf_1-0-0.zip. This is the only download
+that includes the autoloader for Dompdf and all its dependencies.
 
 ### Install with git
 

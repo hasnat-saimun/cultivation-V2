@@ -36,7 +36,6 @@ abstract class CallOptions
      * @param string $recordingChannels The number of channels in the final recording. Can be: `mono` or `dual`. The default is `mono`. `mono` records both legs of the call in a single channel of the recording file. `dual` records each leg to a separate channel of the recording file. The first channel of a dual-channel recording contains the parent call and the second channel contains the child call.
      * @param string $recordingStatusCallback The URL that we call when the recording is available to be accessed.
      * @param string $recordingStatusCallbackMethod The HTTP method we should use when calling the `recording_status_callback` URL. Can be: `GET` or `POST` and the default is `POST`.
-     * @param string $recordingConfigurationId The identifier of the configuration to be used when creating and processing the recording
      * @param string $sipAuthUsername The username used to authenticate the caller making a SIP call.
      * @param string $sipAuthPassword The password required to authenticate the user account specified in `sip_auth_username`.
      * @param string $machineDetection Whether to detect if a human, answering machine, or fax has picked up the call. Can be: `Enable` or `DetectMessageEnd`. Use `Enable` if you would like us to return `AnsweredBy` as soon as the called party is identified. Use `DetectMessageEnd`, if you would like to leave a message on an answering machine. If `send_digits` is provided, this parameter is ignored. For more information, see [Answering Machine Detection](https://www.twilio.com/docs/voice/answering-machine-detection).
@@ -75,7 +74,6 @@ abstract class CallOptions
         string $recordingChannels = Values::NONE,
         string $recordingStatusCallback = Values::NONE,
         string $recordingStatusCallbackMethod = Values::NONE,
-        string $recordingConfigurationId = Values::NONE,
         string $sipAuthUsername = Values::NONE,
         string $sipAuthPassword = Values::NONE,
         string $machineDetection = Values::NONE,
@@ -114,7 +112,6 @@ abstract class CallOptions
             $recordingChannels,
             $recordingStatusCallback,
             $recordingStatusCallbackMethod,
-            $recordingConfigurationId,
             $sipAuthUsername,
             $sipAuthPassword,
             $machineDetection,
@@ -144,12 +141,12 @@ abstract class CallOptions
      * @param string $from Only include calls from this phone number, SIP address, Client identifier or SIM SID.
      * @param string $parentCallSid Only include calls spawned by calls with this SID.
      * @param string $status The status of the calls to include. Can be: `queued`, `ringing`, `in-progress`, `canceled`, `completed`, `failed`, `busy`, or `no-answer`.
-     * @param string $startTimeBefore Only include calls that started before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started before this date.
-     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date.
-     * @param string $startTimeAfter Only include calls that started on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on or after this date.
-     * @param string $endTimeBefore Only include calls that ended before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended before this date.
-     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date.
-     * @param string $endTimeAfter Only include calls that ended on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on or after this date.
+     * @param string $startTimeBefore Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $startTimeAfter Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $endTimeBefore Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
+     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
+     * @param string $endTimeAfter Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      * @return ReadCallOptions Options builder
      */
     public static function read(
@@ -240,7 +237,6 @@ class CreateCallOptions extends Options
      * @param string $recordingChannels The number of channels in the final recording. Can be: `mono` or `dual`. The default is `mono`. `mono` records both legs of the call in a single channel of the recording file. `dual` records each leg to a separate channel of the recording file. The first channel of a dual-channel recording contains the parent call and the second channel contains the child call.
      * @param string $recordingStatusCallback The URL that we call when the recording is available to be accessed.
      * @param string $recordingStatusCallbackMethod The HTTP method we should use when calling the `recording_status_callback` URL. Can be: `GET` or `POST` and the default is `POST`.
-     * @param string $recordingConfigurationId The identifier of the configuration to be used when creating and processing the recording
      * @param string $sipAuthUsername The username used to authenticate the caller making a SIP call.
      * @param string $sipAuthPassword The password required to authenticate the user account specified in `sip_auth_username`.
      * @param string $machineDetection Whether to detect if a human, answering machine, or fax has picked up the call. Can be: `Enable` or `DetectMessageEnd`. Use `Enable` if you would like us to return `AnsweredBy` as soon as the called party is identified. Use `DetectMessageEnd`, if you would like to leave a message on an answering machine. If `send_digits` is provided, this parameter is ignored. For more information, see [Answering Machine Detection](https://www.twilio.com/docs/voice/answering-machine-detection).
@@ -278,7 +274,6 @@ class CreateCallOptions extends Options
         string $recordingChannels = Values::NONE,
         string $recordingStatusCallback = Values::NONE,
         string $recordingStatusCallbackMethod = Values::NONE,
-        string $recordingConfigurationId = Values::NONE,
         string $sipAuthUsername = Values::NONE,
         string $sipAuthPassword = Values::NONE,
         string $machineDetection = Values::NONE,
@@ -315,7 +310,6 @@ class CreateCallOptions extends Options
         $this->options['recordingChannels'] = $recordingChannels;
         $this->options['recordingStatusCallback'] = $recordingStatusCallback;
         $this->options['recordingStatusCallbackMethod'] = $recordingStatusCallbackMethod;
-        $this->options['recordingConfigurationId'] = $recordingConfigurationId;
         $this->options['sipAuthUsername'] = $sipAuthUsername;
         $this->options['sipAuthPassword'] = $sipAuthPassword;
         $this->options['machineDetection'] = $machineDetection;
@@ -514,18 +508,6 @@ class CreateCallOptions extends Options
     public function setRecordingStatusCallbackMethod(string $recordingStatusCallbackMethod): self
     {
         $this->options['recordingStatusCallbackMethod'] = $recordingStatusCallbackMethod;
-        return $this;
-    }
-
-    /**
-     * The identifier of the configuration to be used when creating and processing the recording
-     *
-     * @param string $recordingConfigurationId The identifier of the configuration to be used when creating and processing the recording
-     * @return $this Fluent Builder
-     */
-    public function setRecordingConfigurationId(string $recordingConfigurationId): self
-    {
-        $this->options['recordingConfigurationId'] = $recordingConfigurationId;
         return $this;
     }
 
@@ -778,12 +760,12 @@ class ReadCallOptions extends Options
      * @param string $from Only include calls from this phone number, SIP address, Client identifier or SIM SID.
      * @param string $parentCallSid Only include calls spawned by calls with this SID.
      * @param string $status The status of the calls to include. Can be: `queued`, `ringing`, `in-progress`, `canceled`, `completed`, `failed`, `busy`, or `no-answer`.
-     * @param string $startTimeBefore Only include calls that started before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started before this date.
-     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date.
-     * @param string $startTimeAfter Only include calls that started on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on or after this date.
-     * @param string $endTimeBefore Only include calls that ended before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended before this date.
-     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date.
-     * @param string $endTimeAfter Only include calls that ended on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on or after this date.
+     * @param string $startTimeBefore Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $startTimeAfter Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
+     * @param string $endTimeBefore Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
+     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
+     * @param string $endTimeAfter Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      */
     public function __construct(
         
@@ -860,9 +842,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that started before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started before this date.
+     * Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      *
-     * @param string $startTimeBefore Only include calls that started before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started before this date.
+     * @param string $startTimeBefore Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setStartTimeBefore(string $startTimeBefore): self
@@ -872,9 +854,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date.
+     * Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      *
-     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date.
+     * @param string $startTime Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setStartTime(string $startTime): self
@@ -884,9 +866,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that started on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on or after this date.
+     * Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      *
-     * @param string $startTimeAfter Only include calls that started on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on or after this date.
+     * @param string $startTimeAfter Only include calls that started on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that started on this date. You can also specify an inequality, such as `StartTime<=YYYY-MM-DD`, to read calls that started on or before midnight of this date, and `StartTime>=YYYY-MM-DD` to read calls that started on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setStartTimeAfter(string $startTimeAfter): self
@@ -896,9 +878,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that ended before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended before this date.
+     * Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      *
-     * @param string $endTimeBefore Only include calls that ended before this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended before this date.
+     * @param string $endTimeBefore Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setEndTimeBefore(string $endTimeBefore): self
@@ -908,9 +890,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date.
+     * Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      *
-     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date.
+     * @param string $endTime Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setEndTime(string $endTime): self
@@ -920,9 +902,9 @@ class ReadCallOptions extends Options
     }
 
     /**
-     * Only include calls that ended on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on or after this date.
+     * Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      *
-     * @param string $endTimeAfter Only include calls that ended on or after this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on or after this date.
+     * @param string $endTimeAfter Only include calls that ended on this date. Specify a date as `YYYY-MM-DD` in UTC, for example: `2009-07-06`, to read only calls that ended on this date. You can also specify an inequality, such as `EndTime<=YYYY-MM-DD`, to read calls that ended on or before midnight of this date, and `EndTime>=YYYY-MM-DD` to read calls that ended on or after midnight of this date.
      * @return $this Fluent Builder
      */
     public function setEndTimeAfter(string $endTimeAfter): self

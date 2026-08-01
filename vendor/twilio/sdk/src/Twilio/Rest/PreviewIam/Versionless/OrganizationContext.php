@@ -22,8 +22,6 @@ use Twilio\ListResource;
 use Twilio\Values;
 use Twilio\Version;
 use Twilio\InstanceContext;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 use Twilio\Rest\PreviewIam\Versionless\Organization\AccountList;
 use Twilio\Rest\PreviewIam\Versionless\Organization\UserList;
 use Twilio\Rest\PreviewIam\Versionless\Organization\RoleAssignmentList;
@@ -69,57 +67,21 @@ class OrganizationContext extends InstanceContext
     }
 
     /**
-     * Helper function for Fetch
-     *
-     
-     * @return Response Fetched Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _fetch(): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/scim+json' ]);
-        return $this->version->handleRequest('GET', $this->uri, [], [], $headers, "fetch");
-    }
-
-    /**
      * Fetch the OrganizationInstance
      *
-     
      * @return OrganizationInstance Fetched OrganizationInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function fetch(): OrganizationInstance
     {
-        $response = $this->_fetch();
+
+        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/scim+json' ]);
+        $payload = $this->version->fetch('GET', $this->uri, [], [], $headers);
+
         return new OrganizationInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['organizationSid']
-        );
-        
-    }
-
-    /**
-     * Fetch the OrganizationInstance with Metadata
-     *
-     
-     * @return ResourceMetadata The Fetched Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function fetchWithMetadata(): ResourceMetadata
-    {
-        $response = $this->_fetch();
-        $resource = new OrganizationInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['organizationSid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

@@ -112,6 +112,7 @@ final class XmlRenderer implements DocumentRendererInterface
             return $value ? 'true' : 'false';
         }
 
+        // @phpstan-ignore-next-line
         throw new InvalidArgumentException('$value must be a string, int, float, or bool');
     }
 

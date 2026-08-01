@@ -240,9 +240,6 @@ class DateTimeImmutable extends \DateTimeImmutable
         return self::createFromRegular($date);
     }
 
-    /**
-     * @return DateTimeImmutable
-     */
     public static function createFromInterface(\DateTimeInterface $object): self
     {
         if ($object instanceof \DateTime) {

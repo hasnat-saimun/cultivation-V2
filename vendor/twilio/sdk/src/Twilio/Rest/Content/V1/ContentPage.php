@@ -43,7 +43,6 @@ class ContentPage extends Page
         return new ContentInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

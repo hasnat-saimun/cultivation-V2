@@ -68,24 +68,10 @@ abstract class TokenPaginationPage extends Page {
             }
         }
 
-        if (!$this->key) {
-            $this->key = $this->getMeta('key');
-        }
+        $this->key = $this->getMeta('key');
         $this->pageSize = (int) $this->getMeta('pageSize');
-        $this->nextToken = $this->hasMeta('nextToken') ? $this->getMeta('nextToken') : null;
-        $this->previousToken = $this->hasMeta('previousToken') ? $this->getMeta('previousToken') : null;
-
-        // If the nextToken matches the pageToken we just used, treat it as no more pages
-        // This prevents infinite loops when servers return the same token repeatedly
-        if ($this->nextToken && isset($this->queryParams['pageToken']) &&
-            $this->nextToken === $this->queryParams['pageToken']) {
-            $this->nextToken = null;
-        }
-
-        if ($this->previousToken && isset($this->queryParams['pageToken']) &&
-            $this->previousToken === $this->queryParams['pageToken']) {
-            $this->previousToken = null;
-        }
+        $this->nextToken = $this->getMeta('nextToken');
+        $this->previousToken = $this->getMeta('previousToken');
     }
 
     /**
@@ -97,12 +83,6 @@ abstract class TokenPaginationPage extends Page {
     protected function loadPage(): array {
         $this->key = $this->getMeta('key');
         if ($this->key) {
-            return $this->payload[$this->key];
-        }
-
-        $keys = \array_diff(\array_keys($this->payload), ['meta']);
-        if (\count($keys) === 1) {
-            $this->key = \array_values($keys)[0];
             return $this->payload[$this->key];
         }
 
@@ -155,15 +135,6 @@ abstract class TokenPaginationPage extends Page {
             $this->nextPageUrl = $this->url . $this->getQueryString($this->nextToken);
         }
         return $this->nextPageUrl;
-    }
-
-    #[\ReturnTypeWillChange]
-    public function current() {
-        $record = $this->records->current();
-        if (!\is_array($record)) {
-            $record = ['id' => $record];
-        }
-        return $this->buildInstance($record);
     }
 
     public function __toString(): string {

@@ -20,8 +20,6 @@ use Twilio\Exceptions\TwilioException;
 use Twilio\ListResource;
 use Twilio\Values;
 use Twilio\Version;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class QueryList extends ListResource
@@ -39,60 +37,26 @@ class QueryList extends ListResource
         // Path Solution
         $this->solution = [
         ];
-        $this->uri = '/batch/query';
-    }
 
-    /**
-     * Helper function for Create
-     *
-     * @param ?LookupRequest $lookupRequest
-     * @return Response Created Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _create(?LookupRequest $lookupRequest = null): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
-        $data = $lookupRequest ? $lookupRequest->toArray() : [];
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "create");
+        $this->uri = '/batch/query';
     }
 
     /**
      * Create the QueryInstance
      *
-     * @param ?LookupRequest $lookupRequest
      * @return QueryInstance Created QueryInstance
      * @throws TwilioException When an HTTP error occurs.
      */
-    public function create(?LookupRequest $lookupRequest = null): QueryInstance
+    public function create(): QueryInstance
     {
-        $response = $this->_create($lookupRequest);
+
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
+        $data = $lookupRequest->toArray();
+        $payload = $this->version->create('POST', $this->uri, [], $data, $headers);
+
         return new QueryInstance(
             $this->version,
-            $response->getContent()
-        );
-        
-    }
-
-    /**
-     * Create the QueryInstance with Metadata
-     *
-     * @param ?LookupRequest $lookupRequest
-     * @return ResourceMetadata The Created Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function createWithMetadata(?LookupRequest $lookupRequest = null): ResourceMetadata
-    {
-        $response = $this->_create($lookupRequest);
-        $resource = new QueryInstance(
-                        $this->version,
-                        $response->getContent()
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
+            $payload
         );
     }
 

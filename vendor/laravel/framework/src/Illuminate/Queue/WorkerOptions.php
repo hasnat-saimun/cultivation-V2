@@ -68,13 +68,6 @@ class WorkerOptions
     public $stopWhenEmpty;
 
     /**
-     * The number of seconds to wait for a job before stopping.
-     *
-     * @var int
-     */
-    public $stopWhenEmptyFor;
-
-    /**
      * The maximum number of jobs to run.
      *
      * @var int
@@ -102,7 +95,6 @@ class WorkerOptions
      * @param  int  $maxJobs
      * @param  int  $maxTime
      * @param  int  $rest
-     * @param  int  $stopWhenEmptyFor
      * @return void
      */
     public function __construct(
@@ -117,7 +109,6 @@ class WorkerOptions
         $maxJobs = 0,
         $maxTime = 0,
         $rest = 0,
-        $stopWhenEmptyFor = 0,
     ) {
         $this->name = $name;
         $this->backoff = $backoff;
@@ -128,7 +119,6 @@ class WorkerOptions
         $this->timeout = $timeout;
         $this->maxTries = $maxTries;
         $this->stopWhenEmpty = $stopWhenEmpty;
-        $this->stopWhenEmptyFor = $stopWhenEmptyFor;
         $this->maxJobs = $maxJobs;
         $this->maxTime = $maxTime;
     }

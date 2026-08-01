@@ -28,7 +28,6 @@ use App\Http\Controllers\InstituteController;
 use App\Http\Controllers\MarksheetController;
 use App\Http\Controllers\NoticeController;
 use App\Http\Controllers\PlacementCellController;
-use App\Http\Controllers\PublicAssetController;
 use App\Http\Controllers\individualController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\StudentController;
@@ -81,13 +80,86 @@ Route::get('/',[
     'adminLogin'
 ])->name('admin.login.entry');
 
-// Static asset compatibility routes for Apache environments where static
-// file resolution falls through to Laravel. Controller actions remain safe
-// when routes are cached; path validation is centralized in the service.
-Route::get('/favicon.ico', [PublicAssetController::class, 'favicon']);
-Route::get('/back-office/{path}', [PublicAssetController::class, 'backOffice'])->where('path', '.*');
-Route::get('/loginPart/{path}', [PublicAssetController::class, 'loginPart'])->where('path', '.*');
-Route::get('/public/{path}', [PublicAssetController::class, 'publicAsset'])->where('path', '.*');
+// Static asset compatibility routes for local Apache environments where
+// vhost static file resolution falls through to Laravel.
+if (! function_exists('servePublicAssetResponse')) {
+    function servePublicAssetResponse(string $file)
+    {
+        $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+
+        $mime = match ($ext) {
+            'css' => 'text/css; charset=UTF-8',
+            'js' => 'application/javascript; charset=UTF-8',
+            'json' => 'application/json; charset=UTF-8',
+            'png' => 'image/png',
+            'jpg', 'jpeg' => 'image/jpeg',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            'ico' => 'image/x-icon',
+            'woff' => 'font/woff',
+            'woff2' => 'font/woff2',
+            'ttf' => 'font/ttf',
+            'eot' => 'application/vnd.ms-fontobject',
+            'map' => 'application/json; charset=UTF-8',
+            default => mime_content_type($file) ?: 'application/octet-stream',
+        };
+
+        return response()->file($file, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'public, max-age=3600',
+        ]);
+    }
+}
+
+Route::get('/favicon.ico', function () {
+    $file = public_path('favicon.ico');
+
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+});
+
+Route::get('/back-office/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path('back-office/' . $path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
+
+Route::get('/loginPart/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path('loginPart/' . $path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
+
+Route::get('/public/{path}', function (string $path) {
+    if (str_contains($path, '..')) {
+        abort(404);
+    }
+
+    $file = public_path($path);
+    if (! is_file($file)) {
+        abort(404);
+    }
+
+    return servePublicAssetResponse($file);
+})->where('path', '.*');
 
 // Public brochure pages (no login required)
 Route::get('/brochure', [DocsController::class, 'brochure'])->name('brochure');

@@ -22,10 +22,13 @@ use FontLib\Font;
 class FontMetrics
 {
     /**
-     * Name of the user font families lookup cache file
+     * Name of the user font families file
      *
-     * This file must be readable and writable by the executing (webserver)
-     * process in order to cache user installed font information.
+     * This file must be writable by the webserver process only to update it
+     * with save_font_families() after adding the .afm file references of a new font family
+     * with FontMetrics::saveFontFamilies().
+     * This is typically done only from command line with load_font.php on converting
+     * ttf fonts to ufm with php-font-lib.
      */
     const USER_FONTS_FILE = "installed-fonts.json";
 

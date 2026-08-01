@@ -492,10 +492,10 @@ class Email extends Message
                 }
 
                 if ($name !== $part->getContentId()) {
-                    $html = str_replace('cid:'.$name, 'cid:'.$part->getContentId(), $html);
+                    $html = str_replace('cid:'.$name, 'cid:'.$part->getContentId(), $html, $count);
                 }
                 $relatedParts[$name] = $part;
-                $part->setName($part->getName() ?? $part->getContentId())->asInline();
+                $part->setName($part->getContentId())->asInline();
 
                 continue 2;
             }
@@ -569,10 +569,6 @@ class Email extends Message
      */
     public function __unserialize(array $data): void
     {
-        if (($data[1] ?? null) instanceof \Stringable || ($data[3] ?? null) instanceof \Stringable) {
-            throw new \BadMethodCallException('Cannot unserialize '.self::class);
-        }
-
         [$this->text, $this->textCharset, $this->html, $this->htmlCharset, $this->attachments, $parentData] = $data;
 
         parent::__unserialize($parentData);

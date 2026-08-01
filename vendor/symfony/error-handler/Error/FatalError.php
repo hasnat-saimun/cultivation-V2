@@ -28,9 +28,8 @@ class FatalError extends \Error
 
         if (null !== $trace) {
             if (!$traceArgs) {
-                foreach ($trace as $index => $frame) {
-                    unset($frame['args'], $frame['this']);
-                    $trace[$index] = $frame;
+                foreach ($trace as &$frame) {
+                    unset($frame['args'], $frame['this'], $frame);
                 }
             }
         } elseif (null !== $traceOffset) {

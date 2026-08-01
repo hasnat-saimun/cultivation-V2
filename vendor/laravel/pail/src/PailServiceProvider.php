@@ -3,13 +3,11 @@
 namespace Laravel\Pail;
 
 use Illuminate\Console\Events\CommandStarting;
-use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessed;
 use Illuminate\Queue\Events\JobProcessing;
-use Illuminate\Support\Env;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pail\Console\Commands\PailCommand;
 
@@ -27,7 +25,7 @@ class PailServiceProvider extends ServiceProvider
 
         $this->app->singleton(Handler::class, fn (Application $app) => new Handler(
             $app,
-            $app->make(Files::class),
+            $app->make(Files::class), // @phpstan-ignore argument.type
             $app->runningInConsole(),
         ));
     }
@@ -41,7 +39,7 @@ class PailServiceProvider extends ServiceProvider
             return;
         }
 
-        /** @var Dispatcher $events */
+        /** @var \Illuminate\Contracts\Events\Dispatcher $events */
         $events = $this->app->make('events');
 
         $events->listen(MessageLogged::class, function (MessageLogged $messageLogged) {
@@ -77,6 +75,6 @@ class PailServiceProvider extends ServiceProvider
      */
     protected function runningPailTests(): bool
     {
-        return (bool) (Env::get('PAIL_TESTS') ?? false);
+        return $_ENV['PAIL_TESTS'] ?? false;
     }
 }

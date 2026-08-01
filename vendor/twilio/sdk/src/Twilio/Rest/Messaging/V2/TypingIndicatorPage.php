@@ -43,7 +43,6 @@ class TypingIndicatorPage extends Page
         return new TypingIndicatorInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

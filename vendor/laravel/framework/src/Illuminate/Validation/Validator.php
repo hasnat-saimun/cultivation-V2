@@ -1658,16 +1658,6 @@ class Validator implements ValidatorContract
     }
 
     /**
-     * Flush the validator's global state.
-     *
-     * @return void
-     */
-    public static function flushState()
-    {
-        static::$placeholderHash = null;
-    }
-
-    /**
      * Handle dynamic calls to class methods.
      *
      * @param  string  $method

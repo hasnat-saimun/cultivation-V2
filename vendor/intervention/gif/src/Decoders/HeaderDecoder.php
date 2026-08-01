@@ -13,6 +13,7 @@ class HeaderDecoder extends AbstractDecoder
      * Decode current sourc
      *
      * @throws DecoderException
+     * @return Header
      */
     public function decode(): Header
     {
@@ -26,6 +27,7 @@ class HeaderDecoder extends AbstractDecoder
      * Decode version string
      *
      * @throws DecoderException
+     * @return string
      */
     protected function decodeVersion(): string
     {

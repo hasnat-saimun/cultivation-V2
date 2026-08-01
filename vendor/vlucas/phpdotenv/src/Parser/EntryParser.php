@@ -70,9 +70,7 @@ final class EntryParser
     {
         /** @var array{string, string|null} */
         $result = Str::pos($line, '=')->map(static function () use ($line) {
-            return \array_map(static function (string $part) {
-                return \trim($part, " \n\r\t\0\x0B");
-            }, \explode('=', $line, 2));
+            return \array_map('trim', \explode('=', $line, 2));
         })->getOrElse([$line, null]);
 
         if ($result[0] === '') {
@@ -97,7 +95,7 @@ final class EntryParser
     private static function parseName(string $name)
     {
         if (Str::len($name) > 8 && Str::substr($name, 0, 6) === 'export' && \ctype_space(Str::substr($name, 6, 1))) {
-            $name = \ltrim(Str::substr($name, 6), " \t\n\r\v\f");
+            $name = \ltrim(Str::substr($name, 6));
         }
 
         if (self::isQuotedName($name)) {
@@ -158,7 +156,7 @@ final class EntryParser
      */
     private static function parseValue(string $value)
     {
-        if (\trim($value, " \n\r\t\0\x0B") === '') {
+        if (\trim($value) === '') {
             /** @var \GrahamCampbell\ResultType\Result<\Dotenv\Parser\Value, string> */
             return Success::create(Value::blank());
         }
@@ -170,6 +168,7 @@ final class EntryParser
                 });
             });
         }, Success::create([Value::blank(), self::INITIAL_STATE]))->flatMap(static function (array $result) {
+            /** @psalm-suppress DocblockTypeContradiction */
             if (in_array($result[1], self::REJECT_STATES, true)) {
                 /** @var \GrahamCampbell\ResultType\Result<\Dotenv\Parser\Value, string> */
                 return Error::create('a missing closing quote');

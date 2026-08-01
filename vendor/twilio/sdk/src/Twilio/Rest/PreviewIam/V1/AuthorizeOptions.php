@@ -17,7 +17,6 @@ namespace Twilio\Rest\PreviewIam\V1;
 
 use Twilio\Options;
 use Twilio\Values;
-use Twilio\Http\Response;
 
 abstract class AuthorizeOptions
 {

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Intervention\Gif;
 
 use Intervention\Gif\Exceptions\DecoderException;
-use Intervention\Gif\Exceptions\RuntimeException;
 use Intervention\Gif\Traits\CanHandleFiles;
 
 class Decoder
@@ -15,22 +14,20 @@ class Decoder
     /**
      * Decode given input
      *
+     * @param string|resource $input
      * @throws DecoderException
+     * @return GifDataStream
      */
     public static function decode(mixed $input): GifDataStream
     {
-        try {
-            $handle = match (true) {
-                self::isFilePath($input) => self::getHandleFromFilePath($input),
-                is_string($input) => self::getHandleFromData($input),
-                self::isFileHandle($input) => $input,
-                default => throw new DecoderException(
-                    'Decoder input must be either file path, file pointer resource or binary data.'
-                )
-            };
-        } catch (RuntimeException $e) {
-            throw new DecoderException($e->getMessage());
-        }
+        $handle = match (true) {
+            self::isFilePath($input) => self::getHandleFromFilePath($input),
+            is_string($input) => self::getHandleFromData($input),
+            self::isFileHandle($input) => $input,
+            default => throw new DecoderException(
+                'Decoder input must be either file path, file pointer resource or binary data.'
+            )
+        };
 
         rewind($handle);
 
@@ -39,6 +36,9 @@ class Decoder
 
     /**
      * Determine if input is file pointer resource
+     *
+     * @param mixed $input
+     * @return bool
      */
     private static function isFileHandle(mixed $input): bool
     {

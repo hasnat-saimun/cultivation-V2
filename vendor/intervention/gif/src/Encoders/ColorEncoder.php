@@ -10,6 +10,8 @@ class ColorEncoder extends AbstractEncoder
 {
     /**
      * Create new instance
+     *
+     * @param Color $source
      */
     public function __construct(Color $source)
     {
@@ -18,6 +20,8 @@ class ColorEncoder extends AbstractEncoder
 
     /**
      * Encode current source
+     *
+     * @return string
      */
     public function encode(): string
     {
@@ -30,6 +34,8 @@ class ColorEncoder extends AbstractEncoder
 
     /**
      * Encode color value
+     *
+     * @return string
      */
     protected function encodeColorValue(int $value): string
     {

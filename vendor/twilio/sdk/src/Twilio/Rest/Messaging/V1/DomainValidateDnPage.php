@@ -43,7 +43,6 @@ class DomainValidateDnPage extends Page
         return new DomainValidateDnInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

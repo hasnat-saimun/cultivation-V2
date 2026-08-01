@@ -12,6 +12,8 @@ class ColorTableEncoder extends AbstractEncoder
 {
     /**
      * Create new instance
+     *
+     * @param ColorTable $source
      */
     public function __construct(ColorTable $source)
     {
@@ -22,6 +24,7 @@ class ColorTableEncoder extends AbstractEncoder
      * Encode current source
      *
      * @throws EncoderException
+     * @return string
      */
     public function encode(): string
     {

@@ -21,8 +21,6 @@ use Twilio\ListResource;
 use Twilio\Options;
 use Twilio\Values;
 use Twilio\Version;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 use Twilio\Serialize;
 
 
@@ -41,25 +39,23 @@ class FlowValidateList extends ListResource
         // Path Solution
         $this->solution = [
         ];
+
         $this->uri = '/Flows/Validate';
     }
 
     /**
-     * Helper function for Update
+     * Update the FlowValidateInstance
      *
      * @param string $friendlyName The string that you assigned to describe the Flow.
-     
      * @param string $status
-     
      * @param array $definition JSON representation of flow definition.
-     
      * @param array|Options $options Optional Arguments
-     * @return Response Updated Response
+     * @return FlowValidateInstance Updated FlowValidateInstance
      * @throws TwilioException When an HTTP error occurs.
      */
-    private function _update(string $friendlyName, string $status, array $definition, array $options = []): Response
+    public function update(string $friendlyName, string $status, array $definition, array $options = []): FlowValidateInstance
     {
-        
+
         $options = new Values($options);
 
         $data = Values::of([
@@ -74,57 +70,11 @@ class FlowValidateList extends ListResource
         ]);
 
         $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "update");
-    }
+        $payload = $this->version->update('POST', $this->uri, [], $data, $headers);
 
-    /**
-     * Update the FlowValidateInstance
-     *
-     * @param string $friendlyName The string that you assigned to describe the Flow.
-     
-     * @param string $status
-     
-     * @param array $definition JSON representation of flow definition.
-     
-     * @param array|Options $options Optional Arguments
-     * @return FlowValidateInstance Updated FlowValidateInstance
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function update(string $friendlyName, string $status, array $definition, array $options = []): FlowValidateInstance
-    {
-        $response = $this->_update( $friendlyName,  $status,  $definition, $options);
         return new FlowValidateInstance(
             $this->version,
-            $response->getContent()
-        );
-        
-    }
-
-    /**
-     * Update the FlowValidateInstance with Metadata
-     *
-     * @param string $friendlyName The string that you assigned to describe the Flow.
-     
-     * @param string $status
-     
-     * @param array $definition JSON representation of flow definition.
-     
-     * @param array|Options $options Optional Arguments
-     * @return ResourceMetadata The Updated Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function updateWithMetadata(string $friendlyName, string $status, array $definition, array $options = []): ResourceMetadata
-    {
-        $response = $this->_update( $friendlyName,  $status,  $definition, $options);
-        $resource = new FlowValidateInstance(
-                        $this->version,
-                        $response->getContent()
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
+            $payload
         );
     }
 

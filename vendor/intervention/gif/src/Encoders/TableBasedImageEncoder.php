@@ -8,6 +8,11 @@ use Intervention\Gif\Blocks\TableBasedImage;
 
 class TableBasedImageEncoder extends AbstractEncoder
 {
+    /**
+     * Create new instance
+     *
+     * @param TableBasedImage $source
+     */
     public function __construct(TableBasedImage $source)
     {
         $this->source = $source;

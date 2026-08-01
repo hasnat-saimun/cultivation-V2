@@ -13,6 +13,7 @@ class ColorDecoder extends AbstractDecoder
      * Decode current source to Color
      *
      * @throws DecoderException
+     * @return Color
      */
     public function decode(): Color
     {
@@ -28,15 +29,10 @@ class ColorDecoder extends AbstractDecoder
     /**
      * Decode red value from source
      *
-     * @throws DecoderException
+     * @return int
      */
     protected function decodeColorValue(string $byte): int
     {
-        $unpacked = unpack('C', $byte);
-        if ($unpacked === false || !array_key_exists(1, $unpacked)) {
-            throw new DecoderException('Unable to decode color value.');
-        }
-
-        return $unpacked[1];
+        return unpack('C', $byte)[1];
     }
 }

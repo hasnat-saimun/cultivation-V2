@@ -11,8 +11,6 @@ use Illuminate\Queue\Events\JobExceptionOccurred;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
-use Psr\Log\LogLevel;
 use Throwable;
 
 class Handler
@@ -46,13 +44,6 @@ class Handler
         $files = $this->files->all();
 
         if ($files->isEmpty()) {
-            return;
-        }
-
-        if (
-            $messageLogged->level === LogLevel::WARNING
-            && Str::contains($messageLogged->message, ['deprecated', 'Deprecated', '[\ReturnTypeWillChange]'])
-        ) {
             return;
         }
 
@@ -101,8 +92,8 @@ class Handler
                 'type' => 'http',
                 'method' => request()->method(),
                 'path' => request()->path(),
-                'auth_id' => Auth::hasUser() ? Auth::id() : null,
-                'auth_email' => Auth::hasUser() && Auth::user() instanceof User ? Auth::user()->email : null, // @phpstan-ignore property.notFound
+                'auth_id' => Auth::id(),
+                'auth_email' => Auth::user() instanceof User ? Auth::user()->email : null, // @phpstan-ignore property.notFound
             ],
         }]];
 
@@ -124,7 +115,7 @@ class Handler
         return collect($messageLogged->context)
             ->merge($context)
             ->when($this->container->bound(ContextRepository::class), function (Collection $context) {
-                return $context->merge($this->container->make(ContextRepository::class)->all());
+                return $context->merge($this->container->make(ContextRepository::class)->all()); // @phpstan-ignore method.nonObject
             })->toArray();
     }
 }

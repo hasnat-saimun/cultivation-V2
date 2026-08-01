@@ -12,7 +12,9 @@ class DataSubBlock extends AbstractEntity
     /**
      * Create new instance
      *
+     * @param string $value
      * @throws FormatException
+     * @return void
      */
     public function __construct(protected string $value)
     {
@@ -25,6 +27,8 @@ class DataSubBlock extends AbstractEntity
 
     /**
      * Return size of current block
+     *
+     * @return int
      */
     public function getSize(): int
     {
@@ -33,6 +37,8 @@ class DataSubBlock extends AbstractEntity
 
     /**
      * Return block value
+     *
+     * @return string
      */
     public function getValue(): string
     {

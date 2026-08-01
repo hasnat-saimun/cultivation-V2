@@ -20,8 +20,6 @@ use Twilio\Exceptions\TwilioException;
 use Twilio\ListResource;
 use Twilio\Values;
 use Twilio\Version;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class NewFactorList extends ListResource
@@ -44,69 +42,29 @@ class NewFactorList extends ListResource
             $serviceSid,
         
         ];
+
         $this->uri = '/Services/' . \rawurlencode($serviceSid)
         .'/Passkeys/Factors';
     }
 
     /**
-     * Helper function for Create
-     *
-     
-     * @param CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest
-     
-     * @return Response Created Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _create(CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
-        $data = $createNewPasskeysFactorRequest->toArray();
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "create");
-    }
-
-    /**
      * Create the NewFactorInstance
      *
-     
      * @param CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest
-     
      * @return NewFactorInstance Created NewFactorInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function create(CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest): NewFactorInstance
     {
-        $response = $this->_create( $createNewPasskeysFactorRequest);
+
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
+        $data = $createNewPasskeysFactorRequest->toArray();
+        $payload = $this->version->create('POST', $this->uri, [], $data, $headers);
+
         return new NewFactorInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['serviceSid']
-        );
-        
-    }
-
-    /**
-     * Create the NewFactorInstance with Metadata
-     *
-     
-     * @param CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest
-     
-     * @return ResourceMetadata The Created Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function createWithMetadata(CreateNewPasskeysFactorRequest $createNewPasskeysFactorRequest): ResourceMetadata
-    {
-        $response = $this->_create( $createNewPasskeysFactorRequest);
-        $resource = new NewFactorInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['serviceSid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

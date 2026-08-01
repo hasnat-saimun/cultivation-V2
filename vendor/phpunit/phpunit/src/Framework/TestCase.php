@@ -197,10 +197,6 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      */
     private array $mockObjects = [];
     private TestStatus $status;
-
-    /**
-     * @var non-negative-int
-     */
     private int $numberOfAssertionsPerformed = 0;
     private mixed $testResult                = null;
     private string $output                   = '';
@@ -367,11 +363,10 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             return;
         }
 
-        (new SeparateProcessTestRunner)->run(
+        IsolatedTestRunnerRegistry::run(
             $this,
             $this->runClassInSeparateProcess && !$this->runTestInSeparateProcess,
             $this->preserveGlobalState,
-            $this->requiresXdebug(),
         );
     }
 
@@ -625,7 +620,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
                 Event\Code\ComparisonFailureBuilder::from($e),
             );
         } catch (Throwable $exceptionRaisedDuringTearDown) {
-            if (!isset($e) || $e instanceof SkippedWithMessageException) {
+            if (!isset($e)) {
                 $this->status = TestStatus::error($exceptionRaisedDuringTearDown->getMessage());
                 $e            = $exceptionRaisedDuringTearDown;
 
@@ -814,20 +809,14 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     }
 
     /**
-     * @param non-negative-int $count
-     *
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
     final public function addToAssertionCount(int $count): void
     {
-        assert($count >= 0);
-
         $this->numberOfAssertionsPerformed += $count;
     }
 
     /**
-     * @return non-negative-int
-     *
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
     final public function numberOfAssertionsPerformed(): int
@@ -1811,10 +1800,6 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
                 return true;
             }
 
-            if (!$passedTests->hasReturnValue($dependencyTarget)) {
-                return true;
-            }
-
             $returnValue = $passedTests->returnValue($dependencyTarget);
 
             if ($dependency->deepClone()) {
@@ -2116,31 +2101,18 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             }
         }
 
-        try {
-            return new Snapshot(
-                $excludeList,
-                $backupGlobals,
-                (bool) $this->backupStaticProperties,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-                false,
-            );
-        } catch (Throwable $t) {
-            Event\Facade::emitter()->testPreparationFailed(
-                $this->valueObjectForEvents(),
-            );
-
-            Event\Facade::emitter()->testErrored(
-                $this->valueObjectForEvents(),
-                Event\Code\ThrowableBuilder::from($t),
-            );
-
-            throw $t;
-        }
+        return new Snapshot(
+            $excludeList,
+            $backupGlobals,
+            (bool) $this->backupStaticProperties,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+        );
     }
 
     private function compareGlobalStateSnapshots(Snapshot $before, Snapshot $after): void
@@ -2176,22 +2148,20 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      */
     private function compareGlobalStateSnapshotPart(array $before, array $after, string $header): void
     {
-        if ($before == $after) {
-            return;
-        }
+        if ($before != $after) {
+            $differ = new Differ(new UnifiedDiffOutputBuilder($header));
 
-        $differ = new Differ(new UnifiedDiffOutputBuilder($header));
-
-        Event\Facade::emitter()->testConsideredRisky(
-            $this->valueObjectForEvents(),
-            'This test modified global state but was not expected to do so' . PHP_EOL .
-            trim(
-                $differ->diff(
-                    Exporter::export($before),
-                    Exporter::export($after),
+            Event\Facade::emitter()->testConsideredRisky(
+                $this->valueObjectForEvents(),
+                'This test modified global state but was not expected to do so' . PHP_EOL .
+                trim(
+                    $differ->diff(
+                        Exporter::export($before),
+                        Exporter::export($after),
+                    ),
                 ),
-            ),
-        );
+            );
+        }
     }
 
     private function shouldInvocationMockerBeReset(MockObject $mock): bool
@@ -2613,11 +2583,6 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     private function requirementsNotSatisfied(): bool
     {
         return (new Requirements)->requirementsNotSatisfiedFor(static::class, $this->methodName) !== [];
-    }
-
-    private function requiresXdebug(): bool
-    {
-        return (new Requirements)->requiresXdebug(static::class, $this->methodName);
     }
 
     /**

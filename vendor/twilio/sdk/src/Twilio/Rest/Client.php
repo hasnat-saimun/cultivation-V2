@@ -36,7 +36,6 @@ use Twilio\Base\BaseClient as BaseClient;
  * @property Knowledge $knowledge
  * @property Lookups $lookups
  * @property Marketplace $marketplace
- * @property Memory $memory
  * @property Messaging $messaging
  * @property Monitor $monitor
  * @property Notify $notify
@@ -119,7 +118,6 @@ class Client extends BaseClient {
     protected $_knowledge;
     protected $_lookups;
     protected $_marketplace;
-    protected $_memory;
     protected $_messaging;
     protected $_monitor;
     protected $_notify;
@@ -338,17 +336,6 @@ class Client extends BaseClient {
             $this->_marketplace = new Marketplace($this);
         }
         return $this->_marketplace;
-    }
-    /**
-     * Access the Memory Twilio Domain
-     *
-     * @return Memory Memory Twilio Domain
-     */
-    protected function getMemory(): Memory {
-        if (!$this->_memory) {
-            $this->_memory = new Memory($this);
-        }
-        return $this->_memory;
     }
     /**
      * Access the Messaging Twilio Domain

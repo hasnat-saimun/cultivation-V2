@@ -10,6 +10,8 @@ class TrailerEncoder extends AbstractEncoder
 {
     /**
      * Create new instance
+     *
+     * @param Trailer $source
      */
     public function __construct(Trailer $source)
     {
@@ -18,6 +20,8 @@ class TrailerEncoder extends AbstractEncoder
 
     /**
      * Encode current source
+     *
+     * @return string
      */
     public function encode(): string
     {

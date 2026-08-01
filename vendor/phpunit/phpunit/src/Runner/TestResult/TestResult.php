@@ -9,8 +9,6 @@
  */
 namespace PHPUnit\TestRunner\TestResult;
 
-use function array_map;
-use function array_sum;
 use function count;
 use PHPUnit\Event\Test\AfterLastTestMethodErrored;
 use PHPUnit\Event\Test\BeforeFirstTestMethodErrored;
@@ -252,19 +250,14 @@ final readonly class TestResult
         return $this->testSuiteSkippedEvents;
     }
 
-    public function numberOfTestSkippedByTestSuiteSkippedEvents(): int
+    public function numberOfTestSuiteSkippedEvents(): int
     {
-        return array_sum(
-            array_map(
-                static fn (TestSuiteSkipped $event): int => $event->testSuite()->count(),
-                $this->testSuiteSkippedEvents,
-            ),
-        );
+        return count($this->testSuiteSkippedEvents);
     }
 
     public function hasTestSuiteSkippedEvents(): bool
     {
-        return $this->numberOfTestSkippedByTestSuiteSkippedEvents() > 0;
+        return $this->numberOfTestSuiteSkippedEvents() > 0;
     }
 
     /**
@@ -395,15 +388,21 @@ final readonly class TestResult
 
     public function wasSuccessful(): bool
     {
-        return !$this->hasTestErroredEvents() &&
-               !$this->hasTestFailedEvents() &&
-               !$this->hasTestTriggeredPhpunitErrorEvents();
+        return $this->wasSuccessfulIgnoringPhpunitWarnings() &&
+               !$this->hasTestTriggeredPhpunitErrorEvents() &&
+               !$this->hasTestRunnerTriggeredWarningEvents() &&
+               !$this->hasTestTriggeredPhpunitWarningEvents();
     }
 
-    public function hasIssues(): bool
+    public function wasSuccessfulIgnoringPhpunitWarnings(): bool
     {
-        return $this->hasTestsWithIssues() ||
-               $this->hasTestRunnerTriggeredWarningEvents();
+        return !$this->hasTestErroredEvents() &&
+               !$this->hasTestFailedEvents();
+    }
+
+    public function wasSuccessfulAndNoTestHasIssues(): bool
+    {
+        return $this->wasSuccessful() && !$this->hasTestsWithIssues();
     }
 
     public function hasTestsWithIssues(): bool
@@ -413,8 +412,7 @@ final readonly class TestResult
                $this->hasDeprecations() ||
                !empty($this->errors) ||
                $this->hasNotices() ||
-               $this->hasWarnings() ||
-               $this->hasPhpunitWarnings();
+               $this->hasWarnings();
     }
 
     /**
@@ -517,17 +515,6 @@ final readonly class TestResult
                count($this->testRunnerTriggeredDeprecationEvents);
     }
 
-    public function hasPhpunitWarnings(): bool
-    {
-        return $this->numberOfPhpunitWarnings() > 0;
-    }
-
-    public function numberOfPhpunitWarnings(): int
-    {
-        return count($this->testTriggeredPhpunitWarningEvents) +
-               count($this->testRunnerTriggeredWarningEvents);
-    }
-
     public function numberOfDeprecations(): int
     {
         return count($this->deprecations) +
@@ -555,7 +542,9 @@ final readonly class TestResult
     public function numberOfWarnings(): int
     {
         return count($this->warnings) +
-               count($this->phpWarnings);
+               count($this->phpWarnings) +
+               count($this->testTriggeredPhpunitWarningEvents) +
+               count($this->testRunnerTriggeredWarningEvents);
     }
 
     public function hasIncompleteTests(): bool

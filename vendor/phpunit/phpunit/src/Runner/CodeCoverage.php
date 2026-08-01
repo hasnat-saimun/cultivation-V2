@@ -114,7 +114,7 @@ final class CodeCoverage
                 );
             } else {
                 EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                    'Configured filter does not match any files, code coverage will not be processed',
+                    'Incorrect filter configuration, code coverage will not be processed',
                 );
             }
 
@@ -123,7 +123,7 @@ final class CodeCoverage
     }
 
     /**
-     * @phpstan-assert-if-true !null $this->codeCoverage
+     * @phpstan-assert-if-true !null $this->instance
      */
     public function isActive(): bool
     {

@@ -677,12 +677,9 @@ class Frame
     public function set_containing_block($x = null, $y = null, $w = null, $h = null)
     {
         if (is_array($x)) {
-            list($x, $y, $w, $h) = [
-                $x["x"] ?? null,
-                $x["y"] ?? null,
-                $x["w"] ?? null,
-                $x["h"] ?? null
-            ];
+            foreach ($x as $key => $val) {
+                $$key = $val;
+            }
         }
 
         if (is_numeric($x)) {

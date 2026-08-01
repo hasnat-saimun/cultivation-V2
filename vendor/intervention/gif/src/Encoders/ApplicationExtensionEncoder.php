@@ -12,6 +12,8 @@ class ApplicationExtensionEncoder extends AbstractEncoder
 {
     /**
      * Create new decoder instance
+     *
+     * @param ApplicationExtension $source
      */
     public function __construct(ApplicationExtension $source)
     {
@@ -22,6 +24,7 @@ class ApplicationExtensionEncoder extends AbstractEncoder
      * Encode current source
      *
      * @throws EncoderException
+     * @return string
      */
     public function encode(): string
     {

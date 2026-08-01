@@ -43,7 +43,6 @@ class MessagingGeopermissionsPage extends Page
         return new MessagingGeopermissionsInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

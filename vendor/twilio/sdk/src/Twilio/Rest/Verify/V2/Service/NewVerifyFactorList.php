@@ -20,8 +20,6 @@ use Twilio\Exceptions\TwilioException;
 use Twilio\ListResource;
 use Twilio\Values;
 use Twilio\Version;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class NewVerifyFactorList extends ListResource
@@ -44,69 +42,29 @@ class NewVerifyFactorList extends ListResource
             $serviceSid,
         
         ];
+
         $this->uri = '/Services/' . \rawurlencode($serviceSid)
         .'/Passkeys/VerifyFactor';
     }
 
     /**
-     * Helper function for Update
-     *
-     
-     * @param VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest
-     
-     * @return Response Updated Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _update(VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
-        $data = $verifyPasskeysFactorRequest->toArray();
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "update");
-    }
-
-    /**
      * Update the NewVerifyFactorInstance
      *
-     
      * @param VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest
-     
      * @return NewVerifyFactorInstance Updated NewVerifyFactorInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function update(VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest): NewVerifyFactorInstance
     {
-        $response = $this->_update( $verifyPasskeysFactorRequest);
+
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
+        $data = $verifyPasskeysFactorRequest->toArray();
+        $payload = $this->version->update('POST', $this->uri, [], $data, $headers);
+
         return new NewVerifyFactorInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['serviceSid']
-        );
-        
-    }
-
-    /**
-     * Update the NewVerifyFactorInstance with Metadata
-     *
-     
-     * @param VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest
-     
-     * @return ResourceMetadata The Updated Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function updateWithMetadata(VerifyPasskeysFactorRequest $verifyPasskeysFactorRequest): ResourceMetadata
-    {
-        $response = $this->_update( $verifyPasskeysFactorRequest);
-        $resource = new NewVerifyFactorInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['serviceSid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

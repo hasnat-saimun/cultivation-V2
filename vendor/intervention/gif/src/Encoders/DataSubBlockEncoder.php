@@ -10,6 +10,8 @@ class DataSubBlockEncoder extends AbstractEncoder
 {
     /**
      * Create new instance
+     *
+     * @param DataSubBlock $source
      */
     public function __construct(DataSubBlock $source)
     {
@@ -18,6 +20,8 @@ class DataSubBlockEncoder extends AbstractEncoder
 
     /**
      * Encode current source
+     *
+     * @return string
      */
     public function encode(): string
     {

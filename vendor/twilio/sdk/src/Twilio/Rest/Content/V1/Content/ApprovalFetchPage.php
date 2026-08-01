@@ -43,7 +43,6 @@ class ApprovalFetchPage extends Page
         return new ApprovalFetchInstance($this->version, $payload, $this->solution['sid']);
     }
 
-
     /**
      * Provide a friendly representation
      *

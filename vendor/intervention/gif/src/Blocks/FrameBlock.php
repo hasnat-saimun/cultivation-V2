@@ -6,37 +6,21 @@ namespace Intervention\Gif\Blocks;
 
 use Intervention\Gif\AbstractEntity;
 
-/**
- * The GIF files that can be found on the Internet come in a wide variety
- * of forms. Some strictly adhere to the original specification, others do
- * not and differ in the actual sequence of blocks or their number.
- *
- * For this reason, this libary has this (kind of "virtual") FrameBlock,
- * which can contain all possible blocks in different order that occur in
- * a GIF animation.
- *
- * - Image Description
- * - Local Color Table
- * - Image Data Block
- * - Plain Text Extension
- * - Application Extension
- * - Comment Extension
- *
- * The TableBasedImage block, which is a chain of ImageDescriptor, (Local
- * Color Table) and ImageData, is used as a marker for terminating a
- * FrameBlock.
- *
- * So far I have only seen GIF files that follow this scheme. However, there are
- * examples which have one (or more) comment extensions added before the end. So
- * there can be additional "global comments" that are not part of the FrameBlock
- * and are appended to the GifDataStream afterwards.
- */
 class FrameBlock extends AbstractEntity
 {
+    /**
+     * @var null|GraphicControlExtension $graphicControlExtension
+     */
     protected ?GraphicControlExtension $graphicControlExtension = null;
 
+    /**
+     * @var null|ColorTable $colorTable
+     */
     protected ?ColorTable $colorTable = null;
 
+    /**
+     * @var null|PlainTextExtension $plainTextExtension
+     */
     protected ?PlainTextExtension $plainTextExtension = null;
 
     /**
@@ -94,6 +78,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set the graphic control extension
+     *
+     * @param GraphicControlExtension $extension
+     * @return self
      */
     public function setGraphicControlExtension(GraphicControlExtension $extension): self
     {
@@ -104,6 +91,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Get the graphic control extension of the current frame block
+     *
+     * @return null|GraphicControlExtension
      */
     public function getGraphicControlExtension(): ?GraphicControlExtension
     {
@@ -112,6 +101,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set the image descriptor
+     *
+     * @param ImageDescriptor $descriptor
+     * @return self
      */
     public function setImageDescriptor(ImageDescriptor $descriptor): self
     {
@@ -121,6 +113,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Get the image descriptor of the frame block
+     *
+     * @return ImageDescriptor
      */
     public function getImageDescriptor(): ImageDescriptor
     {
@@ -129,6 +123,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set the color table of the current frame block
+     *
+     * @param ColorTable $table
+     * @return FrameBlock
      */
     public function setColorTable(ColorTable $table): self
     {
@@ -139,6 +136,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Get color table
+     *
+     * @return null|ColorTable
      */
     public function getColorTable(): ?ColorTable
     {
@@ -147,6 +146,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Determine if frame block has color table
+     *
+     * @return bool
      */
     public function hasColorTable(): bool
     {
@@ -155,6 +156,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set image data of frame block
+     *
+     * @param ImageData $data
+     * @return self
      */
     public function setImageData(ImageData $data): self
     {
@@ -165,6 +169,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Get image data of current frame block
+     *
+     * @return ImageData
      */
     public function getImageData(): ImageData
     {
@@ -173,6 +179,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set plain text extension
+     *
+     * @param PlainTextExtension $extension
+     * @return self
      */
     public function setPlainTextExtension(PlainTextExtension $extension): self
     {
@@ -183,6 +192,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Get plain text extension
+     *
+     * @return null|PlainTextExtension
      */
     public function getPlainTextExtension(): ?PlainTextExtension
     {
@@ -191,6 +202,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Add given application extension to the current frame block
+     *
+     * @param ApplicationExtension $extension
+     * @return self
      */
     public function addApplicationExtension(ApplicationExtension $extension): self
     {
@@ -200,17 +214,10 @@ class FrameBlock extends AbstractEntity
     }
 
     /**
-     * Remove all application extensions from the current frame block.
-     */
-    public function clearApplicationExtensions(): self
-    {
-        $this->applicationExtensions = [];
-
-        return $this;
-    }
-
-    /**
      * Add given comment extension to the current frame block
+     *
+     * @param CommentExtension $extension
+     * @return self
      */
     public function addCommentExtension(CommentExtension $extension): self
     {
@@ -221,6 +228,8 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Return netscape extension of the frame block if available
+     *
+     * @return null|NetscapeApplicationExtension
      */
     public function getNetscapeExtension(): ?NetscapeApplicationExtension
     {
@@ -234,6 +243,9 @@ class FrameBlock extends AbstractEntity
 
     /**
      * Set the table based image of the current frame block
+     *
+     * @param TableBasedImage $tableBasedImage
+     * @return self
      */
     public function setTableBasedImage(TableBasedImage $tableBasedImage): self
     {

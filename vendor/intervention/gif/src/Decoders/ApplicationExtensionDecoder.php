@@ -17,6 +17,7 @@ class ApplicationExtensionDecoder extends AbstractDecoder
      *
      * @throws FormatException
      * @throws DecoderException
+     * @return ApplicationExtension
      */
     public function decode(): ApplicationExtension
     {
@@ -60,16 +61,11 @@ class ApplicationExtensionDecoder extends AbstractDecoder
     /**
      * Decode block size of ApplicationExtension from given byte
      *
-     * @throws DecoderException
+     * @param string $byte
+     * @return int
      */
     protected function decodeBlockSize(string $byte): int
     {
-        $unpacked = @unpack('C', $byte);
-
-        if ($unpacked === false || !array_key_exists(1, $unpacked)) {
-            throw new DecoderException('Unable to decode application extension block size.');
-        }
-
-        return intval($unpacked[1]);
+        return (int) @unpack('C', $byte)[1];
     }
 }

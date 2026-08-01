@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Intervention\Gif\Exceptions;
 
-class EncoderException extends RuntimeException
+class EncoderException extends \RuntimeException
 {
-    //
 }

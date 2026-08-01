@@ -21,8 +21,6 @@ use Twilio\ListResource;
 use Twilio\Options;
 use Twilio\Values;
 use Twilio\Version;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class ComplianceInquiriesList extends ListResource
@@ -40,19 +38,20 @@ class ComplianceInquiriesList extends ListResource
         // Path Solution
         $this->solution = [
         ];
+
         $this->uri = '/ComplianceInquiries/Customers/Initialize';
     }
 
     /**
-     * Helper function for Create
+     * Create the ComplianceInquiriesInstance
      *
      * @param array|Options $options Optional Arguments
-     * @return Response Created Response
+     * @return ComplianceInquiriesInstance Created ComplianceInquiriesInstance
      * @throws TwilioException When an HTTP error occurs.
      */
-    private function _create(array $options = []): Response
+    public function create(array $options = []): ComplianceInquiriesInstance
     {
-        
+
         $options = new Values($options);
 
         $data = Values::of([
@@ -65,45 +64,11 @@ class ComplianceInquiriesList extends ListResource
         ]);
 
         $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "create");
-    }
+        $payload = $this->version->create('POST', $this->uri, [], $data, $headers);
 
-    /**
-     * Create the ComplianceInquiriesInstance
-     *
-     * @param array|Options $options Optional Arguments
-     * @return ComplianceInquiriesInstance Created ComplianceInquiriesInstance
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function create(array $options = []): ComplianceInquiriesInstance
-    {
-        $response = $this->_create($options);
         return new ComplianceInquiriesInstance(
             $this->version,
-            $response->getContent()
-        );
-        
-    }
-
-    /**
-     * Create the ComplianceInquiriesInstance with Metadata
-     *
-     * @param array|Options $options Optional Arguments
-     * @return ResourceMetadata The Created Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function createWithMetadata(array $options = []): ResourceMetadata
-    {
-        $response = $this->_create($options);
-        $resource = new ComplianceInquiriesInstance(
-                        $this->version,
-                        $response->getContent()
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
+            $payload
         );
     }
 

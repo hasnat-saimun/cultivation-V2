@@ -331,7 +331,7 @@ interface ImageInterface extends IteratorAggregate, Countable
     public function colorize(int $red = 0, int $green = 0, int $blue = 0): self;
 
     /**
-     * Mirror the current image vertically by swapping top and bottom
+     * Mirror the current image horizontally
      *
      * @link https://image.intervention.io/v3/modifying-images/effects#mirror-image-vertically
      *
@@ -340,7 +340,7 @@ interface ImageInterface extends IteratorAggregate, Countable
     public function flip(): self;
 
     /**
-     * Mirror the current image horizontally by swapping left and right
+     * Mirror the current image vertically
      *
      * @link https://image.intervention.io/v3/modifying-images/effects#mirror-image-horizontally
      *

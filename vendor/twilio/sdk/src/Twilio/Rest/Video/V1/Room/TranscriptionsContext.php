@@ -22,9 +22,6 @@ use Twilio\Options;
 use Twilio\Values;
 use Twilio\Version;
 use Twilio\InstanceContext;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
-use Twilio\Serialize;
 
 
 class TranscriptionsContext extends InstanceContext
@@ -57,135 +54,51 @@ class TranscriptionsContext extends InstanceContext
     }
 
     /**
-     * Helper function for Fetch
-     *
-     
-     
-     * @return Response Fetched Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _fetch(): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        return $this->version->handleRequest('GET', $this->uri, [], [], $headers, "fetch");
-    }
-
-    /**
      * Fetch the TranscriptionsInstance
      *
-     
-     
      * @return TranscriptionsInstance Fetched TranscriptionsInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function fetch(): TranscriptionsInstance
     {
-        $response = $this->_fetch();
+
+        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
+        $payload = $this->version->fetch('GET', $this->uri, [], [], $headers);
+
         return new TranscriptionsInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['roomSid'],
             $this->solution['ttid']
         );
-        
     }
 
-    /**
-     * Fetch the TranscriptionsInstance with Metadata
-     *
-     
-     
-     * @return ResourceMetadata The Fetched Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function fetchWithMetadata(): ResourceMetadata
-    {
-        $response = $this->_fetch();
-        $resource = new TranscriptionsInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['roomSid'],
-                        $this->solution['ttid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
-        );
-    }
-
-
-    /**
-     * Helper function for Update
-     *
-     
-     
-     * @param array|Options $options Optional Arguments
-     * @return Response Updated Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _update(array $options = []): Response
-    {
-        
-        $options = new Values($options);
-
-        $data = Values::of([
-            'Status' =>
-                $options['status'],
-            'Configuration' =>
-                Serialize::jsonObject($options['configuration']),
-        ]);
-
-        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "update");
-    }
 
     /**
      * Update the TranscriptionsInstance
      *
-     
-     
      * @param array|Options $options Optional Arguments
      * @return TranscriptionsInstance Updated TranscriptionsInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function update(array $options = []): TranscriptionsInstance
     {
-        $response = $this->_update($options);
+
+        $options = new Values($options);
+
+        $data = Values::of([
+            'Status' =>
+                $options['status'],
+        ]);
+
+        $headers = Values::of(['Content-Type' => 'application/x-www-form-urlencoded', 'Accept' => 'application/json' ]);
+        $payload = $this->version->update('POST', $this->uri, [], $data, $headers);
+
         return new TranscriptionsInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['roomSid'],
             $this->solution['ttid']
-        );
-        
-    }
-
-    /**
-     * Update the TranscriptionsInstance with Metadata
-     *
-     
-     
-     * @param array|Options $options Optional Arguments
-     * @return ResourceMetadata The Updated Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function updateWithMetadata(array $options = []): ResourceMetadata
-    {
-        $response = $this->_update($options);
-        $resource = new TranscriptionsInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['roomSid'],
-                        $this->solution['ttid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

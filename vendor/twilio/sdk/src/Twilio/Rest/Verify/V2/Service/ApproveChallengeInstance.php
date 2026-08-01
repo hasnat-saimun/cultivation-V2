@@ -25,6 +25,7 @@ use Twilio\Deserialize;
 
 
 /**
+ * @property array $options
  * @property string|null $sid
  * @property string|null $accountSid
  * @property string|null $serviceSid
@@ -43,7 +44,6 @@ use Twilio\Deserialize;
  * @property string $factorType
  * @property string|null $url
  * @property array|null $links
- * @property array $options
  */
 class ApproveChallengeInstance extends InstanceResource
 {
@@ -60,6 +60,7 @@ class ApproveChallengeInstance extends InstanceResource
 
         // Marshaled Properties
         $this->properties = [
+            'options' => Values::array_get($payload, 'options'),
             'sid' => Values::array_get($payload, 'sid'),
             'accountSid' => Values::array_get($payload, 'account_sid'),
             'serviceSid' => Values::array_get($payload, 'service_sid'),
@@ -78,7 +79,6 @@ class ApproveChallengeInstance extends InstanceResource
             'factorType' => Values::array_get($payload, 'factor_type'),
             'url' => Values::array_get($payload, 'url'),
             'links' => Values::array_get($payload, 'links'),
-            'options' => Values::array_get($payload, 'options'),
         ];
 
         $this->solution = ['serviceSid' => $serviceSid, ];

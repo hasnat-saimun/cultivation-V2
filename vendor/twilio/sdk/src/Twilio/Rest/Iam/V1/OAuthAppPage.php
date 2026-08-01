@@ -43,7 +43,6 @@ class OAuthAppPage extends Page
         return new OAuthAppInstance($this->version, $payload);
     }
 
-
     /**
      * Provide a friendly representation
      *

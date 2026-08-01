@@ -21,8 +21,6 @@ use Twilio\Exceptions\TwilioException;
 use Twilio\Values;
 use Twilio\Version;
 use Twilio\InstanceContext;
-use Twilio\Http\Response;
-use Twilio\Metadata\ResourceMetadata;
 
 
 class NewChallengeContext extends InstanceContext
@@ -50,64 +48,23 @@ class NewChallengeContext extends InstanceContext
     }
 
     /**
-     * Helper function for Create
-     *
-     
-     * @param CreatePasskeysChallengeRequest $createPasskeysChallengeRequest
-     
-     * @return Response Created Response
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    private function _create(CreatePasskeysChallengeRequest $createPasskeysChallengeRequest): Response
-    {
-        
-        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
-        $data = $createPasskeysChallengeRequest->toArray();
-        return $this->version->handleRequest('POST', $this->uri, [], $data, $headers, "create");
-    }
-
-    /**
      * Create the NewChallengeInstance
      *
-     
      * @param CreatePasskeysChallengeRequest $createPasskeysChallengeRequest
-     
      * @return NewChallengeInstance Created NewChallengeInstance
      * @throws TwilioException When an HTTP error occurs.
      */
     public function create(CreatePasskeysChallengeRequest $createPasskeysChallengeRequest): NewChallengeInstance
     {
-        $response = $this->_create( $createPasskeysChallengeRequest);
+
+        $headers = Values::of(['Content-Type' => 'application/json', 'Accept' => 'application/json' ]);
+        $data = $createPasskeysChallengeRequest->toArray();
+        $payload = $this->version->create('POST', $this->uri, [], $data, $headers);
+
         return new NewChallengeInstance(
             $this->version,
-            $response->getContent(),
+            $payload,
             $this->solution['serviceSid']
-        );
-        
-    }
-
-    /**
-     * Create the NewChallengeInstance with Metadata
-     *
-     
-     * @param CreatePasskeysChallengeRequest $createPasskeysChallengeRequest
-     
-     * @return ResourceMetadata The Created Resource with Metadata
-     * @throws TwilioException When an HTTP error occurs.
-     */
-    public function createWithMetadata(CreatePasskeysChallengeRequest $createPasskeysChallengeRequest): ResourceMetadata
-    {
-        $response = $this->_create( $createPasskeysChallengeRequest);
-        $resource = new NewChallengeInstance(
-                        $this->version,
-                        $response->getContent(),
-                        $this->solution['serviceSid']
-                    );
-        
-        return new ResourceMetadata(
-            $resource,
-            $response->getStatusCode(),
-            $response->getHeaders()
         );
     }
 

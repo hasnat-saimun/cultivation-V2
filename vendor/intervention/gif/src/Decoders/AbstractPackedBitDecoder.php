@@ -4,29 +4,23 @@ declare(strict_types=1);
 
 namespace Intervention\Gif\Decoders;
 
-use Intervention\Gif\Exceptions\DecoderException;
-
 abstract class AbstractPackedBitDecoder extends AbstractDecoder
 {
     /**
      * Decode packed byte
      *
-     * @throws DecoderException
+     * @return int
      */
     protected function decodePackedByte(string $byte): int
     {
-        $unpacked = unpack('C', $byte);
-        if ($unpacked === false || !array_key_exists(1, $unpacked)) {
-            throw new DecoderException('Unable to get info block size.');
-        }
-
-        return intval($unpacked[1]);
+        return unpack('C', $byte)[1];
     }
 
     /**
      * Determine if packed bit is set
      *
-     * @throws DecoderException
+     * @param int $num from left to right, starting with 0
+     * @return bool
      */
     protected function hasPackedBit(string $byte, int $num): bool
     {
@@ -36,7 +30,9 @@ abstract class AbstractPackedBitDecoder extends AbstractDecoder
     /**
      * Get packed bits
      *
-     * @throws DecoderException
+     * @param int $start
+     * @param int $length
+     * @return string
      */
     protected function getPackedBits(string $byte, int $start = 0, int $length = 8): string
     {

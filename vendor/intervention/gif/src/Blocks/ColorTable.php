@@ -31,6 +31,11 @@ class ColorTable extends AbstractEntity
 
     /**
      * Add color to table
+     *
+     * @param int $r
+     * @param int $g
+     * @param int $b
+     * @return self
      */
     public function addRgb(int $r, int $g, int $b): self
     {
@@ -41,6 +46,9 @@ class ColorTable extends AbstractEntity
 
     /**
      * Add color to table
+     *
+     * @param Color $color
+     * @return self
      */
     public function addColor(Color $color): self
     {
@@ -53,6 +61,7 @@ class ColorTable extends AbstractEntity
      * Reset colors to array of color objects
      *
      * @param array<Color> $colors
+     * @return self
      */
     public function setColors(array $colors): self
     {
@@ -66,6 +75,8 @@ class ColorTable extends AbstractEntity
 
     /**
      * Count colors of current instance
+     *
+     * @return int
      */
     public function countColors(): int
     {
@@ -74,6 +85,8 @@ class ColorTable extends AbstractEntity
 
     /**
      * Determine if any colors are present on the current table
+     *
+     * @return bool
      */
     public function hasColors(): bool
     {
@@ -82,6 +95,8 @@ class ColorTable extends AbstractEntity
 
     /**
      * Empty color table
+     *
+     * @return self
      */
     public function empty(): self
     {
@@ -92,6 +107,8 @@ class ColorTable extends AbstractEntity
 
     /**
      * Get size of color table in logical screen descriptor
+     *
+     * @return int
      */
     public function getLogicalSize(): int
     {
@@ -109,6 +126,8 @@ class ColorTable extends AbstractEntity
 
     /**
      * Calculate the number of bytes contained by the current table
+     *
+     * @return int
      */
     public function getByteSize(): int
     {

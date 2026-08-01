@@ -10,6 +10,8 @@ class HeaderEncoder extends AbstractEncoder
 {
     /**
      * Create new instance
+     *
+     * @param Header $source
      */
     public function __construct(Header $source)
     {
@@ -18,6 +20,8 @@ class HeaderEncoder extends AbstractEncoder
 
     /**
      * Encode current source
+     *
+     * @return string
      */
     public function encode(): string
     {

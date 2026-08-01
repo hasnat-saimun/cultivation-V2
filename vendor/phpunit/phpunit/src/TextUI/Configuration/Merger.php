@@ -119,12 +119,6 @@ final readonly class Merger
             $failOnPhpunitDeprecation = $xmlConfiguration->phpunit()->failOnPhpunitDeprecation();
         }
 
-        if ($cliConfiguration->hasFailOnPhpunitWarning()) {
-            $failOnPhpunitWarning = $cliConfiguration->failOnPhpunitWarning();
-        } else {
-            $failOnPhpunitWarning = $xmlConfiguration->phpunit()->failOnPhpunitWarning();
-        }
-
         if ($cliConfiguration->hasFailOnEmptyTestSuite()) {
             $failOnEmptyTestSuite = $cliConfiguration->failOnEmptyTestSuite();
         } else {
@@ -159,60 +153,6 @@ final readonly class Merger
             $failOnWarning = $cliConfiguration->failOnWarning();
         } else {
             $failOnWarning = $xmlConfiguration->phpunit()->failOnWarning();
-        }
-
-        $doNotFailOnDeprecation = false;
-
-        if ($cliConfiguration->hasDoNotFailOnDeprecation()) {
-            $doNotFailOnDeprecation = $cliConfiguration->doNotFailOnDeprecation();
-        }
-
-        $doNotFailOnPhpunitDeprecation = false;
-
-        if ($cliConfiguration->hasDoNotFailOnPhpunitDeprecation()) {
-            $doNotFailOnPhpunitDeprecation = $cliConfiguration->doNotFailOnPhpunitDeprecation();
-        }
-
-        $doNotFailOnPhpunitWarning = false;
-
-        if ($cliConfiguration->hasDoNotFailOnPhpunitWarning()) {
-            $doNotFailOnPhpunitWarning = $cliConfiguration->doNotFailOnPhpunitWarning();
-        }
-
-        $doNotFailOnEmptyTestSuite = false;
-
-        if ($cliConfiguration->hasDoNotFailOnEmptyTestSuite()) {
-            $doNotFailOnEmptyTestSuite = $cliConfiguration->doNotFailOnEmptyTestSuite();
-        }
-
-        $doNotFailOnIncomplete = false;
-
-        if ($cliConfiguration->hasDoNotFailOnIncomplete()) {
-            $doNotFailOnIncomplete = $cliConfiguration->doNotFailOnIncomplete();
-        }
-
-        $doNotFailOnNotice = false;
-
-        if ($cliConfiguration->hasDoNotFailOnNotice()) {
-            $doNotFailOnNotice = $cliConfiguration->doNotFailOnNotice();
-        }
-
-        $doNotFailOnRisky = false;
-
-        if ($cliConfiguration->hasDoNotFailOnRisky()) {
-            $doNotFailOnRisky = $cliConfiguration->doNotFailOnRisky();
-        }
-
-        $doNotFailOnSkipped = false;
-
-        if ($cliConfiguration->hasDoNotFailOnSkipped()) {
-            $doNotFailOnSkipped = $cliConfiguration->doNotFailOnSkipped();
-        }
-
-        $doNotFailOnWarning = false;
-
-        if ($cliConfiguration->hasDoNotFailOnWarning()) {
-            $doNotFailOnWarning = $cliConfiguration->doNotFailOnWarning();
         }
 
         if ($cliConfiguration->hasStopOnDefect()) {
@@ -825,36 +765,28 @@ final readonly class Merger
             $displayDetailsOnAllIssues = true;
         }
 
-        if ($failOnDeprecation && !$doNotFailOnDeprecation) {
+        if ($failOnDeprecation) {
             $displayDetailsOnTestsThatTriggerDeprecations = true;
         }
 
-        if ($failOnPhpunitDeprecation && !$doNotFailOnPhpunitDeprecation) {
+        if ($failOnPhpunitDeprecation) {
             $displayDetailsOnPhpunitDeprecations = true;
         }
 
-        if ($failOnNotice && !$doNotFailOnNotice) {
+        if ($failOnNotice) {
             $displayDetailsOnTestsThatTriggerNotices = true;
         }
 
-        if ($failOnWarning && !$doNotFailOnWarning) {
+        if ($failOnWarning) {
             $displayDetailsOnTestsThatTriggerWarnings = true;
         }
 
-        if ($failOnIncomplete && !$doNotFailOnIncomplete) {
+        if ($failOnIncomplete) {
             $displayDetailsOnIncompleteTests = true;
         }
 
-        if ($failOnSkipped && !$doNotFailOnSkipped) {
+        if ($failOnSkipped) {
             $displayDetailsOnSkippedTests = true;
-        }
-
-        $issueTriggerIdentificationNeeded = $xmlConfiguration->source()->ignoreSelfDeprecations() || $xmlConfiguration->source()->ignoreDirectDeprecations() || $xmlConfiguration->source()->ignoreIndirectDeprecations();
-
-        if ($issueTriggerIdentificationNeeded && !$xmlConfiguration->source()->identifyIssueTrigger()) {
-            EventFacade::emitter()->testRunnerTriggeredPhpunitWarning(
-                'The identification of issue triggers is disabled. However, ignoring self-deprecations, direct deprecations, or indirect deprecations is requested.',
-            );
         }
 
         return new Configuration(
@@ -885,7 +817,6 @@ final readonly class Merger
                 $xmlConfiguration->source()->ignoreSelfDeprecations(),
                 $xmlConfiguration->source()->ignoreDirectDeprecations(),
                 $xmlConfiguration->source()->ignoreIndirectDeprecations(),
-                $xmlConfiguration->source()->identifyIssueTrigger(),
             ),
             $testResultCacheFile,
             $coverageClover,
@@ -912,22 +843,12 @@ final readonly class Merger
             $failOnAllIssues,
             $failOnDeprecation,
             $failOnPhpunitDeprecation,
-            $failOnPhpunitWarning,
             $failOnEmptyTestSuite,
             $failOnIncomplete,
             $failOnNotice,
             $failOnRisky,
             $failOnSkipped,
             $failOnWarning,
-            $doNotFailOnDeprecation,
-            $doNotFailOnPhpunitDeprecation,
-            $doNotFailOnPhpunitWarning,
-            $doNotFailOnEmptyTestSuite,
-            $doNotFailOnIncomplete,
-            $doNotFailOnNotice,
-            $doNotFailOnRisky,
-            $doNotFailOnSkipped,
-            $doNotFailOnWarning,
             $stopOnDefect,
             $stopOnDeprecation,
             $specificDeprecationToStopOn,

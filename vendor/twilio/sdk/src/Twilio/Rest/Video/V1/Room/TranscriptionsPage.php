@@ -43,7 +43,6 @@ class TranscriptionsPage extends Page
         return new TranscriptionsInstance($this->version, $payload, $this->solution['roomSid']);
     }
 
-
     /**
      * Provide a friendly representation
      *
