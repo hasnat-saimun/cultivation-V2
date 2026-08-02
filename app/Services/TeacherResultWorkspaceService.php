@@ -8,6 +8,7 @@ use App\Models\Marksheet;
 use App\Models\MarksScopeState;
 use App\Models\ResultPublish;
 use App\Models\Subject;
+use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,7 @@ class TeacherResultWorkspaceService
         private ResultMarksPopulationService $population,
         private ResultMarksScopeService $scopeStates,
         private TeacherAssignmentAcademicScopeService $academicScope,
+        private ResultCalculationBatchBuilder $resultBatch,
     ) {}
 
     public function assignments(CultivationAdmin $teacher): Collection
@@ -194,6 +196,7 @@ class TeacherResultWorkspaceService
             ->whereIn('studentId', $students->pluck('id')->all())
             ->get()
             ->keyBy(fn ($mark) => (int) $mark->studentId);
+        $calculatedResults = $this->calculatedSubjectResults($scope, $students);
         $stateScopes = $sectionIds->isEmpty()
             ? collect([$scope['groupId']])
             : $sectionIds;
@@ -225,6 +228,7 @@ class TeacherResultWorkspaceService
             'labels' => $this->labels($teacher, $scope, $authorized['subject'], $authorized['exam']),
             'students' => $students,
             'marks' => $marks,
+            'calculatedResults' => $calculatedResults,
             'state' => $state,
             'status' => $displayStatus,
             'revision' => (int) ($state?->revision ?? 1),
@@ -232,6 +236,31 @@ class TeacherResultWorkspaceService
             'confirmable' => ! $published && $states->count() === 1 && $state?->status === MarksScopeState::STATUS_DRAFT,
             'scopeRevisions' => $scopeRevisions,
         ];
+    }
+
+    private function calculatedSubjectResults(array $scope, Collection $students): Collection
+    {
+        if ($students->isEmpty()) return collect();
+
+        $batch = $this->resultBatch->buildTolerant(
+            (int) $scope['examId'],
+            (int) $scope['classId'],
+            (int) $scope['sessionId'],
+            $scope['groupId'],
+            $scope['optionalGroupId'],
+        );
+        $authorizedStudentIds = $students->pluck('id')->map(fn ($id) => (int) $id)->flip();
+        $selectedSubjectId = (string) $scope['subjectId'];
+
+        return collect($batch['entries'])
+            ->filter(fn ($entry, $studentId) => $authorizedStudentIds->has((int) $studentId))
+            ->mapWithKeys(function ($entry, $studentId) use ($selectedSubjectId) {
+                $subjectResult = collect($entry['result']->subjectResults)->first(
+                    fn ($result) => in_array($selectedSubjectId, $result->sourceSubjectIds, true)
+                );
+
+                return $subjectResult ? [(int) $studentId => $subjectResult] : [];
+            });
     }
 
     public function recentActivity(CultivationAdmin $teacher): Collection

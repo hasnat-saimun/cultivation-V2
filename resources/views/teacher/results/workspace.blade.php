@@ -61,12 +61,15 @@
                         @if($showCq)<th>Written / CQ</th>@endif
                         @if($showMcq)<th>MCQ</th>@endif
                         @if($showPractical)<th>Practical</th>@endif
-                        <th>Total</th><th>Grade</th>
+                        <th>Total</th><th>Grade</th><th>Point</th><th>Result</th>
                     </tr>
                 </thead>
                 <tbody>
                 @foreach ($students as $student)
-                    @php $mark = $marks->get((int)$student->id); @endphp
+                    @php
+                        $mark = $marks->get((int)$student->id);
+                        $calculated = $calculatedResults->get((int)$student->id);
+                    @endphp
                     <tr>
                         <td>{{ $student->stdId ?: '—' }}</td>
                         <td>
@@ -83,8 +86,10 @@
                         @if($showPractical)
                             <td><input class="tp-control tp-mark-control" aria-label="Practical marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" data-configured-maximum="{{ (float)$subject->Practical }}" min="0" max="{{ (float)$subject->Practical }}" name="practical[]" value="{{ old('practical.'.$loop->index, $mark?->practicalMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
                         @else <input type="hidden" name="practical[]" value=""> @endif
-                        <td>{{ $mark?->totalMarks ?? '—' }}</td>
-                        <td>{{ $mark?->laterGrade ?? '—' }}</td>
+                        <td>{{ $calculated?->obtainedMarks ?? '—' }}</td>
+                        <td>{{ $calculated?->letterGrade ?? '—' }}</td>
+                        <td>{{ $calculated ? number_format($calculated->gradePoint, 2) : '—' }}</td>
+                        <td>{{ $calculated?->status ?? '—' }}</td>
                     </tr>
                 @endforeach
                 </tbody>

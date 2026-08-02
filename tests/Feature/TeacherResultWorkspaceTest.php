@@ -21,6 +21,7 @@ use App\Services\TeacherResultExamEligibilityService;
 use App\Http\Controllers\CultivationController;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Tests\TestCase;
 
@@ -416,6 +417,128 @@ class TeacherResultWorkspaceTest extends TestCase
             ->assertDontSee($outside->fullName);
     }
 
+    public function test_workspace_displays_centralized_component_threshold_results_instead_of_stored_grades(): void
+    {
+        $scope = $this->scope();
+        $scope['subject']->forceFill(['CQ' => 70, 'MCQ' => 30, 'Practical' => null])->save();
+        $scope['exam']->forceFill(['passingSystem' => 1])->save();
+        $this->mapSubject($scope, $scope['subject']);
+        $passing = $scope['students']->first();
+        $failing = $this->student($scope, 'Threshold Fail Student');
+        $scope['students']->push($failing);
+        $this->assignment($scope['teacher'], $scope);
+
+        foreach ([[$passing, 23, 'F', 0], [$failing, 22, 'A+', 5]] as [$student, $cq, $storedGrade, $storedPoint]) {
+            Marksheet::create([
+                'studentId' => $student->id,
+                'sessionId' => $scope['session']->id,
+                'classId' => $scope['class']->id,
+                'groupId' => $scope['section']->id,
+                'examId' => $scope['exam']->id,
+                'subjectId' => $scope['subject']->id,
+                'subjectMarks' => $cq,
+                'objectMarks' => 10,
+                'totalMarks' => $cq + 10,
+                'laterGrade' => $storedGrade,
+                'gradePoint' => $storedPoint,
+            ]);
+        }
+
+        $response = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.workspace', $this->query($scope)));
+
+        $response->assertOk()->assertSeeText('Point')->assertSeeText('Result');
+        $results = $response->viewData('calculatedResults');
+        $this->assertSame('Pass', $results->get($passing->id)->status);
+        $this->assertSame('D', $results->get($passing->id)->letterGrade);
+        $this->assertSame(1.0, $results->get($passing->id)->gradePoint);
+        $this->assertSame('Fail', $results->get($failing->id)->status);
+        $this->assertSame('F', $results->get($failing->id)->letterGrade);
+        $this->assertSame(0.0, $results->get($failing->id)->gradePoint);
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => $passing->id,
+            'laterGrade' => 'F',
+            'gradePoint' => 0,
+        ]);
+    }
+
+    public function test_workspace_displays_twenty_five_mark_component_boundary_from_centralized_calculator(): void
+    {
+        $scope = $this->scope();
+        $scope['subject']->forceFill(['CQ' => 50, 'MCQ' => 25, 'Practical' => 25])->save();
+        $scope['exam']->forceFill(['passingSystem' => 1])->save();
+        $this->mapSubject($scope, $scope['subject']);
+        $passing = $scope['students']->first();
+        $failing = $this->student($scope, 'Twenty Five Mark Fail Student');
+        $scope['students']->push($failing);
+        $this->assignment($scope['teacher'], $scope);
+
+        foreach ([[$passing, 8], [$failing, 7]] as [$student, $mcq]) {
+            Marksheet::create([
+                'studentId' => $student->id,
+                'sessionId' => $scope['session']->id,
+                'classId' => $scope['class']->id,
+                'groupId' => $scope['section']->id,
+                'examId' => $scope['exam']->id,
+                'subjectId' => $scope['subject']->id,
+                'subjectMarks' => 17,
+                'objectMarks' => $mcq,
+                'practicalMarks' => 8,
+                'totalMarks' => 25 + $mcq,
+                'laterGrade' => $mcq === 8 ? 'F' : 'A+',
+                'gradePoint' => $mcq === 8 ? 0 : 5,
+            ]);
+        }
+
+        $response = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.workspace', $this->query($scope)));
+        $results = $response->viewData('calculatedResults');
+
+        $this->assertSame('Pass', $results->get($passing->id)->status);
+        $this->assertSame('Fail', $results->get($failing->id)->status);
+    }
+
+    public function test_workspace_displays_the_same_paired_subject_result_as_the_centralized_calculator(): void
+    {
+        $scope = $this->scope(subjectName: 'English 1st Paper');
+        $scope['subject']->forceFill(['alias' => 'english_1st_paper', 'CQ' => 100])->save();
+        $companion = Subject::create([
+            'subjectName' => 'English 2nd Paper',
+            'alias' => 'english_2nd_paper',
+            'subjectType' => 'Theory',
+            'CQ' => 100,
+        ]);
+        $this->mapSubject($scope, $scope['subject']);
+        $this->mapSubject($scope, $companion);
+        $this->assignment($scope['teacher'], $scope);
+        $student = $scope['students']->first();
+
+        foreach ([[$scope['subject'], 29, 'F'], [$companion, 50, 'B']] as [$subject, $cq, $storedGrade]) {
+            Marksheet::create([
+                'studentId' => $student->id,
+                'sessionId' => $scope['session']->id,
+                'classId' => $scope['class']->id,
+                'groupId' => $scope['section']->id,
+                'examId' => $scope['exam']->id,
+                'subjectId' => $subject->id,
+                'subjectMarks' => $cq,
+                'totalMarks' => $cq,
+                'laterGrade' => $storedGrade,
+                'gradePoint' => $storedGrade === 'F' ? 0 : 3,
+            ]);
+        }
+
+        $response = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.workspace', $this->query($scope)));
+        $result = $response->viewData('calculatedResults')->get($student->id);
+
+        $this->assertSame([$scope['subject']->id, $companion->id], array_map('intval', $result->sourceSubjectIds));
+        $this->assertSame(79.0, $result->obtainedMarks);
+        $this->assertSame('D', $result->letterGrade);
+        $this->assertSame(1.0, $result->gradePoint);
+        $this->assertSame('Pass', $result->status);
+    }
+
     public function test_forged_student_is_rejected_without_partial_write(): void
     {
         $scope = $this->scope();
@@ -760,5 +883,22 @@ class TeacherResultWorkspaceTest extends TestCase
         $routine->save();
         ExamRoutineItem::create(['exam_routine_id' => $routine->id, 'subject_id' => $itemSubject->id]);
         return $routine;
+    }
+
+    private function mapSubject(array $scope, Subject $subject, string $type = 'main'): void
+    {
+        DB::table('curriculum_subject_mappings')->insert([
+            'session_id' => (string) $scope['session']->id,
+            'class_id' => (string) $scope['class']->id,
+            'section_id' => (string) $scope['section']->id,
+            'department_id' => null,
+            'subject_id' => $subject->id,
+            'mapping_type' => $type,
+            'sort_order' => 1,
+            'is_active' => 1,
+            'source' => 'test-fixture',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 }
