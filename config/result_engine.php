@@ -9,6 +9,15 @@ return [
     'placement_enabled' => (bool) env('RESULT_ENGINE_PLACEMENT_ENABLED', false),
     'promotion_enabled' => (bool) env('RESULT_ENGINE_PROMOTION_ENABLED', false),
     'promotion_revert_enabled' => (bool) env('RESULT_ENGINE_PROMOTION_REVERT_ENABLED', false),
+    'pass_threshold' => [
+        'default_percentage' => 0.33,
+        'component_fields' => [
+            'cq' => ['CQPass', 'cqPassMark', 'cq_pass_mark'],
+            'mcq' => ['MCQPass', 'mcqPassMark', 'mcq_pass_mark'],
+            'practical' => ['PracticalPass', 'practicalPassMark', 'practical_pass_mark'],
+        ],
+        'subjects' => [],
+    ],
     'historical_exception_manifest' => [
         'databases' => ['cultivation_rhs', 'cultivation_rhs_rehearsal'],
         'orphan_student_ids' => [5, 6, 48, 64, 257, 332, 344, 347],

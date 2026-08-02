@@ -57,7 +57,7 @@
             <table class="tp-table">
                 <thead>
                     <tr>
-                        <th>Roll</th><th>Student ID</th><th>Student Name</th>
+                        <th>Student ID</th><th>Student Name</th><th>Roll</th>
                         @if($showCq)<th>Written / CQ</th>@endif
                         @if($showMcq)<th>MCQ</th>@endif
                         @if($showPractical)<th>Practical</th>@endif
@@ -68,12 +68,12 @@
                 @foreach ($students as $student)
                     @php $mark = $marks->get((int)$student->id); @endphp
                     <tr>
-                        <td>{{ $student->rollNumber ?: '—' }}</td>
                         <td>{{ $student->stdId ?: '—' }}</td>
                         <td>
                             {{ trim($student->fullName.' '.$student->sureName) }}
                             <input type="hidden" name="studentId[]" value="{{ $student->id }}">
                         </td>
+                        <td>{{ $student->rollNumber ?: '—' }}</td>
                         @if($showCq)
                             <td><input class="tp-control tp-mark-control" aria-label="Written marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" data-configured-maximum="{{ $legacyComponents ? 100 : (float)$subject->CQ }}" min="0" max="{{ $legacyComponents ? 100 : (float)$subject->CQ }}" name="cqMarks[]" value="{{ old('cqMarks.'.$loop->index, $mark?->subjectMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
                         @else <input type="hidden" name="cqMarks[]" value=""> @endif

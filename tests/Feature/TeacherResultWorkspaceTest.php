@@ -163,7 +163,7 @@ class TeacherResultWorkspaceTest extends TestCase
         $this->assertSame(0, substr_count($response->getContent(), 'Open Workspace'));
     }
 
-    public function test_teacher_accesses_results_and_sees_gender_scopes_as_distinct_assignments(): void
+    public function test_teacher_accesses_results_and_merges_matching_male_and_female_assignments(): void
     {
         $scope = $this->scope();
         $other = $this->teacher('Other Teacher', 'T-2');
@@ -178,11 +178,60 @@ class TeacherResultWorkspaceTest extends TestCase
             ->assertSee('Teacher Result Workspace')
             ->assertSee($scope['subject']->subjectName)
             ->assertSee($scope['exam']->examName)
-            ->assertSee('Male')
-            ->assertSee('Female')
+            ->assertSee('All')
             ->assertDontSee('Other Subject')
             ->assertDontSee('Other Class');
-        $this->assertSame(2, substr_count($response->getContent(), 'Open Workspace'));
+        $this->assertSame(1, substr_count($response->getContent(), 'Open Workspace'));
+    }
+
+    public function test_matching_gender_assignments_render_unique_male_first_students_and_preserve_draft_confirm_order(): void
+    {
+        $scope = $this->scope();
+        $original = $scope['students']->first();
+        $original->forceFill(['gender' => '1', 'rollNumber' => '4'])->save();
+        $maleTwo = $this->student($scope, 'Male Roll Two');
+        $maleTwo->forceFill(['gender' => '1', 'rollNumber' => '2'])->save();
+        $maleOne = $this->student($scope, 'Male Roll One');
+        $maleOne->forceFill(['gender' => '1', 'rollNumber' => '1'])->save();
+        $femaleFive = $this->student($scope, 'Female Roll Five');
+        $femaleFive->forceFill(['gender' => '2', 'rollNumber' => '5'])->save();
+        $femaleOne = $this->student($scope, 'Female Roll One');
+        $femaleOne->forceFill(['gender' => '2', 'rollNumber' => '1'])->save();
+        $femaleThree = $this->student($scope, 'Female Roll Three');
+        $femaleThree->forceFill(['gender' => '2', 'rollNumber' => '3'])->save();
+
+        $this->assignment($scope['teacher'], $scope, 'male');
+        $this->assignment($scope['teacher'], $scope, 'male');
+        $this->assignment($scope['teacher'], $scope, 'female');
+        $this->assignment($scope['teacher'], $scope, 'female');
+
+        $query = $this->query($scope, ['gender' => 'all']);
+        $workspace = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.workspace', $query));
+        $workspace->assertOk();
+
+        $expectedIds = [$maleOne->id, $maleTwo->id, $original->id, $femaleOne->id, $femaleThree->id, $femaleFive->id];
+        $renderedIds = collect($workspace->viewData('students'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->assertSame($expectedIds, $renderedIds);
+        $this->assertCount(count($expectedIds), array_unique($renderedIds));
+
+        $payload = $query + [
+            'studentId' => $expectedIds,
+            'cqMarks' => array_fill(0, count($expectedIds), 80),
+            'mcqMarks' => array_fill(0, count($expectedIds), null),
+            'practical' => array_fill(0, count($expectedIds), null),
+            'scope_revision' => 1,
+        ];
+        $this->post(route('teacher.results.draft'), $payload)->assertRedirect();
+
+        $reloaded = $this->get(route('teacher.results.workspace', $query));
+        $reloadedIds = collect($reloaded->viewData('students'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->assertSame($expectedIds, $reloadedIds);
+
+        $this->post(route('teacher.results.confirm'), $query + ['scope_revision' => 2])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Subject marks confirmed successfully.');
+        $this->assertSame(count($expectedIds), Marksheet::whereIn('studentId', $expectedIds)->count());
     }
 
     public function test_different_sections_remain_distinct_effective_scopes(): void
@@ -503,6 +552,23 @@ class TeacherResultWorkspaceTest extends TestCase
             'examId' => (string) $scope['exam']->id,
             'subjectId' => (string) $scope['subject']->id,
         ]);
+    }
+
+    public function test_female_only_assignment_excludes_male_students(): void
+    {
+        $scope = $this->scope();
+        $female = $this->student($scope, 'Female Student');
+        $female->forceFill(['gender' => '2', 'rollNumber' => '1'])->save();
+        $this->assignment($scope['teacher'], $scope, 'female');
+
+        $response = $this->actingAs($scope['teacher'], 'teacher')->get(route(
+            'teacher.results.workspace',
+            $this->query($scope, ['gender' => 'female'])
+        ));
+
+        $response->assertOk();
+        $ids = collect($response->viewData('students'))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $this->assertSame([$female->id], $ids);
     }
 
     public function test_confirm_rejects_incomplete_and_stale_lifecycle_state(): void

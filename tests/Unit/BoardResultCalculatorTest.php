@@ -128,6 +128,45 @@ class BoardResultCalculatorTest extends TestCase
         return [['cq', 10, 20, 20], ['mcq', 40, 5, 20], ['practical', 40, 20, 5]];
     }
 
+    public static function componentPassThresholds(): array
+    {
+        return [
+            [25, 7, 8],
+            [50, 16, 17],
+            [75, 24, 25],
+            [100, 32, 33],
+        ];
+    }
+
+    #[DataProvider('componentPassThresholds')]
+    public function test_configured_component_threshold_uses_nearest_default_pass_mark(
+        int $fullMarks,
+        int $failingMark,
+        int $passingMark,
+    ): void {
+        foreach (['cq', 'mcq', 'practical'] as $component) {
+            $full = ['cq' => 100, 'mcq' => 100, 'practical' => 100];
+            $marks = ['cq' => 100, 'mcq' => 100, 'practical' => 100];
+            $full[$component] = $fullMarks;
+            $marks[$component] = $failingMark;
+
+            $failed = $this->calculate(
+                [$this->subject(1, 'Main', $full['cq'], $full['mcq'], $full['practical'])],
+                [$this->mark(1, $marks['cq'], $marks['mcq'], $marks['practical'])],
+                passingSystem: 1,
+            );
+            $this->assertSame('Fail', $failed->status, "{$component} {$failingMark}/{$fullMarks} must fail");
+
+            $marks[$component] = $passingMark;
+            $passed = $this->calculate(
+                [$this->subject(1, 'Main', $full['cq'], $full['mcq'], $full['practical'])],
+                [$this->mark(1, $marks['cq'], $marks['mcq'], $marks['practical'])],
+                passingSystem: 1,
+            );
+            $this->assertSame('Pass', $passed->status, "{$component} {$passingMark}/{$fullMarks} must pass");
+        }
+    }
+
     #[DataProvider('componentFailures')]
     public function test_feature_wise_required_component_failure_fails_subject(string $component, float $cq, float $mcq, float $practical): void
     {

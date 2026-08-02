@@ -52,15 +52,27 @@ class TeacherResultWorkspaceService
             ->get();
         $assignments = $assignments
             ->map(fn ($assignment) => $this->decorateAssignment($assignment, $teacher))
-            ->unique(fn ($assignment) => $this->effectiveScopeKey(
+            ->groupBy(fn ($assignment) => $this->effectiveScopeKey(
                 (int) ($assignment->teacher_id ?? $teacher->id),
                 $this->nullableId($assignment->session_id) ?? 0,
                 $this->nullableId($assignment->class_id) ?? 0,
                 $this->nullableId($assignment->section_id),
                 $this->nullableId($assignment->group_id),
                 $this->nullableId($assignment->subject_id) ?? 0,
-                (string) ($assignment->gender_scope ?? 'all'),
-            ))->values();
+            ))
+            ->map(function (Collection $matching) {
+                $assignment = clone $matching->first();
+                $genders = $matching->pluck('gender_scope')->map(
+                    fn ($gender) => $this->normalizeGender((string) $gender)
+                )->unique()->values();
+                $assignment->gender_scope = $genders->contains('all')
+                    || ($genders->contains('male') && $genders->contains('female'))
+                        ? 'all'
+                        : (string) $genders->first();
+                $assignment->gender_scope_label = ucfirst($assignment->gender_scope);
+
+                return $assignment;
+            })->values();
         $exams = $this->exams->eligibleForClasses($assignments->pluck('class_id')->all());
 
         return $assignments
@@ -163,6 +175,7 @@ class TeacherResultWorkspaceService
             $scope['optionalGroupId'],
             $scope['gender'],
         );
+        $students = $this->orderedUniqueStudents($students);
         $sectionIds = $students->pluck('sectionName')->map(fn ($id) => $this->nullableId($id))->unique()->values();
         $marks = Marksheet::query()
             ->where('sessionId', (string) $scope['sessionId'])
@@ -335,7 +348,6 @@ class TeacherResultWorkspaceService
         ?int $sectionId,
         ?int $departmentId,
         int $subjectId,
-        string $genderScope,
     ): string {
         return implode(':', [
             $teacherId,
@@ -344,8 +356,45 @@ class TeacherResultWorkspaceService
             $sectionId === null ? 'n' : $sectionId,
             $departmentId === null ? 'n' : $departmentId,
             $subjectId,
-            $this->normalizeGender($genderScope),
         ]);
+    }
+
+    private function orderedUniqueStudents(Collection $students): Collection
+    {
+        return $students
+            ->unique(fn ($student) => (int) $student->getKey())
+            ->sort(function ($left, $right) {
+                $leftGender = $this->studentGenderRank($left->gender ?? null);
+                $rightGender = $this->studentGenderRank($right->gender ?? null);
+                if ($leftGender !== $rightGender) return $leftGender <=> $rightGender;
+
+                $leftRoll = $this->studentRoll($left->rollNumber ?? null);
+                $rightRoll = $this->studentRoll($right->rollNumber ?? null);
+                if ($leftRoll !== null && $rightRoll !== null && $leftRoll !== $rightRoll) {
+                    return $leftRoll <=> $rightRoll;
+                }
+                if (($leftRoll === null) !== ($rightRoll === null)) {
+                    return $leftRoll === null ? 1 : -1;
+                }
+
+                return (int) $left->getKey() <=> (int) $right->getKey();
+            })
+            ->values();
+    }
+
+    private function studentGenderRank(mixed $gender): int
+    {
+        return match ($this->normalizeGender((string) $gender)) {
+            'male' => 0,
+            'female' => 1,
+            default => 2,
+        };
+    }
+
+    private function studentRoll(mixed $roll): ?int
+    {
+        $roll = trim((string) $roll);
+        return $roll !== '' && ctype_digit($roll) ? (int) $roll : null;
     }
 
 }

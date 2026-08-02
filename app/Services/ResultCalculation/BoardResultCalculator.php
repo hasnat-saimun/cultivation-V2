@@ -7,6 +7,13 @@ use InvalidArgumentException;
 
 final class BoardResultCalculator
 {
+    private ComponentPassMarkResolver $passMarks;
+
+    public function __construct(?ComponentPassMarkResolver $passMarks = null)
+    {
+        $this->passMarks = $passMarks ?? new ComponentPassMarkResolver();
+    }
+
     /**
      * Calculate one entered subject through the same normalization and component rules
      * used by complete student results.
@@ -171,7 +178,9 @@ final class BoardResultCalculator
                     $warnings[] = "Subject {$sid} {$key} marks are outside 0-{$max}."; $missing = true; continue;
                 }
                 $got[$key] += $value;
-                if (($value / $max) * 100 < 33) $paperFailures[] = "paper:{$sid}:{$key}";
+                if ($value < $this->passMarks->resolve($max, $subject, $key)) {
+                    $paperFailures[] = "paper:{$sid}:{$key}";
+                }
             }
         }
 
@@ -202,7 +211,11 @@ final class BoardResultCalculator
         $percentage = ($obtained / $fullMarks) * 100;
         [$letter, $point] = $this->gradeForPercentage($percentage);
         $combinedFailures = [];
-        if ($featureWise) foreach ($got as $key => $value) if ($full[$key] > 0 && ($value / $full[$key]) * 100 < 33) $combinedFailures[] = $key;
+        if ($featureWise) foreach ($got as $key => $value) {
+            if ($full[$key] > 0 && $value < $this->passMarks->resolve($full[$key], null, $key)) {
+                $combinedFailures[] = $key;
+            }
+        }
         $fails = $letter === 'F' || ($featureWise && $combinedFailures !== []);
         if ($fails) { $letter = 'F'; $point = 0.0; }
         return new SubjectResult($id, $type, round($obtained, 2), round($fullMarks, 2), round($percentage, 4), $letter, $point, $fails ? 'Fail' : 'Pass', $optional, !$optional, array_values(array_unique(array_merge($combinedFailures, $paperFailures))), false, $sourceIds, true);

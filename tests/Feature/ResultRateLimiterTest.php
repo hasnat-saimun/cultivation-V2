@@ -38,7 +38,7 @@ class ResultRateLimiterTest extends TestCase
     {
         [$scope, $admin] = $this->scopeWithAdmin(CultivationAdmin::ROLE_GENERAL);
 
-        $draftPayload = $this->draftPayload($scope, 80.0);
+        $draftPayload = $this->draftPayload($scope, 80);
         $response = $this
             ->withSession(['cultivationAdmin' => $admin->id])
             ->post(route('marks.draft.save'), $draftPayload);
@@ -82,7 +82,7 @@ class ResultRateLimiterTest extends TestCase
 
         $this
             ->withSession(['cultivationAdmin' => $admin->id])
-            ->post(route('marks.draft.save'), $this->draftPayload($scope, 75.0))
+            ->post(route('marks.draft.save'), $this->draftPayload($scope, 75))
             ->assertStatus(302);
 
         $scopeStateBefore = $this->scopeState($scope);
@@ -117,7 +117,7 @@ class ResultRateLimiterTest extends TestCase
 
         $this
             ->withSession(['cultivationAdmin' => $generalAdmin->id])
-            ->post(route('marks.draft.save'), $this->draftPayload($scope, 65.0))
+            ->post(route('marks.draft.save'), $this->draftPayload($scope, 65))
             ->assertStatus(302);
 
         $state = $this->scopeState($scope);
@@ -264,7 +264,7 @@ class ResultRateLimiterTest extends TestCase
         ];
     }
 
-    private function draftPayload(array $scope, float $marks): array
+    private function draftPayload(array $scope, int $marks): array
     {
         return [
             'examId' => $scope['exam']->id,

@@ -89,7 +89,7 @@ trait CreatesResultLifecycleScope
         return $actor;
     }
 
-    protected function lifecycleInput(array $data, float|string|null $mark = 80): array
+    protected function lifecycleInput(array $data, int|string|null $mark = 80): array
     {
         return [
             'sessionId' => $data['session']->id,
@@ -105,7 +105,7 @@ trait CreatesResultLifecycleScope
         ];
     }
 
-    protected function confirmedLifecycleScope(float|string|null $mark = 80, int $studentCount = 1): array
+    protected function confirmedLifecycleScope(int|string|null $mark = 80, int $studentCount = 1): array
     {
         $data = $this->lifecycleScope($studentCount);
         $actor = $this->lifecycleActor();
