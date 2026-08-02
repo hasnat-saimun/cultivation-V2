@@ -92,7 +92,7 @@
                 <thead><tr>
                     <th width="20%">Total Marks: {{ $transcript['result']['totalMarks'] }}</th>
                     <th width="20%">Letter Grade: {{ $transcript['result']['letterGrade'] }}</th>
-                    <th width="20%">Grade Point: {{ $transcript['result']['gpaDisplay'] }}</th>
+                    <th width="20%">GPA: {{ $transcript['result']['gpaDisplay'] }}</th>
                     <th>Remark- {{ $transcript['result']['status'] }}</th>
                 </tr></thead>
             </table>
