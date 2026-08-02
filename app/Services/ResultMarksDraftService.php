@@ -18,6 +18,7 @@ class ResultMarksDraftService
         private ResultMarksPopulationService $population,
         private ResultLifecycleEventService $events,
         private BoardResultCalculator $calculator,
+        private ResultComponentMarksValidationService $componentMarksValidation,
     ) {}
 
     public function save(array $input, CultivationAdmin $actor, ?string $ipAddress = null, bool $legacy = false): array
@@ -209,7 +210,17 @@ class ResultMarksDraftService
     private function markAt(array $values, int $index): ?float
     {
         $value = $values[$index] ?? null;
-        return $value === null || $value === '' ? null : (float) $value;
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (!is_string($value) && !is_int($value)) {
+            throw ResultLifecycleException::invalid('InvalidMarksIdentity', 'Marks must contain English digits (0-9) only.');
+        }
+        if (preg_match('/^[0-9]+$/', (string) $value) !== 1) {
+            throw ResultLifecycleException::invalid('InvalidMarksIdentity', 'Marks must contain English digits (0-9) only.');
+        }
+
+        return (float) $value;
     }
 
     private function nullableId(mixed $value): ?int
@@ -244,22 +255,6 @@ class ResultMarksDraftService
 
     private function assertRawMarks(array $raw, Subject $subject): void
     {
-        $legacyAllComponents = $subject->CQ === null
-            && $subject->MCQ === null
-            && $subject->Practical === null;
-        foreach ([
-            'subjectMarks' => ['CQ', 'CQ'],
-            'objectMarks' => ['MCQ', 'MCQ'],
-            'practicalMarks' => ['Practical', 'Practical'],
-        ] as $field => [$maximumField, $label]) {
-            $value = $raw[$field];
-            $maximum = $legacyAllComponents ? 100.0 : (float) ($subject->{$maximumField} ?? 0);
-            if ($value !== null && ($maximum <= 0 || $value < 0 || $value > $maximum)) {
-                throw ResultLifecycleException::invalid(
-                    'InvalidMarksIdentity',
-                    "{$label} marks must be between 0 and {$maximum} for this subject."
-                );
-            }
-        }
+        $this->componentMarksValidation->assertWithinMaximums($raw, $subject);
     }
 }

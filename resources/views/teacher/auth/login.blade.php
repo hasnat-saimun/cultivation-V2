@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Teacher Portal Login</title>
+    @include('shared.ui-interaction-styles')
     <style>
         :root { color-scheme: light; --brand:#155e75; --brand-dark:#0e4455; --ink:#15313b; --muted:#607781; --danger:#b42318; }
         * { box-sizing:border-box; }
@@ -31,7 +32,7 @@
         @media (max-width:480px) { body { padding:14px; } .card { padding:28px 22px; } }
     </style>
 </head>
-<body>
+<body class="ui-static-caret-scope">
 <main class="card">
     <div class="brand">
         <div class="logo-frame">

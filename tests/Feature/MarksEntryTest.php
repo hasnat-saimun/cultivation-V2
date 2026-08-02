@@ -582,6 +582,43 @@ class MarksEntryTest extends TestCase
         $this->assertContains($classA->id, $teacherIds);
     }
 
+    public function test_actual_admin_marks_url_populates_class_and_section_cascade_before_session_selection(): void
+    {
+        $this->createSession();
+        $exam = $this->createExam('Pre-Test');
+        $class = $this->createClass('Class 10');
+        $section = $this->createSection('A');
+        $admin = $this->createAdmin(CultivationAdmin::ROLE_GENERAL);
+
+        $student = new \App\Models\NewAdmission();
+        $student->forceFill([
+            'stdId' => 990001,
+            'fullName' => 'Admin Cascade Student',
+            'className' => (string) $class->id,
+            'sectionName' => (string) $section->id,
+            'sessName' => '2026',
+        ]);
+        $student->save();
+
+        $page = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('addMarks'));
+        $page->assertOk()
+            ->assertSee('id="marks_exam_select"', false)
+            ->assertSee('id="marks_session_select"', false)
+            ->assertSee('const requiresSessionForScope = false;', false)
+            ->assertSee('const classEndpoint = '.json_encode(route('api.marks.classes')).';', false)
+            ->assertSee('const sectionEndpoint = '.json_encode(route('api.marks.sections')).';', false)
+            ->assertSee('const groupEndpoint = '.json_encode(route('api.marks.groups')).';', false)
+            ->assertSee('const subjectEndpoint = '.json_encode(route('api.marks.subjects')).';', false);
+
+        $classes = $this->withSession(['cultivationAdmin' => $admin->id])
+            ->postJson(route('api.marks.classes'), ['examId' => $exam->id, 'sessionId' => '']);
+        $classes->assertOk()->assertJsonFragment(['id' => $class->id, 'name' => 'Class 10']);
+
+        $sections = $this->withSession(['cultivationAdmin' => $admin->id])
+            ->postJson(route('api.marks.sections'), ['classId' => $class->id, 'sessionId' => '']);
+        $sections->assertOk()->assertJsonFragment(['id' => $section->id, 'name' => 'A']);
+    }
+
     public function test_sections_endpoint_returns_only_teacher_context_sections(): void
     {
         $teacher = $this->createAdmin(CultivationAdmin::ROLE_TEACHER);

@@ -125,11 +125,12 @@ Add New Marks
         const subjectSelect = document.getElementById('subject_select');
         const getDataButton = document.getElementById('marks_get_data_button');
 
-        const classEndpoint = @json(route('api.marks.classes', [], false));
-        const sectionEndpoint = @json(route('api.marks.sections', [], false));
-        const groupEndpoint = @json(route('api.marks.groups', [], false));
-        const subjectEndpoint = @json(route('api.marks.subjects', [], false));
+        const classEndpoint = @json(route('api.marks.classes'));
+        const sectionEndpoint = @json(route('api.marks.sections'));
+        const groupEndpoint = @json(route('api.marks.groups'));
+        const subjectEndpoint = @json(route('api.marks.subjects'));
         const csrfToken = @json(csrf_token());
+        const requiresSessionForScope = @json((bool) ($isTeacherAdmin ?? false));
 
         const oldValues = {
             examId: @json((string) old('examId', '')),
@@ -202,11 +203,22 @@ Add New Marks
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                throw new Error('Request failed with status ' + response.status);
+            const responseText = await response.text();
+            let json = {};
+            try {
+                json = responseText ? JSON.parse(responseText) : {};
+            } catch (parseError) {
+                json = {};
             }
 
-            return response.json();
+            if (!response.ok) {
+                const error = new Error(json.message || responseText || response.statusText || 'Request failed');
+                error.status = response.status;
+                error.requestId = json.request_id || response.headers.get('X-Request-ID') || 'unavailable';
+                throw error;
+            }
+
+            return json;
         }
 
         function classNeedsOptionalGroup() {
@@ -247,7 +259,7 @@ Add New Marks
         function resetAfterSession() {
             classRequirementMap = {};
             sectionRequired = false;
-            replaceOptions(classSelect, 'Select exam and session first', true);
+            replaceOptions(classSelect, requiresSessionForScope ? 'Select exam and session first' : 'Select exam first', true);
             replaceOptions(sectionSelect, 'Select class first', true);
             replaceOptions(optionalGroupSelect, 'All Departments/Groups', true);
             replaceOptions(subjectSelect, 'Select section first', true);
@@ -278,7 +290,7 @@ Add New Marks
 
             resetAfterSession();
 
-            if (!examId || !sessionId) {
+            if (!examId || (requiresSessionForScope && !sessionId)) {
                 return;
             }
 
@@ -321,7 +333,7 @@ Add New Marks
             resetAfterClass();
             applyDepartmentVisibility();
 
-            if (!classId || !sessionId) return;
+            if (!classId || (requiresSessionForScope && !sessionId)) return;
 
             replaceOptions(sectionSelect, 'Loading sections...', true);
 
@@ -360,7 +372,7 @@ Add New Marks
             resetAfterSection();
             applyDepartmentVisibility();
 
-            if (!classId || !sessionId || (sectionRequired && !sectionId)) return;
+            if (!classId || (requiresSessionForScope && !sessionId) || (sectionRequired && !sectionId)) return;
 
             if (!classNeedsOptionalGroup()) {
                 await loadSubjects(restoreOld);
@@ -401,7 +413,7 @@ Add New Marks
 
             replaceOptions(subjectSelect, 'Select section first', true);
 
-            if (!classId || !sessionId || (sectionRequired && !sectionId)) {
+            if (!classId || (requiresSessionForScope && !sessionId) || (sectionRequired && !sectionId)) {
                 updateSubmitState();
                 return;
             }

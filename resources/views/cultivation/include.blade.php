@@ -2,6 +2,7 @@
 <html class="no-js" lang="">
 <head>
     @include('cultivation.includeSection')
+    @include('shared.ui-interaction-styles')
     {{-- Page-level stacked styles --}}
     @stack('styles')
     <style>
@@ -28,7 +29,7 @@
         }
     </style>
 </head>
-<body>
+<body class="ui-static-caret-scope">
     @php
         $assetPath = static function (?string $path): string {
             $path = ltrim((string) $path, '/');

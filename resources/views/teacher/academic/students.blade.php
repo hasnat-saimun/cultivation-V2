@@ -10,5 +10,5 @@
 <td>{{ $student->stdId ?: '—' }}</td><td>{{ $student->rollNumber ?: '—' }}</td><td><a href="{{ route('teacher.students.show',$student->id) }}">{{ $student->student_name }}</a></td>
 <td>{{ $student->classInfo?->className ?: '—' }}</td><td>{{ $student->sectionInfo?->section ?: '—' }}</td><td>{{ $student->departmentInfo?->departmentName ?: '—' }}</td><td>{{ $student->status ?: '—' }}</td></tr>
 @empty<tr><td colspan="8" class="tp-empty">No authorized students found.</td></tr>@endforelse
-</tbody></table></div>{{ $students->links() }}</section>
+</tbody></table></div>{{ $students->onEachSide(1)->links('teacher.partials.pagination') }}</section>
 @endsection

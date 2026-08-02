@@ -29,6 +29,7 @@ use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultCalculation\ResultMeritPositionService;
 use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultMarksDraftService;
+use App\Services\ResultComponentMarksValidationService;
 use App\Services\ResultMarksConfirmationService;
 use App\Services\ResultMarksReopenService;
 use App\Services\ResultMarksScopeService;
@@ -41,6 +42,7 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -59,6 +61,7 @@ class MarksheetController extends Controller
     private TabulationResultPresenter $tabulationResultPresenter;
     private ResultMeritPositionService $meritPositionService;
     private ResultMarksDraftService $draftMarks;
+    private ResultComponentMarksValidationService $componentMarksValidation;
     private ResultMarksConfirmationService $marksConfirmation;
     private ResultMarksReopenService $marksReopen;
     private ResultMarksScopeService $marksScopes;
@@ -80,6 +83,7 @@ class MarksheetController extends Controller
         TabulationResultPresenter $tabulationResultPresenter,
         ResultMeritPositionService $meritPositionService,
         ResultMarksDraftService $draftMarks,
+        ResultComponentMarksValidationService $componentMarksValidation,
         ResultMarksConfirmationService $marksConfirmation,
         ResultMarksReopenService $marksReopen,
         ResultMarksScopeService $marksScopes,
@@ -101,6 +105,7 @@ class MarksheetController extends Controller
         $this->tabulationResultPresenter = $tabulationResultPresenter;
         $this->meritPositionService = $meritPositionService;
         $this->draftMarks = $draftMarks;
+        $this->componentMarksValidation = $componentMarksValidation;
         $this->marksConfirmation = $marksConfirmation;
         $this->marksReopen = $marksReopen;
         $this->marksScopes = $marksScopes;
@@ -270,39 +275,88 @@ class MarksheetController extends Controller
 
     public function marksEntryClasses(Request $request)
     {
-        $validated = $request->validate([
-            'exam_id' => 'nullable|integer',
-            'examId' => 'nullable|integer',
-            'session_id' => 'nullable|integer',
-            'sessionId' => 'nullable|integer',
-        ]);
+        $requestId = (string) Str::uuid();
+        $examId = $request->input('exam_id', $request->input('examId'));
+        $sessionId = $request->input('session_id', $request->input('sessionId'));
+        $adminId = null;
+        $status = 500;
+        $classCount = 0;
+        $exceptionClass = null;
+        $exceptionMessage = null;
 
-        $examId = (int) ($request->input('exam_id', $request->input('examId', 0)));
-        $sessionId = (int) ($request->input('session_id', $request->input('sessionId', 0)));
+        try {
+            $request->validate([
+                'exam_id' => 'nullable|integer',
+                'examId' => 'nullable|integer',
+                'session_id' => 'nullable|integer',
+                'sessionId' => 'nullable|integer',
+            ]);
 
-        if ($examId <= 0 || $sessionId <= 0
-            || !Exam::whereKey($examId)->exists()
-            || !sessionManage::whereKey($sessionId)->exists()) {
-            return response()->json(['classes' => []]);
+            $examId = (int) ($examId ?? 0);
+            $sessionId = (int) ($sessionId ?? 0);
+            $user = $this->adminResolver->current();
+            $adminId = $user?->id;
+            $isTeacher = $user && $user->isTeacher();
+
+            if ($examId <= 0
+                || !Exam::whereKey($examId)->exists()
+                || ($isTeacher && $sessionId <= 0)
+                || ($sessionId > 0 && !sessionManage::whereKey($sessionId)->exists())) {
+                $status = 200;
+
+                return response()->json([
+                    'classes' => [],
+                    'request_id' => $requestId,
+                ])->header('X-Request-ID', $requestId);
+            }
+
+            $classes = $this->marksContext
+                ->classesForContext($user)
+                ->map(function ($class) {
+                    $supportsGroup = $this->marksContext
+                        ->classRequiresOptionalGroup((string) $class->className);
+
+                    return [
+                        'id' => (int) $class->id,
+                        'name' => (string) $class->className,
+                        'requires_department' => $supportsGroup,
+                        'requiresOptionalGroup' => $supportsGroup,
+                        'supports_group' => $supportsGroup,
+                    ];
+                })
+                ->values();
+
+            $classCount = $classes->count();
+            $status = 200;
+
+            return response()->json([
+                'classes' => $classes,
+                'request_id' => $requestId,
+            ])->header('X-Request-ID', $requestId);
+        } catch (\Throwable $exception) {
+            $exceptionClass = $exception::class;
+            $exceptionMessage = $exception->getMessage();
+            $status = $exception instanceof ValidationException ? 422 : 500;
+
+            return response()->json([
+                'message' => $exceptionMessage,
+                'request_id' => $requestId,
+            ], $status)->header('X-Request-ID', $requestId);
+        } finally {
+            Log::info('marks_entry_classes_diagnostic', [
+                'timestamp' => now()->toIso8601String(),
+                'request_id' => $requestId,
+                'admin_id' => $adminId,
+                'exam_id' => $examId,
+                'session_id' => $sessionId,
+                'http_status' => $status,
+                'class_count' => $classCount,
+                'exception_class' => $exceptionClass,
+                'exception_message' => $exceptionMessage,
+                'host' => $request->getHost(),
+                'user_agent' => $request->userAgent(),
+            ]);
         }
-
-        $classes = $this->marksContext
-            ->classesForContext($this->adminResolver->current())
-            ->map(function ($class) {
-                $supportsGroup = $this->marksContext
-                    ->classRequiresOptionalGroup((string) $class->className);
-
-                return [
-                    'id' => (int) $class->id,
-                    'name' => (string) $class->className,
-                    'requires_department' => $supportsGroup,
-                    'requiresOptionalGroup' => $supportsGroup,
-                    'supports_group' => $supportsGroup,
-                ];
-            })
-            ->values();
-
-        return response()->json(['classes' => $classes]);
     }
 
     public function marksEntrySections(Request $request)
@@ -673,15 +727,8 @@ class MarksheetController extends Controller
     private function validateDraftSubmissionPayload(Request $request): void
     {
         $subjectForValidation = Subject::find((int) $request->input('subjectId'));
-        $legacyAllComponents = $subjectForValidation
-            && $subjectForValidation->CQ === null
-            && $subjectForValidation->MCQ === null
-            && $subjectForValidation->Practical === null;
-        $cqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->CQ ?? 0);
-        $mcqMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->MCQ ?? 0);
-        $practicalMaximum = $legacyAllComponents ? 100 : (float) ($subjectForValidation?->Practical ?? 0);
 
-        $request->validate([
+        $request->validate(array_merge([
             'examId' => 'required|integer',
             'classId' => 'required|integer',
             'subjectId' => 'required|integer',
@@ -692,15 +739,12 @@ class MarksheetController extends Controller
             'studentId' => 'required|array|min:1|max:500',
             'studentId.*' => 'required|integer|distinct',
             'cqMarks' => 'nullable|array|max:500',
-            'cqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$cqMaximum],
             'mcqMarks' => 'nullable|array|max:500',
-            'mcqMarks.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$mcqMaximum],
             'practical' => 'nullable|array|max:500',
-            'practical.*' => ['nullable', 'regex:/^\d{1,3}(?:\.\d{1,2})?$/', 'numeric', 'min:0', 'max:'.$practicalMaximum],
             'scope_revision' => 'nullable|integer|min:1',
             'scope_revisions' => 'nullable|array',
             'scope_revisions.*' => 'integer|min:1',
-        ]);
+        ], $this->componentMarksValidation->componentRules($subjectForValidation)));
     }
 
     public function reopenSubjectMarks(Request $request)

@@ -42,6 +42,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Cultivation | Login</title>
+    @include('shared.ui-interaction-styles')
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root{
@@ -92,7 +93,7 @@
     <meta name="author" content="cultivationapp.com">
     <meta name="description" content="Secure login to Cultivation back office">
 </head>
-<body>
+<body class="ui-static-caret-scope">
 <div class="auth-wrap">
   <div class="card auth-card w-100">
     <div class="row g-0 align-items-center">

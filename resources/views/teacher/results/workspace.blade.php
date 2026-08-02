@@ -4,6 +4,18 @@
 @section('page-title', 'Result Entry')
 
 @section('content')
+<style>
+    .teacher-result-modal[hidden]{display:none!important}
+    .teacher-result-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:1rem;background:rgba(9,30,36,.58)}
+    .teacher-result-modal__dialog{width:min(520px,100%);max-height:calc(100vh - 2rem);overflow:auto;border-radius:.85rem;background:#fff;box-shadow:0 24px 60px rgba(9,30,36,.28)}
+    .teacher-result-modal__header,.teacher-result-modal__body,.teacher-result-modal__footer{padding:1rem 1.15rem}
+    .teacher-result-modal__header{display:flex;align-items:center;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--tp-border)}
+    .teacher-result-modal__header h3{margin:0;font-size:1.08rem}
+    .teacher-result-modal__close{border:0;background:transparent;color:var(--tp-muted);font-size:1.5rem;line-height:1;cursor:pointer}
+    .teacher-result-modal__body p{margin:.25rem 0 .7rem}.teacher-result-modal__body p:last-child{margin-bottom:0}
+    .teacher-result-modal__footer{display:flex;justify-content:flex-end;gap:.55rem;flex-wrap:wrap;border-top:1px solid var(--tp-border)}
+    body.teacher-result-modal-open{overflow:hidden}
+</style>
 @php
     $legacyComponents = $subject->CQ === null && $subject->MCQ === null && $subject->Practical === null;
     $showCq = $legacyComponents || (float)($subject->CQ ?? 0) > 0;
@@ -63,13 +75,13 @@
                             <input type="hidden" name="studentId[]" value="{{ $student->id }}">
                         </td>
                         @if($showCq)
-                            <td><input class="tp-control tp-mark-control" aria-label="Written marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="number" step="0.01" min="0" max="{{ $legacyComponents ? 100 : (float)$subject->CQ }}" name="cqMarks[]" value="{{ old('cqMarks.'.$loop->index, $mark?->subjectMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
+                            <td><input class="tp-control tp-mark-control" aria-label="Written marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" data-configured-maximum="{{ $legacyComponents ? 100 : (float)$subject->CQ }}" min="0" max="{{ $legacyComponents ? 100 : (float)$subject->CQ }}" name="cqMarks[]" value="{{ old('cqMarks.'.$loop->index, $mark?->subjectMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
                         @else <input type="hidden" name="cqMarks[]" value=""> @endif
                         @if($showMcq)
-                            <td><input class="tp-control tp-mark-control" aria-label="MCQ marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="number" step="0.01" min="0" max="{{ (float)$subject->MCQ }}" name="mcqMarks[]" value="{{ old('mcqMarks.'.$loop->index, $mark?->objectMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
+                            <td><input class="tp-control tp-mark-control" aria-label="MCQ marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" data-configured-maximum="{{ (float)$subject->MCQ }}" min="0" max="{{ (float)$subject->MCQ }}" name="mcqMarks[]" value="{{ old('mcqMarks.'.$loop->index, $mark?->objectMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
                         @else <input type="hidden" name="mcqMarks[]" value=""> @endif
                         @if($showPractical)
-                            <td><input class="tp-control tp-mark-control" aria-label="Practical marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="number" step="0.01" min="0" max="{{ (float)$subject->Practical }}" name="practical[]" value="{{ old('practical.'.$loop->index, $mark?->practicalMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
+                            <td><input class="tp-control tp-mark-control" aria-label="Practical marks for {{ trim($student->fullName.' '.$student->sureName) }}" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" data-configured-maximum="{{ (float)$subject->Practical }}" min="0" max="{{ (float)$subject->Practical }}" name="practical[]" value="{{ old('practical.'.$loop->index, $mark?->practicalMarks) }}" {{ $editable ? '' : 'disabled' }}></td>
                         @else <input type="hidden" name="practical[]" value=""> @endif
                         <td>{{ $mark?->totalMarks ?? '—' }}</td>
                         <td>{{ $mark?->laterGrade ?? '—' }}</td>
@@ -99,29 +111,27 @@
         Confirm only after reviewing every student and required component.
     </section>
 
-    <div class="modal fade" id="teacherBlankMarksModal" tabindex="-1" aria-labelledby="teacherBlankMarksModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="teacherBlankMarksModalLabel">Blank marks detected</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+    <div class="teacher-result-modal" id="teacherBlankMarksModal" role="dialog" aria-modal="true" aria-labelledby="teacherBlankMarksModalLabel" aria-hidden="true" hidden>
+        <div class="teacher-result-modal__dialog" role="document">
+                <div class="teacher-result-modal__header">
+                    <h3 id="teacherBlankMarksModalLabel">Blank marks detected</h3>
+                    <button type="button" class="teacher-result-modal__close" id="teacherBlankClose" aria-label="Close">&times;</button>
                 </div>
-                <div class="modal-body">
+                <div class="teacher-result-modal__body">
                     <p id="teacherBlankMarksSummary" class="mb-2"></p>
                     <p class="text-muted mb-0">Some mark fields are still blank. You may confirm the marks anyway, save the current entries as a draft, or return to complete the missing fields.</p>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal" id="teacherBlankGoBack">Go Back</button>
-                    <button type="button" class="btn btn-success" id="teacherBlankSaveDraft">Save as Draft</button>
-                    <button type="button" class="btn btn-warning" id="teacherBlankConfirmAnyway">Confirm Anyway</button>
+                <div class="teacher-result-modal__footer">
+                    <button type="button" class="tp-btn" id="teacherBlankGoBack">Go Back</button>
+                    <button type="button" class="tp-btn tp-btn-primary" id="teacherBlankSaveDraft">Save as Draft</button>
+                    <button type="button" class="tp-btn tp-btn-danger" id="teacherBlankConfirmAnyway">Confirm Anyway</button>
                 </div>
-            </div>
         </div>
     </div>
 @endif
 @endif
+
+@include('shared.ascii-marks-input-guard')
 
 @if($editable)
 @push('scripts')
@@ -139,11 +149,7 @@
     const confirmAnywayBtn = document.getElementById('teacherBlankConfirmAnyway');
     const saveDraftBtn = document.getElementById('teacherBlankSaveDraft');
     const goBackBtn = document.getElementById('teacherBlankGoBack');
-    const modalInstance = (window.jQuery && modalElement) ? window.jQuery(modalElement) : null;
-
-    if (modalInstance) {
-        modalInstance.modal({backdrop: 'static', show: false});
-    }
+    const closeBtn = document.getElementById('teacherBlankClose');
 
     let dirty = false;
     let submitInProgress = false;
@@ -191,12 +197,22 @@
     }
 
     function openModal(summary) {
-        if (!modalInstance) {
-            submitWithIntent('confirm_with_blanks', confirmRoute);
-            return;
-        }
+        if (!modalElement) return;
         if (summaryElement) summaryElement.textContent = summary;
-        modalInstance.modal('show');
+        modalElement.hidden = false;
+        modalElement.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('teacher-result-modal-open');
+        goBackBtn?.focus();
+    }
+
+    function closeModal() {
+        if (!modalElement) return;
+        modalElement.hidden = true;
+        modalElement.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('teacher-result-modal-open');
+        submitInProgress = false;
+        resetIntent();
+        confirmButton?.focus();
     }
 
     form.addEventListener('input', () => dirty = true);
@@ -241,18 +257,14 @@
     }
 
     if (goBackBtn) {
-        goBackBtn.addEventListener('click', () => {
-            submitInProgress = false;
-            resetIntent();
-        });
+        goBackBtn.addEventListener('click', closeModal);
     }
 
-    if (modalElement) {
-        modalElement.addEventListener('hidden.bs.modal', () => {
-            submitInProgress = false;
-            resetIntent();
-        });
-    }
+    closeBtn?.addEventListener('click', closeModal);
+    modalElement?.addEventListener('click', event => { if (event.target === modalElement) closeModal(); });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && modalElement && !modalElement.hidden) closeModal();
+    });
 
     window.addEventListener('beforeunload', event => {
         if (!dirty) return;

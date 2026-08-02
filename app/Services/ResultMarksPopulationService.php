@@ -66,7 +66,8 @@ class ResultMarksPopulationService
 
         $authorized = $this->applyStudentOrder($authorized)->get();
         if ($requireCompleteTeacherCoverage) {
-            $completeIds = $complete->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
+            $completeIds = $this->genderFilter($complete, $gender)
+                ->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
             $authorizedIds = $authorized->pluck('id')->map(fn ($id) => (int) $id)->sort()->values();
             if ($completeIds->all() !== $authorizedIds->all()) {
                 throw ResultLifecycleException::forbidden(
@@ -80,7 +81,10 @@ class ResultMarksPopulationService
     private function genderFilter(Collection $students, string $gender): Collection
     {
         if ($gender === 'all') return $students;
-        return $students->filter(fn ($student) => (string) $student->gender === $gender)->values();
+        $accepted = $gender === 'male' ? ['1', 'male', 'm'] : ['2', 'female', 'f'];
+        return $students->filter(
+            fn ($student) => in_array(strtolower(trim((string) $student->gender)), $accepted, true)
+        )->values();
     }
 
     private function applyStudentOrder(Builder $query): Builder

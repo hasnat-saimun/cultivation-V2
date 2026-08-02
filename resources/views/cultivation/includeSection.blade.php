@@ -47,6 +47,54 @@
     </script>
 
     <style type="text/css">
+        /* Suppress the editing caret on static admin UI copy without disabling
+           text selection. Editable controls and rich/search widgets opt back in. */
+        .dashboard-content-one :where(
+            .ui-static-text,
+            label,
+            h1, h2, h3, h4, h5, h6,
+            p,
+            .card-title,
+            .breadcrumb-item,
+            .breadcrumbs-area,
+            th,
+            td
+        ) {
+            caret-color: transparent;
+            cursor: default;
+        }
+
+        .dashboard-content-one :where(
+            input,
+            textarea,
+            select,
+            [contenteditable="true"],
+            code,
+            pre,
+            .CodeMirror,
+            .ace_editor,
+            .select2-container,
+            .select2-search__field,
+            .dataTables_filter
+        ),
+        .dashboard-content-one :where(
+            input,
+            textarea,
+            [contenteditable="true"],
+            code,
+            pre,
+            .CodeMirror,
+            .ace_editor,
+            .select2-search__field,
+            .dataTables_filter input
+        ) * {
+            caret-color: auto;
+        }
+
+        .dashboard-content-one :where(input, textarea, [contenteditable="true"], .CodeMirror, .ace_editor, .select2-search__field, .dataTables_filter input) {
+            cursor: text;
+        }
+
         div.dataTables_wrapper div.dataTables_length select {
             width: 40px !important;
             height: 25px !important;

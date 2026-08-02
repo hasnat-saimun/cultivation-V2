@@ -45,7 +45,7 @@ class ResultMarksConfirmationService
             $subject,
             $actor,
             $this->nullableId($input['optionalGroupId'] ?? null),
-            'all',
+            (string) ($input['gender'] ?? 'all'),
             true,
         );
         if ($students->isEmpty()) {

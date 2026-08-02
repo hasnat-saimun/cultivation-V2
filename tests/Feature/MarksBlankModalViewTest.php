@@ -32,5 +32,10 @@ class MarksBlankModalViewTest extends TestCase
         $this->assertStringContainsString('Go Back', $view);
         $this->assertStringContainsString('teacher_submission_action', $view);
         $this->assertStringContainsString('teacher_confirm_blank_marks', $view);
+        $this->assertStringContainsString('aria-hidden="true" hidden', $view);
+        $this->assertStringContainsString('modalElement.hidden = false', $view);
+        $this->assertStringContainsString('modalElement.hidden = true', $view);
+        $this->assertStringNotContainsString('modalInstance.modal(', $view);
+        $this->assertStringNotContainsString('data-dismiss="modal"', $view);
     }
 }

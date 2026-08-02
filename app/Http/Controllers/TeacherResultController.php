@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\ResultLifecycleException;
 use App\Models\CultivationAdmin;
+use App\Models\Subject;
+use App\Services\ResultComponentMarksValidationService;
 use App\Services\ResultMarksConfirmationService;
 use App\Services\ResultMarksDraftService;
 use App\Services\TeacherDashboardService;
@@ -19,6 +21,7 @@ class TeacherResultController extends Controller
     public function __construct(
         private TeacherResultWorkspaceService $workspace,
         private ResultMarksDraftService $drafts,
+        private ResultComponentMarksValidationService $componentMarksValidation,
         private ResultMarksConfirmationService $confirmations,
         private TeacherDashboardService $dashboard,
     ) {}
@@ -118,19 +121,18 @@ class TeacherResultController extends Controller
 
     private function validateMarks(Request $request): void
     {
-        $request->validate([
+        $subject = Subject::find((int) $request->input('subjectId'));
+
+        $request->validate(array_merge([
             'studentId' => ['required', 'array', 'min:1', 'max:500'],
             'studentId.*' => ['required', 'integer', 'distinct'],
             'cqMarks' => ['nullable', 'array', 'max:500'],
-            'cqMarks.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'mcqMarks' => ['nullable', 'array', 'max:500'],
-            'mcqMarks.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'practical' => ['nullable', 'array', 'max:500'],
-            'practical.*' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'scope_revision' => ['required', 'integer', 'min:1'],
             'scope_revisions' => ['nullable', 'array'],
             'scope_revisions.*' => ['integer', 'min:1'],
-        ]);
+        ], $this->componentMarksValidation->componentRules($subject)));
     }
 
     private function failure(Request $request, ResultLifecycleException $exception): RedirectResponse
@@ -141,7 +143,7 @@ class TeacherResultController extends Controller
             'ScopePublished' => 'Published results are read-only.',
             'BlankMarksConfirmationRequired' => 'Some mark fields are blank. Choose Confirm Anyway or save as Draft.',
             'ScopeIncomplete' => 'The scope is incomplete and cannot be confirmed.',
-            default => 'The result operation could not be completed for this assigned scope.',
+            default => $exception->getMessage(),
         };
         return back()->withInput($request->except(['studentId', 'cqMarks', 'mcqMarks', 'practical']))
             ->with('error', $message);

@@ -421,6 +421,44 @@ class TeacherResultWorkspaceTest extends TestCase
         $this->assertDatabaseHas('marksheets', ['subjectMarks' => 80]);
     }
 
+    public function test_draft_and_confirm_enforce_the_subject_component_maximums(): void
+    {
+        $scope = $this->scope();
+        $scope['subject']->forceFill(['CQ' => 40, 'MCQ' => 30, 'Practical' => 20])->save();
+        $this->assignment($scope['teacher'], $scope);
+        $this->actingAs($scope['teacher'], 'teacher');
+
+        foreach ([
+            'cqMarks' => [41],
+            'mcqMarks' => [31],
+            'practical' => [21],
+        ] as $field => $marks) {
+            $payload = $this->marksPayload($scope, [
+                'cqMarks' => [40],
+                'mcqMarks' => [30],
+                'practical' => [20],
+                $field => $marks,
+            ]);
+
+            $this->post(route('teacher.results.draft'), $payload)
+                ->assertSessionHasErrors($field.'.0');
+            $this->post(route('teacher.results.confirm'), $payload + ['submission_action' => 'confirm'])
+                ->assertSessionHasErrors($field.'.0');
+        }
+
+        $this->assertDatabaseMissing('marksheets', [
+            'studentId' => (string) $scope['students']->first()->id,
+            'examId' => $scope['exam']->id,
+            'subjectId' => $scope['subject']->id,
+        ]);
+
+        $workspace = $this->get(route('teacher.results.workspace', $this->query($scope)));
+        $workspace->assertOk()
+            ->assertSee('data-configured-maximum="40"', false)
+            ->assertSee('data-configured-maximum="30"', false)
+            ->assertSee('data-configured-maximum="20"', false);
+    }
+
     public function test_confirm_succeeds_only_when_ready_and_audits_actor(): void
     {
         $scope = $this->scope();
@@ -435,6 +473,35 @@ class TeacherResultWorkspaceTest extends TestCase
         $this->assertDatabaseHas('result_lifecycle_events', [
             'actor_id' => $scope['teacher']->id,
             'action' => 'subject_confirmed',
+        ]);
+    }
+
+    public function test_gender_scoped_teacher_can_draft_and_confirm_only_the_assigned_population(): void
+    {
+        $scope = $this->scope();
+        $female = $this->student($scope, 'Female Student');
+        $female->forceFill(['gender' => '2', 'rollNumber' => '2'])->save();
+        $this->assignment($scope['teacher'], $scope, 'male');
+
+        $query = $this->query($scope, ['gender' => 'male']);
+        $payload = $this->marksPayload($scope, ['gender' => 'male']);
+
+        $this->actingAs($scope['teacher'], 'teacher')
+            ->post(route('teacher.results.draft'), $payload)
+            ->assertRedirect();
+
+        $this->post(route('teacher.results.confirm'), $query + ['scope_revision' => 2])
+            ->assertRedirect()
+            ->assertSessionHas('success', 'Subject marks confirmed successfully.');
+
+        $this->assertDatabaseHas('marks_scope_states', [
+            'status' => MarksScopeState::STATUS_CONFIRMED,
+            'revision' => 2,
+        ]);
+        $this->assertDatabaseMissing('marksheets', [
+            'studentId' => (string) $female->id,
+            'examId' => (string) $scope['exam']->id,
+            'subjectId' => (string) $scope['subject']->id,
         ]);
     }
 
