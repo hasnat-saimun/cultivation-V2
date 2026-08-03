@@ -209,18 +209,7 @@ class ResultMarksDraftService
 
     private function markAt(array $values, int $index): ?float
     {
-        $value = $values[$index] ?? null;
-        if ($value === null || $value === '') {
-            return null;
-        }
-        if (!is_string($value) && !is_int($value)) {
-            throw ResultLifecycleException::invalid('InvalidMarksIdentity', 'Marks must contain English digits (0-9) only.');
-        }
-        if (preg_match('/^[0-9]+$/', (string) $value) !== 1) {
-            throw ResultLifecycleException::invalid('InvalidMarksIdentity', 'Marks must contain English digits (0-9) only.');
-        }
-
-        return (float) $value;
+        return $this->componentMarksValidation->normalize($values[$index] ?? null);
     }
 
     private function nullableId(mixed $value): ?int

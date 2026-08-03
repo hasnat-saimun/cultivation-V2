@@ -954,6 +954,44 @@ class MarksEntryTest extends TestCase
         $this->assertSame(0, Marksheet::count());
     }
 
+    public function test_admin_draft_and_confirm_preserve_decimal_component_marks(): void
+    {
+        [$session, $class, $section, $department, $exam, $subject] = $this->createMarksScope('Class 8');
+        $student = $this->createStudent($session, $class, $section, $department, '1', '01');
+        $subject->forceFill(['CQ' => 50, 'MCQ' => 25, 'Practical' => 25])->save();
+        $admin = $this->createAdmin(CultivationAdmin::ROLE_GENERAL);
+        $payload = [
+            'sessionId' => $session->id,
+            'classId' => $class->id,
+            'groupId' => $section->id,
+            'optionalGroupId' => $department->id,
+            'gender' => 'all',
+            'examId' => $exam->id,
+            'subjectId' => $subject->id,
+            'studentId' => [$student->id],
+            'cqMarks' => ['35.5'],
+            'mcqMarks' => ['15.5'],
+            'practical' => ['4.5'],
+            'scope_revision' => 1,
+        ];
+
+        $this->withSession(['cultivationAdmin' => $admin->id])
+            ->post(route('marks.draft.save'), $payload)->assertRedirect();
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $student->id,
+            'subjectMarks' => '35.5',
+            'objectMarks' => '15.5',
+            'practicalMarks' => '4.5',
+        ]);
+
+        $this->withSession(['cultivationAdmin' => $admin->id])
+            ->post(route('marks.subject.confirm'), array_merge($payload, [
+                'scope_revision' => 2,
+                'submission_action' => 'confirm',
+            ]))->assertRedirect();
+        $this->assertDatabaseHas('marks_scope_states', ['status' => 'confirmed']);
+    }
+
     public function test_marks_entry_render_query_count_is_constant_as_roster_grows(): void
     {
         [$session, $class, $section, $department, $exam, $subject] = $this->createMarksScope('Class 8');

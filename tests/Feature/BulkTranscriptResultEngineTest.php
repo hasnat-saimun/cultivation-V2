@@ -475,7 +475,7 @@ class BulkTranscriptResultEngineTest extends TestCase
 
     private function assertSummary(string $html, string $gpa, string $letter): void
     {
-        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>Grade Point:\s*([^<]+)/', $html, $match);
+        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>(?:Grade Point|GPA):\s*([^<]+)/', $html, $match);
         $this->assertNotEmpty($match); $this->assertSame($letter, trim($match[1])); $this->assertSame($gpa, trim($match[2]));
     }
 }

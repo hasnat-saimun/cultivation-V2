@@ -201,6 +201,42 @@ class BoardResultCalculatorTest extends TestCase
         $this->assertSame('Pass', $result->status);
     }
 
+    public function test_fractional_component_marks_preserve_totals_and_component_pass_status(): void
+    {
+        $result = $this->calculate(
+            [$this->subject(1, 'Main', 50, 25, 25)],
+            [$this->mark(1, 17.25, 8.5, 8.25)],
+            null,
+            1,
+        );
+
+        $this->assertSame(34.0, $result->subjectResults[0]->obtainedMarks);
+        $this->assertSame('D', $result->subjectResults[0]->letterGrade);
+        $this->assertSame('Pass', $result->subjectResults[0]->status);
+        $this->assertSame('Pass', $result->status);
+    }
+
+    public function test_paired_and_fourth_subject_calculation_preserves_fractional_marks(): void
+    {
+        $subjects = [
+            $this->subject(1, 'Main', 100, alias: 'english_1st_paper', name: 'English 1st Paper'),
+            $this->subject(2, 'Main', 100, alias: 'english_2nd_paper', name: 'English 2nd Paper'),
+            $this->subject(3, 'Optional', 100),
+        ];
+        $result = $this->calculate(
+            $subjects,
+            [$this->mark(1, 39.5), $this->mark(2, 40.25), $this->mark(3, 79.5)],
+            3,
+        );
+
+        $paired = collect($result->subjectResults)->first(fn ($subject) => count($subject->sourceSubjectIds) === 2);
+        $this->assertSame(79.75, $paired->obtainedMarks);
+        $this->assertSame('D', $paired->letterGrade);
+        $this->assertSame(2.0, $result->optionalBonus);
+        $this->assertSame(3.0, $result->gpa);
+        $this->assertSame('Pass', $result->status);
+    }
+
     public function test_subject_level_api_returns_incomplete_when_required_component_is_missing(): void
     {
         $result = $this->calculator->calculateSubject(

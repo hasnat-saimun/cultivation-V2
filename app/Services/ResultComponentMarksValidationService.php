@@ -7,6 +7,8 @@ use App\Models\Subject;
 
 class ResultComponentMarksValidationService
 {
+    public const DECIMAL_PATTERN = '/^[0-9]+(?:\.[0-9]{1,2})?$/';
+
     public function maximums(?Subject $subject): array
     {
         $legacy = $subject && $subject->CQ === null && $subject->MCQ === null && $subject->Practical === null;
@@ -23,10 +25,25 @@ class ResultComponentMarksValidationService
         $maximums = $this->maximums($subject);
 
         return [
-            'cqMarks.*' => ['nullable', 'regex:/^[0-9]+$/', 'integer', 'min:0', 'max:'.$maximums['cqMarks']],
-            'mcqMarks.*' => ['nullable', 'regex:/^[0-9]+$/', 'integer', 'min:0', 'max:'.$maximums['mcqMarks']],
-            'practical.*' => ['nullable', 'regex:/^[0-9]+$/', 'integer', 'min:0', 'max:'.$maximums['practical']],
+            'cqMarks.*' => $this->rulesForMaximum($maximums['cqMarks']),
+            'mcqMarks.*' => $this->rulesForMaximum($maximums['mcqMarks']),
+            'practical.*' => $this->rulesForMaximum($maximums['practical']),
         ];
+    }
+
+    public function normalize(mixed $value): ?float
+    {
+        if ($value === null || $value === '') return null;
+        if (!is_string($value) && !is_int($value) && !is_float($value)) {
+            throw ResultLifecycleException::invalid('InvalidMarksIdentity', $this->formatMessage());
+        }
+
+        $text = (string) $value;
+        if (preg_match(self::DECIMAL_PATTERN, $text) !== 1) {
+            throw ResultLifecycleException::invalid('InvalidMarksIdentity', $this->formatMessage());
+        }
+
+        return (float) $text;
     }
 
     public function assertWithinMaximums(array $raw, Subject $subject): void
@@ -46,5 +63,15 @@ class ResultComponentMarksValidationService
                 );
             }
         }
+    }
+
+    private function rulesForMaximum(float $maximum): array
+    {
+        return ['bail', 'nullable', 'regex:'.self::DECIMAL_PATTERN, 'numeric', 'min:0', 'max:'.$maximum];
+    }
+
+    private function formatMessage(): string
+    {
+        return 'Marks must use English digits with no more than two decimal places.';
     }
 }

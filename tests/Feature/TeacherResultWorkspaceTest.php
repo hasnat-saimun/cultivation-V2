@@ -631,6 +631,51 @@ class TeacherResultWorkspaceTest extends TestCase
             ->assertSee('data-configured-maximum="20"', false);
     }
 
+    public function test_teacher_draft_confirm_and_reload_preserve_decimal_marks(): void
+    {
+        $scope = $this->scope();
+        $scope['subject']->forceFill(['CQ' => 50, 'MCQ' => 25, 'Practical' => 25])->save();
+        $this->assignment($scope['teacher'], $scope);
+        $payload = $this->marksPayload($scope, [
+            'cqMarks' => ['23.25'],
+            'mcqMarks' => ['15.5'],
+            'practical' => ['0.5'],
+        ]);
+        $this->actingAs($scope['teacher'], 'teacher')
+            ->post(route('teacher.results.draft'), $payload)->assertRedirect();
+
+        $this->assertDatabaseHas('marksheets', [
+            'studentId' => (string) $scope['students']->first()->id,
+            'subjectMarks' => '23.25',
+            'objectMarks' => '15.5',
+            'practicalMarks' => '0.5',
+        ]);
+        $this->get(route('teacher.results.workspace', $this->query($scope)))
+            ->assertOk()->assertSee('value="23.25"', false)
+            ->assertSee('value="15.5"', false)->assertSee('value="0.5"', false)
+            ->assertSee('inputmode="decimal"', false);
+
+        $this->post(route('teacher.results.confirm'), array_merge($payload, [
+            'scope_revision' => 2,
+            'submission_action' => 'confirm',
+        ]))->assertRedirect();
+        $this->assertDatabaseHas('marks_scope_states', ['status' => 'Confirmed']);
+    }
+
+    public function test_teacher_rejects_non_ascii_malformed_and_overprecision_marks(): void
+    {
+        $scope = $this->scope();
+        $scope['subject']->forceFill(['CQ' => 50, 'MCQ' => null, 'Practical' => null])->save();
+        $this->assignment($scope['teacher'], $scope);
+        $this->actingAs($scope['teacher'], 'teacher');
+
+        foreach (['4.257', '15.123', '-1', '1e2', '4.5.1', '25abc', '২৫', '4 5'] as $invalid) {
+            $this->post(route('teacher.results.draft'), $this->marksPayload($scope, ['cqMarks' => [$invalid]]))
+                ->assertSessionHasErrors('cqMarks.0');
+        }
+        $this->assertDatabaseCount('marksheets', 0);
+    }
+
     public function test_confirm_succeeds_only_when_ready_and_audits_actor(): void
     {
         $scope = $this->scope();

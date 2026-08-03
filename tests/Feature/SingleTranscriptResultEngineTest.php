@@ -110,6 +110,22 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertSame([], $queries, 'The single-transcript Blade path executed a database query.');
     }
 
+    public function test_single_transcript_preserves_fractional_component_marks_and_total(): void
+    {
+        $scope = $this->scope(1);
+        $subject = $this->subject('Fractional Subject', 'Main', 50, 25, 25);
+        $student = $this->student($scope);
+        $this->mark($student, $scope, $subject, 17.25, 8.5, 8.25);
+
+        $data = $this->response($student, $scope['exam'])->getData()['transcriptResult'];
+
+        $this->assertSame(34.0, $data['mainRows'][0]['total']);
+        $this->assertSame(17.25, $data['mainRows'][0]['cq']);
+        $this->assertSame(8.5, $data['mainRows'][0]['mcq']);
+        $this->assertSame(8.25, $data['mainRows'][0]['practical']);
+        $this->assertSame('Pass', $data['mainRows'][0]['status']);
+    }
+
     public function test_enabled_gpa_is_capped_and_optional_a_plus_bonus_is_applied(): void
     {
         config(['result_engine.transcript_enabled' => true]);

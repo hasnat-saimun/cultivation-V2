@@ -180,7 +180,7 @@ Get Mark
                             <td>{{ $std->fullName.' '.$std->sureName }}</td>
                             @if($showCQ)
                                 <td>
-                                    <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
+                                    <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                         @if($updatedBy)
@@ -191,7 +191,7 @@ Get Mark
                             @endif
                             @if($showMCQ)
                                 <td>
-                                    <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
+                                    <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                         @if($updatedBy)
@@ -202,7 +202,7 @@ Get Mark
                             @endif
                             @if($showPractical)
                                 <td>
-                                    <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
+                                    <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                     @if($readonlyByOther)
                                         <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                         @if($updatedBy)
@@ -214,7 +214,7 @@ Get Mark
                             
                             @if($showAll)
                             <td>
-                                <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
+                                <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="cqMarks[]" value="{{ $subjectMarks }}" placeholder="Enter CQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                     @if($updatedBy)
@@ -223,7 +223,7 @@ Get Mark
                                 @endif
                             </td>
                             <td>
-                                <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
+                                <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="mcqMarks[]" value="{{ $objectMarks }}" placeholder="Enter MCQ Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                     @if($updatedBy)
@@ -232,7 +232,7 @@ Get Mark
                                 @endif
                             </td>
                             <td>
-                                <input type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" data-ascii-mark="true" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
+                                <input type="text" inputmode="decimal" pattern="[0-9]+([.][0-9]{1,2})?" autocomplete="off" data-ascii-mark="true" class="form-control" name="practical[]" value="{{ $practicalMarks }}" placeholder="Enter Practical Marks" {{ $readonly ? 'readonly' : '' }}>
                                 @if($readonlyByOther)
                                     <small class="text-muted">Entered by: {{ $enteredBy ?? 'Another teacher' }}{{ $enteredRole ? ' ('.ucfirst($enteredRole).')' : '' }}</small>
                                     @if($updatedBy)
@@ -334,16 +334,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function limitInput(input, max) {
+        input.dataset.configuredMaximum = max;
         input.addEventListener('input', function() {
             var val = parseFloat(input.value);
             if (!isNaN(val) && val > max) {
-                input.value = max;
                 showError(input, max);
+                input.setCustomValidity(`Marks must not exceed the configured maximum of ${max}.`);
             } else {
                 removeError(input);
-            }
-            if (!isNaN(val) && val < 0) {
-                input.value = 0;
+                if (input.dataset.asciiMarkRejected !== 'true') input.setCustomValidity('');
             }
         });
     }

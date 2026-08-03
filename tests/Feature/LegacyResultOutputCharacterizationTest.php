@@ -123,7 +123,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
         $this->mark($zero, $scope, $main, 0, 0, 'F');
 
         $html = $this->bulkTranscriptHtml([$bonus, $compulsoryFail, $optionalFail, $missing, $zero], $scope['exam']);
-        preg_match_all('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>Grade Point:\s*([^<]+)/', $html, $matches, PREG_SET_ORDER);
+        preg_match_all('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>(?:Grade Point|GPA):\s*([^<]+)/', $html, $matches, PREG_SET_ORDER);
         $summaries = array_map(fn ($m) => [trim($m[2]), trim($m[1])], $matches);
 
         $this->assertSame([
@@ -235,7 +235,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
 
         $single = $this->summaryFromHtml($this->singleTranscriptHtml($student, $scope['exam']));
         $bulkHtml = $this->bulkTranscriptHtml([$student], $scope['exam']);
-        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>Grade Point:\s*([^<]+)/', $bulkHtml, $bulkMatch);
+        preg_match('/Letter Grade:\s*([^<]+)<\/th>\s*<th[^>]*>(?:Grade Point|GPA):\s*([^<]+)/', $bulkHtml, $bulkMatch);
         $bulk = ['gpa' => trim($bulkMatch[2]), 'letter' => trim($bulkMatch[1])];
 
         $tabData = app(MarksheetController::class)->allMarksheet($this->resultRequest($scope))->getData();
