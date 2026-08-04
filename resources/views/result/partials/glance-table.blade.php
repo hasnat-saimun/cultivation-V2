@@ -14,8 +14,15 @@
     @forelse($tableRows as $row)
         <tr><td>{{ ($slStart ?? 1) + $loop->index }}</td><td>{{ $row['studentIdentity']['roll'] }}</td><td>{{ $row['student']->stdId ?? $row['studentIdentity']['id'] }}</td><td class="name-col">{{ $row['studentIdentity']['name'] }}</td>
             @foreach($subjects as $subject)
+                @php
+                    $subjectCell = $row['cells'][$subject->cellKey] ?? null;
+                    $isFailedCompulsorySubject = is_array($subjectCell)
+                        && ($subjectCell['status'] ?? null) === 'Fail'
+                        && !($subject->optional ?? false)
+                        && !($subject->is_fourth_subject ?? false);
+                @endphp
                 @foreach($subject->componentColumns as $component)
-                    <td class="mini">{{ $row['cells'][$subject->cellKey][$component['key']] ?? '-' }}</td>
+                    <td class="mini{{ $isFailedCompulsorySubject ? ' failed-subject-cell' : '' }}">{{ $subjectCell[$component['key']] ?? '-' }}</td>
                 @endforeach
             @endforeach
             <td>{{ $row['meritPosition'] ?? '-' }}</td><td>{{ $row['totalMarks'] }}</td><td>{{ $row['finalGpa'] ?? $row['classification'] }}</td><td>{{ $row['finalLetter'] }}</td><td>{{ $row['subjectFails'] }}</td><td>{{ $row['reportStatus'] }}</td>

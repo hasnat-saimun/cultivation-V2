@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\{DB,Schema};
 use Illuminate\Support\Str;
 use RuntimeException;
 final class SubjectScopeSplitService {
- public function __construct(private SubjectReferenceDiscoveryService $discovery){}
- public function execute(int $sourceId,?int $destinationId,array $remain,array $migrate,bool $apply=false,?string $actor=null,bool $createDestination=false): array {
+ public function __construct(private SubjectReferenceDiscoveryService $discovery,private SubjectTeacherReferenceResolver $teacherResolver){}
+ public function execute(int $sourceId,?int $destinationId,array $remain,array $migrate,bool $apply=false,?string $actor=null,bool $createDestination=false,array $classlessResolutions=[]): array {
   $remain=$this->ids($remain);$migrate=$this->ids($migrate);
   if(array_intersect($remain,$migrate)||!$migrate)throw new RuntimeException('Remain and migrate classes must be non-overlapping and migrate classes cannot be empty.');
   $requested=array_values(array_unique(array_merge($remain,$migrate)));if(DB::table('class_manages')->whereIn('id',$requested)->count()!==count($requested))throw new RuntimeException('One or more selected classes do not exist.');
@@ -14,26 +14,30 @@ final class SubjectScopeSplitService {
   if($destinationId===null&&!$createDestination)throw new RuntimeException('Select a destination subject or use --create-destination.');
   $destination=$destinationId===null?$source->replicate():Subject::findOrFail($destinationId);
   $this->compatible($source,$destination);$this->assertName($source,$destination,$remain,$migrate);
-  $references=$this->discovery->discover();$counts=[];$blockers=[];
+  $references=$this->discovery->discover();$counts=[];$blockers=[];$teacherResolution=$this->teacherResolver->inspect($sourceId,$remain,$migrate);
   foreach($references as $ref){
    if(in_array($ref['table'],['subjects','subject_class_scopes','subject_scope_migration_audits'],true))continue;
+   if($ref['table']==='teacher_subjects'&&$ref['column']==='subject_id'){$counts['teacher_subjects.subject_id']=count($teacherResolution);continue;}
    if($ref['json_payload']??false){$q=$this->jsonQuery($ref,$sourceId,$migrate);$counts[$ref['table'].'.'.$ref['column']]=$q->count();if(!$ref['class_column']&&$q->exists())$blockers[]=$ref;continue;}
    $q=$this->referenceQuery($ref,$sourceId,$migrate);
    if(!$ref['class_column']&&!($ref['scope_join']??null)&&$q->exists()){$blockers[]=$ref;continue;}
    $counts[$ref['table'].'.'.$ref['column']]=$q->count();
   }
   if($blockers)throw new RuntimeException('Class-less subject references require manual resolution: '.collect($blockers)->map(fn($r)=>$r['table'].'.'.$r['column'])->implode(', '));
-  $report=compact('sourceId','destinationId','remain','migrate','references','counts','apply');
+  $manualTeacherRows=array_values(array_filter($teacherResolution,fn($row)=>!$row['automatic']));
+  if($apply)foreach($manualTeacherRows as $row)if(!isset($classlessResolutions[$row['row_id']]))throw new RuntimeException('Every unresolved teacher subject reference requires an explicit resolution.');
+  $report=compact('sourceId','destinationId','remain','migrate','references','counts','apply')+['teacher_resolution'=>['rows'=>$teacherResolution,'auto_resolved'=>count($teacherResolution)-count($manualTeacherRows),'manual_unresolved'=>count($manualTeacherRows)]];
   if(!$apply)return $report;
-  return DB::transaction(function()use($source,$destination,$remain,$migrate,$references,$counts,$actor,$report,$createDestination){
+  return DB::transaction(function()use($source,$destination,$remain,$migrate,$references,$counts,$actor,$report,$createDestination,$teacherResolution,$classlessResolutions){
    Subject::whereKey(array_filter([$source->id,$destination->id]))->lockForUpdate()->get();
    if($createDestination&&!$destination->exists){$destination->assign_class='';$destination->save();}
-   foreach($references as $ref){if(in_array($ref['table'],['subjects','subject_class_scopes','subject_scope_migration_audits'],true)||(!$ref['class_column']&&!($ref['scope_join']??null)))continue;
+   foreach($references as $ref){if(in_array($ref['table'],['subjects','subject_class_scopes','subject_scope_migration_audits','teacher_subjects'],true)||(!$ref['class_column']&&!($ref['scope_join']??null)))continue;
     if($ref['json_payload']??false){foreach($this->jsonQuery($ref,$source->id,$migrate)->get(['id',$ref['column']]) as $row){$payload=json_decode((string)$row->{$ref['column']},true);DB::table($ref['table'])->where('id',$row->id)->update([$ref['column']=>json_encode($this->replaceJsonSubject($payload,$source->id,$destination->id))]);}continue;}
     $q=$this->referenceQuery($ref,$source->id,$migrate);
     if($ref['table']==='marksheets')$this->assertNoMarkCollision($q,$destination->id);
     $q->update([$ref['column']=>$destination->id]);
    }
+   $this->teacherResolver->apply($teacherResolution,$source->id,$destination->id,$classlessResolutions);
    $this->writeScopes($source,$remain);$this->writeScopes($destination,$migrate);
    $operationUuid=(string)Str::uuid();
    DB::table('subject_scope_migration_audits')->insert(['operation_uuid'=>$operationUuid,'source_subject_id'=>$source->id,'destination_subject_id'=>$destination->id,'remain_class_ids'=>json_encode($remain),'migrate_class_ids'=>json_encode($migrate),'discovered_references'=>json_encode($references),'affected_counts'=>json_encode($counts),'actor'=>$actor,'applied_at'=>now(),'created_at'=>now(),'updated_at'=>now()]);

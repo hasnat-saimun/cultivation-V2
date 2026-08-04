@@ -67,6 +67,29 @@ class SubjectScopeSplitTest extends TestCase {
   $this->expectException(RuntimeException::class);$this->expectExceptionMessage('Overlapping active class scope');
   app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id],true);
  }
+ public function test_classless_teacher_subject_is_auto_resolved_from_exact_class_assignments():void {
+  $s=$this->fixture('Teacher Scoped Subject','teacher_scoped','Theory',null);
+  DB::table('teacher_subjects')->insert(['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['source']->id,'created_at'=>now(),'updated_at'=>now()]);
+  $dry=app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id]);
+  $this->assertSame(1,$dry['teacher_resolution']['auto_resolved']);
+  $this->assertSame(0,$dry['teacher_resolution']['manual_unresolved']);
+  $this->assertSame('both',$dry['teacher_resolution']['rows'][0]['action']);
+  app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id],true,'test');
+  $this->assertDatabaseHas('teacher_subjects',['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['source']->id]);
+  $this->assertDatabaseHas('teacher_subjects',['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['destination']->id]);
+  $this->assertSame(2,DB::table('teacher_subjects')->where('teacher_id',$s['teacher']->id)->count());
+ }
+ public function test_unproven_classless_teacher_subject_requires_explicit_resolution():void {
+  $s=$this->fixture('Manual Teacher Subject','manual_teacher','Theory',null);
+  DB::table('teacher_class_subjects')->where('teacher_id',$s['teacher']->id)->delete();
+  $rowId=DB::table('teacher_subjects')->insertGetId(['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['source']->id,'created_at'=>now(),'updated_at'=>now()]);
+  $dry=app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id]);
+  $this->assertSame(1,$dry['teacher_resolution']['manual_unresolved']);
+  try{app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id],true,'test');$this->fail('Expected manual resolution blocker.');}catch(RuntimeException $e){$this->assertStringContainsString('explicit resolution',$e->getMessage());}
+  app(SubjectScopeSplitService::class)->execute($s['source']->id,$s['destination']->id,[$s['remainClass']->id],[$s['moveClass']->id],true,'test',false,[$rowId=>'both']);
+  $this->assertDatabaseHas('teacher_subjects',['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['source']->id]);
+  $this->assertDatabaseHas('teacher_subjects',['teacher_id'=>$s['teacher']->id,'subject_id'=>$s['destination']->id]);
+ }
  private function fixture(string $name,string $alias,string $type,?string $studentField):array {
   $session=new SessionManage();$session->forceFill(['session'=>'2026']);$session->save();$remainClass=new ClassManage();$remainClass->forceFill(['className'=>'Class Eight']);$remainClass->save();$moveClass=new ClassManage();$moveClass->forceFill(['className'=>'Class Nine']);$moveClass->save();$section=new SectionManage();$section->forceFill(['section'=>'A']);$section->save();$department=new Department();$department->forceFill(['departmentName'=>'Science']);$department->save();
   $source=Subject::create(['subjectName'=>$name,'alias'=>$alias,'subjectType'=>$type,'assign_class'=>$remainClass->id.','.$moveClass->id,'passingSystem'=>'1','CQ'=>50,'MCQ'=>25,'Practical'=>25]);

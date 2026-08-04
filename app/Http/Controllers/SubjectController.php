@@ -199,11 +199,14 @@ class SubjectController extends Controller
         $source = Subject::findOrFail($itemId);
         $payload = $this->validateSplitPayload($request, $source);
         $request->validate(['confirmation' => ['required', 'in:APPLY']]);
+        if ($payload['legacy_unresolved']) {
+            throw ValidationException::withMessages(['legacy_scope_resolution' => 'Every legacy/non-academic scope must be explicitly kept with the source before Apply.']);
+        }
 
         try {
             $result = $this->splitter->execute(
                 $source->id, $payload['destination_id'], $payload['remain'], $payload['migrate'], true,
-                'admin:'.session('cultivationAdmin'), $payload['create_destination']
+                'admin:'.session('cultivationAdmin'), $payload['create_destination'], $payload['teacher_resolutions']
             );
         } catch (Throwable $exception) {
             return back()->withInput()->withErrors(['split' => $exception->getMessage()]);
@@ -221,6 +224,9 @@ class SubjectController extends Controller
     private function splitViewData(Subject $source): array
     {
         $sourceClassIds = $this->scopeService->selectedClassIds($source);
+        $scopeClasses = classManage::whereIn('id', $sourceClassIds)->orderBy('id')->get();
+        $legacyClassList = $scopeClasses->filter(fn ($class) => $this->isLegacyNonAcademicClass($class->className))->values();
+        $classList = $scopeClasses->reject(fn ($class) => $this->isLegacyNonAcademicClass($class->className))->values();
         $normalized = mb_strtolower(preg_replace('/\s+/u', ' ', trim($source->subjectName)));
         $destinations = Subject::whereKeyNot($source->id)->get()->filter(
             fn (Subject $subject) => mb_strtolower(preg_replace('/\s+/u', ' ', trim($subject->subjectName))) === $normalized
@@ -228,7 +234,9 @@ class SubjectController extends Controller
 
         return [
             'source' => $source,
-            'classList' => classManage::whereIn('id', $sourceClassIds)->orderBy('id')->get(),
+            'classList' => $classList,
+            'legacyClassList' => $legacyClassList,
+            'allClassNames' => classManage::pluck('className', 'id'),
             'sourceClassIds' => $sourceClassIds,
             'destinations' => $destinations,
         ];
@@ -237,22 +245,30 @@ class SubjectController extends Controller
     private function validateSplitPayload(Request $request, Subject $source): array
     {
         $validated = $request->validate([
-            'remain' => ['required', 'array'],
+            'remain' => ['nullable', 'array'],
             'remain.*' => ['integer', 'exists:class_manages,id'],
-            'migrate' => ['required', 'array'],
-            'migrate.*' => ['integer', 'exists:class_manages,id'],
             'destination_mode' => ['required', 'in:existing,create'],
             'destination_id' => ['nullable', 'integer', 'exists:subjects,id', Rule::notIn([$source->id])],
+            'legacy_scope_resolution' => ['nullable', 'array'],
+            'legacy_scope_resolution.*' => ['nullable', 'in:keep_source'],
+            'teacher_resolution' => ['nullable', 'array'],
+            'teacher_resolution.*' => ['in:keep,move,both,scoped'],
         ]);
-        $remain = collect($validated['remain'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
-        $migrate = collect($validated['migrate'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+        $remain = collect($validated['remain'] ?? [])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
         $current = $this->scopeService->selectedClassIds($source);
-
-        $partition = array_values(array_unique(array_merge($remain, $migrate)));
-        sort($partition);
-        if (array_intersect($remain, $migrate) || $partition !== $current) {
-            throw ValidationException::withMessages(['split' => 'Remain and migrate selections must form an exact, non-overlapping partition of the source scope.']);
+        $scopeClasses = classManage::whereIn('id', $current)->get(['id', 'className']);
+        $legacyIds = $scopeClasses->filter(fn ($class) => $this->isLegacyNonAcademicClass($class->className))->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $academicCurrent = array_values(array_diff($current, $legacyIds));
+        if (array_diff($remain, $academicCurrent)) {
+            throw ValidationException::withMessages(['remain' => 'Remaining classes must belong to the current source scope.']);
         }
+        $migrate = array_values(array_diff($academicCurrent, $remain));
+        if (!$remain || !$migrate) {
+            throw ValidationException::withMessages(['remain' => 'Select at least one academic class to remain and leave at least one academic class to migrate.']);
+        }
+        $legacyResolutions = collect((array) $request->input('legacy_scope_resolution', []))->mapWithKeys(fn ($action, $id) => [(int) $id => $action])->all();
+        $legacyUnresolved = array_values(array_filter($legacyIds, fn ($id) => ($legacyResolutions[$id] ?? null) !== 'keep_source'));
+        $remain = array_values(array_unique(array_merge($remain, $legacyIds)));
 
         $create = $validated['destination_mode'] === 'create';
         if (!$create && empty($validated['destination_id'])) {
@@ -260,7 +276,14 @@ class SubjectController extends Controller
         }
 
         return ['remain' => $remain, 'migrate' => $migrate, 'create_destination' => $create,
-            'destination_id' => $create ? null : (int) $validated['destination_id']];
+            'destination_id' => $create ? null : (int) $validated['destination_id'],
+            'legacy_scope_resolutions' => $legacyResolutions, 'legacy_unresolved' => $legacyUnresolved,
+            'teacher_resolutions' => (array) $request->input('teacher_resolution', [])];
+    }
+
+    private function isLegacyNonAcademicClass(string $name): bool
+    {
+        return preg_match('/^no\s*class$/iu', trim($name)) === 1;
     }
 
     public function delSubject($id){

@@ -56,12 +56,14 @@ class SubjectScopeManagementUiTest extends TestCase
             'department_id' => 1, 'subject_id' => $source->id, 'mapping_type' => 'main', 'sort_order' => 1,
             'is_active' => 1, 'source' => 'test', 'created_at' => now(), 'updated_at' => now()]);
 
-        $payload = ['remain' => [$classes[0]->id], 'migrate' => [$classes[1]->id],
+        $payload = ['remain' => [$classes[0]->id],
             'destination_mode' => 'existing', 'destination_id' => $destination->id];
         $this->withSession(['cultivationAdmin' => $admin->id])->get(route('subject.scope.split', $source->id))
-            ->assertOk()->assertSee('Split/Migrate Subject Scope')->assertSee('English 1st Paper');
+            ->assertOk()->assertSee('Split/Migrate Subject Scope')->assertSee('English 1st Paper')
+            ->assertSee('Classes that will REMAIN with this subject')->assertDontSee('name="migrate[]"', false);
         $this->withSession(['cultivationAdmin' => $admin->id])->post(route('subject.scope.split.preview', $source->id), $payload)
-            ->assertOk()->assertSee('Dry-Run Preview')->assertSee('Affected marks');
+            ->assertOk()->assertSee('Dry-Run Preview')->assertSee('Affected marks')
+            ->assertSee('Class Six')->assertSee('Class Seven')->assertDontSee('name="migrate[]"', false);
         $this->assertSame($source->id, (int) $mark->fresh()->subjectId);
 
         $this->withSession(['cultivationAdmin' => $admin->id])->post(route('subject.scope.split.apply', $source->id), $payload + ['confirmation' => 'APPLY'])
@@ -70,6 +72,28 @@ class SubjectScopeManagementUiTest extends TestCase
         $this->assertSame('35.5', (string) $mark->fresh()->subjectMarks);
         $this->assertDatabaseHas('curriculum_subject_mappings', ['class_id' => (string) $classes[1]->id, 'subject_id' => $destination->id]);
         $this->assertDatabaseCount('subject_scope_migration_audits', 1);
+    }
+
+    public function test_no_class_is_separated_and_must_be_explicitly_kept_before_apply(): void
+    {
+        [$admin, $classes] = $this->baseFixture();
+        $noClass = new ClassManage(); $noClass->forceFill(['className' => 'No Class']); $noClass->save();
+        $source = Subject::create(['subjectName'=>'Legacy Scope Subject','alias'=>'legacy_scope','subjectType'=>'Main',
+            'assign_class'=>$classes[0]->id.','.$classes[1]->id.','.$noClass->id,'passingSystem'=>'1','CQ'=>100]);
+        $destination = Subject::create(['subjectName'=>' LEGACY  SCOPE SUBJECT ','alias'=>'legacy_scope','subjectType'=>'Main',
+            'assign_class'=>'','passingSystem'=>'1','CQ'=>100]);
+        foreach([$classes[0]->id,$classes[1]->id,$noClass->id] as $id) DB::table('subject_class_scopes')->insert(['subject_id'=>$source->id,'class_id'=>$id,'created_at'=>now(),'updated_at'=>now()]);
+        $payload=['remain'=>[$classes[0]->id],'destination_mode'=>'existing','destination_id'=>$destination->id];
+        $this->withSession(['cultivationAdmin'=>$admin->id])->get(route('subject.scope.split',$source->id))
+            ->assertOk()->assertSee('Unresolved / legacy scope')->assertSee('No Class');
+        $this->withSession(['cultivationAdmin'=>$admin->id])->post(route('subject.scope.split.preview',$source->id),$payload)
+            ->assertOk()->assertSee('Manual resolution required before Apply');
+        $this->withSession(['cultivationAdmin'=>$admin->id])->post(route('subject.scope.split.apply',$source->id),$payload+['confirmation'=>'APPLY'])
+            ->assertSessionHasErrors('legacy_scope_resolution');
+        $this->withSession(['cultivationAdmin'=>$admin->id])->post(route('subject.scope.split.apply',$source->id),$payload+[
+            'confirmation'=>'APPLY','legacy_scope_resolution'=>[$noClass->id=>'keep_source']])->assertSessionHas('success');
+        $this->assertDatabaseHas('subject_class_scopes',['subject_id'=>$source->id,'class_id'=>$noClass->id]);
+        $this->assertDatabaseMissing('subject_class_scopes',['subject_id'=>$destination->id,'class_id'=>$noClass->id]);
     }
 
     private function baseFixture(): array

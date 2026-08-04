@@ -49,6 +49,12 @@ At-a-Glance Result
         font-size: 11px !important;
         text-align: center !important;
     }
+    .glance-table td.failed-subject-cell {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1.5px solid #b91c1c;
+        font-weight: 700;
+    }
 
     @media print {
         .glance-table th,
@@ -60,6 +66,14 @@ At-a-Glance Result
         }
         .glance-table thead th { background: #eef2f7 !important; }
         .glance-table tbody tr:nth-child(even) { background: #fff !important; }
+        .glance-table td.failed-subject-cell {
+            background: #fce8e8 !important;
+            color: #7f1d1d !important;
+            border: 2px solid #7f1d1d !important;
+            font-weight: 800 !important;
+            print-color-adjust: exact;
+            -webkit-print-color-adjust: exact;
+        }
     }
 </style>
 
