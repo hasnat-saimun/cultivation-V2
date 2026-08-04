@@ -9,6 +9,7 @@ use App\Models\newAdmission;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -32,6 +33,8 @@ class StudentFiltersAndIdCardTest extends TestCase
         $bulk->assertSee('student/list?sessionId='.$scope['session']->id, false);
         $list->assertViewHasAll(['filterOptions', 'filters', 'filterAction', 'filterResetUrl']);
         $bulk->assertViewHasAll(['filterOptions', 'filters', 'filterAction', 'filterResetUrl']);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $list->viewData('studentData'));
+        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Collection::class, $bulk->viewData('students'));
         $this->assertSame(route('studentList'), $list->viewData('filterAction'));
         $this->assertSame(route('studentBulkUpdate'), $bulk->viewData('filterAction'));
         foreach (['sessionId', 'classId', 'sectionId', 'departmentId', 'gender', 'search'] as $field) {
@@ -57,6 +60,19 @@ class StudentFiltersAndIdCardTest extends TestCase
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentList', $filters));
         $response->assertOk()->assertSee('page=2', false)->assertSee('gender=2', false)->assertSee('sessionId='.$scope['session']->id, false);
+        $paginator = $response->viewData('studentData');
+        $this->assertInstanceOf(LengthAwarePaginator::class, $paginator);
+        $this->assertCount(50, $paginator->items());
+        $pageOneIds = $paginator->getCollection()->pluck('id')->all();
+
+        $pageTwo = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentList', array_merge($filters, ['page' => 2])));
+        $pageTwo->assertOk()->assertSee('gender=2', false)->assertSee('sessionId='.$scope['session']->id, false);
+        $secondPaginator = $pageTwo->viewData('studentData');
+        $this->assertInstanceOf(LengthAwarePaginator::class, $secondPaginator);
+        $this->assertCount(1, $secondPaginator->items());
+        $pageTwoIds = $secondPaginator->getCollection()->pluck('id')->all();
+        $this->assertSame([], array_values(array_intersect($pageOneIds, $pageTwoIds)));
+        $this->assertCount(51, array_unique(array_merge($pageOneIds, $pageTwoIds)));
     }
 
     public function test_single_id_card_and_pdf_use_one_complete_secure_payload(): void

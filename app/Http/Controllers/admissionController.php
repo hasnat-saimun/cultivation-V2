@@ -18,6 +18,7 @@ use File;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentsExport;
 use App\Services\Students\StudentFilterService;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 class AdmissionController extends Controller
@@ -194,7 +195,14 @@ class AdmissionController extends Controller
         $studentFilters ??= app(StudentFilterService::class);
         $filterPayload = $studentFilters->viewPayload($request, route('studentList'));
         $filters = $filterPayload['filters'];
-        $stdData = $studentFilters->query($filters)->paginate(50)->withQueryString();
+        /** @var LengthAwarePaginator $stdData */
+        $stdData = $studentFilters->query($filters)
+            ->paginate(50)
+            ->withQueryString();
+
+        if (! $stdData instanceof LengthAwarePaginator) {
+            throw new \LogicException('Student List requires a LengthAwarePaginator.');
+        }
 
         $studentIds = $stdData->pluck('id')->all();
         $latestTestimonialIds = [];

@@ -154,7 +154,9 @@ Student List
                                         @endif
                                     </tbody>
                                 </table>
-                                <div class="mt-3">{{ $studentData->links('pagination::bootstrap-4') }}</div>
+                                @if($studentData instanceof \Illuminate\Contracts\Pagination\Paginator)
+                                    <div class="mt-3">{{ $studentData->links('pagination::bootstrap-4') }}</div>
+                                @endif
                             </div>
                         </div>
                     </div>
