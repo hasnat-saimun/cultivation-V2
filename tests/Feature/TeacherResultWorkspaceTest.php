@@ -581,7 +581,12 @@ class TeacherResultWorkspaceTest extends TestCase
             ->assertSee($student->fullName)
             ->assertSee('23.25')->assertSee('15.5')->assertSee('0.5')->assertSee('39.25')
             ->assertSee('Teacher Signature')
-            ->assertDontSee('GPA')->assertDontSee('Transcript');
+            ->assertDontSee('>GPA<', false)->assertDontSee('>Transcript<', false);
+        $print->assertSee('class="page-sheet"', false)
+            ->assertSee('width: 279mm; min-height: 191mm; margin: 0', false)
+            ->assertSee('class="logo"', false)
+            ->assertSee('data:image/', false)
+            ->assertDontSee('logo">', false);
 
         $pdf = $this->get(route('teacher.results.subject-marksheet.pdf', $query));
         $pdf->assertOk();
@@ -623,6 +628,8 @@ class TeacherResultWorkspaceTest extends TestCase
         $response->assertOk()->assertSee('Page 1 of 2')->assertSee('Page 2 of 2');
         $html = $response->getContent();
         $this->assertSame(2, substr_count($html, 'class="report-page"'));
+        $this->assertSame(2, substr_count($html, 'class="page-sheet"'));
+        $this->assertSame(2, substr_count($html, 'class="page-bottom"'));
         $this->assertSame(16, substr_count($html, '<td class="name">'));
         $this->assertStringContainsString('>0</td>', $html);
         $this->assertStringContainsString('>—</td>', $html);

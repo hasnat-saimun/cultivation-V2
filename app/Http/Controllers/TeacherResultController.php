@@ -170,9 +170,8 @@ class TeacherResultController extends Controller
         return $data + [
             'teacher' => $teacher,
             'instituteName' => $branding['instituteName'],
-            'instituteLogoUrl' => $pdfMode
-                ? $this->reportLogoSource($branding['instituteLogoUrl'])
-                : $branding['instituteLogoUrl'],
+            // Use one embedded source for browser print and DomPDF so both render identically.
+            'instituteLogoUrl' => $this->reportLogoSource($branding['instituteLogoUrl']),
             'printedAt' => now(),
             'pdfMode' => $pdfMode,
             'reportPages' => $rows->chunk(15)->values(),
@@ -181,22 +180,29 @@ class TeacherResultController extends Controller
         ];
     }
 
-    private function reportLogoSource(string $url): string
+    private function reportLogoSource(string $url): ?string
     {
+        $candidates = [];
         $path = parse_url($url, PHP_URL_PATH);
-        if (! is_string($path)) {
-            return $url;
+        if (is_string($path) && $path !== '') {
+            $relative = preg_replace('~^/public/~', '', '/'.ltrim(rawurldecode($path), '/'));
+            $candidates[] = public_path(ltrim((string) $relative, '/'));
         }
 
-        $relative = preg_replace('~^/public/~', '', '/'.ltrim(rawurldecode($path), '/'));
-        $file = public_path(ltrim((string) $relative, '/'));
-        if (! is_file($file)) {
-            return $url;
+        $fallback = ltrim((string) config('branding.cultivation_logo'), '/');
+        $fallback = preg_replace('~^public/~', '', $fallback);
+        $candidates[] = public_path((string) $fallback);
+
+        foreach (array_unique($candidates) as $file) {
+            if (! is_file($file) || ! is_readable($file)) {
+                continue;
+            }
+
+            $mime = mime_content_type($file) ?: 'image/png';
+            return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($file));
         }
 
-        $mime = mime_content_type($file) ?: 'image/png';
-
-        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($file));
+        return null;
     }
 
     private function validateMarks(Request $request): void
