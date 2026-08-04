@@ -93,6 +93,7 @@ Bulk Student Profile Update
                 @if($students->count() > 0)
                     <form method="post" action="{{ route('studentBulkUpdateStore') }}" id="bulkUpdateForm">
                         @csrf
+                        <input type="hidden" name="students_payload" id="studentsPayload">
                         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                             <table class="table table-bordered table-hover editable-table table-fit" id="studentTable">
                                 <thead class="table-dark sticky-top">
@@ -376,6 +377,20 @@ Bulk Student Profile Update
         const form = document.getElementById('bulkUpdateForm');
         if (form) {
             form.addEventListener('submit', function() {
+                const rows = Array.from(form.querySelectorAll('#studentTable tbody tr'));
+                const students = rows.map(row => {
+                    const student = {};
+                    row.querySelectorAll('[name^="students["]').forEach(control => {
+                        const field = control.name.match(/\[([^\]]+)\]$/)?.[1];
+                        if (field) student[field] = control.value;
+                    });
+                    return student;
+                });
+
+                document.getElementById('studentsPayload').value = JSON.stringify(students);
+                form.querySelectorAll('[name^="students["]').forEach(control => {
+                    control.disabled = true;
+                });
                 hasChanges = false;
             });
         }

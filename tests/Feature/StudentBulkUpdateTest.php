@@ -238,6 +238,63 @@ class StudentBulkUpdateTest extends TestCase
         $this->assertSame('01730000002', (string) newAdmission::query()->findOrFail($studentB->id)->phone);
     }
 
+    public function test_json_batch_updates_49_50_51_100_and_200_students_without_input_truncation(): void
+    {
+        $admin = $this->createAdmin();
+        $offset = 0;
+
+        foreach ([49, 50, 51, 100, 200] as $count) {
+            $payload = [];
+            for ($index = 0; $index < $count; $index++) {
+                $student = $this->createStudent(['stdId' => 100000 + $offset + $index]);
+                $payload[] = ['id' => $student->id, 'phone' => '019'.str_pad((string) $index, 8, '0', STR_PAD_LEFT)];
+            }
+
+            $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
+                'students_payload' => json_encode($payload, JSON_THROW_ON_ERROR),
+            ]);
+
+            $response->assertRedirect(route('studentBulkUpdate'))->assertSessionHas('success');
+            $this->assertSame($payload[0]['phone'], (string) newAdmission::findOrFail($payload[0]['id'])->phone, $count.'-row first record');
+            $this->assertSame($payload[$count - 1]['phone'], (string) newAdmission::findOrFail($payload[$count - 1]['id'])->phone, $count.'-row last record');
+            $offset += $count;
+        }
+    }
+
+    public function test_validation_error_at_row_120_rolls_back_the_entire_200_row_batch(): void
+    {
+        $admin = $this->createAdmin();
+        $payload = [];
+        $ids = [];
+        for ($index = 0; $index < 200; $index++) {
+            $student = $this->createStudent(['stdId' => 200000 + $index, 'phone' => '01740000000']);
+            $ids[] = $student->id;
+            $payload[] = ['id' => $student->id, 'phone' => '01840000000', 'mail' => $index === 119 ? 'invalid-email' : null];
+        }
+
+        $response = $this->withSession(['cultivationAdmin' => $admin->id])
+            ->from(route('studentBulkUpdate'))
+            ->post(route('studentBulkUpdateStore'), ['students_payload' => json_encode($payload, JSON_THROW_ON_ERROR)]);
+
+        $response->assertRedirect(route('studentBulkUpdate'))->assertSessionHasErrors('students.119.mail');
+        $this->assertSame(200, newAdmission::whereIn('id', $ids)->where('phone', '01740000000')->count());
+        $this->assertSame(0, newAdmission::whereIn('id', $ids)->where('phone', '01840000000')->count());
+    }
+
+    public function test_bulk_update_form_serializes_all_dom_rows_into_one_json_field(): void
+    {
+        $admin = $this->createAdmin();
+        $this->createStudent();
+
+        $html = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentBulkUpdate'))
+            ->assertOk()->getContent();
+
+        $this->assertStringContainsString('name="students_payload"', $html);
+        $this->assertStringContainsString("JSON.stringify(students)", $html);
+        $this->assertStringContainsString("form.querySelectorAll('[name^=\"students[\"]')", $html);
+        $this->assertStringNotContainsString('slice(0, 50)', $html);
+    }
+
     private function createAdmin(): CultivationAdmin
     {
         $admin = new CultivationAdmin();

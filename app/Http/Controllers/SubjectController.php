@@ -174,10 +174,25 @@ class SubjectController extends Controller
         return [$classIds, $allClasses];
     }
 
-    public function splitScopeForm(int $itemId)
+    public function splitScopeForm(Request $request, int $itemId)
     {
         $source = Subject::findOrFail($itemId);
-        return view('result.subject-scope-split', $this->splitViewData($source));
+        $viewData = $this->splitViewData($source);
+        $payload = $request->session()->pull('subject_scope_split_preview');
+        if (!is_array($payload)) {
+            return view('result.subject-scope-split', $viewData);
+        }
+
+        try {
+            $preview = $this->splitPreview->preview(
+                $source->id, $payload['destination_id'], $payload['remain'], $payload['migrate'], $payload['create_destination']
+            );
+        } catch (Throwable $exception) {
+            return redirect()->route('subject.scope.split', ['itemId' => $source->id])
+                ->withInput()->withErrors(['split' => $exception->getMessage()]);
+        }
+
+        return view('result.subject-scope-split', $viewData + compact('preview', 'payload'));
     }
 
     public function previewScopeSplit(Request $request, int $itemId)
@@ -191,7 +206,8 @@ class SubjectController extends Controller
             return back()->withInput()->withErrors(['split' => $exception->getMessage()]);
         }
 
-        return view('result.subject-scope-split', $this->splitViewData($source) + compact('preview', 'payload'));
+        return redirect()->route('subject.scope.split', ['itemId' => $source->id])
+            ->with('subject_scope_split_preview', $payload);
     }
 
     public function applyScopeSplit(Request $request, int $itemId)

@@ -1088,9 +1088,26 @@ class AdmissionController extends Controller
      */
     public function bulkStudentUpdateStore(Request $request)
     {
-        $validated = $request->validate([
-            'students' => 'required|array',
-            'students.*.id' => 'required|exists:new_admissions,id',
+        if ($request->filled('students_payload')) {
+            try {
+                $decodedStudents = json_decode((string) $request->input('students_payload'), true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'students_payload' => 'The submitted student batch is not valid JSON.',
+                ]);
+            }
+            if (!is_array($decodedStudents) || !array_is_list($decodedStudents)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'students_payload' => 'The submitted student batch must be an indexed list.',
+                ]);
+            }
+            $request->merge(['students' => $decodedStudents]);
+        }
+
+        $rules = [
+            'students_payload' => 'nullable|string|max:2000000',
+            'students' => 'required|array|min:1|max:500',
+            'students.*.id' => 'required|integer|distinct|exists:new_admissions,id',
             'students.*.fullName' => 'nullable|string|max:255',
             'students.*.sureName' => 'nullable|string|max:255',
             'students.*.father' => 'nullable|string|max:255',
@@ -1110,7 +1127,14 @@ class AdmissionController extends Controller
             'students.*.gurdianName' => 'nullable|string|max:255',
             'students.*.gurdianMobile' => 'nullable|string|max:20',
             'students.*.relationGurdian' => 'nullable|integer',
-        ]);
+        ];
+        $rowAttributes = [];
+        foreach ((array) $request->input('students', []) as $index => $studentData) {
+            foreach (array_keys(is_array($studentData) ? $studentData : []) as $field) {
+                $rowAttributes['students.'.$index.'.'.$field] = 'Row '.($index + 1).' '.$field;
+            }
+        }
+        $validated = $request->validate($rules, [], $rowAttributes);
 
         $fields = [
             'fullName',
@@ -1147,10 +1171,15 @@ class AdmissionController extends Controller
         $unchanged = 0;
 
         DB::transaction(function () use (&$updated, &$unchanged, $validated, $fields, $numericNullableFields) {
-            foreach (($validated['students'] ?? []) as $studentData) {
-                $student = newAdmission::query()->find($studentData['id'] ?? null);
+            $submittedStudents = $validated['students'];
+            $studentIds = collect($submittedStudents)->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $studentsById = newAdmission::query()->whereIn('id', $studentIds)->lockForUpdate()->get()->keyBy('id');
+
+            foreach (array_chunk($submittedStudents, 100) as $studentChunk) {
+              foreach ($studentChunk as $studentData) {
+                $student = $studentsById->get((int) ($studentData['id'] ?? 0));
                 if (!$student) {
-                    continue;
+                    throw new \RuntimeException('Student bulk update failed because a validated row no longer exists.');
                 }
 
                 foreach ($fields as $field) {
@@ -1176,6 +1205,7 @@ class AdmissionController extends Controller
                 }
 
                 $updated++;
+              }
             }
         });
 

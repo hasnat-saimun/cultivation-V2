@@ -62,6 +62,8 @@ class SubjectScopeManagementUiTest extends TestCase
             ->assertOk()->assertSee('Split/Migrate Subject Scope')->assertSee('English 1st Paper')
             ->assertSee('Classes that will REMAIN with this subject')->assertDontSee('name="migrate[]"', false);
         $this->withSession(['cultivationAdmin' => $admin->id])->post(route('subject.scope.split.preview', $source->id), $payload)
+            ->assertRedirect(route('subject.scope.split', $source->id));
+        $this->get(route('subject.scope.split', $source->id))
             ->assertOk()->assertSee('Dry-Run Preview')->assertSee('Affected marks')
             ->assertSee('Class Six')->assertSee('Class Seven')->assertDontSee('name="migrate[]"', false);
         $this->assertSame($source->id, (int) $mark->fresh()->subjectId);
@@ -87,6 +89,8 @@ class SubjectScopeManagementUiTest extends TestCase
         $this->withSession(['cultivationAdmin'=>$admin->id])->get(route('subject.scope.split',$source->id))
             ->assertOk()->assertSee('Unresolved / legacy scope')->assertSee('No Class');
         $this->withSession(['cultivationAdmin'=>$admin->id])->post(route('subject.scope.split.preview',$source->id),$payload)
+            ->assertRedirect(route('subject.scope.split',$source->id));
+        $this->get(route('subject.scope.split',$source->id))
             ->assertOk()->assertSee('Manual resolution required before Apply');
         $this->withSession(['cultivationAdmin'=>$admin->id])->post(route('subject.scope.split.apply',$source->id),$payload+['confirmation'=>'APPLY'])
             ->assertSessionHasErrors('legacy_scope_resolution');
@@ -94,6 +98,32 @@ class SubjectScopeManagementUiTest extends TestCase
             'confirmation'=>'APPLY','legacy_scope_resolution'=>[$noClass->id=>'keep_source']])->assertSessionHas('success');
         $this->assertDatabaseHas('subject_class_scopes',['subject_id'=>$source->id,'class_id'=>$noClass->id]);
         $this->assertDatabaseMissing('subject_class_scopes',['subject_id'=>$destination->id,'class_id'=>$noClass->id]);
+    }
+
+    public function test_preview_uses_post_redirect_get_and_validation_returns_to_the_form(): void
+    {
+        [$admin, $classes] = $this->baseFixture();
+        $source = Subject::create(['subjectName'=>'PRG Subject','alias'=>'prg_subject','subjectType'=>'Main',
+            'assign_class'=>$classes[0]->id.','.$classes[1]->id,'passingSystem'=>'1','CQ'=>100]);
+        foreach ($classes->take(2) as $class) {
+            DB::table('subject_class_scopes')->insert(['subject_id'=>$source->id,'class_id'=>$class->id,'created_at'=>now(),'updated_at'=>now()]);
+        }
+
+        $formUrl = route('subject.scope.split', $source->id);
+        $previewUrl = route('subject.scope.split.preview', $source->id);
+        $form = $this->withSession(['cultivationAdmin'=>$admin->id])->get($formUrl)
+            ->assertOk()->assertSee('method="POST"', false)->assertSee('action="'.$previewUrl.'"', false)
+            ->assertSee('type="submit">Run Dry-Run Preview', false);
+        $this->withSession(['cultivationAdmin'=>$admin->id])->get($previewUrl)->assertMethodNotAllowed();
+
+        $this->withSession(['cultivationAdmin'=>$admin->id])->from($formUrl)->post($previewUrl, [
+            'remain'=>[$classes[0]->id], 'destination_mode'=>'create',
+        ])->assertRedirect($formUrl)->assertSessionHas('subject_scope_split_preview');
+        $this->get($formUrl)->assertOk()->assertSee('Dry-Run Preview');
+
+        $this->withSession(['cultivationAdmin'=>$admin->id])->from($formUrl)->post($previewUrl, [
+            'remain'=>[$classes[0]->id, $classes[1]->id], 'destination_mode'=>'create',
+        ])->assertRedirect($formUrl)->assertSessionHasErrors('remain');
     }
 
     private function baseFixture(): array
