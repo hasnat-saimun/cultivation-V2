@@ -9,14 +9,99 @@ use App\Models\MarksScopeState;
 use App\Models\ResultPublish;
 use App\Services\ResultMarksConfirmationService;
 use App\Services\ResultMarksDraftService;
+use App\Services\ResultLifecycleEventService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Mockery\MockInterface;
 use Tests\Support\CreatesResultLifecycleScope;
 use Tests\TestCase;
 
 class ResultMarksConfirmationTest extends TestCase
 {
     use RefreshDatabase, CreatesResultLifecycleScope;
+
+    public function test_admin_and_teacher_confirmation_reconcile_stale_derived_cache_without_changing_raw_marks(): void
+    {
+        foreach ([CultivationAdmin::ROLE_GENERAL, CultivationAdmin::ROLE_TEACHER] as $role) {
+            $data = $this->lifecycleScope();
+            $draftActor = $this->lifecycleActor();
+            app(ResultMarksDraftService::class)->save($this->lifecycleInput($data, 44), $draftActor, null, true);
+            $mark = Marksheet::where('subjectId', (string) $data['subject']->id)->firstOrFail();
+            $rawBefore = $mark->only(['subjectMarks', 'objectMarks', 'practicalMarks']);
+            $this->assertSame(44.0, (float) $rawBefore['subjectMarks']);
+            $mark->forceFill(['totalMarks' => 12, 'laterGrade' => 'F', 'gradePoint' => 0])->save();
+            $authoritative = app(\App\Services\ResultCalculation\BoardResultCalculator::class)
+                ->calculateSubject($data['students']->first(), $data['exam'], $mark->fresh(), $data['subject']);
+            $this->assertSame(44.0, $authoritative->obtainedMarks);
+            $this->assertSame('C', $authoritative->letterGrade);
+
+            $confirmActor = $role === CultivationAdmin::ROLE_GENERAL
+                ? $draftActor
+                : $this->lifecycleActor(CultivationAdmin::ROLE_TEACHER);
+            if ($role === CultivationAdmin::ROLE_TEACHER) {
+                DB::table('teacher_class_subjects')->insert([
+                    'teacher_id' => $confirmActor->id,
+                    'session_id' => $data['session']->id,
+                    'class_id' => $data['class']->id,
+                    'section_id' => $data['section']->id,
+                    'group_id' => null,
+                    'subject_id' => $data['subject']->id,
+                    'gender_scope' => 'all',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $result = app(ResultMarksConfirmationService::class)->confirm(
+                $this->lifecycleInput($data, 44) + ['scope_revision' => 2],
+                $confirmActor,
+            );
+
+            $mark->refresh();
+            $this->assertSame('confirmed', $result['status']);
+            $this->assertSame($rawBefore, $mark->only(array_keys($rawBefore)));
+            $eventChanges = json_decode((string) DB::table('result_lifecycle_events')
+                ->where('action', 'subject_confirmed')->latest('id')->value('change_set'), true);
+            $this->assertSame(1, (int) data_get($eventChanges, 'derived_cache_reconciled_count', 0));
+            $this->assertSame(44.0, (float) $mark->totalMarks);
+            $this->assertSame('C', $mark->laterGrade);
+            $this->assertSame(2.0, (float) $mark->gradePoint);
+            $this->assertSame(2, (int) MarksScopeState::firstOrFail()->revision);
+
+            $this->refreshDatabase();
+        }
+    }
+
+    public function test_derived_cache_repair_rolls_back_when_confirmation_transaction_fails(): void
+    {
+        $data = $this->lifecycleScope();
+        $actor = $this->lifecycleActor();
+        app(ResultMarksDraftService::class)->save($this->lifecycleInput($data, 44), $actor, null, true);
+        Marksheet::firstOrFail()->forceFill(['totalMarks' => 12, 'laterGrade' => 'F', 'gradePoint' => 0])->save();
+
+        $this->mock(ResultLifecycleEventService::class, function (MockInterface $mock) {
+            $mock->shouldReceive('correlationUuid')->once()->andReturn('rollback-test');
+            $mock->shouldReceive('append')->once()->andThrow(new \RuntimeException('event write failed'));
+        });
+
+        try {
+            app(ResultMarksConfirmationService::class)->confirm(
+                $this->lifecycleInput($data, 44) + ['scope_revision' => 2],
+                $actor,
+            );
+            $this->fail('Confirmation must roll back when its lifecycle event cannot be written.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('event write failed', $exception->getMessage());
+        }
+
+        $mark = Marksheet::firstOrFail();
+        $this->assertSame(44.0, (float) $mark->subjectMarks);
+        $this->assertSame(12.0, (float) $mark->totalMarks);
+        $this->assertSame('F', $mark->laterGrade);
+        $this->assertSame(0.0, (float) $mark->gradePoint);
+        $this->assertSame(MarksScopeState::STATUS_DRAFT, MarksScopeState::firstOrFail()->status);
+        $this->assertSame(2, (int) MarksScopeState::firstOrFail()->revision);
+    }
 
     public function test_complete_pass_fail_and_zero_are_confirmable_without_mark_mutation(): void
     {

@@ -67,7 +67,12 @@ class ResultMarksConfirmationService
             if ((int) $state->revision !== $revision) {
                 throw ResultLifecycleException::conflict('ScopeRevisionConflict', 'Marks changed during confirmation.');
             }
-            $locked = $this->verifyComplete($scope, $students, $exam, $subject, true, $confirmWithBlanks);
+            $lockedBeforeRepair = $this->verifyComplete($scope, $students, $exam, $subject, true, $confirmWithBlanks);
+            if ($lockedBeforeRepair['fingerprint'] !== $preflight['fingerprint']) {
+                throw ResultLifecycleException::conflict('ScopeRevisionConflict', 'Marks changed during confirmation.');
+            }
+            $reconciledCount = $this->refreshDerivedCaches($lockedBeforeRepair['cache_repairs']);
+            $locked = $this->verifyComplete($scope, $students, $exam, $subject, true, $confirmWithBlanks, true);
             if ($locked['fingerprint'] !== $preflight['fingerprint']) {
                 throw ResultLifecycleException::conflict('ScopeRevisionConflict', 'Marks changed during confirmation.');
             }
@@ -93,6 +98,7 @@ class ResultMarksConfirmationService
                     'student_count' => $students->count(),
                     'marks_fingerprint' => $locked['fingerprint'],
                     'blank_override' => $confirmWithBlanks,
+                    'derived_cache_reconciled_count' => $reconciledCount,
                 ],
                 null,
                 $ipAddress,
@@ -107,7 +113,8 @@ class ResultMarksConfirmationService
         Exam $exam,
         Subject $subject,
         bool $lock = false,
-        bool $allowBlankConfirmation = false
+        bool $allowBlankConfirmation = false,
+        bool $requireCacheMatch = false,
     ): array
     {
         $query = Marksheet::query()
@@ -124,6 +131,7 @@ class ResultMarksConfirmationService
         $blankFieldCount = 0;
         $blankStudentIds = [];
         $fingerprintRows = [];
+        $cacheRepairs = [];
         foreach ($students as $student) {
             $mark = $marks->get((int) $student->id);
             if (!$mark) {
@@ -149,8 +157,17 @@ class ResultMarksConfirmationService
             }
             if (!$this->cacheMatches($mark, $result)
                 && !($allowBlankConfirmation && $result->status === 'Incomplete')) {
-                $errors[] = ['studentId' => (int) $student->id, 'issue' => 'compatibility_cache_mismatch'];
-                continue;
+                $cacheRepairs[] = [
+                    'mark' => $mark,
+                    'studentId' => (int) $student->id,
+                    'totalMarks' => $result->obtainedMarks,
+                    'laterGrade' => $result->letterGrade,
+                    'gradePoint' => $result->gradePoint,
+                ];
+                if ($requireCacheMatch) {
+                    $errors[] = ['studentId' => (int) $student->id, 'issue' => 'compatibility_cache_mismatch'];
+                    continue;
+                }
             }
             $fingerprintRows[] = [
                 (int) $student->id,
@@ -184,7 +201,27 @@ class ResultMarksConfirmationService
                 $summary,
             );
         }
-        return ['fingerprint' => hash('sha256', json_encode($fingerprintRows, JSON_PRESERVE_ZERO_FRACTION))];
+        return [
+            'fingerprint' => hash('sha256', json_encode($fingerprintRows, JSON_PRESERVE_ZERO_FRACTION)),
+            'cache_repairs' => $cacheRepairs,
+        ];
+    }
+
+    /** Refresh derived compatibility fields on already-authorized, locked marks rows. */
+    private function refreshDerivedCaches(array $repairs): int
+    {
+        foreach ($repairs as $repair) {
+            /** @var Marksheet $mark */
+            $mark = $repair['mark'];
+            Marksheet::query()->whereKey($mark->getKey())->update([
+                'totalMarks' => $repair['totalMarks'],
+                'laterGrade' => $repair['laterGrade'],
+                'gradePoint' => $repair['gradePoint'],
+                'updated_at' => now(),
+            ]);
+        }
+
+        return count($repairs);
     }
 
     private function cacheMatches(Marksheet $mark, $result): bool
