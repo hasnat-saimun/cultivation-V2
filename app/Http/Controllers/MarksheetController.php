@@ -507,11 +507,7 @@ class MarksheetController extends Controller
             });
         }
 
-        $studentList = $studentQuery
-            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('id','ASC')
-            ->get();
+        $studentList = $studentQuery->professionalOrder()->get();
 
         // Fallback for legacy data where sessName stores id/text inconsistently
         if($studentList->isEmpty() && $studentSessionValue && is_numeric($studentSessionValue)){
@@ -519,9 +515,7 @@ class MarksheetController extends Controller
             if($sessionText){
                 $studentList = (clone $studentBaseQuery)
                     ->where('sessName', $sessionText)
-                    ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
-                    ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-                    ->orderBy('id','ASC')
+                    ->professionalOrder()
                     ->get();
             }
         }
@@ -1341,11 +1335,7 @@ class MarksheetController extends Controller
             if ($sessionId) { $q->where('sessName', (int)$sessionId); }
             if ($sectionId) { $q->where('sectionName', (int)$sectionId); }
             if ($departmentId) { $q->where('departmentName', (int)$departmentId); }
-            $students = $q
-                ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
-                ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-                ->orderBy('id','ASC')
-                ->get();
+            $students = $q->professionalOrder()->get();
             $studentsLoaded = true;
         }
 
@@ -1388,9 +1378,7 @@ class MarksheetController extends Controller
                     $q->orWhereIn('id', $numericIds);
                 }
             })
-            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('id', 'ASC')
+            ->professionalOrder()
             ->get();
 
         if ($students->isEmpty()) {

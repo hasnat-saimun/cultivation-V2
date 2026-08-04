@@ -43,55 +43,10 @@ Bulk Student Profile Update
                     </div>
                 </div>
 
-                <form method="get" action="{{ route('studentBulkUpdate') }}" class="row g-2 align-items-end mb-3">
-                    <div class="col-auto form-group">
-                        <label class="form-label">Session</label>
-                        <select name="sessionId" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            @foreach($sessionDetails as $session)
-                                <option value="{{ $session->id }}" {{ ($filters['sessionId'] ?? '') == $session->id ? 'selected' : '' }}>{{ $session->session }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group col-auto">
-                        <label class="form-label">Class</label>
-                        <select name="classId" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            @foreach($classDetails as $class)
-                                <option value="{{ $class->id }}" {{ ($filters['classId'] ?? '') == $class->id ? 'selected' : '' }}>{{ $class->className }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group col-auto">
-                        <label class="form-label">Section</label>
-                        <select name="sectionId" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            @foreach($sectionDetails as $section)
-                                <option value="{{ $section->id }}" {{ ($filters['sectionId'] ?? '') == $section->id ? 'selected' : '' }}>{{ $section->section }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group col-auto">
-                        <label class="form-label">Department</label>
-                        <select name="departmentId" class="form-select form-select-sm">
-                            <option value="">All</option>
-                            @foreach($departmentDetails as $dept)
-                                <option value="{{ $dept->id }}" {{ ($filters['departmentId'] ?? '') == $dept->id ? 'selected' : '' }}>{{ $dept->departmentName }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="form-group col-auto">
-                        <label class="form-label">Search</label>
-                        <input name="search" type="text" class="form-control form-control-sm" value="{{ $filters['search'] ?? '' }}" placeholder="Name / Student ID / Phone">
-                    </div>
-                    <div class="form-group col-auto">
-                        <button type="submit" class="btn btn-primary">Filter</button>
-                        <a href="{{ route('studentBulkUpdate') }}" class="btn btn-light">Reset</a>
-                    </div>
-                </form>
+                <div class="mb-3">@include('cultivation.partials.student-filters', ['action' => route('studentBulkUpdate')])</div>
 
                 @if($students->count() > 0)
-                    <form method="post" action="{{ route('studentBulkUpdateStore') }}" id="bulkUpdateForm">
+                    <form method="post" action="{{ route('studentBulkUpdateStore', array_filter($filters, fn ($value) => $value !== null && $value !== '')) }}" id="bulkUpdateForm">
                         @csrf
                         <input type="hidden" name="students" id="studentsPayload">
                         <div class="alert alert-danger d-none" id="bulkSerializationError" role="alert"></div>

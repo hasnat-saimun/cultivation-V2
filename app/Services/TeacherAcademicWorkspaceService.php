@@ -44,7 +44,7 @@ class TeacherAcademicWorkspaceService
             $query->where(fn ($q) => $q->where('stdId', 'like', $term)->orWhere('rollNumber', 'like', $term)
                 ->orWhere('fullName', 'like', $term)->orWhere('sureName', 'like', $term));
         }
-        return $query->orderBy('className')->orderBy('sectionName')->orderBy('rollNumber')->orderBy('id')
+        return $query->professionalOrder()
             ->paginate($perPage)->withQueryString();
     }
 

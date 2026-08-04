@@ -10,6 +10,8 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use App\Models\Department;
 use App\Models\Subject;
+use App\Services\Students\StudentOrderingService;
+use Illuminate\Database\Eloquent\Builder;
 
 class newAdmission extends Model
 {
@@ -49,6 +51,11 @@ class newAdmission extends Model
     public function fourthSubject()
     {
         return $this->belongsTo(Subject::class, 'fourthSubjectId', 'id');
+    }
+
+    public function scopeProfessionalOrder(Builder $query, string $table = 'new_admissions'): Builder
+    {
+        return app(StudentOrderingService::class)->apply($query, $table);
     }
 
     public function getRollNumberAttribute($value)

@@ -1,96 +1,79 @@
-@extends('cultivation.include')
-@section('backTitle')
-{{$std->fullName}} ID Card
-@endsection
-@section('backIndex')
-                <!-- Dashboard summery Start Here -->
-                <div class="row gutters-20 mb-4">
-                    <!-- Admit Form Area Start Here -->
-                    <div class="card height-auto col-10 mx-auto">
-                        <div class="card-body">
-                            <div class="heading-layout1">
-                                <div class="item-title">
-                                    <h3>Student ID Card</h3>
-                                </div>
-                            </div>
-                            @if(isset($std))
-                                @php $fmt = request()->get('format','landscape'); $qsL = ['format'=>'landscape']; $qsP = ['format'=>'portrait']; @endphp
-                                <div class="row">
-                                    <div class="col-10 mx-auto">
-                                        <div class="card">
-                                            <div class="card-header d-flex justify-content-between align-items-center">
-                                                <h4 class="mb-0">Student ID Card</h4>
-                                                <div class="d-flex gap-2 align-items-center">
-                                                    <button type="button" class="btn btn-success btn-sm" onclick="printCards()"><i class="fa-solid fa-print"></i> Print</button>
-                                                    <div class="btn-group">
-                                                        <a href="{{ route('stdIdCard', ['stdId'=>$std->id] + $qsL) }}" class="btn btn-outline-secondary btn-sm {{ $fmt==='landscape' ? 'active' : '' }}">Landscape</a>
-                                                        <a href="{{ route('stdIdCard', ['stdId'=>$std->id] + $qsP) }}" class="btn btn-outline-secondary btn-sm {{ $fmt==='portrait' ? 'active' : '' }}">Portrait</a>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="card-body" id="printArea">
-                                                @if($fmt === 'portrait')
-                                                    @include('cultivation.partials.student-id-card-portrait', ['card' => $card, 'branding' => $branding])
-                                                @else
-                                                    @include('cultivation.partials.student-id-card', ['card' => $card, 'branding' => $branding])
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @else
-                                <div class="alert alert-info">Sorry! No data found</div>
-                                <div class="mb-4"> <a href="{{ route('studentList') }}" class="btn btn-primary"><i class="fa-solid fa-arrow-left"></i> Back</a></div>
-                            @endif
-                        </div>
-                    </div>
-                </div>
-@endsection
-
-@push('styles')
-                                    <style>
-                                    :root { --id-primary:#0f172a; --id-accent:#2563eb; --id-muted:#6b7280; --id-border:#e5e7eb; --id-bg:#f8fafc; --card-w:85.60mm; --card-h:53.98mm; }
-                                    .bg-gradient-info { background: linear-gradient(135deg,#17a2b8 0%,#138496 100%); }
-                                    .id-card-shell { max-width: 440px; margin:0 auto; color:var(--id-primary); font-family:'Segoe UI', Tahoma, sans-serif; }
-                                    .id-face { background:#fff; border:1px solid var(--id-border); border-radius:16px; overflow:hidden; box-shadow:0 12px 30px rgba(15,23,42,.12); display:flex; flex-direction:column; gap:14px; padding:16px; }
-                                    .id-face.back { margin-top:12px; box-shadow:0 6px 18px rgba(15,23,42,.08); }
-                                    .id-header { margin:-16px -16px 0 -16px; padding:14px 16px; background:linear-gradient(115deg,var(--id-primary) 0%, var(--id-accent) 100%); color:#fff; display:flex; align-items:center; gap:12px; }
-                                    .logo-wrap { height:58px; width:58px; background:rgba(255,255,255,.12); border-radius:14px; display:flex; align-items:center; justify-content:center; }
-                                    .logo-img { max-height:50px; width:auto; object-fit:contain; }
-                                    .logo-fallback { font-weight:700; font-size:22px; }
-                                    .ins-meta { flex:1; min-width:0; }
-                                    .ins-name { font-weight:700; font-size:1.05rem; line-height:1.2; }
-                                    .ins-sub { font-size:.82rem; color:rgba(255,255,255,.85); line-height:1.3; }
-                                    .badge-chip { background:rgba(255,255,255,.15); color:#fff; padding:8px 12px; border-radius:999px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; font-size:.78rem; }
-                                    .id-body { display:grid; grid-template-columns:120px 1fr; gap:14px; align-items:center; }
-                                    .photo-box { height:140px; border-radius:14px; overflow:hidden; border:1px solid var(--id-border); background:var(--id-bg); }
-                                    .photo { width:100%; height:100%; object-fit:cover; }
-                                    .info .student-name { font-weight:800; font-size:1.1rem; }
-                                    .info .meta { color:var(--id-muted); font-size:.9rem; margin-bottom:6px; }
-                                    .info .meta.muted { margin-top:6px; }
-                                    .pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px; }
-                                    .pill { background:var(--id-bg); border:1px solid var(--id-border); border-radius:999px; padding:6px 10px; font-size:.82rem; color:var(--id-primary); }
-                                    .id-footer { display:flex; justify-content:space-between; gap:10px; border-top:1px dashed var(--id-border); padding-top:10px; }
-                                    .foot-col .label { font-size:.75rem; color:var(--id-muted); letter-spacing:.3px; }
-                                    .foot-col .value { font-weight:700; font-size:.95rem; }
-                                    .id-signatures { display:flex; justify-content:space-between; gap:12px; margin-top:10px; }
-                                    .sig-line { flex:1; text-align:center; border-top:1px solid var(--id-border); padding-top:8px; font-size:.85rem; color:var(--id-muted); }
-                                    .back-title { font-weight:700; font-size:1rem; color:var(--id-primary); }
-                                    .back-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:10px; }
-                                    .back-grid .label { font-size:.8rem; color:var(--id-muted); }
-                                    .back-grid .value { font-weight:700; font-size:.95rem; }
-                                    @media print { .card, .btn, .alert, .card-header { display:none !important; } #printArea { display:block !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .id-card-shell{ page-break-inside:avoid; } }
-                                    @media print {
-                                        #printArea { width:auto !important; }
-                                        .id-card-shell { width: var(--card-w) !important; }
-                                        .id-face { width: var(--card-w) !important; height: var(--card-h) !important; border-radius: 3.18mm !important; }
-                                        @page { size: A4; margin: 10mm; }
-                                    }
-                                    </style>
-                                    @endpush
-
-                                    @push('scripts')
-                                    <script>
-                                    function printCards(){ const printArea=document.getElementById('printArea'); if(!printArea) return; const original=document.body.innerHTML; document.body.innerHTML=printArea.innerHTML; window.print(); document.body.innerHTML=original; }
-                                    </script>
-                                    @endpush
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $card['name'] }} ID Card</title>
+    <style>
+        @page { size: A4 portrait; margin: 10mm; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #fff; color: #172033; font-family: DejaVu Sans, Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .actions { max-width: 190mm; margin: 8mm auto 4mm; text-align: right; }
+        .actions a,.actions button { display:inline-block; margin-left:5px; padding:8px 13px; border:1px solid #155eaa; border-radius:5px; background:#fff; color:#155eaa; text-decoration:none; cursor:pointer; font-weight:700; }
+        .actions .primary { background:#155eaa; color:#fff; }
+        .print-sheet { width: 189mm; margin: 0 auto; padding: 16mm 0; background:#fff; text-align:center; }
+        .id-card-set { display:block; width:85.60mm; margin:0 auto; text-align:left; }
+        .id-card { width:85.60mm; height:53.98mm; border:.35mm solid #a7b3c4; border-radius:3mm; overflow:hidden; background:#fff; page-break-inside:avoid; }
+        .portrait .id-card { width:53.98mm; height:85.60mm; }
+        .portrait .id-card-set { width:53.98mm; }
+        .card-gap { height:7mm; }
+        .header { width:100%; height:13mm; border-collapse:collapse; background:#155eaa; color:#fff; }
+        .header td { padding:1.5mm 2mm; vertical-align:middle; }
+        .logo-cell { width:12mm; }
+        .logo { display:block; max-width:9mm; max-height:9mm; margin:auto; }
+        .school { font-size:10pt; font-weight:800; line-height:1.1; }
+        .card-title { font-size:6.8pt; text-transform:uppercase; letter-spacing:.4pt; opacity:.9; }
+        .front-body { width:100%; height:33.5mm; border-collapse:collapse; }
+        .front-body td { padding:2mm; vertical-align:middle; }
+        .photo-cell { width:23mm; text-align:center; }
+        .photo { width:18mm; height:22mm; border:.3mm solid #a7b3c4; border-radius:1.5mm; object-fit:cover; }
+        .student-name { max-width:52mm; margin-bottom:1.2mm; font-size:9pt; font-weight:800; white-space:normal; overflow-wrap:anywhere; }
+        .detail { width:100%; border-collapse:collapse; font-size:6.8pt; }
+        .detail td { padding:.45mm 1mm .45mm 0; border-bottom:.15mm solid #e0e5ec; }
+        .detail .label { width:16mm; color:#586579; }
+        .footer { height:7.5mm; padding:1.4mm 2mm; background:#172033; color:#fff; font-size:6.5pt; }
+        .back-body { height:33.5mm; padding:2.5mm; font-size:7pt; }
+        .back-table { width:100%; border-collapse:collapse; }
+        .back-table td { padding:1mm; vertical-align:top; }
+        .back-table .label { width:21mm; color:#586579; }
+        .signature { margin-top:4mm; text-align:right; }
+        .signature span { display:inline-block; width:30mm; border-top:.25mm solid #68758a; padding-top:1mm; text-align:center; }
+        .portrait .front-body { height:65mm; }
+        .portrait .front-body,.portrait .front-body tbody,.portrait .front-body tr,.portrait .front-body td { display:block; width:100%; height:auto; text-align:center; }
+        .portrait .photo-cell { padding-top:3mm; }
+        .portrait .student-name { margin:1mm auto; }
+        .portrait .detail { width:45mm; margin:auto; text-align:left; }
+        .portrait .back-body { height:65mm; }
+        @media print {
+            body { background:#fff; }
+            .no-print { display:none !important; }
+            .print-sheet { width:189mm; margin:0; padding:16mm 0; }
+        }
+    </style>
+</head>
+<body>
+@unless($pdfMode)
+<div class="actions no-print">
+    <a href="{{ route('studentList') }}">Back</a>
+    <a href="{{ route('stdIdCard', ['stdId' => $std->id, 'format' => $format === 'portrait' ? 'landscape' : 'portrait']) }}">{{ $format === 'portrait' ? 'Landscape' : 'Portrait' }}</a>
+    <a href="{{ route('stdIdCard.pdf', ['stdId' => $std->id, 'format' => $format]) }}">Download PDF</a>
+    <button class="primary" type="button" onclick="window.print()">Print</button>
+</div>
+@endunless
+<main class="print-sheet {{ $format }}" id="printArea">
+    <div class="id-card-set">
+        <section class="id-card id-front" aria-label="Student ID card front">
+            <table class="header" role="presentation"><tr><td class="logo-cell">@if($branding['logoUrl'])<img class="logo" src="{{ $branding['logoUrl'] }}" alt="">@endif</td><td><div class="school">{{ $branding['name'] }}</div><div class="card-title">Student Identity Card</div></td></tr></table>
+            <table class="front-body" role="presentation"><tr><td class="photo-cell">@if($card['photoUrl'])<img class="photo" src="{{ $card['photoUrl'] }}" alt="Student photo">@endif</td><td><div class="student-name">{{ $card['name'] }}</div><table class="detail"><tr><td class="label">Student ID</td><td>{{ $card['studentId'] }}</td></tr><tr><td class="label">Roll</td><td>{{ $card['roll'] ?: '-' }}</td></tr><tr><td class="label">Class / Section</td><td>{{ $card['class'] }} / {{ $card['section'] }}</td></tr><tr><td class="label">Session</td><td>{{ $card['sessionText'] }}</td></tr></table></td></tr></table>
+            <div class="footer">{{ $branding['address'] ?: 'Official student identity card' }}</div>
+        </section>
+        <div class="card-gap"></div>
+        <section class="id-card id-back" aria-label="Student ID card back">
+            <table class="header" role="presentation"><tr><td><div class="school">Guardian &amp; Contact Information</div><div class="card-title">{{ $branding['name'] }}</div></td></tr></table>
+            <div class="back-body"><table class="back-table"><tr><td class="label">Guardian</td><td>{{ $card['guardianName'] }}</td></tr><tr><td class="label">Relation</td><td>{{ $card['guardianRelation'] }}</td></tr><tr><td class="label">Guardian Mobile</td><td>{{ $card['guardianPhone'] }}</td></tr><tr><td class="label">Student Contact</td><td>{{ $card['contact'] }}</td></tr><tr><td class="label">Department</td><td>{{ $card['department'] }}</td></tr><tr><td class="label">Valid Until</td><td>{{ $card['validity'] }}</td></tr></table><div class="signature"><span>Authorized Signature</span></div></div>
+            <div class="footer">If found, contact {{ $branding['phone'] ?: $card['guardianPhone'] }}</div>
+        </section>
+    </div>
+</main>
+</body>
+</html>

@@ -62,9 +62,7 @@ class TeacherAttendanceWorkspaceService
             ->where('sessName', $sessionId)
             ->where('className', $classId)
             ->where('sectionName', $sectionId)
-            ->orderByRaw('CASE WHEN rollNumber IS NULL THEN 1 ELSE 0 END')
-            ->orderBy('rollNumber')
-            ->orderBy('id')
+            ->professionalOrder()
             ->get();
     }
 

@@ -130,8 +130,7 @@ class ExamController extends Controller
             ->when($requ->departmentId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->departmentId);
             })
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('id', 'ASC')
+            ->professionalOrder()
             ->get();
         return view('result.get-admitCard',['studentList'=>$studentList,'groupId'=>$requ->groupId,'classId'=>$requ->classId,'sessionId'=>$requ->sessionId,'examId'=>$requ->examId]);
     }
@@ -1222,8 +1221,7 @@ class ExamController extends Controller
             ->when($requ->departmentId, function($q) use ($requ){
                 return $q->where('departmentName', (int)$requ->departmentId);
             })
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('id', 'ASC')
+            ->professionalOrder()
             ->get();
 
         $routine = ExamRoutine::with('entries.subject')->where('status', 'result_routine')

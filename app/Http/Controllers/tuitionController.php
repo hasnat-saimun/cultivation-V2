@@ -413,8 +413,7 @@ class tuitionController extends Controller
             });
         }
 
-        $students = $query->orderBy('className','ASC')
-            ->orderBy('rollNumber','ASC')
+        $students = $query->professionalOrder()
             ->limit(100)
             ->get();
 

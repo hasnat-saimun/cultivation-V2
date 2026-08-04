@@ -89,9 +89,6 @@ class ResultMarksPopulationService
 
     private function applyStudentOrder(Builder $query): Builder
     {
-        return $query
-            ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('id');
+        return $query->professionalOrder();
     }
 }

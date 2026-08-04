@@ -1392,6 +1392,10 @@ Route::middleware(['adminGuard'])->group (function(){
         AdmissionController::class ,
         'stdIdCard'
     ])->name('stdIdCard');
+    Route::get('/student/idCard/{stdId}/pdf', [
+        AdmissionController::class,
+        'stdIdCardPdf'
+    ])->name('stdIdCard.pdf');
 
     Route::get('/student/promotion',[
         AdmissionController::class ,

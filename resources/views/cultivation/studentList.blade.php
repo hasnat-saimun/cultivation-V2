@@ -22,7 +22,7 @@ Student List
                                     @endphp
                                     <a href="{{ route('student.export.pdf', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
                                     <a href="{{ route('student.export.excel', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
-                                    <a href="{{ route('studentBulkUpdate') }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
+                                    <a href="{{ route('studentBulkUpdate', $exportParams) }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
                                     <a href="{{route('admitStudent')}}" class="btn btn-success btn-sm"><i class="fa-solid fa-user-plus"></i> New Admission</a>
                                 </div>
                             </div>
@@ -41,63 +41,7 @@ Student List
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     </div>
                                 @endif
-                                <div class="mb-3">
-                                    <form method="GET" class="row g-2 align-items-end">
-                                        <div class="col-auto">
-                                            <label class="form-label">Class</label>
-                                            <select name="classId" class="form-control">
-                                                <option value="">All</option>
-                                                @foreach($classes as $c)
-                                                <option value="{{ $c->id }}" {{ request()->get('classId') == $c->id ? 'selected' : '' }}>{{ $c->className }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <label class="form-label">Session</label>
-                                            <select name="sessionId" class="form-control">
-                                                <option value="">All</option>
-                                                @foreach($sessions as $s)
-                                                <option value="{{ $s->id }}" {{ request()->get('sessionId') == $s->id ? 'selected' : '' }}>{{ $s->session }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <label class="form-label">Section</label>
-                                            <select name="sectionId" class="form-control">
-                                                <option value="">All</option>
-                                                @foreach($sections as $sec)
-                                                <option value="{{ $sec->id }}" {{ request()->get('sectionId') == $sec->id ? 'selected' : '' }}>{{ $sec->section }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <label class="form-label">Department</label>
-                                            <select name="departmentId" class="form-control">
-                                                <option value="">All</option>
-                                                @foreach($departments as $d)
-                                                <option value="{{ $d->id }}" {{ request()->get('departmentId') == $d->id ? 'selected' : '' }}>{{ $d->departmentName }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <label class="form-label">Gender</label>
-                                            <select name="gender" class="form-control">
-                                                <option value="">All</option>
-                                                @foreach(($genderOptions ?? []) as $genderValue => $genderLabel)
-                                                <option value="{{ $genderValue }}" {{ request()->get('gender') === (string) $genderValue ? 'selected' : '' }}>{{ $genderLabel }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-                                        <div class="col-auto">
-                                            <label class="form-label">Search</label>
-                                            <input name="search" type="text" class="form-control" value="{{ request()->get('search') }}" placeholder="Name / Student ID / Phone">
-                                        </div>
-                                        <div class="col-auto">
-                                            <button type="submit" class="btn btn-primary">Filter</button>
-                                            <a href="{{ route('studentList') }}" class="btn btn-light">Reset</a>
-                                        </div>
-                                    </form>
-                                </div>
+                                <div class="mb-3">@include('cultivation.partials.student-filters', ['action' => route('studentList')])</div>
                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                     <button type="button" class="btn btn-danger" id="bulkDeleteBtn" style="display:none;">
                                         <i class="fa-solid fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)
@@ -108,7 +52,7 @@ Student List
                                     @method('POST')
                                     <input type="hidden" name="ids" id="deleteIds">
                                 </form>
-                                <table id="myTable" class="table table-hover table-bordered">
+                                <table id="studentListTable" class="table table-hover table-bordered">
                                     <thead class="table-dark">
                                         <tr>
                                             <th style="width: 40px;" class="text-center">
@@ -210,6 +154,7 @@ Student List
                                         @endif
                                     </tbody>
                                 </table>
+                                <div class="mt-3">{{ $studentData->links('pagination::bootstrap-4') }}</div>
                             </div>
                         </div>
                     </div>
@@ -217,7 +162,6 @@ Student List
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap4.min.css">
 <style>
 /* Color Scheme */
 :root {
@@ -446,8 +390,6 @@ h1, h2, h3, h4, h5, h6 {
 @endpush
 
 @push('scripts')
-<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
-<script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap4.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const selectAllCheckbox = document.getElementById('selectAll');
@@ -516,25 +458,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 4000);
 });
 
-(function(){
-    function initDT(){
-        if (!window.jQuery || !jQuery.fn || !jQuery.fn.DataTable) { return false; }
-        var $ = jQuery;
-        var $tbl = $('#myTable');
-        if($tbl.length && !$tbl.hasClass('dt-initialized')){
-            $tbl.addClass('dt-initialized').DataTable({
-                pageLength: 25,
-                order: [[1,'asc']],
-                lengthMenu: [10,25,50,100],
-                language: { search: "Search:", lengthMenu: "Show _MENU_ entries" },
-                responsive: true
-            });
-        }
-        return true;
-    }
-    if(!initDT()){
-        document.addEventListener('DOMContentLoaded', initDT);
-    }
-})();
 </script>
 @endpush

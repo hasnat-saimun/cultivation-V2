@@ -106,7 +106,7 @@ class AttendanceController extends Controller
     $query->where('className', (int)$requ->classId);
     if($requ->sessionId){ $query->where('sessName', (int)$requ->sessionId); }
     if($requ->sectionId){ $query->where('sectionName', (int)$requ->sectionId); }
-        $students = $query->orderBy('id','ASC')->get();
+        $students = $query->professionalOrder()->get();
         // If attendance table not yet migrated, avoid querying and proceed with empty existing map
         if(!Schema::hasTable('attendances')){
             $existing = collect();
@@ -435,7 +435,7 @@ class AttendanceController extends Controller
             $studQ = newAdmission::query()->where('className',(int)$classId);
             if($sessionId){ $studQ->where('sessName',(int)$sessionId); }
             if($sectionId){ $studQ->where('sectionName',(int)$sectionId); }
-            $students = $studQ->orderBy('rollNumber','ASC')->get();
+            $students = $studQ->professionalOrder()->get();
 
             $attQ = Attendance::query()
                 ->whereBetween('attendance_date', [$startDate,$endDate])
@@ -514,7 +514,7 @@ class AttendanceController extends Controller
         $studQ = newAdmission::query()->where('className',(int)$classId);
         if($sessionId){ $studQ->where('sessName',(int)$sessionId); }
         if($sectionId){ $studQ->where('sectionName',(int)$sectionId); }
-        $students = $studQ->orderBy('rollNumber','ASC')->get();
+        $students = $studQ->professionalOrder()->get();
 
         $attQ = Attendance::query()
             ->whereBetween('attendance_date', [$startDate,$endDate])
@@ -586,7 +586,7 @@ class AttendanceController extends Controller
         $studQ = newAdmission::query()->where('className',(int)$classId);
         if($sessionId){ $studQ->where('sessName',(int)$sessionId); }
         if($sectionId){ $studQ->where('sectionName',(int)$sectionId); }
-        $students = $studQ->orderBy('rollNumber','ASC')->get();
+        $students = $studQ->professionalOrder()->get();
         $attQ = Attendance::query()
             ->whereBetween('attendance_date', [$startDate,$endDate])
             ->where('class_id',(int)$classId);

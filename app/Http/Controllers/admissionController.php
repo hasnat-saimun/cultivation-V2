@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Cache;
 use File;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentsExport;
+use App\Services\Students\StudentFilterService;
 
 
 class AdmissionController extends Controller
@@ -44,7 +45,7 @@ class AdmissionController extends Controller
         if (!empty($filters['sectionId'])) { $q->where('sectionName', (int)$filters['sectionId']); }
         if (!empty($filters['departmentId'])) { $q->where('departmentName', (int)$filters['departmentId']); }
         $students = (!empty($filters['classId']) || !empty($filters['sessionId']) || !empty($filters['sectionId']) || !empty($filters['departmentId']))
-            ? $q->orderBy('rollNumber')->get()
+            ? $q->professionalOrder()->get()
             : collect();
 
         // Branding from ServerConfig (first row)
@@ -189,9 +190,10 @@ class AdmissionController extends Controller
     //     return view('cultivation.admit-student',['classDetails'=>$classDetails,'sectionDatails'=>$sectionDetails]);
     // }
 
-    public function studentList(Request $request){
-        $filters = $this->sanitizeStudentFilters($request);
-        $stdData = $this->buildStudentListQuery($filters)->get();
+    public function studentList(Request $request, ?StudentFilterService $studentFilters = null){
+        $studentFilters ??= app(StudentFilterService::class);
+        $filters = $studentFilters->filters($request);
+        $stdData = $studentFilters->query($filters)->paginate(50)->withQueryString();
 
         $studentIds = $stdData->pluck('id')->all();
         $latestTestimonialIds = [];
@@ -213,13 +215,17 @@ class AdmissionController extends Controller
                 ->toArray();
         }
 
+        $filterOptions = $studentFilters->options($filters);
+
         return view('cultivation.studentList', [
             'studentData' => $stdData,
-            'classes' => classManage::query()->orderBy('id')->get(['id', 'className']),
-            'sessions' => sessionManage::query()->orderBy('id')->get(['id', 'session']),
-            'sections' => sectionManage::query()->orderBy('id')->get(['id', 'section']),
-            'departments' => Department::query()->orderBy('id')->get(['id', 'departmentName']),
-            'genderOptions' => $this->studentGenderOptions(),
+            'filters' => $filters,
+            'filterOptions' => $filterOptions,
+            'classes' => $filterOptions['classes'],
+            'sessions' => $filterOptions['sessions'],
+            'sections' => $filterOptions['sections'],
+            'departments' => $filterOptions['departments'],
+            'genderOptions' => $filterOptions['genderOptions'],
             'latestTestimonialIds' => $latestTestimonialIds,
             'latestTransferCertificateIds' => $latestTransferCertificateIds,
         ]);
@@ -228,10 +234,10 @@ class AdmissionController extends Controller
     /**
      * Export student list as PDF
      */
-    public function exportStudentPDF(Request $request)
+    public function exportStudentPDF(Request $request, StudentFilterService $studentFilters)
     {
-        $filters = $this->sanitizeStudentFilters($request);
-        $students = $this->buildStudentListQuery($filters)->get();
+        $filters = $studentFilters->filters($request);
+        $students = $studentFilters->query($filters)->get();
         $instituteName = \App\Models\ServerConfig::query()->value('instituteName') ?: 'Institute';
 
         $pdf = \PDF::loadView('exports.student-list-pdf', [
@@ -243,94 +249,13 @@ class AdmissionController extends Controller
         return $pdf->download('student-list-' . date('Y-m-d') . '.pdf');
     }
 
-    public function exportStudentExcel(Request $request)
+    public function exportStudentExcel(Request $request, StudentFilterService $studentFilters)
     {
-        $filters = $this->sanitizeStudentFilters($request);
-        $studentsQuery = $this->buildStudentListQuery($filters);
+        $filters = $studentFilters->filters($request);
+        $studentsQuery = $studentFilters->query($filters);
         $filename = 'students-' . date('Y-m-d') . '.xlsx';
 
         return Excel::download(new StudentsExport($studentsQuery), $filename);
-    }
-
-    private function buildStudentListQuery(array $filters)
-    {
-        $q = newAdmission::query()
-            ->with([
-                'classInfo:id,className',
-                'sectionInfo:id,section',
-                'sessionInfo:id,session',
-                'departmentInfo:id,departmentName',
-            ])
-            ->leftJoin('session_manages as sm', 'sm.id', '=', 'new_admissions.sessName')
-            ->leftJoin('class_manages as cm', 'cm.id', '=', 'new_admissions.className')
-            ->leftJoin('section_manages as secm', 'secm.id', '=', 'new_admissions.sectionName')
-            ->leftJoin('departments as dpm', 'dpm.id', '=', 'new_admissions.departmentName')
-            ->select('new_admissions.*');
-
-        if (!empty($filters['classId'])) {
-            $q->where('new_admissions.className', $filters['classId']);
-        }
-        if (!empty($filters['sessionId'])) {
-            $q->where('new_admissions.sessName', $filters['sessionId']);
-        }
-        if (!empty($filters['sectionId'])) {
-            $q->where('new_admissions.sectionName', $filters['sectionId']);
-        }
-        if (!empty($filters['departmentId'])) {
-            $q->where('new_admissions.departmentName', $filters['departmentId']);
-        }
-        if (!empty($filters['gender'])) {
-            $q->where('new_admissions.gender', $filters['gender']);
-        }
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $q->where(function($w) use ($s){
-                $w->where('new_admissions.fullName', 'like', '%' . $s . '%')
-                    ->orWhere('new_admissions.sureName', 'like', '%' . $s . '%')
-                    ->orWhere('new_admissions.stdId', 'like', '%' . $s . '%')
-                    ->orWhere('new_admissions.phone', 'like', '%' . $s . '%');
-            });
-        }
-
-        return $q
-            ->orderByRaw('COALESCE(sm.session, "") ASC')
-            ->orderByRaw('COALESCE(cm.className, "") ASC')
-            ->orderByRaw('COALESCE(secm.section, "") ASC')
-            ->orderByRaw('CAST(NULLIF(new_admissions.rollNumber, "") AS UNSIGNED) ASC')
-            ->orderByRaw('CAST(NULLIF(new_admissions.stdId, "") AS UNSIGNED) ASC')
-            ->orderBy('new_admissions.stdId', 'asc');
-    }
-
-    private function sanitizeStudentFilters(Request $request): array
-    {
-        $validator = Validator::make($request->all(), [
-            'classId' => 'nullable|integer|min:1',
-            'sessionId' => 'nullable|integer|min:1',
-            'sectionId' => 'nullable|integer|min:1',
-            'departmentId' => 'nullable|integer|min:1',
-            'gender' => 'nullable|in:1,2,3',
-            'search' => 'nullable|string|max:100',
-        ]);
-
-        $safe = $validator->valid();
-
-        return [
-            'classId' => isset($safe['classId']) ? (int) $safe['classId'] : null,
-            'sessionId' => isset($safe['sessionId']) ? (int) $safe['sessionId'] : null,
-            'sectionId' => isset($safe['sectionId']) ? (int) $safe['sectionId'] : null,
-            'departmentId' => isset($safe['departmentId']) ? (int) $safe['departmentId'] : null,
-            'gender' => isset($safe['gender']) ? (string) $safe['gender'] : null,
-            'search' => isset($safe['search']) ? trim((string) $safe['search']) : null,
-        ];
-    }
-
-    private function studentGenderOptions(): array
-    {
-        return [
-            '1' => 'Male',
-            '2' => 'Female',
-            '3' => 'Others',
-        ];
     }
 
     public function bulkPhotoForm(Request $request)
@@ -351,7 +276,7 @@ class AdmissionController extends Controller
                 'className' => $filters['classId'],
                 'sessName' => $filters['sessionId'],
                 'sectionName' => $filters['sectionId'],
-            ])->orderBy('rollNumber')->get();
+            ])->professionalOrder()->get();
         }
 
         return view('cultivation.student-photo-bulk', compact('classDetails', 'sessionDetails', 'sectionDetails', 'students', 'filters'));
@@ -707,7 +632,7 @@ class AdmissionController extends Controller
             $q->where('sectionName', $requ->groupId);
         }
 
-        $studentList = $q->get();
+        $studentList = $q->professionalOrder()->get();
         $groupId = $requ->filled('groupId') ? $requ->groupId : null;
         $submitToken = (string) Str::uuid();
         session()->put('promotion_submit_token', $submitToken);
@@ -810,30 +735,39 @@ class AdmissionController extends Controller
     }
 
 
-    public function stdIdCard($id){
-        $std = newAdmission::find($id);
-        if (!$std) { return back()->with('error','Student not found'); }
+    public function stdIdCard(Request $request, $id){
+        return view('cultivation.stdIdCard', $this->singleIdCardData($request, (int) $id, false));
+    }
 
-        // Build branding
+    public function stdIdCardPdf(Request $request, $id)
+    {
+        $data = $this->singleIdCardData($request, (int) $id, true);
+
+        return \PDF::loadView('cultivation.stdIdCard', $data)
+            ->setPaper('a4', 'portrait')
+            ->download('student-id-card-'.$data['std']->stdId.'.pdf');
+    }
+
+    private function singleIdCardData(Request $request, int $id, bool $pdfMode): array
+    {
+        $std = newAdmission::query()->with(['classInfo', 'sectionInfo', 'sessionInfo', 'departmentInfo'])->findOrFail($id);
+        $format = $request->get('format') === 'portrait' ? 'portrait' : 'landscape';
         $server = \App\Models\ServerConfig::orderBy('id')->first();
         $branding = [
             'name' => $server->instituteName ?? 'Institute',
             'address' => $server->address ?? '',
             'email' => $server->officeEmail ?? '',
             'phone' => $server->officeMobile ?? '',
-            'logoUrl' => !empty($server->logo) ? asset('/public/upload/image/cultivation/'.$server->logo) : null,
-            'principalSignUrl' => !empty($server->principalSign) ? asset('/public/upload/image/cultivation/'.$server->principalSign) : null,
+            'logoUrl' => $this->embeddedImage(
+                ! empty($server->logo) ? public_path('upload/image/cultivation/'.$server->logo) : null,
+                public_path(ltrim(preg_replace('~^public/~', '', (string) config('branding.cultivation_logo')), '/'))
+            ),
         ];
 
-        // Lookups
-        $class = \App\Models\classManage::find((int)$std->className);
-        $section = \App\Models\sectionManage::find((int)$std->sectionName);
-        $session = \App\Models\sessionManage::find((int)$std->sessName);
-        $dept = \App\Models\Department::find((int)$std->departmentName);
-        $className = optional($class)->className ?? '-';
-        $sectionName = optional($section)->section ?? '-';
-        $deptName = optional($dept)->departmentName ?? '-';
-        $sessionText = optional($session)->session ?? '-';
+        $className = optional($std->classInfo)->className ?? '-';
+        $sectionName = optional($std->sectionInfo)->section ?? '-';
+        $deptName = optional($std->departmentInfo)->departmentName ?? '-';
+        $sessionText = optional($std->sessionInfo)->session ?? '-';
 
         $validDate = null;
         if ($sessionText && preg_match('/(\d{4})\s*[-–]\s*(\d{4})/', $sessionText, $m)) {
@@ -842,9 +776,10 @@ class AdmissionController extends Controller
         }
         if (!$validDate) { $validDate = date('d-m-Y', strtotime('+1 year')); }
 
-        $photoUrl = !empty($std->avatar)
-            ? asset('/public/upload/image/student/'.$std->avatar)
-            : asset('/public/back-office/img/avatar.jpeg');
+        $photoUrl = $this->embeddedImage(
+            ! empty($std->avatar) ? public_path('upload/image/student/'.$std->avatar) : null,
+            public_path('back-office/img/avatar.jpeg')
+        );
 
         $card = [
             'studentId' => $std->stdId,
@@ -856,9 +791,23 @@ class AdmissionController extends Controller
             'sessionText' => $sessionText,
             'validity' => $validDate,
             'photoUrl' => $photoUrl,
+            'guardianName' => $std->gurdianName ?: $std->father ?: '-',
+            'guardianRelation' => $std->relationGurdian ?: '-',
+            'guardianPhone' => $std->gurdianMobile ?: $std->phone ?: '-',
+            'contact' => $std->phone ?: '-',
         ];
 
-        return view('cultivation.stdIdCard', compact('std','branding','card'));
+        return compact('std', 'branding', 'card', 'format', 'pdfMode');
+    }
+
+    private function embeddedImage(?string ...$paths): ?string
+    {
+        foreach ($paths as $path) {
+            if (! $path || ! is_file($path) || ! is_readable($path)) continue;
+            $mime = mime_content_type($path) ?: 'image/png';
+            return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($path));
+        }
+        return null;
     }
 
     public function editStudent($id){
@@ -995,7 +944,7 @@ class AdmissionController extends Controller
     /**
      * Show bulk update form for students
      */
-    public function bulkStudentUpdateForm()
+    public function bulkStudentUpdateForm(Request $request, StudentFilterService $studentFilters)
     {
         $classDetails = classManage::orderBy('id')->get();
         $sessionDetails = sessionManage::orderBy('id')->get();
@@ -1012,63 +961,9 @@ class AdmissionController extends Controller
             ->orderBy('id')
             ->value('id');
 
-        $filters = [
-            'classId' => request()->get('classId'),
-            'sessionId' => request()->get('sessionId'),
-            'sectionId' => request()->get('sectionId'),
-            'departmentId' => request()->get('departmentId'),
-            'search' => request()->get('search'),
-        ];
-
-        $q = newAdmission::query();
-        if (!empty($filters['classId'])) {
-            $q->where('className', (int) $filters['classId']);
-        }
-        if (!empty($filters['sessionId'])) {
-            $q->where('sessName', (int) $filters['sessionId']);
-        }
-        if (!empty($filters['sectionId'])) {
-            $q->where('sectionName', (int) $filters['sectionId']);
-        }
-        if (!empty($filters['departmentId'])) {
-            $q->where('departmentName', (int) $filters['departmentId']);
-        }
-        if (!empty($filters['search'])) {
-            $s = $filters['search'];
-            $q->where(function($w) use ($s){
-                $w->where('fullName', 'like', '%'.$s.'%')
-                  ->orWhere('sureName', 'like', '%'.$s.'%')
-                  ->orWhere('stdId', 'like', '%'.$s.'%')
-                  ->orWhere('phone', 'like', '%'.$s.'%');
-            });
-        }
-
-        $students = $q->select(
-                'id',
-                'stdId',
-                'fullName',
-                'sureName',
-                'father',
-                'mother',
-                'gender',
-                'dob',
-                'mail',
-                'phone',
-                'address',
-                'sessName',
-                'className',
-                'departmentName',
-                'sectionName',
-                'religiousSubjectId',
-                'fourthSubjectId',
-                'rollNumber',
-                'gurdianName',
-                'gurdianMobile',
-                'relationGurdian'
-            )
-            ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
-            ->orderBy('fullName')
-            ->get();
+        $filters = $studentFilters->filters($request);
+        $students = $studentFilters->query($filters)->get();
+        $filterOptions = $studentFilters->options($filters);
 
         return view('cultivation.student-bulk-update', compact(
             'students',
@@ -1079,7 +974,8 @@ class AdmissionController extends Controller
             'optionalSubjectList',
             'religiousSubjectList',
             'islamDefaultSubjectId',
-            'filters'
+            'filters',
+            'filterOptions'
         ));
     }
 
@@ -1088,6 +984,7 @@ class AdmissionController extends Controller
      */
     public function bulkStudentUpdateStore(Request $request)
     {
+        $returnFilters = app(StudentFilterService::class)->filters($request);
         $rawStudents = $request->input('students');
         if ($rawStudents === null || $rawStudents === '') {
             throw \Illuminate\Validation\ValidationException::withMessages(['students' => 'The students field is required.']);
@@ -1219,7 +1116,7 @@ class AdmissionController extends Controller
         });
 
         if ($updated === 0) {
-            return redirect()->route('studentBulkUpdate')->with(
+            return redirect()->route('studentBulkUpdate', array_filter($returnFilters, fn ($value) => $value !== null && $value !== ''))->with(
                 'error',
                 $unchanged > 0
                     ? 'No changes were saved because all submitted values matched current records.'
@@ -1227,7 +1124,7 @@ class AdmissionController extends Controller
             );
         }
 
-        return redirect()->route('studentBulkUpdate')->with(
+        return redirect()->route('studentBulkUpdate', array_filter($returnFilters, fn ($value) => $value !== null && $value !== ''))->with(
             'success',
             "Successfully updated {$updated} student(s).".($unchanged > 0 ? " {$unchanged} row(s) unchanged." : '')
         );
@@ -1265,7 +1162,7 @@ class AdmissionController extends Controller
      */
     public function exportPDF()
     {
-        $students = newAdmission::orderBy('stdName')->get();
+        $students = newAdmission::query()->professionalOrder()->get();
         $pdf = \PDF::loadView('exports.student-list-pdf', ['students' => $students]);
         return $pdf->download('student-list-' . date('Y-m-d') . '.pdf');
     }
