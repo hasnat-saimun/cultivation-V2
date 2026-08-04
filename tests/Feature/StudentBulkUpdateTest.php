@@ -19,12 +19,12 @@ class StudentBulkUpdateTest extends TestCase
         $student = $this->createStudent();
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => $student->id,
                 'phone' => '01710000001',
                 'gurdianMobile' => '01810000001',
                 'address' => 'Updated Address One',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -45,7 +45,7 @@ class StudentBulkUpdateTest extends TestCase
         $studentB = $this->createStudent(['stdId' => 2002]);
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [
+            'students' => json_encode([
                 [
                     'id' => $studentA->id,
                     'phone' => '01710000002',
@@ -58,7 +58,7 @@ class StudentBulkUpdateTest extends TestCase
                     'gurdianMobile' => '01810000003',
                     'address' => 'Updated Address B',
                 ],
-            ],
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -88,12 +88,12 @@ class StudentBulkUpdateTest extends TestCase
         ]);
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => $student->id,
                 'phone' => '01712345678',
                 'gurdianMobile' => '01812345678',
                 'address' => 'No Change Address',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -106,9 +106,9 @@ class StudentBulkUpdateTest extends TestCase
         $admin = $this->createAdmin();
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->from(route('studentBulkUpdate'))->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'phone' => '01710000001',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -120,10 +120,10 @@ class StudentBulkUpdateTest extends TestCase
         $admin = $this->createAdmin();
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->from(route('studentBulkUpdate'))->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => 999999,
                 'phone' => '01710000009',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -135,10 +135,10 @@ class StudentBulkUpdateTest extends TestCase
         $student = $this->createStudent();
 
         $response = $this->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => $student->id,
                 'phone' => '01710000011',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('adminLogin'));
@@ -153,10 +153,10 @@ class StudentBulkUpdateTest extends TestCase
         $modelConnection = $student->getConnectionName() ?: $defaultConnection;
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => $student->id,
                 'phone' => '01710000021',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertSessionHas('success');
@@ -171,10 +171,10 @@ class StudentBulkUpdateTest extends TestCase
         $studentB = $this->createStudent(['phone' => '01720000002']);
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [
+            'students' => json_encode([
                 ['id' => $studentA->id, 'phone' => '01720000001'],
                 ['id' => $studentB->id, 'phone' => '01729999999'],
-            ],
+            ], JSON_THROW_ON_ERROR),
         ]);
 
         $response->assertRedirect(route('studentBulkUpdate'));
@@ -191,12 +191,12 @@ class StudentBulkUpdateTest extends TestCase
         $student = $this->createStudent(['fullName' => 'Reload', 'sureName' => 'Check']);
 
         $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-            'students' => [[
+            'students' => json_encode([[
                 'id' => $student->id,
                 'phone' => '01710000031',
                 'gurdianMobile' => '01810000031',
                 'address' => 'Persist After Reload',
-            ]],
+            ]], JSON_THROW_ON_ERROR),
         ])->assertSessionHas('success');
 
         $reload = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentBulkUpdate'));
@@ -222,10 +222,10 @@ class StudentBulkUpdateTest extends TestCase
 
         try {
             $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-                'students' => [
+                'students' => json_encode([
                     ['id' => $studentA->id, 'phone' => '01739999991'],
                     ['id' => $studentB->id, 'phone' => '01739999992'],
-                ],
+                ], JSON_THROW_ON_ERROR),
             ]);
             $this->fail('Expected transaction failure to bubble up.');
         } catch (\RuntimeException $exception) {
@@ -251,7 +251,7 @@ class StudentBulkUpdateTest extends TestCase
             }
 
             $response = $this->withSession(['cultivationAdmin' => $admin->id])->post(route('studentBulkUpdateStore'), [
-                'students_payload' => json_encode($payload, JSON_THROW_ON_ERROR),
+                'students' => json_encode($payload, JSON_THROW_ON_ERROR),
             ]);
 
             $response->assertRedirect(route('studentBulkUpdate'))->assertSessionHas('success');
@@ -274,7 +274,7 @@ class StudentBulkUpdateTest extends TestCase
 
         $response = $this->withSession(['cultivationAdmin' => $admin->id])
             ->from(route('studentBulkUpdate'))
-            ->post(route('studentBulkUpdateStore'), ['students_payload' => json_encode($payload, JSON_THROW_ON_ERROR)]);
+            ->post(route('studentBulkUpdateStore'), ['students' => json_encode($payload, JSON_THROW_ON_ERROR)]);
 
         $response->assertRedirect(route('studentBulkUpdate'))->assertSessionHasErrors('students.119.mail');
         $this->assertSame(200, newAdmission::whereIn('id', $ids)->where('phone', '01740000000')->count());
@@ -289,10 +289,31 @@ class StudentBulkUpdateTest extends TestCase
         $html = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentBulkUpdate'))
             ->assertOk()->getContent();
 
-        $this->assertStringContainsString('name="students_payload"', $html);
+        $this->assertStringContainsString('name="students" id="studentsPayload"', $html);
         $this->assertStringContainsString("JSON.stringify(students)", $html);
         $this->assertStringContainsString("form.querySelectorAll('[name^=\"students[\"]')", $html);
+        $this->assertStringContainsString("payloadField.value = json", $html);
+        $this->assertStringContainsString("form.dataset.submitting === 'true'", $html);
+        $this->assertStringContainsString('form.requestSubmit(document.getElementById(\'saveBtn\'))', $html);
+        $this->assertStringContainsString('No student rows are available to update.', $html);
         $this->assertStringNotContainsString('slice(0, 50)', $html);
+    }
+
+    public function test_missing_invalid_and_legacy_array_payloads_are_rejected_specifically(): void
+    {
+        $admin = $this->createAdmin();
+        $student = $this->createStudent();
+        $url = route('studentBulkUpdateStore');
+
+        $this->withSession(['cultivationAdmin' => $admin->id])->from(route('studentBulkUpdate'))->post($url, [])
+            ->assertSessionHasErrors(['students' => 'The students field is required.']);
+        $this->withSession(['cultivationAdmin' => $admin->id])->from(route('studentBulkUpdate'))->post($url, ['students' => '{bad-json'])
+            ->assertSessionHasErrors(['students' => 'The students field contains invalid JSON.']);
+        $this->withSession(['cultivationAdmin' => $admin->id])->from(route('studentBulkUpdate'))->post($url, [
+            'students' => [['id' => $student->id, 'phone' => '01799999999']],
+        ])->assertSessionHasErrors(['students' => 'The students field must contain the complete JSON batch.']);
+
+        $this->assertSame('01700000000', (string) $student->fresh()->phone);
     }
 
     private function createAdmin(): CultivationAdmin

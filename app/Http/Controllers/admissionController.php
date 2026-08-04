@@ -1088,24 +1088,33 @@ class AdmissionController extends Controller
      */
     public function bulkStudentUpdateStore(Request $request)
     {
-        if ($request->filled('students_payload')) {
-            try {
-                $decodedStudents = json_decode((string) $request->input('students_payload'), true, 512, JSON_THROW_ON_ERROR);
-            } catch (\JsonException) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'students_payload' => 'The submitted student batch is not valid JSON.',
-                ]);
-            }
-            if (!is_array($decodedStudents) || !array_is_list($decodedStudents)) {
-                throw \Illuminate\Validation\ValidationException::withMessages([
-                    'students_payload' => 'The submitted student batch must be an indexed list.',
-                ]);
-            }
-            $request->merge(['students' => $decodedStudents]);
+        $rawStudents = $request->input('students');
+        if ($rawStudents === null || $rawStudents === '') {
+            throw \Illuminate\Validation\ValidationException::withMessages(['students' => 'The students field is required.']);
         }
+        if (!is_string($rawStudents)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'students' => 'The students field must contain the complete JSON batch.',
+            ]);
+        }
+        if (strlen($rawStudents) > 2000000) {
+            throw \Illuminate\Validation\ValidationException::withMessages(['students' => 'The submitted student batch is too large.']);
+        }
+        try {
+            $decodedStudents = json_decode($rawStudents, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'students' => 'The students field contains invalid JSON.',
+            ]);
+        }
+        if (!is_array($decodedStudents) || !array_is_list($decodedStudents)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'students' => 'The students JSON must be an indexed array.',
+            ]);
+        }
+        $request->merge(['students' => $decodedStudents]);
 
         $rules = [
-            'students_payload' => 'nullable|string|max:2000000',
             'students' => 'required|array|min:1|max:500',
             'students.*.id' => 'required|integer|distinct|exists:new_admissions,id',
             'students.*.fullName' => 'nullable|string|max:255',

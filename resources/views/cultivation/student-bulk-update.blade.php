@@ -93,7 +93,8 @@ Bulk Student Profile Update
                 @if($students->count() > 0)
                     <form method="post" action="{{ route('studentBulkUpdateStore') }}" id="bulkUpdateForm">
                         @csrf
-                        <input type="hidden" name="students_payload" id="studentsPayload">
+                        <input type="hidden" name="students" id="studentsPayload">
+                        <div class="alert alert-danger d-none" id="bulkSerializationError" role="alert"></div>
                         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                             <table class="table table-bordered table-hover editable-table table-fit" id="studentTable">
                                 <thead class="table-dark sticky-top">
@@ -376,8 +377,12 @@ Bulk Student Profile Update
 
         const form = document.getElementById('bulkUpdateForm');
         if (form) {
-            form.addEventListener('submit', function() {
+            const payloadField = document.getElementById('studentsPayload');
+            const errorBox = document.getElementById('bulkSerializationError');
+            const originalControls = () => Array.from(form.querySelectorAll('[name^="students["]'));
+            const serializeStudents = () => {
                 const rows = Array.from(form.querySelectorAll('#studentTable tbody tr'));
+                if (rows.length === 0) throw new Error('No student rows are available to update.');
                 const students = rows.map(row => {
                     const student = {};
                     row.querySelectorAll('[name^="students["]').forEach(control => {
@@ -386,12 +391,52 @@ Bulk Student Profile Update
                     });
                     return student;
                 });
+                if (students.some(student => !student.id)) throw new Error('A student row is missing its record ID.');
+                return JSON.stringify(students);
+            };
 
-                document.getElementById('studentsPayload').value = JSON.stringify(students);
-                form.querySelectorAll('[name^="students["]').forEach(control => {
-                    control.disabled = true;
-                });
-                hasChanges = false;
+            const showSerializationError = message => {
+                errorBox.textContent = message;
+                errorBox.classList.remove('d-none');
+            };
+
+            form.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter' && event.target.matches('input.editable-input:not([type="hidden"])')) {
+                    event.preventDefault();
+                    form.requestSubmit(document.getElementById('saveBtn'));
+                }
+            });
+
+            form.addEventListener('submit', function(event) {
+                if (form.dataset.submitting === 'true') {
+                    event.preventDefault();
+                    return;
+                }
+                try {
+                    const json = serializeStudents();
+                    if (!json || json === '[]') throw new Error('No student rows were serialized.');
+                    payloadField.value = json;
+                    errorBox.classList.add('d-none');
+                    originalControls().forEach(control => { control.disabled = true; });
+                    form.dataset.submitting = 'true';
+                    document.getElementById('saveBtn').disabled = true;
+                    hasChanges = false;
+                } catch (error) {
+                    event.preventDefault();
+                    originalControls().forEach(control => { control.disabled = false; });
+                    payloadField.value = '';
+                    showSerializationError(error.message || 'Student rows could not be prepared. Please try again.');
+                }
+            });
+
+            form.addEventListener('formdata', function(event) {
+                if (!payloadField.value) {
+                    try { payloadField.value = serializeStudents(); }
+                    catch (error) { showSerializationError(error.message || 'Student rows could not be prepared.'); return; }
+                }
+                Array.from(event.formData.keys()).filter(key => key.startsWith('students['))
+                    .forEach(key => event.formData.delete(key));
+                event.formData.set('students', payloadField.value);
             });
         }
 
