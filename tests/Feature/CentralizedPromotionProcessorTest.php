@@ -96,7 +96,8 @@ class CentralizedPromotionProcessorTest extends TestCase
             $this->mark($pass,$scope,$subject,80);
             if($case==='fail')$this->mark($blocked,$scope,$subject,32);
             $this->publish($scope);
-            $code=$case==='fail'?'ACADEMIC_STATUS_FAIL':'ACADEMIC_STATUS_INCOMPLETE';
+            // A final-published incomplete result is deliberately finalized as Fail.
+            $code='ACADEMIC_STATUS_FAIL';
             $this->assertBlocked(fn()=> $this->processor()->process(...$this->args($scope,[$pass->id,$blocked->id])),$code);
             $this->assertSame($scope['class']->id,(int)$pass->fresh()->className);
             $this->assertDatabaseCount('result_archives',0);$this->assertDatabaseCount('promotion_audit_logs',0);

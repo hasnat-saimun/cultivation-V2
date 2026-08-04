@@ -56,7 +56,7 @@ class PairedLifecycleMatrixTest extends TestCase
 
             $afterPublish = $this->surfaceSnapshot($data, $scenario);
             $this->assertSurfaceParity($afterPublish, $scenario['id'].' published');
-            $this->assertEquivalentStage($pre, $afterPublish, $scenario['id'].' pre->published');
+            $this->assertFinalPublishedStage($pre, $afterPublish, $scenario['id'].' pre->published');
             $this->assertTotalsConsistent($afterPublish['single']);
             $this->assertTotalsConsistent($afterPublish['bulk']);
             $this->assertTotalsConsistent($afterPublish['tabulation']);
@@ -94,7 +94,7 @@ class PairedLifecycleMatrixTest extends TestCase
             $this->assertSame(3, $publishTwo['publications'][0]['revision']);
 
             $afterPublishTwo = $this->surfaceSnapshot($data, $scenario);
-            $this->assertEquivalentStage($pre, $afterPublishTwo, $scenario['id'].' pre->second-publish');
+            $this->assertEquivalentStage($afterPublish, $afterPublishTwo, $scenario['id'].' published->second-publish');
 
             $marksAfter = $this->marksSnapshot($scope, $student->id);
             $this->assertSame($marksBefore, $marksAfter, $scenario['id'].' marks rows changed across lifecycle');
@@ -558,6 +558,19 @@ class PairedLifecycleMatrixTest extends TestCase
         }
     }
 
+    private function assertFinalPublishedStage(array $before, array $published, string $label): void
+    {
+        if (($before['single']['status'] ?? null) !== 'Incomplete') {
+            $this->assertEquivalentStage($before, $published, $label);
+            return;
+        }
+
+        foreach (['single', 'bulk', 'tabulation'] as $surface) {
+            $this->assertSame('Fail', $published[$surface]['status'], $label.' status mismatch on '.$surface);
+            $this->assertSame('0.00', $published[$surface]['gpa'], $label.' GPA mismatch on '.$surface);
+        }
+    }
+
     private function assertTotalsConsistent(array $surface): void
     {
         $componentValues = [
@@ -567,7 +580,7 @@ class PairedLifecycleMatrixTest extends TestCase
         ];
 
         if ($surface['total'] === '-') {
-            $this->assertContains($surface['status'], ['Incomplete', 'Absent']);
+            $this->assertContains($surface['status'], ['Incomplete', 'Absent', 'Fail']);
             return;
         }
 

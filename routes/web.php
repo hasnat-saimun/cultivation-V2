@@ -1470,7 +1470,8 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::post('/student/bulk-update',[
         AdmissionController::class,
         'bulkStudentUpdateStore'
-    ])->name('studentBulkUpdateStore');
+    ])->middleware(\App\Http\Middleware\BulkStudentUpdateDiagnostics::class)
+      ->name('studentBulkUpdateStore');
 
     Route::get('/teacher/export/pdf',[
         TeacherController::class,

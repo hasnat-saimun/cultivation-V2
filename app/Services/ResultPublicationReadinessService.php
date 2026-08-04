@@ -18,8 +18,8 @@ class ResultPublicationReadinessService
     {
         try {
             $batch = $scope['groupId'] === null
-                ? $this->results->buildSectionless($scope['examId'], $scope['classId'], $scope['sessionId'])
-                : $this->results->buildPublicationScope(
+                ? $this->results->buildSectionlessForReadiness($scope['examId'], $scope['classId'], $scope['sessionId'])
+                : $this->results->buildPublicationScopeForReadiness(
                     $scope['examId'], $scope['classId'], $scope['sessionId'], $scope['groupId']
                 );
         } catch (\Throwable $exception) {

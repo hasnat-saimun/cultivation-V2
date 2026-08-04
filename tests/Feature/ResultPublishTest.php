@@ -229,7 +229,7 @@ class ResultPublishTest extends TestCase
         $this->assertSame(34, $count);
     }
 
-    public function test_publish_lifecycle_preserves_authoritative_marks_and_classifications_when_confirm_anyway_is_used(): void
+    public function test_publish_lifecycle_preserves_marks_and_finalizes_incomplete_results_as_failures(): void
     {
         [$data, $actor, $input] = $this->confirmedLifecycleScope(80, 4);
         $students = $data['students']->values();
@@ -262,7 +262,7 @@ class ResultPublishTest extends TestCase
             'totalMarks' => 0,
         ]);
         Marksheet::query()->where('studentId', $students[3]->id)->delete();
-        foreach ([$students[0], $students[1], $students[2]] as $student) {
+        foreach ([$students[0], $students[1]] as $student) {
             Marksheet::create([
                 'studentId' => $student->id,
                 'classId' => $data['class']->id,
@@ -287,8 +287,9 @@ class ResultPublishTest extends TestCase
         ]);
 
         $snapshotBeforePublish = $this->scopeSnapshot($data);
-        $this->assertSame(6, $snapshotBeforePublish['marksCount']);
+        $this->assertSame(5, $snapshotBeforePublish['marksCount']);
         $this->assertSame(4, array_sum($snapshotBeforePublish['counts']));
+        $this->assertSame(1, $snapshotBeforePublish['counts']['Incomplete']);
         $this->assertGreaterThanOrEqual(1, $snapshotBeforePublish['counts']['Absent']);
 
         $published = app(ResultPublishService::class)->publish($input + ['confirm_anyway' => true], $actor);
@@ -299,8 +300,12 @@ class ResultPublishTest extends TestCase
 
         $snapshotAfterPublish = $this->scopeSnapshot($data);
         $this->assertSame($snapshotBeforePublish['marksCount'], $snapshotAfterPublish['marksCount']);
-        $this->assertSame($snapshotBeforePublish['rowsByStudent'], $snapshotAfterPublish['rowsByStudent']);
-        $this->assertSame($snapshotBeforePublish['counts'], $snapshotAfterPublish['counts']);
+        $this->assertSame(0, $snapshotAfterPublish['counts']['Incomplete']);
+        $this->assertSame('Fail', $snapshotAfterPublish['rowsByStudent'][$students[2]->id]['status']);
+        $this->assertSame('Complete', $snapshotAfterPublish['rowsByStudent'][$students[2]->id]['classification']);
+        $this->assertSame(1, $snapshotAfterPublish['rowsByStudent'][$students[2]->id]['subjectFails']);
+        $this->assertSame('Fail', $snapshotAfterPublish['rowsByStudent'][$students[3]->id]['status']);
+        $this->assertSame('Absent', $snapshotAfterPublish['rowsByStudent'][$students[3]->id]['classification']);
 
         $repeatPublish = app(ResultPublishService::class)->publish(
             $input + ['confirm_anyway' => true, 'publication_revision' => 1],
@@ -321,7 +326,7 @@ class ResultPublishTest extends TestCase
             $actor,
         );
         $snapshotAfterRepublish = $this->scopeSnapshot($data);
-        $this->assertSame($snapshotBeforePublish, $snapshotAfterRepublish);
+        $this->assertSame($snapshotAfterPublish, $snapshotAfterRepublish);
 
         $this->assertSame(MarksScopeState::STATUS_DRAFT, MarksScopeState::query()->value('status'));
         $this->assertSame($finalScopeRevision, (int) MarksScopeState::query()->value('revision'));

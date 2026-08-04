@@ -3,6 +3,7 @@
 namespace App\Services\ResultCalculation;
 
 use App\Models\Exam;
+use App\Models\ResultPublish;
 use App\Models\newAdmission;
 use App\Models\sessionManage;
 use App\Services\PublishedResultReadyMarksService;
@@ -15,6 +16,7 @@ class ResultCalculationBatchBuilder
         private ResultCalculationInputBuilder $inputBuilder,
         private ComponentRequirementProfileBuilder $componentProfileBuilder,
         private ?PublishedResultReadyMarksService $publishedMarks = null,
+        private ?PublishedResultFinalizer $publishedResultFinalizer = null,
     ) {}
 
     /** @return array{exam:Exam,students:Collection,entries:array<int,array>} */
@@ -42,6 +44,20 @@ class ResultCalculationBatchBuilder
         return $this->buildBatch($examId, $classId, $sessionId, $sectionId, null, false, false, $label);
     }
 
+    /** Raw pre-publication calculation used only by readiness validation. */
+    public function buildSectionlessForReadiness(int $examId, int $classId, int $sessionId): array
+    {
+        $label = sessionManage::whereKey($sessionId)->value('session');
+        return $this->buildBatch($examId, $classId, $sessionId, null, null, false, true, $label, false);
+    }
+
+    /** Raw pre-publication calculation used only by readiness validation. */
+    public function buildPublicationScopeForReadiness(int $examId, int $classId, int $sessionId, int $sectionId): array
+    {
+        $label = sessionManage::whereKey($sessionId)->value('session');
+        return $this->buildBatch($examId, $classId, $sessionId, $sectionId, null, false, false, $label, false);
+    }
+
     private function buildBatch(
         int $examId,
         int $classId,
@@ -51,6 +67,7 @@ class ResultCalculationBatchBuilder
         bool $tolerant,
         bool $sectionlessOnly = false,
         ?string $sessionLabel = null,
+        bool $applyPublicationFinalization = true,
     ): array
     {
         $exam = Exam::findOrFail($examId);
@@ -100,20 +117,44 @@ class ResultCalculationBatchBuilder
         }
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
         $componentProfilesByStudent = $this->componentProfileBuilder->buildByStudent($students, $subjectsByStudent);
+        $publishedScopes = $applyPublicationFinalization
+            ? ResultPublish::query()
+                ->where('status', ResultPublish::STATUS_PUBLISHED)
+                ->where('examId', (string) $examId)
+                ->where('sessionId', (string) $sessionId)
+                ->where('classId', (string) $classId)
+                ->get(['groupId', 'legacyImported'])
+            : collect();
+        $legacyClassPublication = $publishedScopes->contains(
+            fn ($publication) => $publication->groupId === null && (bool) $publication->legacyImported
+        );
+        $publishedGroupIds = $publishedScopes->pluck('groupId')
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $sectionlessPublished = $publishedScopes->contains(fn ($publication) => $publication->groupId === null);
         $entries = []; $errors = [];
         foreach ($students as $student) {
             $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
             try {
+                $result = $this->calculator->calculate(
+                    $student,
+                    $exam,
+                    $student->marksheet,
+                    $subjects,
+                    $componentProfilesByStudent[(int) $student->id] ?? [],
+                );
+                $studentSectionId = is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : $sectionId;
+                $isPublished = $studentSectionId === null
+                    ? $sectionlessPublished
+                    : ($legacyClassPublication || in_array($studentSectionId, $publishedGroupIds, true));
+                if ($isPublished) {
+                    $result = $this->publishedResultFinalizer()->finalize($result);
+                }
                 $entries[(int) $student->id] = [
                     'student' => $student,
                     'subjects' => $subjects,
-                    'result' => $this->calculator->calculate(
-                        $student,
-                        $exam,
-                        $student->marksheet,
-                        $subjects,
-                        $componentProfilesByStudent[(int) $student->id] ?? [],
-                    ),
+                    'result' => $result,
                 ];
             } catch (\Throwable $exception) {
                 if (!$tolerant) throw $exception;
@@ -129,6 +170,11 @@ class ResultCalculationBatchBuilder
     private function publishedMarks(): PublishedResultReadyMarksService
     {
         return $this->publishedMarks ??= app(PublishedResultReadyMarksService::class);
+    }
+
+    private function publishedResultFinalizer(): PublishedResultFinalizer
+    {
+        return $this->publishedResultFinalizer ??= app(PublishedResultFinalizer::class);
     }
 
 }
