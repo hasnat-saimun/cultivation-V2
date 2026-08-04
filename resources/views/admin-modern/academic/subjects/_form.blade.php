@@ -1,7 +1,8 @@
 @php
     $subjectItem = $item ?? null;
     $selectedSubjectType = old('subjectType', (string) ($subjectItem->subjectType ?? 'Main'));
-    $selectedClassId = old('classId', isset($subjectItem) ? (string) ($subjectItem->assign_class ?? '') : '');
+    $selectedScopeIds = collect(old('classIds', $selectedClassIds ?? []))->map(fn ($id) => (int) $id)->all();
+    $allScopeClasses = (bool) old('allClasses', $allClasses ?? false);
     $cqValue = old('cqValue', isset($subjectItem) ? $subjectItem->CQ : '');
     $mcqValue = old('mcqValue', isset($subjectItem) ? $subjectItem->MCQ : '');
     $practicalValue = old('practicalValue', isset($subjectItem) ? $subjectItem->Practical : '');
@@ -40,16 +41,20 @@
 
     <div class="am-grid am-grid-2" style="margin-bottom: 0.7rem;">
         <div>
-            <label for="classId" style="display:block; font-weight:600; margin-bottom:0.35rem;">Assign Class *</label>
-            <select id="classId" name="classId" style="width:100%; border:1px solid var(--am-border); border-radius:10px; padding:0.55rem 0.7rem; background:var(--am-surface); color:var(--am-text);">
-                <option value="">Select Class</option>
-                <option value="0" {{ $selectedClassId === '0' ? 'selected' : '' }}>All</option>
-                @if(($classList ?? collect([]))->count() > 0)
-                    @foreach($classList as $class)
-                        <option value="{{ $class->id }}" {{ $selectedClassId === (string) $class->id ? 'selected' : '' }}>{{ $class->className }}</option>
-                    @endforeach
-                @endif
-            </select>
+            <label style="display:block; font-weight:600; margin-bottom:0.35rem;">Class Scope *</label>
+            <label style="display:flex; align-items:center; gap:0.45rem; margin-bottom:0.55rem; font-weight:600;">
+                <input type="checkbox" id="allClasses" name="allClasses" value="1" {{ $allScopeClasses ? 'checked' : '' }}>
+                <span>All Classes</span>
+            </label>
+            <div id="subjectClassChoices" class="am-grid am-grid-2">
+                @foreach(($classList ?? collect([])) as $class)
+                    <label style="display:flex; align-items:center; gap:0.45rem;">
+                        <input class="subject-class-choice" type="checkbox" name="classIds[]" value="{{ $class->id }}" {{ in_array((int) $class->id, $selectedScopeIds, true) ? 'checked' : '' }}>
+                        <span>{{ $class->className }}</span>
+                    </label>
+                @endforeach
+            </div>
+            @error('classIds')<div class="am-flash is-danger" style="margin-top:.5rem;">{{ $message }}</div>@enderror
         </div>
 
         <div>
@@ -141,6 +146,8 @@
         const wrapSix = document.getElementById('defaultRelSixWrap');
         const wrapAll = document.getElementById('defaultRelAllWrap');
         const allToggle = document.getElementById('defaultReligiousForAllClass');
+        const allClasses = document.getElementById('allClasses');
+        const classChoices = Array.from(document.querySelectorAll('.subject-class-choice'));
 
         if (isRel) {
             const toggle = function() {
@@ -160,6 +167,18 @@
                     box.checked = allToggle.checked;
                 });
             });
+        }
+
+        if (allClasses) {
+            const syncClassScope = function() {
+                classChoices.forEach(function(box) {
+                    box.disabled = allClasses.checked;
+                    if (allClasses.checked) box.checked = false;
+                });
+                document.getElementById('subjectClassChoices').style.opacity = allClasses.checked ? '.5' : '1';
+            };
+            allClasses.addEventListener('change', syncClassScope);
+            syncClassScope();
         }
 
         const cq = document.getElementById('CQ');

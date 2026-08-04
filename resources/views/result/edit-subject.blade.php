@@ -23,6 +23,9 @@ Edit Subject
                                             {{ session()->get('error') }}
                                         </div>
                                     @endif
+                                    @if($errors->any())
+                                        <div class="alert alert-danger w-100"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="heading-layout1">
@@ -49,18 +52,7 @@ Edit Subject
                                             <option value="Optional">Optional</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 form-group">
-                                        <label>Assign Class *</label>
-                                        <select name="classId" id="" class="form-control">
-                                            <option value="">Select Class</option>
-                                            <option value="0" {{ old('classId', (string) ($item->assign_class ?? '')) === '0' ? 'selected' : '' }}>All</option>
-                                            @if(($classList ?? collect([]))->count() > 0)
-                                                @foreach($classList as $class)
-                                                    <option value="{{ $class->id }}" {{ old('classId', (string) ($item->assign_class ?? '')) === (string) $class->id ? 'selected' : '' }}>{{ $class->className }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
+                                    @include('result.partials.subject-class-scope', compact('selectedClassIds', 'allClasses'))
                                     <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         @php

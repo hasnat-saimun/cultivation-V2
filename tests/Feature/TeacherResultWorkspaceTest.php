@@ -498,7 +498,7 @@ class TeacherResultWorkspaceTest extends TestCase
         $this->assertSame('Fail', $results->get($failing->id)->status);
     }
 
-    public function test_workspace_displays_the_same_paired_subject_result_as_the_centralized_calculator(): void
+    public function test_workspace_previews_each_paired_paper_independently(): void
     {
         $scope = $this->scope(subjectName: 'English 1st Paper');
         $scope['subject']->forceFill(['alias' => 'english_1st_paper', 'CQ' => 100])->save();
@@ -511,6 +511,9 @@ class TeacherResultWorkspaceTest extends TestCase
         $this->mapSubject($scope, $scope['subject']);
         $this->mapSubject($scope, $companion);
         $this->assignment($scope['teacher'], $scope);
+        $companionScope = $scope;
+        $companionScope['subject'] = $companion;
+        $this->assignment($scope['teacher'], $companionScope);
         $student = $scope['students']->first();
 
         foreach ([[$scope['subject'], 29, 'F'], [$companion, 50, 'B']] as [$subject, $cq, $storedGrade]) {
@@ -532,11 +535,121 @@ class TeacherResultWorkspaceTest extends TestCase
             ->get(route('teacher.results.workspace', $this->query($scope)));
         $result = $response->viewData('calculatedResults')->get($student->id);
 
-        $this->assertSame([$scope['subject']->id, $companion->id], array_map('intval', $result->sourceSubjectIds));
-        $this->assertSame(79.0, $result->obtainedMarks);
-        $this->assertSame('D', $result->letterGrade);
-        $this->assertSame(1.0, $result->gradePoint);
-        $this->assertSame('Pass', $result->status);
+        $this->assertSame([$scope['subject']->id], array_map('intval', $result->sourceSubjectIds));
+        $this->assertSame(29.0, $result->obtainedMarks);
+        $this->assertSame('F', $result->letterGrade);
+        $this->assertSame(0.0, $result->gradePoint);
+        $this->assertSame('Fail', $result->status);
+
+        $secondResponse = $this->get(route('teacher.results.workspace', $this->query(
+            $scope,
+            ['subjectId' => $companion->id]
+        )));
+        $second = $secondResponse->viewData('calculatedResults')->get($student->id);
+        $this->assertSame([$companion->id], array_map('intval', $second->sourceSubjectIds));
+        $this->assertSame(50.0, $second->obtainedMarks);
+        $this->assertSame('B', $second->letterGrade);
+        $this->assertSame(3.0, $second->gradePoint);
+        $this->assertSame('Pass', $second->status);
+    }
+
+    public function test_teacher_can_print_and_download_only_the_authorized_subject_marksheet(): void
+    {
+        $scope = $this->scope(subjectName: 'Printable Physics');
+        $scope['subject']->forceFill(['CQ' => 50, 'MCQ' => 25, 'Practical' => 25])->save();
+        $this->assignment($scope['teacher'], $scope);
+        $student = $scope['students']->first();
+        Marksheet::create([
+            'studentId' => $student->id,
+            'sessionId' => $scope['session']->id,
+            'classId' => $scope['class']->id,
+            'groupId' => $scope['section']->id,
+            'examId' => $scope['exam']->id,
+            'subjectId' => $scope['subject']->id,
+            'subjectMarks' => '23.25',
+            'objectMarks' => '15.5',
+            'practicalMarks' => '0.5',
+        ]);
+        $query = $this->query($scope);
+
+        $print = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.subject-marksheet.print', $query));
+        $print->assertOk()
+            ->assertSee('Subject Marksheet')
+            ->assertSee($scope['teacher']->adminName)
+            ->assertSee($scope['subject']->subjectName)
+            ->assertSee($student->fullName)
+            ->assertSee('23.25')->assertSee('15.5')->assertSee('0.5')->assertSee('39.25')
+            ->assertSee('Teacher Signature')
+            ->assertDontSee('GPA')->assertDontSee('Transcript');
+
+        $pdf = $this->get(route('teacher.results.subject-marksheet.pdf', $query));
+        $pdf->assertOk();
+        $this->assertSame('application/pdf', $pdf->headers->get('content-type'));
+        $this->assertStringContainsString('attachment;', (string) $pdf->headers->get('content-disposition'));
+    }
+
+    public function test_subject_marksheet_pages_students_in_scope_without_duplicates_and_preserves_order_and_values(): void
+    {
+        $scope = $this->scope(subjectName: 'Bangla 1st Paper');
+        $scope['subject']->forceFill(['alias' => 'bangla_1st_paper', 'CQ' => 100, 'MCQ' => 0, 'Practical' => 0])->save();
+        $this->assignment($scope['teacher'], $scope, 'male');
+        $this->assignment($scope['teacher'], $scope, 'female');
+        $scope['students']->first()->forceFill(['rollNumber' => '2', 'gender' => '1'])->save();
+
+        for ($index = 1; $index <= 15; $index++) {
+            $student = $this->student($scope, 'Report Student '.$index);
+            $student->forceFill([
+                'rollNumber' => (string) $index,
+                'gender' => $index <= 7 ? '1' : '2',
+            ])->save();
+        }
+
+        $students = NewAdmission::query()->where('sessName', (string) $scope['session']->id)->get();
+        foreach ($students as $index => $student) {
+            Marksheet::create([
+                'studentId' => $student->id,
+                'sessionId' => $scope['session']->id,
+                'classId' => $scope['class']->id,
+                'groupId' => $scope['section']->id,
+                'examId' => $scope['exam']->id,
+                'subjectId' => $scope['subject']->id,
+                'subjectMarks' => $index === 0 ? '0' : ($index === 1 ? null : '23.25'),
+            ]);
+        }
+
+        $response = $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.subject-marksheet.print', $this->query($scope)));
+        $response->assertOk()->assertSee('Page 1 of 2')->assertSee('Page 2 of 2');
+        $html = $response->getContent();
+        $this->assertSame(2, substr_count($html, 'class="report-page"'));
+        $this->assertSame(16, substr_count($html, '<td class="name">'));
+        $this->assertStringContainsString('>0</td>', $html);
+        $this->assertStringContainsString('>—</td>', $html);
+        $this->assertStringContainsString('23.25', $html);
+        $this->assertStringNotContainsString('>MCQ</th>', $html);
+        $this->assertStringNotContainsString('>Practical</th>', $html);
+        $this->assertLessThan(
+            strpos($html, 'Report Student 8'),
+            strpos($html, 'Report Student 7'),
+        );
+    }
+
+    public function test_subject_marksheet_routes_reject_an_unassigned_teacher_and_tampered_scope(): void
+    {
+        $scope = $this->scope();
+        $this->assignment($scope['teacher'], $scope);
+        $otherTeacher = $this->teacher('Other Teacher', 'T-2');
+
+        $this->actingAs($otherTeacher, 'teacher')
+            ->get(route('teacher.results.subject-marksheet.print', $this->query($scope)))
+            ->assertForbidden();
+        $this->get(route('teacher.results.subject-marksheet.pdf', $this->query($scope)))
+            ->assertForbidden();
+
+        $this->actingAs($scope['teacher'], 'teacher')
+            ->get(route('teacher.results.subject-marksheet.print', $this->query($scope, ['subjectId' => 999999])))
+            ->assertStatus(403);
     }
 
     public function test_forged_student_is_rejected_without_partial_write(): void

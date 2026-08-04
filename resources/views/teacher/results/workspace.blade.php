@@ -21,6 +21,12 @@
     $showCq = $legacyComponents || (float)($subject->CQ ?? 0) > 0;
     $showMcq = !$legacyComponents && (float)($subject->MCQ ?? 0) > 0;
     $showPractical = !$legacyComponents && (float)($subject->Practical ?? 0) > 0;
+    $subjectMarksheetQuery = array_filter([
+        'sessionId' => $scope['sessionId'], 'classId' => $scope['classId'],
+        'groupId' => $scope['groupId'], 'optionalGroupId' => $scope['optionalGroupId'],
+        'subjectId' => $scope['subjectId'], 'examId' => $scope['examId'],
+        'gender' => $scope['gender'] ?? 'all',
+    ], fn ($value) => $value !== null);
 @endphp
 
 <section class="tp-card" style="position:sticky;top:82px;z-index:20">
@@ -33,7 +39,11 @@
                 @if($scope['gender'] !== 'all') · Gender {{ $labels['gender'] }} @endif
             </span>
         </div>
-        <strong style="padding:.4rem .7rem;border-radius:999px;background:#e5f5f2;color:#0f766e">{{ $status }}</strong>
+        <div style="display:flex;align-items:center;justify-content:flex-end;gap:.5rem;flex-wrap:wrap">
+            <a class="tp-btn" target="_blank" rel="noopener" href="{{ route('teacher.results.subject-marksheet.print', $subjectMarksheetQuery) }}">Print</a>
+            <a class="tp-btn tp-btn-primary" href="{{ route('teacher.results.subject-marksheet.pdf', $subjectMarksheetQuery) }}">Download PDF</a>
+            <strong style="padding:.4rem .7rem;border-radius:999px;background:#e5f5f2;color:#0f766e">{{ $status }}</strong>
+        </div>
     </div>
 </section>
 

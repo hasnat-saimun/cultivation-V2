@@ -23,6 +23,9 @@ Create Subject
                                             {{ session()->get('error') }}
                                         </div>
                                     @endif
+                                    @if($errors->any())
+                                        <div class="alert alert-danger w-100"><ul class="mb-0">@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="heading-layout1">
@@ -44,18 +47,7 @@ Create Subject
                                             <option value="Optional">Optional</option>
                                         </select>
                                     </div>
-                                    <div class="col-12 form-group">
-                                        <label>Assign Class *</label>
-                                        <select name="classId" id="" class="form-control">
-                                            <option value="">Select Class</option>
-                                            <option value="0">All</option>
-                                            @if($classList->count() > 0)
-                                                @foreach($classList as $class)
-                                                    <option value="{{ $class->id }}">{{ $class->className }}</option>
-                                                @endforeach
-                                            @endif
-                                        </select>
-                                    </div>
+                                    @include('result.partials.subject-class-scope', ['selectedClassIds' => [], 'allClasses' => false])
                                     <div class="col-12 form-group">
                                         <label>Available Feature *</label>
                                         <div class="form-check form-check-inline">

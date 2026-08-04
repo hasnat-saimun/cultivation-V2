@@ -6,10 +6,19 @@ use Illuminate\Http\Request;
 use App\Models\classManage;
 use App\Models\Subject;
 use App\Models\ReligiousSubjectDefault;
+use App\Services\{SubjectClassScopeService, SubjectScopeSplitPreviewService, SubjectScopeSplitService};
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class SubjectController extends Controller
 {
+    public function __construct(
+        private SubjectClassScopeService $scopeService,
+        private SubjectScopeSplitPreviewService $splitPreview,
+        private SubjectScopeSplitService $splitter,
+    ) {}
     
     
     public function createSubject(){
@@ -19,10 +28,10 @@ class SubjectController extends Controller
 
     public function confirmSubject(Request $requ){
         $validated = $this->validateSubjectPayload($requ);
-        $chk = Subject::where(['subjectName'=>$validated['subjectName']]);
-        if($chk->exists()):
-            return back()->withInput()->with('error','Alias already exist');
-        else:
+        [$requestedClasses, $allClasses] = $this->requestedClasses($validated, $requ);
+        $classIds = $this->scopeService->validate($validated['subjectName'], $requestedClasses, $allClasses);
+
+        DB::transaction(function () use ($requ, $validated, $allClasses, $classIds) {
             $subject = new Subject();
             $aliasCreate = str_replace(' ','_',$validated['subjectName']);
             $alias = strtolower($aliasCreate);
@@ -30,13 +39,14 @@ class SubjectController extends Controller
             $subject->subjectName   = $validated['subjectName'];
             $subject->subjectType   = $validated['subjectType'];
             $subject->passingSystem = $requ->passingSystem;
-            $subject->assign_class  = $validated['classId'] ?? null;
+            $subject->assign_class  = null;
             $subject->CQ            = $validated['cqValue'] ?? null;
             $subject->MCQ           = $validated['mcqValue'] ?? null;
             $subject->Practical     = $validated['practicalValue'] ?? null;
             $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
+            $this->scopeService->sync($subject, $classIds, $allClasses);
 
             // Map defaults for selected classes (for all classes support)
             if ($subject->isReligious) {
@@ -51,20 +61,29 @@ class SubjectController extends Controller
                     );
                 }
             }
-            return back()->with('success','Record successfully saved');
-        endif;
+        });
+
+        return back()->with('success','Record successfully saved');
     }
 
     public function allSubject(){
         $itemData = Subject::orderBy('id','DESC')->get();
-        return view('result.subjectList',['itemData'=>$itemData]);
+        $classNames = classManage::pluck('className', 'id');
+        $subjectScopeLabels = $itemData->mapWithKeys(function (Subject $subject) use ($classNames) {
+            if ($this->scopeService->isAllClasses($subject)) {
+                return [$subject->id => 'All Classes'];
+            }
+            return [$subject->id => collect($this->scopeService->selectedClassIds($subject))->map(fn ($id) => $classNames[$id] ?? '#'.$id)->implode(', ') ?: 'Not assigned'];
+        });
+        return view('result.subjectList', compact('itemData', 'subjectScopeLabels'));
     }
     
     public function editSubject($item){
         $itemData = Subject::find($item);
         $classList = classManage::orderBy('id','ASC')->get();
         $defaultClassIds = ReligiousSubjectDefault::where('subjectId', $itemData->id)->pluck('classId')->toArray();
-        return view('result.edit-subject',['item'=>$itemData, 'classList'=>$classList, 'defaultClassIds'=>$defaultClassIds]);
+        return view('result.edit-subject',['item'=>$itemData, 'classList'=>$classList, 'defaultClassIds'=>$defaultClassIds,
+            'selectedClassIds'=>$this->scopeService->selectedClassIds($itemData), 'allClasses'=>$this->scopeService->isAllClasses($itemData)]);
     }
     
 
@@ -72,19 +91,22 @@ class SubjectController extends Controller
         $validated = $this->validateSubjectPayload($requ, true);
         $subject = Subject::find($validated['itemId']);
         if(!empty($subject) && $subject->exists()):
+            [$requestedClasses, $allClasses] = $this->requestedClasses($validated, $requ);
+            $classIds = $this->scopeService->validate($validated['subjectName'], $requestedClasses, $allClasses, $subject->id);
+            DB::transaction(function () use ($requ, $validated, $subject, $allClasses, $classIds) {
             $aliasCreate = str_replace(' ','_',$validated['subjectName']);
             $alias = strtolower($aliasCreate);
 
             $subject->subjectName   = $validated['subjectName'];
             $subject->subjectType   = $validated['subjectType'];
             $subject->passingSystem = $requ->passingSystem;
-            $subject->assign_class  = $validated['classId'] ?? null;
             $subject->CQ            = $validated['cqValue'] ?? null;
             $subject->MCQ           = $validated['mcqValue'] ?? null;
             $subject->Practical     = $validated['practicalValue'] ?? null;
             $subject->isReligious   = $requ->has('isReligious') ? 1 : 0;
             $subject->alias         = $alias;
             $subject->save();
+            $this->scopeService->sync($subject, $classIds, $allClasses);
 
             // Update defaults mapping for selected classes
             if ($subject->isReligious) {
@@ -106,6 +128,7 @@ class SubjectController extends Controller
                     ReligiousSubjectDefault::where('subjectId', $subject->id)->whereIn('classId', $toRemove)->delete();
                 }
             }
+            });
             return back()->with('success','Record successfully updated');
         else:
             return back()->with('error','No alias found for update');
@@ -122,27 +145,122 @@ class SubjectController extends Controller
                 'required',
                 'string',
                 'max:255',
-                Rule::unique('subjects', 'subjectName')->ignore($subjectId),
             ],
             'subjectType' => ['required', 'string', 'max:255'],
-            'classId' => [
-                'nullable',
-                function (string $attribute, $value, $fail) {
-                    if ($value === null || $value === '' || $value === '0') {
-                        return;
-                    }
-
-                    if (!is_numeric($value) || !classManage::whereKey((int) $value)->exists()) {
-                        $fail('The selected class is invalid.');
-                    }
-                },
-            ],
+            'allClasses' => ['nullable', 'boolean'],
+            'classIds' => ['nullable', 'array'],
+            'classIds.*' => ['integer', 'exists:class_manages,id'],
+            'classId' => ['nullable', 'integer', function (string $attribute, $value, $fail) {
+                if ((int) $value !== 0 && !classManage::whereKey((int) $value)->exists()) {
+                    $fail('The selected class is invalid.');
+                }
+            }],
             'cqValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'mcqValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'practicalValue' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'defaultReligiousClasses' => ['nullable', 'array'],
             'defaultReligiousClasses.*' => ['integer', 'exists:class_manages,id'],
         ]);
+    }
+
+    private function requestedClasses(array $validated, Request $request): array
+    {
+        $legacyAll = array_key_exists('classId', $validated) && (string) $validated['classId'] === '0';
+        $allClasses = $request->boolean('allClasses') || $legacyAll;
+        $classIds = $validated['classIds'] ?? [];
+        if (!$classIds && isset($validated['classId']) && (int) $validated['classId'] > 0) {
+            $classIds = [(int) $validated['classId']];
+        }
+        return [$classIds, $allClasses];
+    }
+
+    public function splitScopeForm(int $itemId)
+    {
+        $source = Subject::findOrFail($itemId);
+        return view('result.subject-scope-split', $this->splitViewData($source));
+    }
+
+    public function previewScopeSplit(Request $request, int $itemId)
+    {
+        $source = Subject::findOrFail($itemId);
+        $payload = $this->validateSplitPayload($request, $source);
+
+        try {
+            $preview = $this->splitPreview->preview($source->id, $payload['destination_id'], $payload['remain'], $payload['migrate'], $payload['create_destination']);
+        } catch (Throwable $exception) {
+            return back()->withInput()->withErrors(['split' => $exception->getMessage()]);
+        }
+
+        return view('result.subject-scope-split', $this->splitViewData($source) + compact('preview', 'payload'));
+    }
+
+    public function applyScopeSplit(Request $request, int $itemId)
+    {
+        $source = Subject::findOrFail($itemId);
+        $payload = $this->validateSplitPayload($request, $source);
+        $request->validate(['confirmation' => ['required', 'in:APPLY']]);
+
+        try {
+            $result = $this->splitter->execute(
+                $source->id, $payload['destination_id'], $payload['remain'], $payload['migrate'], true,
+                'admin:'.session('cultivationAdmin'), $payload['create_destination']
+            );
+        } catch (Throwable $exception) {
+            return back()->withInput()->withErrors(['split' => $exception->getMessage()]);
+        }
+
+        return redirect()->route('subject.scope.split', ['itemId' => $source->id])
+            ->with('success', 'Scope migration applied. Audit operation: '.$result['operation_uuid'])
+            ->with('migrationResult', [
+                'operation_uuid' => $result['operation_uuid'],
+                'destination_id' => $result['destinationId'],
+                'counts' => $result['counts'],
+            ]);
+    }
+
+    private function splitViewData(Subject $source): array
+    {
+        $sourceClassIds = $this->scopeService->selectedClassIds($source);
+        $normalized = mb_strtolower(preg_replace('/\s+/u', ' ', trim($source->subjectName)));
+        $destinations = Subject::whereKeyNot($source->id)->get()->filter(
+            fn (Subject $subject) => mb_strtolower(preg_replace('/\s+/u', ' ', trim($subject->subjectName))) === $normalized
+        );
+
+        return [
+            'source' => $source,
+            'classList' => classManage::whereIn('id', $sourceClassIds)->orderBy('id')->get(),
+            'sourceClassIds' => $sourceClassIds,
+            'destinations' => $destinations,
+        ];
+    }
+
+    private function validateSplitPayload(Request $request, Subject $source): array
+    {
+        $validated = $request->validate([
+            'remain' => ['required', 'array'],
+            'remain.*' => ['integer', 'exists:class_manages,id'],
+            'migrate' => ['required', 'array'],
+            'migrate.*' => ['integer', 'exists:class_manages,id'],
+            'destination_mode' => ['required', 'in:existing,create'],
+            'destination_id' => ['nullable', 'integer', 'exists:subjects,id', Rule::notIn([$source->id])],
+        ]);
+        $remain = collect($validated['remain'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+        $migrate = collect($validated['migrate'])->map(fn ($id) => (int) $id)->unique()->sort()->values()->all();
+        $current = $this->scopeService->selectedClassIds($source);
+
+        $partition = array_values(array_unique(array_merge($remain, $migrate)));
+        sort($partition);
+        if (array_intersect($remain, $migrate) || $partition !== $current) {
+            throw ValidationException::withMessages(['split' => 'Remain and migrate selections must form an exact, non-overlapping partition of the source scope.']);
+        }
+
+        $create = $validated['destination_mode'] === 'create';
+        if (!$create && empty($validated['destination_id'])) {
+            throw ValidationException::withMessages(['destination_id' => 'Select the existing destination subject.']);
+        }
+
+        return ['remain' => $remain, 'migrate' => $migrate, 'create_destination' => $create,
+            'destination_id' => $create ? null : (int) $validated['destination_id']];
     }
 
     public function delSubject($id){

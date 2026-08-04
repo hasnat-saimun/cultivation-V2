@@ -52,7 +52,7 @@
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
                         $sessionRoutes = ['allSession','createSession'];
-                        $subjectRoutes = ['allSubject','resultCurriculumMappingManage','saveResultCurriculumMapping','previewResultCurriculumMappingCopy','copyResultCurriculumMapping','createSubject'];
+                        $subjectRoutes = ['allSubject','resultCurriculumMappingManage','saveResultCurriculumMapping','previewResultCurriculumMappingCopy','copyResultCurriculumMapping','createSubject','editSubject','subject.scope.split','subject.scope.split.preview','subject.scope.split.apply'];
                         $examRoutes = ['allExam','createExam','admitCard','getAdmitCard','resultExamRoutineManage','saveResultExamRoutine','editResultExamRoutine','delResultExamRoutine','admitCardRoutine','getAdmitCardRoutine','attendSheet','getAttendSheet'];
 
                         $resultOpen = request()->routeIs($resultRoutes);

@@ -22,8 +22,8 @@ class SubjectFormConsistencyTest extends TestCase
             ->get(route('adminModernAcademicSubjectsCreate'));
 
         $response->assertOk();
-        $response->assertSee('name="classId"', false);
-        $response->assertSee('Assign Class *');
+        $response->assertSee('name="classIds[]"', false);
+        $response->assertSee('Class Scope *');
         $response->assertSee('value="'.$class->id.'"', false);
     }
 
@@ -37,8 +37,8 @@ class SubjectFormConsistencyTest extends TestCase
             ->get(route('adminModernAcademicSubjectsEdit', ['itemId' => $subject->id]));
 
         $response->assertOk();
-        $response->assertSee('name="classId"', false);
-        $response->assertSee('Assign Class *');
+        $response->assertSee('name="classIds[]"', false);
+        $response->assertSee('Class Scope *');
         $response->assertSee('value="'.$class->id.'"', false);
     }
 
@@ -52,7 +52,7 @@ class SubjectFormConsistencyTest extends TestCase
             ->get(route('adminModernAcademicSubjectsEdit', ['itemId' => $subject->id]));
 
         $response->assertOk();
-        $response->assertSee('option value="'.$class->id.'" selected', false);
+        $response->assertSee('name="classIds[]" value="'.$class->id.'" checked', false);
     }
 
     public function test_changing_related_class_persists_and_reload_shows_updated_value(): void
@@ -69,7 +69,7 @@ class SubjectFormConsistencyTest extends TestCase
                 'itemId' => $subject->id,
                 'subjectName' => $subject->subjectName,
                 'subjectType' => $subject->subjectType,
-                'classId' => $newClass->id,
+                'classIds' => [$newClass->id],
                 'cqValue' => $subject->CQ,
                 'mcqValue' => $subject->MCQ,
                 'practicalValue' => $subject->Practical,
@@ -90,8 +90,8 @@ class SubjectFormConsistencyTest extends TestCase
             ->get(route('adminModernAcademicSubjectsEdit', ['itemId' => $subject->id]));
 
         $reload->assertOk();
-        $reload->assertSee('option value="'.$newClass->id.'" selected', false);
-        $reload->assertDontSee('option value="'.$oldClass->id.'" selected', false);
+        $reload->assertSee('name="classIds[]" value="'.$newClass->id.'" checked', false);
+        $reload->assertDontSee('name="classIds[]" value="'.$oldClass->id.'" checked', false);
     }
 
     public function test_create_and_update_class_validation_is_consistent(): void
@@ -104,11 +104,11 @@ class SubjectFormConsistencyTest extends TestCase
             ->post(route('confirmSubject'), [
                 'subjectName' => 'New Subject',
                 'subjectType' => 'Main',
-                'classId' => 999999,
+                'classIds' => [999999],
             ]);
 
         $createResponse->assertRedirect(route('adminModernAcademicSubjectsCreate'));
-        $createResponse->assertSessionHasErrors('classId');
+        $createResponse->assertSessionHasErrors('classIds.0');
 
         $updateResponse = $this->withSession(['cultivationAdmin' => $admin->id])
             ->from(route('adminModernAcademicSubjectsEdit', ['itemId' => $subject->id]))
@@ -116,11 +116,11 @@ class SubjectFormConsistencyTest extends TestCase
                 'itemId' => $subject->id,
                 'subjectName' => $subject->subjectName,
                 'subjectType' => $subject->subjectType,
-                'classId' => 999999,
+                'classIds' => [999999],
             ]);
 
         $updateResponse->assertRedirect(route('adminModernAcademicSubjectsEdit', ['itemId' => $subject->id]));
-        $updateResponse->assertSessionHasErrors('classId');
+        $updateResponse->assertSessionHasErrors('classIds.0');
     }
 
     private function createAdmin(): CultivationAdmin

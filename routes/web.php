@@ -133,6 +133,10 @@ Route::prefix('teacher')->name('teacher.')->group(function () {
             ->middleware('throttle:30,1')->name('results.draft');
         Route::post('/results/confirm', [TeacherResultController::class, 'confirm'])
             ->middleware('throttle:12,1')->name('results.confirm');
+        Route::get('/results/subject-marksheet/print', [TeacherResultController::class, 'subjectMarksheetPrint'])
+            ->name('results.subject-marksheet.print');
+        Route::get('/results/subject-marksheet/pdf', [TeacherResultController::class, 'subjectMarksheetPdf'])
+            ->name('results.subject-marksheet.pdf');
         Route::post('/logout', [TeacherAuthController::class, 'destroy'])->name('logout');
     });
 });
@@ -1746,6 +1750,12 @@ Route::middleware(['adminGuard'])->group (function(){
         SubjectController::class,
         'allSubject'
     ])->name('allSubject');
+
+    Route::middleware(\App\Http\Middleware\Roles::class.':3')->group(function () {
+        Route::get('/subject/{itemId}/scope-split', [SubjectController::class, 'splitScopeForm'])->name('subject.scope.split');
+        Route::post('/subject/{itemId}/scope-split/preview', [SubjectController::class, 'previewScopeSplit'])->name('subject.scope.split.preview');
+        Route::post('/subject/{itemId}/scope-split/apply', [SubjectController::class, 'applyScopeSplit'])->name('subject.scope.split.apply');
+    });
 
 
     //Exam route declaration

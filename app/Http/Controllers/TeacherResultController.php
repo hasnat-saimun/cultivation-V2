@@ -9,7 +9,9 @@ use App\Services\ResultComponentMarksValidationService;
 use App\Services\ResultMarksConfirmationService;
 use App\Services\ResultMarksDraftService;
 use App\Services\TeacherDashboardService;
+use App\Services\TeacherLoginBrandingService;
 use App\Services\TeacherResultWorkspaceService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +26,7 @@ class TeacherResultController extends Controller
         private ResultComponentMarksValidationService $componentMarksValidation,
         private ResultMarksConfirmationService $confirmations,
         private TeacherDashboardService $dashboard,
+        private TeacherLoginBrandingService $branding,
     ) {}
 
     public function index(): View
@@ -117,6 +120,83 @@ class TeacherResultController extends Controller
         } catch (ResultLifecycleException $exception) {
             return $this->failure($request, $exception);
         }
+    }
+
+    public function subjectMarksheetPrint(Request $request): View|RedirectResponse
+    {
+        try {
+            return view('teacher.results.subject-marksheet', $this->subjectMarksheetData($request, false));
+        } catch (ResultLifecycleException $exception) {
+            abort($exception->httpStatus, $exception->getMessage());
+        }
+    }
+
+    public function subjectMarksheetPdf(Request $request): mixed
+    {
+        try {
+            $data = $this->subjectMarksheetData($request, true);
+            $filename = 'subject-marksheet-'.str($data['labels']['subject'])->slug().'.pdf';
+
+            return Pdf::loadView('teacher.results.subject-marksheet', $data)
+                ->setPaper('a4', 'landscape')
+                ->download($filename);
+        } catch (ResultLifecycleException $exception) {
+            abort($exception->httpStatus, $exception->getMessage());
+        }
+    }
+
+    /** @return array<string,mixed> */
+    private function subjectMarksheetData(Request $request, bool $pdfMode): array
+    {
+        $teacher = $this->teacher();
+        $data = $this->workspace->workspace($teacher, $request->all());
+        $branding = $this->branding->resolve();
+        $rows = $data['students']->values()->map(function ($student, int $index) use ($data) {
+            $mark = $data['marks']->get((int) $student->id);
+            $preview = $data['calculatedResults']->get((int) $student->id);
+
+            return [
+                'sl' => $index + 1,
+                'roll' => $student->rollNumber,
+                'student_id' => $student->stdId,
+                'name' => trim($student->fullName.' '.$student->sureName),
+                'cq' => $mark?->subjectMarks,
+                'mcq' => $mark?->objectMarks,
+                'practical' => $mark?->practicalMarks,
+                'total' => $preview?->obtainedMarks,
+            ];
+        });
+
+        return $data + [
+            'teacher' => $teacher,
+            'instituteName' => $branding['instituteName'],
+            'instituteLogoUrl' => $pdfMode
+                ? $this->reportLogoSource($branding['instituteLogoUrl'])
+                : $branding['instituteLogoUrl'],
+            'printedAt' => now(),
+            'pdfMode' => $pdfMode,
+            'reportPages' => $rows->chunk(15)->values(),
+            'subjectCode' => $data['subject']->getAttribute('subjectCode')
+                ?: $data['subject']->getAttribute('code'),
+        ];
+    }
+
+    private function reportLogoSource(string $url): string
+    {
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path)) {
+            return $url;
+        }
+
+        $relative = preg_replace('~^/public/~', '', '/'.ltrim(rawurldecode($path), '/'));
+        $file = public_path(ltrim((string) $relative, '/'));
+        if (! is_file($file)) {
+            return $url;
+        }
+
+        $mime = mime_content_type($file) ?: 'image/png';
+
+        return 'data:'.$mime.';base64,'.base64_encode((string) file_get_contents($file));
     }
 
     private function validateMarks(Request $request): void
