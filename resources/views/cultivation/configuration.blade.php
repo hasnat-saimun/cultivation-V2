@@ -540,7 +540,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb bg-success" src="{{ asset('public') }}\upload\image\cultivation\{{ $logo }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delLogo',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delLogo',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif
@@ -558,7 +558,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $favicon }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delFavicon',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delFavicon',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif
@@ -576,7 +576,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $boardChairmanImg }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delBoardChairmanImg',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delBoardChairmanImg',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif
@@ -596,7 +596,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $avatar }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delAvatar',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delAvatar',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif
@@ -614,7 +614,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $principalSign }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delSign',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delSign',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif
@@ -632,7 +632,7 @@ Configuration
                             <div class="pt-1">
                                 <img class="preview-thumb" src="{{ asset('public') }}\upload\image\cultivation\{{ $eduMinImg }}" alt="{{ $insName }}">
                                 <div>
-                                    <a href="{{ route('delEduMinImg',['id'=>$serverId]) }}">Delete</a>
+                                    <x-delete-action :action="route('delEduMinImg',['id'=>$serverId])">Delete</x-delete-action>
                                 </div>
                             </div>
                             @endif

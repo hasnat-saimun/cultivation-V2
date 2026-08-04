@@ -131,7 +131,7 @@ Admin Profile
                                 <img class="img-thumbnail" style="max-width:160px;border-radius:50%;object-fit:cover;" src="{{ asset('public/upload/image/admin/'.$adminAvatar) }}" alt="{{ $adminName }}" />
                             </div>
                             <div class="mb-3">
-                                <a href="{{ route('delAdminPhoto',['id'=>$adminId]) }}" class="btn btn-outline-danger">Remove Photo</a>
+                                <x-delete-action :action="route('delAdminPhoto',['id'=>$adminId])" class="btn btn-outline-danger">Remove Photo</x-delete-action>
                             </div>
                         @endif
                         <form action="{{ route('updateAdminPhoto') }}" method="POST" enctype="multipart/form-data">

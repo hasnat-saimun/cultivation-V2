@@ -28,10 +28,25 @@ class StudentFiltersAndIdCardTest extends TestCase
 
         $list->assertOk()->assertSee($target->student_name)->assertDontSee('Excluded Male');
         $bulk->assertOk()->assertSee('value="Shared"', false)->assertSee('value="Target"', false)->assertDontSee('value="Excluded"', false);
+        $list->assertSee('student/bulk-update?classId='.$scope['class']->id.'&amp;sessionId='.$scope['session']->id, false);
+        $bulk->assertSee('student/list?sessionId='.$scope['session']->id, false);
+        $list->assertViewHasAll(['filterOptions', 'filters', 'filterAction', 'filterResetUrl']);
+        $bulk->assertViewHasAll(['filterOptions', 'filters', 'filterAction', 'filterResetUrl']);
+        $this->assertSame(route('studentList'), $list->viewData('filterAction'));
+        $this->assertSame(route('studentBulkUpdate'), $bulk->viewData('filterAction'));
         foreach (['sessionId', 'classId', 'sectionId', 'departmentId', 'gender', 'search'] as $field) {
             $list->assertSee('name="'.$field.'"', false);
             $bulk->assertSee('name="'.$field.'"', false);
         }
+    }
+
+    public function test_shared_filter_partial_has_a_safe_display_only_default(): void
+    {
+        $html = view('cultivation.partials.student-filters')->render();
+
+        $this->assertStringContainsString('<form method="GET"', $html);
+        $this->assertStringContainsString('name="gender"', $html);
+        $this->assertStringContainsString('name="search"', $html);
     }
 
     public function test_list_pagination_preserves_the_complete_filter_query(): void

@@ -35,6 +35,7 @@ class SingleTranscriptResultEngineTest extends TestCase
     {
         parent::setUp();
         config(['app.key' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', 'cache.default' => 'array']);
+        $this->signInGeneralAdmin();
     }
 
     public function test_retired_controller_uses_centralized_single_transcript_when_flag_is_disabled(): void

@@ -280,7 +280,7 @@ Exam Routine Management
                                     <td>{{ $item->entries_count ?? 0 }}</td>
                                     <td>
                                         <a href="{{ route('editResultExamRoutine',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                        <a href="{{ route('delResultExamRoutine',['id'=>$item->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                        <x-delete-action :action="route('delResultExamRoutine',['id'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                     </td>
                                 </tr>
                                 @php $x++; @endphp

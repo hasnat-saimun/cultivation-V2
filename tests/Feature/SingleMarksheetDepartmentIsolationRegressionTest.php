@@ -18,6 +18,12 @@ class SingleMarksheetDepartmentIsolationRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->signInGeneralAdmin();
+    }
+
     public function test_single_marksheet_route_excludes_cross_department_subjects_and_keeps_optional_separate(): void
     {
         $this->withoutMiddleware();

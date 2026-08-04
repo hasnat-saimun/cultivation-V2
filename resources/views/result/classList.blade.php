@@ -45,7 +45,7 @@ Class List
                                                 <td>{{ $item->className }}</td>
                                                 <td>
                                                     <a href="{{ route('editClass',['itemId'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                                    <a href="{{ route('delClass',['itemId'=>$item->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                                    <x-delete-action :action="route('delClass',['itemId'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                                 </td>
                                             </tr>
                                         @php

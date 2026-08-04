@@ -27,4 +27,19 @@ abstract class TestCase extends BaseTestCase
 
         return $app;
     }
+
+    protected function signInGeneralAdmin(): \App\Models\CultivationAdmin
+    {
+        $admin = new \App\Models\CultivationAdmin();
+        $admin->adminName = 'Test General Admin';
+        $admin->adminUser = 'test_admin_'.uniqid();
+        $admin->userType = \App\Models\CultivationAdmin::ROLE_GENERAL;
+        $admin->loginPassword = \Illuminate\Support\Facades\Hash::make('test-password');
+        $admin->adminMobile = '01700000000';
+        $admin->adminMail = uniqid().'@test.local';
+        $admin->save();
+        session()->put('cultivationAdmin', (int) $admin->id);
+
+        return $admin;
+    }
 }

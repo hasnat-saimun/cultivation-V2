@@ -54,7 +54,7 @@ Registered List
                                                 <a href="{{ route('registerForm') }}" class="btn btn-danger">Admin Access</a>
                                                     
                                                     <!-- <a href="{{ route('registerEdit',['regId'=>$allData->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                                    <a href="{{ route('registerDel',['regId'=>$allData->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a> -->
+                                                    <x-delete-action :action="route('registerDel',['regId'=>$allData->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action> -->
                                                 </td>
                                             </tr>
                                         @endforeach

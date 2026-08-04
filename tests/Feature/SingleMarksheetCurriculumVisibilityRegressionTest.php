@@ -16,6 +16,12 @@ class SingleMarksheetCurriculumVisibilityRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->signInGeneralAdmin();
+    }
+
     public function test_mapped_main_subject_remains_visible_even_when_marks_are_missing(): void
     {
         $this->withoutMiddleware();

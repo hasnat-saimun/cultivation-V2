@@ -22,7 +22,7 @@ Student List
                                     @endphp
                                     <a href="{{ route('student.export.pdf', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-pdf"></i> Export PDF</a>
                                     <a href="{{ route('student.export.excel', $exportParams) }}" class="btn btn-light btn-sm"><i class="fa-solid fa-file-excel"></i> Export Excel</a>
-                                    <a href="{{ route('studentBulkUpdate', $exportParams) }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
+                                    <a href="{{ route('studentBulkUpdate') }}{{ $exportParams ? '?'.http_build_query($exportParams) : '' }}" class="btn btn-warning btn-sm"><i class="fa-solid fa-edit"></i> Bulk Update</a>
                                     <a href="{{route('admitStudent')}}" class="btn btn-success btn-sm"><i class="fa-solid fa-user-plus"></i> New Admission</a>
                                 </div>
                             </div>
@@ -41,7 +41,7 @@ Student List
                                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                                     </div>
                                 @endif
-                                <div class="mb-3">@include('cultivation.partials.student-filters', ['action' => route('studentList')])</div>
+                                <div class="mb-3">@include('cultivation.partials.student-filters')</div>
                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                     <button type="button" class="btn btn-danger" id="bulkDeleteBtn" style="display:none;">
                                         <i class="fa-solid fa-trash"></i> Delete Selected (<span id="selectedCount">0</span>)

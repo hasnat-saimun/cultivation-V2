@@ -77,7 +77,7 @@ Tuition Fee List
                                 <a href="{{route('tuitionReport',['id'=>$tfdData->id])}}"><i class="fa-duotone fa-solid fa-print mx-2" style="color:rgb(0 0 0 );"></i></a>
                                 <a href="{{route('tuitionFeeView',['id'=>$tfdData->id])}}"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                                 <a href="{{route('editTuitionFee',['id'=>$tfdData->id])}}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                <a onclick="confirm('are you sure')" href="{{route('dltTuitionFee',['id'=>$tfdData->id])}}"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                <x-delete-action :action="route('dltTuitionFee',['id'=>$tfdData->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                             </td>
                         </tr>
                         @endforeach

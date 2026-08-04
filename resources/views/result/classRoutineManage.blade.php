@@ -457,7 +457,7 @@ Class Routine Management
                                         <a href="{{ route('downloadResultClassRoutineTeacherWisePdf',['id'=>$item->id]) }}" title="Teacher Wise PDF"><i class="fa-solid fa-file-circle-check mx-2" style="color: #7c2d12;"></i></a>
                                         <a href="{{ route('printResultClassRoutine',['id'=>$item->id]) }}" target="_blank" title="Print"><i class="fa-solid fa-print mx-2" style="color: #1666c1;"></i></a>
                                         <a href="{{ route('editResultClassRoutine',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                        <a href="{{ route('delResultClassRoutine',['id'=>$item->id]) }}" onclick="return confirm('Are you sure you want to delete this item?');"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                        <x-delete-action :action="route('delResultClassRoutine',['id'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                     </td>
                                 </tr>
                                 @php $x++; @endphp

@@ -36,6 +36,7 @@ class LegacyResultOutputCharacterizationTest extends TestCase
             'app.key' => 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
             'cache.default' => 'array',
         ]);
+        $this->signInGeneralAdmin();
     }
 
     public function test_single_transcript_caps_optional_bonus_at_five_and_normalizes_non_100_subject(): void

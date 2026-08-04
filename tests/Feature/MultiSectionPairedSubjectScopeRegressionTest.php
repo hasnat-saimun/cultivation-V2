@@ -23,6 +23,12 @@ class MultiSectionPairedSubjectScopeRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->signInGeneralAdmin();
+    }
+
     public function test_paired_component_profiles_are_isolated_across_a_b_c_and_super_reports(): void
     {
         $session = new sessionManage(); $session->session = '2026'; $session->save();

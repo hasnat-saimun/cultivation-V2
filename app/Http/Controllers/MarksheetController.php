@@ -38,6 +38,7 @@ use App\Exceptions\ResultPublicationException;
 use App\Services\ResultPublishService;
 use App\Services\ResultUnpublishService;
 use App\Services\PublishedResultReadyMarksService;
+use App\Services\TranscriptAccessService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -68,6 +69,7 @@ class MarksheetController extends Controller
     private ResultPublishService $resultPublisher;
     private ResultUnpublishService $resultUnpublisher;
     private PublishedResultReadyMarksService $publishedMarks;
+    private TranscriptAccessService $transcriptAccess;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
@@ -89,7 +91,8 @@ class MarksheetController extends Controller
         ResultMarksScopeService $marksScopes,
         ResultPublishService $resultPublisher,
         ResultUnpublishService $resultUnpublisher,
-        PublishedResultReadyMarksService $publishedMarks
+        PublishedResultReadyMarksService $publishedMarks,
+        TranscriptAccessService $transcriptAccess
     )
     {
         $this->adminResolver = $adminResolver;
@@ -112,6 +115,7 @@ class MarksheetController extends Controller
         $this->resultPublisher = $resultPublisher;
         $this->resultUnpublisher = $resultUnpublisher;
         $this->publishedMarks = $publishedMarks;
+        $this->transcriptAccess = $transcriptAccess;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -1175,8 +1179,10 @@ class MarksheetController extends Controller
         if (!$student) return back()->with('error','Student not found.');
         if ($examId <= 0) return back()->with('error','Selected exam is required.');
 
+        $exam = Exam::findOrFail($examId);
+        $this->transcriptAccess->authorize($this->adminResolver->current(), $student, $exam);
+
         try {
-            $exam = Exam::findOrFail($examId);
             $scopedMarks = $this->scopedTranscriptMarks($student, (int) $exam->id);
             $sessionIdForMarks = is_numeric($student->sessName ?? null)
                 ? (int) $student->sessName

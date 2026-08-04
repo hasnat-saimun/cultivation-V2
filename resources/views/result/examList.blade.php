@@ -62,7 +62,7 @@ All Exam
                                                 <td> {{ $item->passingSystem == 1 ? 'Feature Wise' : 'Total Marks' }}</td>
                                                 <td>
                                                     <a href="{{ route('editExam',['itemId'=>$item->id]) }}"><i class="fa-light fa-pen-to-square fa-xl"></i></a>
-                                                    <a href="{{ route('delExam',['itemId'=>$item->id]) }}"><i class="fa-thin fa-circle-trash fa-xl"></i></a>
+                                                    <x-delete-action :action="route('delExam',['itemId'=>$item->id])"><i class="fa-thin fa-circle-trash fa-xl"></i></x-delete-action>
                                                 </td>
                                             </tr>
                                         @php

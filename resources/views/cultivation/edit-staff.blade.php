@@ -72,7 +72,7 @@ Edit Profile
                             @if(!empty($profileData->avatar))
                             <div class="avatar-upload">
                                     <div><img class="w-75" src="{{ $assetPath('upload/image/staff/' . $profileData->avatar) }}" alt="$profileData->firstName" /><br /></div>
-                                <a href="{{route('delStaffPhoto',['profileId'=>$profileData->id])}}" class="mt-3 w-75 btn btn-danger btn-lg">Remove</a>
+                                <x-delete-action :action="route('delStaffPhoto',['profileId'=>$profileData->id])" class="mt-3 w-75 btn btn-danger btn-lg">Remove</x-delete-action>
                             </div>
                             @else
                             <div class="avatar-upload">

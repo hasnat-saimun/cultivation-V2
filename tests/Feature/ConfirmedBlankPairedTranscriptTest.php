@@ -18,6 +18,12 @@ class ConfirmedBlankPairedTranscriptTest extends TestCase
 {
     use RefreshDatabase, CreatesResultLifecycleScope;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->signInGeneralAdmin();
+    }
+
     public function test_confirmed_blank_override_is_effective_zero_in_paired_transcript_and_html(): void
     {
         [$data, $actor, $paper1, $paper2] = $this->pairedScope();

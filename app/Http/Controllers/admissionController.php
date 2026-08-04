@@ -192,7 +192,8 @@ class AdmissionController extends Controller
 
     public function studentList(Request $request, ?StudentFilterService $studentFilters = null){
         $studentFilters ??= app(StudentFilterService::class);
-        $filters = $studentFilters->filters($request);
+        $filterPayload = $studentFilters->viewPayload($request, route('studentList'));
+        $filters = $filterPayload['filters'];
         $stdData = $studentFilters->query($filters)->paginate(50)->withQueryString();
 
         $studentIds = $stdData->pluck('id')->all();
@@ -215,12 +216,10 @@ class AdmissionController extends Controller
                 ->toArray();
         }
 
-        $filterOptions = $studentFilters->options($filters);
+        $filterOptions = $filterPayload['filterOptions'];
 
-        return view('cultivation.studentList', [
+        return view('cultivation.studentList', array_merge($filterPayload, [
             'studentData' => $stdData,
-            'filters' => $filters,
-            'filterOptions' => $filterOptions,
             'classes' => $filterOptions['classes'],
             'sessions' => $filterOptions['sessions'],
             'sections' => $filterOptions['sections'],
@@ -228,7 +227,7 @@ class AdmissionController extends Controller
             'genderOptions' => $filterOptions['genderOptions'],
             'latestTestimonialIds' => $latestTestimonialIds,
             'latestTransferCertificateIds' => $latestTransferCertificateIds,
-        ]);
+        ]));
     }
 
     /**
@@ -961,11 +960,11 @@ class AdmissionController extends Controller
             ->orderBy('id')
             ->value('id');
 
-        $filters = $studentFilters->filters($request);
+        $filterPayload = $studentFilters->viewPayload($request, route('studentBulkUpdate'));
+        $filters = $filterPayload['filters'];
         $students = $studentFilters->query($filters)->get();
-        $filterOptions = $studentFilters->options($filters);
 
-        return view('cultivation.student-bulk-update', compact(
+        return view('cultivation.student-bulk-update', array_merge(compact(
             'students',
             'classDetails',
             'sessionDetails',
@@ -974,9 +973,7 @@ class AdmissionController extends Controller
             'optionalSubjectList',
             'religiousSubjectList',
             'islamDefaultSubjectId',
-            'filters',
-            'filterOptions'
-        ));
+        ), $filterPayload));
     }
 
     /**

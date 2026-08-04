@@ -149,7 +149,7 @@ Institute Dashboard
                                     @else
                                     <div class="my-2">
                                         <img class="w-25" src="{{ asset('public/upload/image/webHomepage').'/'.$eduMinImg }}" class="form-control">
-                                        <div><a href="{{ route('home.delEduMinImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <div><x-delete-action :action="route('home.delEduMinImg',['id'=>$pageId])" class="text-danger fw-bold">Delete</x-delete-action></div>
                                     </div>
                                     @endif
                                 </div>
@@ -173,7 +173,7 @@ Institute Dashboard
                                     @else
                                     <div class="my-2">
                                         <img class="w-25" src="{{ asset('public/upload/image/webHomepage').'/'.$boardChairmanImg }}" class="form-control">
-                                        <div><a href="{{ route('home.delBoardChairmanImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <div><x-delete-action :action="route('home.delBoardChairmanImg',['id'=>$pageId])" class="text-danger fw-bold">Delete</x-delete-action></div>
                                     </div>
                                     @endif
                                 </div>
@@ -197,7 +197,7 @@ Institute Dashboard
                                     @else
                                     <div class="my-2">
                                         <img class="w-25" src="{{ asset('public/upload/image/webHomepage').'/'.$principalImg }}" class="form-control">
-                                        <div><a href="{{ route('delPrincipalImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                                        <div><x-delete-action :action="route('delPrincipalImg',['id'=>$pageId])" class="text-danger fw-bold">Delete</x-delete-action></div>
                                     </div>
                                     @endif
                                 </div>

@@ -30,7 +30,7 @@
                         <div class="col-xl-3 col-lg-6 col-12 form-group mg-t-30">
                             @if(!empty($regData->insLogo))
                             <div><img class="w-75" src="{{ asset('/public/upload/image/registerLogo/') }}/{{$regData->insLogo}}" alt="$regData->insName" /><br /></div>
-                            <a href="{{route('registerLogoDel',['regId'=>$regData->id])}}" class="mt-3 w-75 btn btn-danger btn-lg">Remove</a>
+                            <x-delete-action :action="route('registerLogoDel',['regId'=>$regData->id])" class="mt-3 w-75 btn btn-danger btn-lg">Remove</x-delete-action>
                             @else
                             <label class="text-dark-medium">Avatar (150px X 150px)</label>
                             <input type="file" name="insLogo" class="form-control-file" />

@@ -30,12 +30,7 @@
                         <td style="text-align:center; vertical-align:middle;">
                             <div class="am-action-group" style="justify-content:center; gap:0.35rem; flex-wrap:wrap;" aria-label="Section row actions">
                                 <a href="{{ route('adminModernAcademicSectionsEdit', ['itemId' => $item->id]) }}" class="am-action-btn is-edit" title="Edit section">Edit</a>
-                                <a
-                                    href="{{ route('delSection', ['itemId' => $item->id]) }}"
-                                    class="am-action-btn is-delete"
-                                    title="Delete section"
-                                    onclick="return confirm('Are you sure you want to delete this item?');"
-                                >Delete</a>
+                                <x-delete-action :action="route('delSection', ['itemId' => $item->id])" class="am-action-btn is-delete" title="Delete section">Delete</x-delete-action>
                             </div>
                         </td>
                     </tr>

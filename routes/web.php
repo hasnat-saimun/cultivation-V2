@@ -553,7 +553,7 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class,
         'updateAdminPhoto'
     ])->name('updateAdminPhoto');
-    Route::get('/admin/del/avatar/{id}', [
+    Route::delete('/admin/del/avatar/{id}', [
         CultivationController::class,
         'delAdminPhoto'
     ])->name('delAdminPhoto');
@@ -583,7 +583,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'updateNotice'
     ])->name('updateNotice');
 
-    Route::get('/notice/delete/{id}',[
+    Route::delete('/notice/delete/{id}',[
         NoticeController::class ,
         'delNotice'
     ])->name('delNotice');
@@ -617,12 +617,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editPhoto'
     ])->name('editPhoto');
 
-    Route::get('/photo/content/delete/{id}',[
+    Route::delete('/photo/content/delete/{id}',[
         GalleryController::class ,
         'delPhotoContent'
     ])->name('delPhotoContent');
 
-    Route::get('/photo/delete/{id}',[
+    Route::delete('/photo/delete/{id}',[
         GalleryController::class ,
         'delPhoto'
     ])->name('delPhoto');
@@ -646,12 +646,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editVideo'
     ])->name('editVideo');
 
-    Route::get('/video/content/delete/{id}',[
+    Route::delete('/video/content/delete/{id}',[
         GalleryController::class ,
         'delVideoContent'
     ])->name('delVideoContent');
 
-    Route::get('/video/delete/{id}',[
+    Route::delete('/video/delete/{id}',[
         GalleryController::class ,
         'delVideo'
     ])->name('delVideo');
@@ -674,12 +674,12 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('editSlider');
 
 
-    Route::get('/home/slider/image/delete/{id}',[
+    Route::delete('/home/slider/image/delete/{id}',[
         InstituteController::class ,
         'delSliderImg'
     ])->name('delSliderImg');
 
-    Route::get('/home/slider/delete/{id}',[
+    Route::delete('/home/slider/delete/{id}',[
         InstituteController::class ,
         'delSlider'
     ])->name('delSlider');
@@ -696,17 +696,17 @@ Route::middleware(['adminGuard'])->group (function(){
 
 
 
-    Route::get('/home/info/eduMinImg/del/{id}',[
+    Route::delete('/home/info/eduMinImg/del/{id}',[
         InstituteController::class ,
         'delEduMinImg'
     ])->name('home.delEduMinImg');
 
-    Route::get('/home/info/boardChairmanImg/del/{id}',[
+    Route::delete('/home/info/boardChairmanImg/del/{id}',[
         InstituteController::class ,
         'delBoardChairmanImg'
     ])->name('home.delBoardChairmanImg');
 
-    Route::get('/home/info/principalImg/del/{id}',[
+    Route::delete('/home/info/principalImg/del/{id}',[
         InstituteController::class ,
         'delPrincipalImg'
     ])->name('delPrincipalImg');
@@ -737,7 +737,7 @@ Route::middleware(['adminGuard'])->group (function(){
         ->middleware(\App\Http\Middleware\Roles::class.':3')
         ->name('sms.alphaRate');
 
-    Route::get('/institute/info/img/del/{id}',[
+    Route::delete('/institute/info/img/del/{id}',[
         InstituteController::class ,
         'delHeroImg'
     ])->name('delHeroImg');
@@ -777,12 +777,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editExPrincipal'
     ])->name('editExPrincipal');
 
-    Route::get('/academic/exPlc/content/delete/{id}',[
+    Route::delete('/academic/exPlc/content/delete/{id}',[
         InstituteController::class ,
         'delexPlcCon'
     ])->name('delexPlcCon');
 
-    Route::get('/institute/principal/exList/del/{id}',[
+    Route::delete('/institute/principal/exList/del/{id}',[
         InstituteController::class ,
         'delExPrincipal'
     ])->name('delExPrincipal');
@@ -807,12 +807,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editManagingCommittee'
     ])->name('editManagingCommittee');
 
-    Route::get('/institute/committee/dlt/image/{id}',[
+    Route::delete('/institute/committee/dlt/image/{id}',[
         InstituteController::class ,
         'delImgContent'
     ])->name('delImgContent');
 
-    Route::get('/institute/committee/del/{id}',[
+    Route::delete('/institute/committee/del/{id}',[
         InstituteController::class ,
         'delManagingCommittee'
     ])->name('delManagingCommittee');
@@ -845,12 +845,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editSyllabus'
     ])->name('editSyllabus');
 
-    Route::get('/academic/syllabus/content/delete/{id}',[
+    Route::delete('/academic/syllabus/content/delete/{id}',[
         AcademicController::class ,
         'delSyllabusContent'
     ])->name('delSyllabusContent');
 
-    Route::get('/academic/syllabus/del/{id}',[
+    Route::delete('/academic/syllabus/del/{id}',[
         AcademicController::class ,
         'delSyllabus'
     ])->name('delSyllabus');
@@ -870,12 +870,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editClassRoutine'
     ])->name('editClassRoutine');
 
-    Route::get('/academic/classRoutine/del/{id}',[
+    Route::delete('/academic/classRoutine/del/{id}',[
         ExamController::class ,
         'delClassRoutine'
     ])->name('delClassRoutine');
 
-    Route::get('/academic/classRoutine/content/delete/{id}',[
+    Route::delete('/academic/classRoutine/content/delete/{id}',[
         ExamController::class ,
         'delClassRoutineContent'
     ])->name('delClassRoutineContent');
@@ -895,12 +895,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editExamRoutine'
     ])->name('editExamRoutine');
 
-    Route::get('/academic/examRoutine/del/{id}',[
+    Route::delete('/academic/examRoutine/del/{id}',[
         ExamController::class ,
         'delExamRoutine'
     ])->name('delExamRoutine');
 
-    Route::get('/academic/examRoutine/content/delete/{id}',[
+    Route::delete('/academic/examRoutine/content/delete/{id}',[
         ExamController::class ,
         'delExamRoutineContent'
     ])->name('delExamRoutineContent');
@@ -920,12 +920,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editSemisterPlan'
     ])->name('editSemisterPlan');
 
-    Route::get('/academic/semisterPlan/del/{id}',[
+    Route::delete('/academic/semisterPlan/del/{id}',[
         AcademicController::class ,
         'delSemisterPlan'
     ])->name('delSemisterPlan');
 
-    Route::get('/academic/semisterPlan/content/delete/{id}',[
+    Route::delete('/academic/semisterPlan/content/delete/{id}',[
         AcademicController::class ,
         'delSemisterPlanContent'
     ])->name('delSemisterPlanContent');
@@ -946,12 +946,12 @@ Route::middleware(['adminGuard'])->group (function(){
         'editInternalResult'
     ])->name('editInternalResult');
 
-    Route::get('/academic/internalResult/del/{id}',[
+    Route::delete('/academic/internalResult/del/{id}',[
         AcademicController::class ,
         'delInternalResult'
     ])->name('delInternalResult');
 
-    Route::get('/academic/internalResult/content/delete/{id}',[
+    Route::delete('/academic/internalResult/content/delete/{id}',[
         AcademicController::class ,
         'delInternalResultContent'
     ])->name('delInternalResultContent');
@@ -972,12 +972,12 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('editPlc');
 
 
-    Route::get('/academic/placementCell/content/delete/{id}',[
+    Route::delete('/academic/placementCell/content/delete/{id}',[
         PlacementCellController::class ,
         'delPlcCon'
     ])->name('delPlcCon');
 
-    Route::get('/placement/placementCell/delete/{id}',[
+    Route::delete('/placement/placementCell/delete/{id}',[
         PlacementCellController::class ,
         'delPlc'
     ])->name('delPlc');
@@ -998,16 +998,16 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('editNeedyStdPanel');
 
 
-    Route::get('/academic/needyStudentPanel/photo/delete/{id}',[
+    Route::delete('/academic/needyStudentPanel/photo/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPanelCon'
     ])->name('delNeedyStdPanelCon');
-    Route::get('/academic/needyStudentPanel/documents/delete/{id}',[
+    Route::delete('/academic/needyStudentPanel/documents/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPaneldoc'
     ])->name('delNeedyStdPaneldoc');
 
-    Route::get('/placement/needyStudentPanel/delete/{id}',[
+    Route::delete('/placement/needyStudentPanel/delete/{id}',[
         PlacementCellController::class ,
         'delNeedyStdPanel'
     ])->name('delNeedyStdPanel');
@@ -1039,7 +1039,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'update'
     ])->name('designationsUpdate');
 
-    Route::get('/designations/{id}/delete', [
+    Route::delete('/designations/{id}/delete', [
         DesignationController::class,
         'delete'
     ])->name('designationsDelete');
@@ -1049,7 +1049,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'reorder'
     ])->name('designationsReorder');
 
-    Route::get('/designations/{id}/toggle', [
+    Route::patch('/designations/{id}/toggle', [
         DesignationController::class,
         'toggleActive'
     ])->name('designationsToggle');
@@ -1064,7 +1064,7 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class ,
         'saveConfig'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveConfig');
-    Route::get('/sign/del/{id}',[
+    Route::delete('/sign/del/{id}',[
         CultivationController::class ,
         'delSign'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delSign');
@@ -1072,7 +1072,7 @@ Route::middleware(['adminGuard'])->group (function(){
         CultivationController::class,
         'saveSign'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveSign');
-    Route::get('/logo/del/{id}',[
+    Route::delete('/logo/del/{id}',[
         CultivationController::class ,
         'delLogo'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delLogo');
@@ -1092,7 +1092,7 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveEduMinImg');
 
 
-    Route::get('/favicon/del/{id}',[
+    Route::delete('/favicon/del/{id}',[
         CultivationController::class ,
         'delFavicon'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delFavicon');
@@ -1101,17 +1101,17 @@ Route::middleware(['adminGuard'])->group (function(){
         'saveFavicon'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('saveFavicon');
     
-    Route::get('/boardChairmanImg/del/{id}',[
+    Route::delete('/boardChairmanImg/del/{id}',[
         CultivationController::class ,
         'delBoardChairmanImg'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delBoardChairmanImg');
     
-    Route::get('/eduMinImg/del/{id}',[
+    Route::delete('/eduMinImg/del/{id}',[
         CultivationController::class ,
         'delEduMinImg'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delEduMinImg');
 
-    Route::get('/avatar/del/{id}',[
+    Route::delete('/avatar/del/{id}',[
         CultivationController::class ,
         'delAvatar'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('delAvatar');
@@ -1148,7 +1148,7 @@ Route::middleware(['adminGuard'])->group (function(){
             'saveFees'
         ])->name('saveFees');
 
-        Route::get('/delete-fees-data/{id}',[
+        Route::delete('/delete-fees-data/{id}',[
             individualController::class,      // delete Fees
             'deleteFees'
         ])->name('deleteFees');
@@ -1184,7 +1184,7 @@ Route::middleware(['adminGuard'])->group (function(){
             'updateCashCalculas'
         ])->name('updateCashCalculas');
 
-        Route::get('/delete-calculas-data/{id}',[
+        Route::delete('/delete-calculas-data/{id}',[
             cashCalculasController::class,      // delete calculas
             'dltCalculasData'
         ])->name('dltCalculasData');
@@ -1260,7 +1260,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'collectDueSubmit'
     ])->name('collectDueSubmit');
 
-    Route::get('/delete-tuition-fee/{id}',[
+    Route::delete('/delete-tuition-fee/{id}',[
         tuitionController::class,      // delete tuition free
         'dltTuitionFee'
     ])->name('dltTuitionFee');
@@ -1295,7 +1295,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'getClassWiseFeeSetupData'
     ])->name('getClassWiseFeeSetupData');
 
-    Route::get('/student/fees/classwise-setup/delete/{id}',[
+    Route::delete('/student/fees/classwise-setup/delete/{id}',[
         tuitionController::class,
         'deleteClassWiseFeeSetup'
     ])->name('deleteClassWiseFeeSetup');
@@ -1353,12 +1353,12 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('studentPhotoBulkUpload');
 
 
-    Route::get('/student/del/avatar/{stdId}',[
+    Route::delete('/student/del/avatar/{stdId}',[
         AdmissionController::class ,
         'delStudentPhoto'
     ])->name('delStudentPhoto');
 
-    Route::get('/student/del/{stdId}',[
+    Route::delete('/student/del/{stdId}',[
         AdmissionController::class ,
         'delStudent'
     ])->name('delStudent');
@@ -1436,11 +1436,11 @@ Route::middleware(['adminGuard'])->group (function(){
         TeacherController::class ,
         'updateTeacher'
     ])->name('updateTeacher');
-    Route::get('/teacher/del/{profileId}',[
+    Route::delete('/teacher/del/{profileId}',[
         TeacherController::class ,
         'delTeacher'
     ])->name('delTeacher');
-    Route::get('/teacher/del/avatar/{profileId}',[
+    Route::delete('/teacher/del/avatar/{profileId}',[
         TeacherController::class ,
         'delTeacherPhoto'
     ])->name('delTeacherPhoto');
@@ -1539,11 +1539,11 @@ Route::middleware(['adminGuard'])->group (function(){
         StaffController::class ,
         'updateStaff'
     ])->name('updateStaff');
-    Route::get('/staff/del/{profileId}',[
+    Route::delete('/staff/del/{profileId}',[
         StaffController::class ,
         'delStaff'
     ])->name('delStaff');
-    Route::get('/staff/del/avatar/{profileId}',[
+    Route::delete('/staff/del/avatar/{profileId}',[
         StaffController::class ,
         'delStaffPhoto'
     ])->name('delStaffPhoto');
@@ -1627,7 +1627,7 @@ Route::middleware(['adminGuard'])->group (function(){
         individualController::class ,
         'updateClass'
     ])->name('updateClass');
-    Route::get('/class/del/{itemId}',[
+    Route::delete('/class/del/{itemId}',[
         individualController::class ,
         'delClass'
     ])->name('delClass');
@@ -1656,7 +1656,7 @@ Route::middleware(['adminGuard'])->group (function(){
         individualController::class ,
         'updateDepartment'
     ])->name('updateDepartment');
-    Route::get('/department/del/{itemId}',[
+    Route::delete('/department/del/{itemId}',[
         individualController::class ,
         'delDepartment'
     ])->name('delDepartment');
@@ -1684,7 +1684,7 @@ Route::middleware(['adminGuard'])->group (function(){
         individualController::class ,
         'updateSection'
     ])->name('updateSection');
-    Route::get('/Section/del/{itemId}',[
+    Route::delete('/Section/del/{itemId}',[
         individualController::class ,
         'delSection'
     ])->name('delSection');
@@ -1712,7 +1712,7 @@ Route::middleware(['adminGuard'])->group (function(){
         individualController::class ,
         'updateSession'
     ])->name('updateSession');
-    Route::get('/session/del/{itemId}',[
+    Route::delete('/session/del/{itemId}',[
         individualController::class ,
         'delSession'
     ])->name('delSession');
@@ -1746,7 +1746,7 @@ Route::middleware(['adminGuard'])->group (function(){
         SubjectController::class ,
         'updateSubject'
     ])->name('updateSubject');
-    Route::get('/subject/del/{itemId}',[
+    Route::delete('/subject/del/{itemId}',[
         SubjectController::class ,
         'delSubject'
     ])->name('delSubject');
@@ -1781,7 +1781,7 @@ Route::middleware(['adminGuard'])->group (function(){
         ExamController::class ,
         'updateExam'
     ])->name('updateExam');
-    Route::get('/exam/del/{itemId}',[
+    Route::delete('/exam/del/{itemId}',[
         ExamController::class ,
         'delExam'
     ])->name('delExam');
@@ -1904,7 +1904,7 @@ Route::middleware(['adminGuard'])->group (function(){
         ExamController::class,
         'editResultExamRoutine'
     ])->name('editResultExamRoutine');
-    Route::get('/result/exam-routine/del/{id}',[
+    Route::delete('/result/exam-routine/del/{id}',[
         ExamController::class,
         'delResultExamRoutine'
     ])->name('delResultExamRoutine');
@@ -1925,7 +1925,7 @@ Route::middleware(['adminGuard'])->group (function(){
         ExamController::class,
         'editResultClassRoutine'
     ])->name('editResultClassRoutine');
-    Route::get('/result/class-routine/del/{id}',[
+    Route::delete('/result/class-routine/del/{id}',[
         ExamController::class,
         'delResultClassRoutine'
     ])->name('delResultClassRoutine');
@@ -2021,7 +2021,7 @@ Route::middleware(['adminGuard'])->group (function(){
         GradeListController::class ,
         'updateGrade'
     ])->name('updateGrade');
-    Route::get('/grade/del/{itemId}',[
+    Route::delete('/grade/del/{itemId}',[
         GradeListController::class ,
         'delGrade'
     ])->name('delGrade');
@@ -2048,7 +2048,7 @@ Route::middleware(['adminGuard'])->group (function(){
     ])->name('saveRegForm');
 
 
-    Route::get('/register/logo/delete/{regId}',[
+    Route::delete('/register/logo/delete/{regId}',[
         registerController::class ,
         'registerLogoDel'
     ])->name('registerLogoDel');
@@ -2073,7 +2073,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'registerUpdate'
     ])->name('registerUpdate');
 
-    Route::get('/register/del/{regId}',[
+    Route::delete('/register/del/{regId}',[
         registerController::class ,
         'registerDel'
     ])->name('registerDel');
@@ -2146,7 +2146,7 @@ Route::middleware(['adminGuard'])->group (function(){
     Route::get('/marksheet/generate', [
         MarksheetController::class,
         'generateMarksheet'
-    ])->name('marksheetGenerate');
+    ])->middleware('adminGuard')->name('marksheetGenerate');
     //MarksheetController end
 
     //Placements (GPA-based ranking)
@@ -2233,7 +2233,7 @@ Route::middleware(['adminGuard'])->group (function(){
         'editUser'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('editUser'); 
 
-    Route::get('/admin/delete/{id}',[
+    Route::delete('/admin/delete/{id}',[
         CultivationController::class,
         'deleteUser'
     ])->middleware(\App\Http\Middleware\Roles::class.':3')->name('deleteUser');

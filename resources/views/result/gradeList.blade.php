@@ -55,7 +55,7 @@ All Grade
                                                 <td>{{ $item->maxGp }}</td>
                                                 <td>
                                                     <a href="{{ route('editGrade',['itemId'=>$item->id]) }}"><i class="fa-light fa-pen-to-square fa-xl"></i></a>
-                                                    <a href="{{ route('delGrade',['itemId'=>$item->id]) }}"><i class="fa-thin fa-circle-trash fa-xl"></i></a>
+                                                    <x-delete-action :action="route('delGrade',['itemId'=>$item->id])"><i class="fa-thin fa-circle-trash fa-xl"></i></x-delete-action>
                                                 </td>
                                             </tr>
                                         @php

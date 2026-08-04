@@ -135,12 +135,16 @@ Designation Management
                                     <a href="{{ route('designationsEdit', $designation->id) }}" class="btn btn-sm btn-warning btn-action" title="Edit">
                                         <i class="fa-solid fa-pencil"></i> Edit
                                     </a>
-                                    <a href="{{ route('designationsToggle', $designation->id) }}" class="btn btn-sm btn-info btn-action" title="Toggle Status">
-                                        <i class="fa-solid fa-power-off"></i> Toggle
-                                    </a>
-                                    <a href="{{ route('designationsDelete', $designation->id) }}" class="btn btn-sm btn-danger btn-action" onclick="return confirm('Are you sure? This action cannot be undone.');" title="Delete">
+                                    <form method="POST" action="{{ route('designationsToggle', $designation->id) }}" class="d-inline">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit" class="btn btn-sm btn-info btn-action" title="Toggle Status">
+                                            <i class="fa-solid fa-power-off"></i> Toggle
+                                        </button>
+                                    </form>
+                                    <x-delete-action :action="route('designationsDelete', $designation->id)" class="btn btn-sm btn-danger btn-action" confirm="Are you sure? This action cannot be undone." title="Delete">
                                         <i class="fa-solid fa-trash"></i> Delete
-                                    </a>
+                                    </x-delete-action>
                                 </td>
                             </tr>
                             @empty

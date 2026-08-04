@@ -82,7 +82,7 @@ Classwise Fees Setup
                                     <td>{{ $row->fee_name }}</td>
                                     <td>{{ number_format((float)$row->setup_amount, 2) }}</td>
                                     <td>
-                                        <a href="{{ route('deleteClassWiseFeeSetup', $row->id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this classwise setup record?')">Delete</a>
+                                        <x-delete-action :action="route('deleteClassWiseFeeSetup', $row->id)" class="btn btn-sm btn-outline-danger" confirm="Delete this classwise setup record?">Delete</x-delete-action>
                                     </td>
                                 </tr>
                             @empty

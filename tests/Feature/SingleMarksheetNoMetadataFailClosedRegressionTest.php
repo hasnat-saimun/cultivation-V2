@@ -17,6 +17,12 @@ class SingleMarksheetNoMetadataFailClosedRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->signInGeneralAdmin();
+    }
+
     public function test_single_marksheet_fail_closed_when_no_curriculum_or_marks_metadata_exists(): void
     {
         $this->withoutMiddleware();

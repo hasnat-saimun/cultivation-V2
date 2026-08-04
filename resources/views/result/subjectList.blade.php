@@ -56,7 +56,7 @@ All Subject
                                                 <td>
                                                     <a href="{{ route('editSubject',['itemId'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
                                                     <a href="{{ route('subject.scope.split',['itemId'=>$item->id]) }}" title="Split/Migrate Scope"><i class="fa-solid fa-code-branch mx-2" style="color:#0b7285;"></i></a>
-                                                    <a href="{{ route('delSubject',['itemId'=>$item->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                                    <x-delete-action :action="route('delSubject',['itemId'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                                 </td>
                                             </tr>
                                         @php

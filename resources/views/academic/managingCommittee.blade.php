@@ -110,7 +110,7 @@ Governing Body
                         @else
                         <div class="my-2">
                             <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$avatar }}" class="form-control">
-                            <div><a href="{{ route('delImgContent',['id'=>$proId]) }}" class="text-danger fw-bold">Delete</a></div>
+                            <div><x-delete-action :action="route('delImgContent',['id'=>$proId])" class="text-danger fw-bold">Delete</x-delete-action></div>
                         </div>
                         @endif
                     </div>
@@ -156,7 +156,7 @@ Governing Body
                                 <td>
                                         <a href="{{ route('viewManagingCommittee',  ['id'=>$profile->id]) }}"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                                         <a href="{{ route('editManagingCommittee',['id'=>$profile->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                        <a href="{{ route('delManagingCommittee',['id'=>$profile->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                        <x-delete-action :action="route('delManagingCommittee',['id'=>$profile->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                 </td>
                             </tr>
                         @endforeach

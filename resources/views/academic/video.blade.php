@@ -47,7 +47,7 @@
                             @if(!empty($avatar))
                             <div>
                                 <iframe src="{{ asset('public/upload/image/VideoGallery/').'/'.$avatar }}" class="w-50" height="300px"></iframe>
-                                <a href="{{ route('delVideoContent',['id'=>$itemId]) }}" class="fw-bold text-danger">Delete</a>
+                                <x-delete-action :action="route('delVideoContent',['id'=>$itemId])" class="fw-bold text-danger">Delete</x-delete-action>
                             </div>
                             @else
                             <input type="file" name="avatar" class="form-control-file" />
@@ -81,7 +81,7 @@
                     <td>
                         <a href="{{ $item->avatar }}"><i class="fa-solid fa-eye mx-2" style="color:rgb(35 170 211);"></i></a>
                         <a href="{{ route('editVideo',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                        <a href="{{ route('delVideo',['id'=>$item->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                        <x-delete-action :action="route('delVideo',['id'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                     </td>
                 </tr>
                 @endforeach @else

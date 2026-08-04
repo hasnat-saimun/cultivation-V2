@@ -13,6 +13,21 @@ use Illuminate\Support\Facades\Validator;
 
 final class StudentFilterService
 {
+    /**
+     * Build the complete, shared view contract used by student list screens.
+     */
+    public function viewPayload(Request $request, string $action, ?string $resetUrl = null): array
+    {
+        $filters = $this->filters($request);
+
+        return [
+            'filters' => $filters,
+            'filterOptions' => $this->options($filters),
+            'filterAction' => $action,
+            'filterResetUrl' => $resetUrl ?? $action,
+        ];
+    }
+
     public function filters(Request $request): array
     {
         $safe = Validator::make($request->query(), [

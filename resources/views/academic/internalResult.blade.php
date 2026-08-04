@@ -164,7 +164,7 @@ Internal Results Management
                         @if(!empty($attachment))
                         <div>
                             <iframe src="{{ asset('public/upload/image/cultivation/internalResult/').'/'.$attachment }}" class="w-25" height="300px"></iframe>
-                            <a href="{{ route('delInternalResultContent',['id'=>$itemId]) }}" class="fw-bold text-danger">Delete</a>
+                            <x-delete-action :action="route('delInternalResultContent',['id'=>$itemId])" class="fw-bold text-danger">Delete</x-delete-action>
                         </div>
                         @else
                         <input type="file" name="attachment" class="form-control-file">
@@ -176,6 +176,10 @@ Internal Results Management
                     </div>
                 </form>
             </div>
+            <form id="deleteInternalResultForm" method="POST" class="d-none">
+                @csrf
+                @method('DELETE')
+            </form>
             <div class="card-header">Existing Internal Results</div>
             <div class="card-body cultivation">
                 <table id="myTable" class="table table-striped">
@@ -256,6 +260,7 @@ Internal Results Management
                 const modal = document.getElementById('deleteConfirmModal');
                 const cancelBtn = document.getElementById('cancelDeleteBtn');
                 const confirmBtn = document.getElementById('confirmDeleteBtn');
+                const deleteForm = document.getElementById('deleteInternalResultForm');
                 let currentId = null;
 
                 const baseDeleteUrl = "{{ route('delInternalResult',['id'=>'__ID__']) }}";
@@ -271,7 +276,8 @@ Internal Results Management
                 confirmBtn.addEventListener('click', function(){
                     if(!currentId) return;
                     const url = baseDeleteUrl.replace('__ID__', currentId);
-                    window.location.href = url;
+                    deleteForm.action = url;
+                    deleteForm.requestSubmit();
                 });
 
                 // Toast logic: show success/error messages as small toast

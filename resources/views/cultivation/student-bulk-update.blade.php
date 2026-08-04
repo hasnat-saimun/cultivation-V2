@@ -8,7 +8,7 @@ Bulk Student Profile Update
         <div class="card card-default">
             <div class="card-header bg-gradient-primary text-white d-flex justify-content-between align-items-center">
                 <h3 class="mb-0"><i class="fa-solid fa-edit"></i> Student Bulk Details Update</h3>
-                <a href="{{ route('studentList') }}" class="btn btn-light btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to List</a>
+                <a href="{{ route('studentList') }}{{ array_filter($filters ?? [], fn ($value) => $value !== null && $value !== '') ? '?'.http_build_query(array_filter($filters, fn ($value) => $value !== null && $value !== '')) : '' }}" class="btn btn-light btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to List</a>
             </div>
             <div class="card-body">
                 @if(session('success'))
@@ -43,7 +43,7 @@ Bulk Student Profile Update
                     </div>
                 </div>
 
-                <div class="mb-3">@include('cultivation.partials.student-filters', ['action' => route('studentBulkUpdate')])</div>
+                <div class="mb-3">@include('cultivation.partials.student-filters')</div>
 
                 @if($students->count() > 0)
                     <form method="post" action="{{ route('studentBulkUpdateStore', array_filter($filters, fn ($value) => $value !== null && $value !== '')) }}" id="bulkUpdateForm">

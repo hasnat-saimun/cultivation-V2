@@ -120,7 +120,7 @@ Class Routine Management
                         @if(!empty($attachment))
                         <div>
                             <iframe src="{{ asset('public/upload/image/cultivation/classRoutine').'/'.$attachment }}" class="w-25" height="300px"></iframe>
-                            <a href="{{ route('delClassRoutineContent',['id'=>$itemId]) }}" class="fw-bold text-danger">Delete</a>
+                            <x-delete-action :action="route('delClassRoutineContent',['id'=>$itemId])" class="fw-bold text-danger">Delete</x-delete-action>
                         </div>
                         @else
                         <input type="file" name="attachment" class="form-control-file">
@@ -164,7 +164,7 @@ Class Routine Management
                                 <td>{{ $itemSession->session }}</td>
                                 <td>
                                     <a href="{{ route('editClassRoutine',['id'=>$item->id]) }}"><i class="fa-solid fa-pen-to-square mx-2" style="color: #4125b1;"></i></a>
-                                        <a href="{{ route('delClassRoutine',['id'=>$item->id]) }}"onclick="return confirm('Are you sure you want to delete this item?');" title="Get Id Card" ><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></a>
+                                        <x-delete-action :action="route('delClassRoutine',['id'=>$item->id])"><i class="fa-solid fa-trash mx-2" style="color: #c10b26;"></i></x-delete-action>
                                 </td>
                             </tr>
                         @endforeach

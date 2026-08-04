@@ -95,7 +95,7 @@ Institute Info
                         @else
                         <div class="my-2">
                             <img class="w-25" src="{{ asset('public/upload/image/cultivation').'/'.$heroImg }}" class="form-control">
-                            <div><a href="{{ route('delHeroImg',['id'=>$pageId]) }}" class="text-danger fw-bold">Delete</a></div>
+                            <div><x-delete-action :action="route('delHeroImg',['id'=>$pageId])" class="text-danger fw-bold">Delete</x-delete-action></div>
                         </div>
                         @endif
                     </div>
