@@ -1419,9 +1419,15 @@ class MarksheetController extends Controller
             return back()->with('error', 'Transcripts could not be calculated safely.');
         }
 
+        $isHttpRuntime = ! in_array(PHP_SAPI, ['cli', 'phpdbg'], true);
+        $previousTimeLimit = ini_get('max_execution_time');
+        $previousMemoryLimit = ini_get('memory_limit');
+
         try {
-            @set_time_limit(180);
-            @ini_set('memory_limit', '512M');
+            if ($isHttpRuntime) {
+                @set_time_limit(180);
+                @ini_set('memory_limit', '512M');
+            }
 
             $config = ServerConfig::first();
             $publicAsset = fn (?string $path, string $directory): ?string =>
@@ -1488,6 +1494,15 @@ class MarksheetController extends Controller
             ]);
 
             return back()->with('error', 'PDF generation failed on server. Please contact admin.');
+        } finally {
+            if ($isHttpRuntime) {
+                if ($previousTimeLimit !== false) {
+                    @set_time_limit((int) $previousTimeLimit);
+                }
+                if ($previousMemoryLimit !== false) {
+                    @ini_set('memory_limit', (string) $previousMemoryLimit);
+                }
+            }
         }
     }
 

@@ -76,15 +76,18 @@ class BulkTranscriptResultEngineTest extends TestCase
         };
         $this->app->instance(BulkTranscriptResultBuilder::class, $fake);
         $request = fn () => Request::create('/transcripts/bulk/pdf', 'POST', ['examId' => $scope['exam']->id, 'stdIds' => [$student->id]]);
+        $originalExecutionLimit = ini_get('max_execution_time');
 
         config(['result_engine.bulk_transcript_enabled' => false]);
         app(\App\Http\Controllers\MarksheetController::class)->bulkTranscriptPdf($request());
         $this->assertSame(1, $fake->calls);
+        $this->assertSame($originalExecutionLimit, ini_get('max_execution_time'));
 
         config(['result_engine.bulk_transcript_enabled' => true]);
         app(\App\Http\Controllers\MarksheetController::class)->bulkTranscriptPdf($request());
         $this->assertSame(2, $fake->calls);
         $this->assertSame([$student->id], $fake->studentIds);
+        $this->assertSame($originalExecutionLimit, ini_get('max_execution_time'));
     }
 
     public function test_enabled_bulk_processes_multiple_students_independently(): void
