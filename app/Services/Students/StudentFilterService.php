@@ -9,9 +9,9 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Str;
 
 final class StudentFilterService
 {
@@ -33,19 +33,19 @@ final class StudentFilterService
     public function filters(Request $request): array
     {
         $safe = Validator::make($request->query(), [
-            'sessionId' => 'nullable|integer|min:1',
-            'classId' => 'nullable|integer|min:1',
-            'sectionId' => 'nullable|integer|min:1',
-            'departmentId' => 'nullable|integer|min:1',
+            'sessionId' => 'nullable|string|max:100',
+            'classId' => 'nullable|string|max:100',
+            'sectionId' => 'nullable|string|max:100',
+            'departmentId' => 'nullable|string|max:100',
             'gender' => 'nullable|in:1,2,3',
             'search' => 'nullable|string|max:100',
         ])->valid();
 
         return [
-            'sessionId' => isset($safe['sessionId']) ? (int) $safe['sessionId'] : null,
-            'classId' => isset($safe['classId']) ? (int) $safe['classId'] : null,
-            'sectionId' => isset($safe['sectionId']) ? (int) $safe['sectionId'] : null,
-            'departmentId' => isset($safe['departmentId']) ? (int) $safe['departmentId'] : null,
+            'sessionId' => isset($safe['sessionId']) ? trim((string) $safe['sessionId']) : null,
+            'classId' => isset($safe['classId']) ? trim((string) $safe['classId']) : null,
+            'sectionId' => isset($safe['sectionId']) ? trim((string) $safe['sectionId']) : null,
+            'departmentId' => isset($safe['departmentId']) ? trim((string) $safe['departmentId']) : null,
             'gender' => isset($safe['gender']) ? (string) $safe['gender'] : null,
             'search' => isset($safe['search']) ? trim((string) $safe['search']) : null,
         ];
@@ -82,66 +82,65 @@ final class StudentFilterService
     public function options(array $filters): array
     {
         $base = newAdmission::query();
-        $queries = [];
-        $capture = static function (string $name, Builder $query) use (&$queries): void {
-            $queries[] = ['name' => $name, 'sql' => $query->toSql(), 'bindings' => $query->getBindings()];
-        };
-
         $sessionIdQuery = (clone $base)->whereNotNull('sessName')->select('sessName')->distinct();
-        $capture('student_session_ids', $sessionIdQuery);
         $sessionIds = $sessionIdQuery->pluck('sessName');
 
         $classScope = clone $base;
         if ($filters['sessionId']) $classScope->where('sessName', $filters['sessionId']);
         $classIdQuery = $classScope->whereNotNull('className')->select('className')->distinct();
-        $capture('student_class_ids', $classIdQuery);
         $classIds = $classIdQuery->pluck('className');
 
         $sectionScope = clone $classScope;
         if ($filters['classId']) $sectionScope->where('className', $filters['classId']);
         $sectionIdQuery = $sectionScope->whereNotNull('sectionName')->select('sectionName')->distinct();
-        $capture('student_section_ids', $sectionIdQuery);
         $sectionIds = $sectionIdQuery->pluck('sectionName');
 
         $departmentScope = clone $sectionScope;
         if ($filters['sectionId']) $departmentScope->where('sectionName', $filters['sectionId']);
         $departmentIdQuery = $departmentScope->whereNotNull('departmentName')->select('departmentName')->distinct();
-        $capture('student_department_ids', $departmentIdQuery);
         $departmentIds = $departmentIdQuery->pluck('departmentName');
 
         $sessionQuery = sessionManage::whereIn('id', $sessionIds)->orderBy('session');
         $classQuery = classManage::whereIn('id', $classIds)->orderBy('className');
         $sectionQuery = sectionManage::whereIn('id', $sectionIds)->orderBy('section');
         $departmentQuery = Department::whereIn('id', $departmentIds)->orderBy('departmentName');
-        $capture('session_options', $sessionQuery);
-        $capture('class_options', $classQuery);
-        $capture('section_options', $sectionQuery);
-        $capture('department_options', $departmentQuery);
-
         $options = [
-            'sessions' => $sessionQuery->get(['id', 'session']),
-            'classes' => $classQuery->get(['id', 'className']),
-            'sections' => $sectionQuery->get(['id', 'section']),
-            'departments' => $departmentQuery->get(['id', 'departmentName']),
+            'sessions' => $this->resolvedOrSourceOptions($sessionIds, $sessionQuery->get(['id', 'session']), 'sessions', 'session'),
+            'classes' => $this->resolvedOrSourceOptions($classIds, $classQuery->get(['id', 'className']), 'classes', 'className'),
+            'sections' => $this->resolvedOrSourceOptions($sectionIds, $sectionQuery->get(['id', 'section']), 'sections', 'section'),
+            'departments' => $this->resolvedOrSourceOptions($departmentIds, $departmentQuery->get(['id', 'departmentName']), 'departments', 'departmentName'),
             'genderOptions' => ['1' => 'Male', '2' => 'Female', '3' => 'Others'],
         ];
 
-        $request = request();
-        $requestId = (string) ($request->headers->get('X-Request-ID') ?: Str::uuid());
-        $request->attributes->set('student_filter_request_id', $requestId);
-        Log::info('student_filter_options_diagnostic', [
-            'request_id' => $requestId,
-            'host' => $request->getHost(),
-            'option_counts' => [
-                'sessions' => $options['sessions']->count(),
-                'classes' => $options['classes']->count(),
-                'sections' => $options['sections']->count(),
-                'departments' => $options['departments']->count(),
-                'genders' => count($options['genderOptions']),
-            ],
-            'queries' => $queries,
+        return $options;
+    }
+
+    private function resolvedOrSourceOptions(
+        Collection $sourceValues,
+        Collection $resolved,
+        string $group,
+        string $labelField,
+    ): Collection {
+        $sourceValues = $sourceValues
+            ->filter(fn ($value) => $value !== null && trim((string) $value) !== '')
+            ->map(fn ($value) => trim((string) $value))
+            ->unique()
+            ->values();
+
+        if ($resolved->isNotEmpty() || $sourceValues->isEmpty()) {
+            return $resolved;
+        }
+
+        Log::warning('student_filter_options_fallback', [
+            'host' => request()->getHost(),
+            'option_group' => $group,
+            'distinct_source_count' => $sourceValues->count(),
+            'resolved_master_count' => $resolved->count(),
         ]);
 
-        return $options;
+        return $sourceValues
+            ->sort(fn ($left, $right) => strnatcasecmp((string) $left, (string) $right))
+            ->values()
+            ->map(fn ($value) => (object) ['id' => $value, $labelField => $value]);
     }
 }

@@ -11,6 +11,7 @@ use App\Models\sessionManage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class StudentFiltersAndIdCardTest extends TestCase
@@ -50,6 +51,41 @@ class StudentFiltersAndIdCardTest extends TestCase
         $this->assertStringContainsString('<form method="GET"', $html);
         $this->assertStringContainsString('name="gender"', $html);
         $this->assertStringContainsString('name="search"', $html);
+    }
+
+    public function test_filter_options_fall_back_to_distinct_student_scope_values_when_masters_do_not_resolve(): void
+    {
+        [$admin] = $this->scope();
+        newAdmission::create([
+            'stdId' => 89992, 'fullName' => 'Legacy', 'sureName' => 'Scope', 'gender' => '1',
+            'sessName' => 'Legacy Session', 'className' => 'Legacy Class',
+            'sectionName' => 'Legacy Section', 'departmentName' => 'Legacy Department',
+            'rollNumber' => '1',
+        ]);
+        Log::spy();
+
+        $list = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentList'));
+        $bulk = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentBulkUpdate'));
+
+        foreach ([$list, $bulk] as $response) {
+            $response->assertOk()
+                ->assertSee('value="Legacy Session"', false)
+                ->assertSee('value="Legacy Class"', false)
+                ->assertSee('value="Legacy Section"', false)
+                ->assertSee('value="Legacy Department"', false);
+        }
+        Log::shouldHaveReceived('warning')->withArgs(fn ($event, $context) =>
+            $event === 'student_filter_options_fallback'
+            && $context['resolved_master_count'] === 0
+            && $context['distinct_source_count'] > 0
+        )->atLeast()->once();
+
+        $filtered = $this->withSession(['cultivationAdmin' => $admin->id])->get(route('studentList', [
+            'sessionId' => 'Legacy Session', 'classId' => 'Legacy Class',
+            'sectionId' => 'Legacy Section', 'departmentId' => 'Legacy Department',
+        ]));
+        $filtered->assertOk()->assertSee('Legacy Scope');
+        $this->assertSame('Legacy Session', $filtered->viewData('filters')['sessionId']);
     }
 
     public function test_list_pagination_preserves_the_complete_filter_query(): void
