@@ -11,6 +11,7 @@ use App\Models\Department;
 use App\Models\sectionManage;
 use App\Models\sessionManage;
 use Illuminate\Support\Facades\Log;
+use App\Services\Students\StudentGenderService;
 
 class BulkTranscriptResultBuilder
 {
@@ -29,12 +30,22 @@ class BulkTranscriptResultBuilder
         return $this->buildPrepared($students, $exam, GradeList::all());
     }
 
-    public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows): array
+    public function buildWithGradeRows(
+        iterable $students,
+        Exam $exam,
+        iterable $gradeRows,
+        string $gender = StudentGenderService::ALL,
+    ): array
     {
-        return $this->buildPrepared($students, $exam, collect($gradeRows));
+        return $this->buildPrepared($students, $exam, collect($gradeRows), $gender);
     }
 
-    private function buildPrepared(iterable $students, Exam $exam, $gradeRows): array
+    private function buildPrepared(
+        iterable $students,
+        Exam $exam,
+        $gradeRows,
+        string $gender = StudentGenderService::ALL,
+    ): array
     {
         $students = collect($students)->values();
         $subjectsByStudent = $this->inputBuilder->subjectsForStudents($students);
@@ -59,17 +70,18 @@ class BulkTranscriptResultBuilder
                 is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : 0,
                 is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : 0,
             ]);
-        })->each(function ($scopeStudents) use ($exam, $sessionIds, $meritPositions) {
+        })->each(function ($scopeStudents) use ($exam, $sessionIds, $meritPositions, $gender) {
             $student = $scopeStudents->first();
             $sessionId = (int) ($sessionIds[(int) $student->id] ?? 0);
             $classId = (int) ($student->className ?? 0);
             if ($sessionId <= 0 || $classId <= 0) return;
-            $batch = $this->batchBuilder()->build(
+            $batch = $this->batchBuilder()->buildForGender(
                 (int) $exam->id,
                 $classId,
                 $sessionId,
                 is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null,
                 is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : null,
+                $gender,
             );
             foreach ($this->meritPositionService()->positions($batch['entries']) as $studentId => $position) {
                 $meritPositions[(int) $studentId] = (int) $position;

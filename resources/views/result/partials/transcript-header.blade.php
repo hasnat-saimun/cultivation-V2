@@ -11,6 +11,9 @@
     <div class="title">
         <h3>{{ $header['title'] }}</h3>
         <p>{{ $header['examName'] }}</p>
+        @if(array_key_exists('genderLabel', $header))
+            <p>Gender: {{ $header['genderLabel'] }}</p>
+        @endif
     </div>
 
 </div>

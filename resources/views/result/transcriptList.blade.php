@@ -63,6 +63,14 @@ Transcript Generator
                     </select>
                 </div>
                 <div class="col-md-3">
+                    <label class="form-label">Gender</label>
+                    <select name="gender" class="form-control">
+                        @foreach($genderOptions as $value => $label)
+                            <option value="{{ $value }}" {{ $gender === $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3">
                     <button class="btn btn-success w-100">Load Students</button>
                 </div>
                 @if($studentsLoaded)
@@ -80,6 +88,7 @@ Transcript Generator
         @if($examId && $classId)
         <div class="container-fluid">
             @include('components.result-header')
+            <div class="alert alert-light border py-2 mb-2"><strong>Gender:</strong> {{ $genderLabel }}</div>
             <div class="d-flex justify-content-between align-items-center mb-2 controls">
                 <div>
                     <button type="button" class="btn btn-primary btn-sm" onclick="openSelected()">Open Selected Transcripts</button>
@@ -92,6 +101,11 @@ Transcript Generator
             <form id="bulkPdfForm" method="POST" action="{{ route('transcripts.bulk.pdf') }}" class="d-none">
                 @csrf
                 <input type="hidden" name="examId" value="{{ $examId }}">
+                <input type="hidden" name="classId" value="{{ $classId }}">
+                <input type="hidden" name="sessionId" value="{{ $sessionId }}">
+                <input type="hidden" name="sectionId" value="{{ $sectionId }}">
+                <input type="hidden" name="departmentId" value="{{ $departmentId }}">
+                <input type="hidden" name="gender" value="{{ $gender }}">
                 <div id="bulkPdfStdIds"></div>
             </form>
             <div class="table-responsive">

@@ -1349,6 +1349,7 @@ class MarksheetController extends Controller
         $sessionId = $request->get('sessionId');
         $sectionId = $request->get('sectionId');
         $departmentId = $request->get('departmentId');
+        $gender = $this->studentGender->normalize($request->get('gender', StudentGenderService::ALL));
 
         $students = collect();
         $studentsLoaded = false;
@@ -1357,8 +1358,17 @@ class MarksheetController extends Controller
             if ($sessionId) { $q->where('sessName', (int)$sessionId); }
             if ($sectionId) { $q->where('sectionName', (int)$sectionId); }
             if ($departmentId) { $q->where('departmentName', (int)$departmentId); }
-            $students = $q->professionalOrder()->get();
+            $students = $this->studentGender->apply($q, $gender)->professionalOrder()->get();
             $studentsLoaded = true;
+        }
+
+        $genderOptions = [
+            StudentGenderService::ALL => 'All',
+            StudentGenderService::MALE => 'Male',
+            StudentGenderService::FEMALE => 'Female',
+        ];
+        if ($this->studentGender->apply(newAdmission::query(), StudentGenderService::OTHER)->exists()) {
+            $genderOptions[StudentGenderService::OTHER] = 'Other/Unknown';
         }
 
         return view('result.transcriptList', [
@@ -1367,6 +1377,9 @@ class MarksheetController extends Controller
             'sessionId' => $sessionId,
             'sectionId' => $sectionId,
             'departmentId' => $departmentId,
+            'gender' => $gender,
+            'genderLabel' => $this->studentGender->label($gender),
+            'genderOptions' => $genderOptions,
             'students' => $students,
             'studentsLoaded' => $studentsLoaded,
         ]);
@@ -1376,11 +1389,21 @@ class MarksheetController extends Controller
     {
         $request->validate([
             'examId' => 'required|integer',
+            'classId' => 'required|integer',
+            'sessionId' => 'nullable|integer',
+            'sectionId' => 'nullable|integer',
+            'departmentId' => 'nullable|integer',
+            'gender' => 'nullable|string',
             'stdIds' => 'required|array|min:1',
             'stdIds.*' => 'required',
         ]);
 
         $examId = (int)$request->input('examId');
+        $classId = (int)$request->input('classId');
+        $sessionId = $request->filled('sessionId') ? (int)$request->input('sessionId') : null;
+        $sectionId = $request->filled('sectionId') ? (int)$request->input('sectionId') : null;
+        $departmentId = $request->filled('departmentId') ? (int)$request->input('departmentId') : null;
+        $gender = $this->studentGender->normalize($request->input('gender', StudentGenderService::ALL));
         $rawIds = collect($request->input('stdIds', []))
             ->map(fn($v) => trim((string)$v))
             ->filter()
@@ -1393,7 +1416,12 @@ class MarksheetController extends Controller
 
         $numericIds = $rawIds->filter(fn($v) => ctype_digit($v))->map(fn($v) => (int)$v)->values();
 
-        $students = newAdmission::query()
+        $studentQuery = newAdmission::query()
+            ->where('className', $classId)
+            ->when($sessionId, fn ($query) => $query->where('sessName', $sessionId))
+            ->when($sectionId, fn ($query) => $query->where('sectionName', $sectionId))
+            ->when($departmentId, fn ($query) => $query->where('departmentName', $departmentId));
+        $students = $this->studentGender->apply($studentQuery, $gender)
             ->where(function($q) use ($rawIds, $numericIds){
                 $q->whereIn('stdId', $rawIds);
                 if ($numericIds->isNotEmpty()) {
@@ -1402,6 +1430,10 @@ class MarksheetController extends Controller
             })
             ->professionalOrder()
             ->get();
+
+        if ($students->count() !== $rawIds->count()) {
+            abort(403, 'One or more selected students are outside the requested transcript scope.');
+        }
 
         if ($students->isEmpty()) {
             return back()->with('error', 'No matching students found for selected IDs.');
@@ -1421,7 +1453,7 @@ class MarksheetController extends Controller
 
         try {
             $gradeRows = GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
-            $transcripts = $this->bulkTranscriptResultBuilder->buildWithGradeRows($students, $exam, $gradeRows);
+            $transcripts = $this->bulkTranscriptResultBuilder->buildWithGradeRows($students, $exam, $gradeRows, $gender);
         } catch (\Throwable $exception) {
             Log::warning('Centralized bulk transcript calculation failed.', [
                 'exam_id' => $examId,
@@ -1455,6 +1487,7 @@ class MarksheetController extends Controller
             $bulkView = [
                 'title' => $config?->transcript_title ?? 'Academic Transcript',
                 'examName' => (string) $exam->examName,
+                'genderLabel' => $this->studentGender->label($gender),
                 'institute' => [
                     'name' => $config?->instituteName ?? 'Jahanara Ayub Academy',
                     'address' => $config?->address ?? '',

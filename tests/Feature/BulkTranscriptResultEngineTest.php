@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\classManage;
 use App\Models\Exam;
 use App\Models\Department;
+use App\Models\GradeList;
 use App\Models\Marksheet;
 use App\Models\newAdmission;
 use App\Models\Placement;
@@ -25,6 +26,7 @@ use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
@@ -71,14 +73,22 @@ class BulkTranscriptResultEngineTest extends TestCase
         ) extends BulkTranscriptResultBuilder {
             public int $calls = 0;
             public array $studentIds = [];
-            public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows): array
+            public function buildWithGradeRows(iterable $students, Exam $exam, iterable $gradeRows, string $gender = 'all'): array
             {
                 $this->calls++; $students = collect($students); $this->studentIds = $students->pluck('id')->all();
-                return parent::buildWithGradeRows($students, $exam, $gradeRows);
+                return parent::buildWithGradeRows($students, $exam, $gradeRows, $gender);
             }
         };
         $this->app->instance(BulkTranscriptResultBuilder::class, $fake);
-        $request = fn () => Request::create('/transcripts/bulk/pdf', 'POST', ['examId' => $scope['exam']->id, 'stdIds' => [$student->id]]);
+        $request = fn () => Request::create('/transcripts/bulk/pdf', 'POST', [
+            'examId' => $scope['exam']->id,
+            'classId' => $scope['class']->id,
+            'sessionId' => $scope['session']->id,
+            'sectionId' => $scope['section']->id,
+            'departmentId' => $scope['department']->id,
+            'gender' => 'all',
+            'stdIds' => [$student->id],
+        ]);
         $originalExecutionLimit = ini_get('max_execution_time');
 
         config(['result_engine.bulk_transcript_enabled' => false]);
@@ -177,6 +187,119 @@ class BulkTranscriptResultEngineTest extends TestCase
         ]));
 
         $this->assertSame([$matching->id], $response->getData()['students']->pluck('id')->all());
+    }
+
+    public function test_bulk_list_applies_and_preserves_normalized_gender_filter(): void
+    {
+        $scope = $this->scope();
+        $male = $this->student($scope, '01'); $male->gender = '1'; $male->save();
+        $female = $this->student($scope, '02'); $female->gender = '2'; $female->save();
+
+        $response = app(\App\Http\Controllers\MarksheetController::class)->transcriptList(
+            Request::create('/transcripts/bulk', 'GET', [
+                'examId' => $scope['exam']->id,
+                'classId' => $scope['class']->id,
+                'sessionId' => $scope['session']->id,
+                'sectionId' => $scope['section']->id,
+                'departmentId' => $scope['department']->id,
+                'gender' => 'female',
+            ])
+        );
+
+        $data = $response->getData();
+        $this->assertSame('female', $data['gender']);
+        $this->assertSame('Female', $data['genderLabel']);
+        $this->assertSame([$female->id], $data['students']->pluck('id')->all());
+        $html = $response->render();
+        $this->assertStringContainsString('name="gender"', $html);
+        $this->assertMatchesRegularExpression('/value="female"\s+selected/', $html);
+        $this->assertStringContainsString('Gender:</strong> Female', $html);
+        $this->assertStringContainsString('value="female"', $html);
+        $this->assertStringNotContainsString('data-stdid="'.$male->stdId.'"', $html);
+    }
+
+    public function test_bulk_list_and_pdf_reject_invalid_or_opposite_gender_scope(): void
+    {
+        $scope = $this->scope();
+        $female = $this->student($scope, '02'); $female->gender = '2'; $female->save();
+
+        try {
+            app(\App\Http\Controllers\MarksheetController::class)->transcriptList(
+                Request::create('/transcripts/bulk', 'GET', ['classId' => $scope['class']->id, 'gender' => 'invalid'])
+            );
+            $this->fail('Invalid gender was accepted.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('gender', $exception->errors());
+        }
+
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\HttpException::class);
+        $this->expectExceptionMessage('outside the requested transcript scope');
+        app(\App\Http\Controllers\MarksheetController::class)->bulkTranscriptPdf(
+            Request::create('/transcripts/bulk/pdf', 'POST', [
+                'examId' => $scope['exam']->id,
+                'classId' => $scope['class']->id,
+                'sessionId' => $scope['session']->id,
+                'sectionId' => $scope['section']->id,
+                'departmentId' => $scope['department']->id,
+                'gender' => 'male',
+                'stdIds' => [$female->id],
+            ])
+        );
+    }
+
+    public function test_bulk_merit_uses_complete_gender_scope_not_selected_subset_and_preserves_ties(): void
+    {
+        $scope = $this->scope();
+        $main = $this->subject('Gender Merit Main', 'Main', 100);
+        $missing = $this->subject('Gender Missing Main', 'Main', 100);
+        $students = [];
+        foreach ([
+            ['1', '01', 90], ['2', '02', 95], ['1', '03', 80],
+            ['2', '04', 85], ['1', '05', 80],
+        ] as [$gender, $roll, $mark]) {
+            $student = $this->student($scope, $roll); $student->gender = $gender; $student->save();
+            $this->mark($student, $scope, $main, $mark);
+            $students[] = $student;
+        }
+        $incomplete = $this->student($scope, '06'); $incomplete->gender = '1'; $incomplete->save();
+        $this->mark($incomplete, $scope, $main, 70);
+        $this->ensureCurriculumMapping($scope, $missing);
+        // Supply the second required subject only for completed students.
+        foreach ($students as $student) $this->mark($student, $scope, $missing, 40);
+        $this->loadMarks(array_merge($students, [$incomplete]), $scope['exam']);
+
+        $allEntries = app(ResultCalculationBatchBuilder::class)->buildForGender(
+            $scope['exam']->id, $scope['class']->id, $scope['session']->id,
+            $scope['section']->id, $scope['department']->id, 'all'
+        )['entries'];
+        $maleEntries = app(ResultCalculationBatchBuilder::class)->buildForGender(
+            $scope['exam']->id, $scope['class']->id, $scope['session']->id,
+            $scope['section']->id, $scope['department']->id, 'male'
+        )['entries'];
+        $allRanks = app(ResultMeritPositionService::class)->positions($allEntries);
+        $maleRanks = app(ResultMeritPositionService::class)->positions($maleEntries);
+
+        $maleFirst = $students[0]; $maleTieA = $students[2]; $maleTieB = $students[4];
+        $this->assertSame(2, $allRanks[$maleFirst->id]);
+        $this->assertSame(1, $maleRanks[$maleFirst->id]);
+        $this->assertSame(4, $allRanks[$maleTieA->id]);
+        $this->assertSame(2, $maleRanks[$maleTieA->id]);
+        $this->assertSame(2, $maleRanks[$maleTieB->id]);
+        $this->assertArrayNotHasKey($incomplete->id, $maleRanks);
+
+        $selected = collect([$maleTieA, $incomplete]);
+        $bulk = app(BulkTranscriptResultBuilder::class)->buildWithGradeRows(
+            $selected, $scope['exam'], GradeList::all(), 'male'
+        );
+        $this->assertSame(2, $bulk[0]['meritRank']);
+        $this->assertNull($bulk[1]['meritRank']);
+        $this->assertSame('Incomplete', $bulk[1]['result']['classification']);
+
+        $html = view('result.bulk-transcript-pdf', ['transcripts' => $bulk, 'bulkView' => $this->bulkView($scope['exam']) + ['genderLabel' => 'Male']])->render();
+        $this->assertStringContainsString('Gender: Male', $html);
+        $this->assertStringContainsString('>'.$maleTieA->stdId.'<', $html);
+        $this->assertStringNotContainsString('>'.$students[1]->stdId.'<', $html);
+        $this->assertMatchesRegularExpression('/Merit Position<\/th><td>:\s*<\/td><td[^>]*>-<\/td>/', $html);
     }
 
     public function test_one_student_calculation_failure_blocks_the_complete_batch(): void
