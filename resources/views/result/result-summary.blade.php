@@ -17,7 +17,7 @@ Result Summary
         <div class="alert alert-info">Please select required filters (Exam, Class & Session) to view summary.</div>
     @else
         <div class="d-print-none">
-            @include('result.partials.passive-result-header')
+            @include('result.partials.passive-result-header', ['headerVariant' => 'result-summary'])
             @if(!$hasData)<div class="alert alert-warning">No result data found for the selected filters.</div>@endif
             @include('result.partials.summary-overall')
             @include('result.partials.summary-subjects', ['subjectRows' => $subjectStats])
@@ -27,7 +27,7 @@ Result Summary
         <div class="d-none d-print-block">
             @foreach($summaryView['subjectPages'] as $page)
                 <section class="result-print-page">
-                    @include('result.partials.passive-result-header')
+                    @include('result.partials.passive-result-header', ['headerVariant' => 'result-summary'])
                     @include('result.partials.summary-overall')
                     @include('result.partials.summary-subjects', ['subjectRows' => $page['subjectRows']])
                     @if($page['pageNumber'] === $page['pageCount'])

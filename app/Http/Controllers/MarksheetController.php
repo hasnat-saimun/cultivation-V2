@@ -1104,6 +1104,7 @@ class MarksheetController extends Controller
                 'className' => $class?->className ?? '-',
                 'sessionName' => $session?->session ?? '-',
                 'sectionName' => $section?->section ?? '-',
+                'departmentName' => $department?->departmentName ?? 'All Departments',
                 'printedAt' => now()->format('d M Y, h:i A'),
             ],
             'preloadedInstituteConfig' => $serverConfig,

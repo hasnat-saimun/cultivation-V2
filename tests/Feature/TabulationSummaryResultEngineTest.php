@@ -79,6 +79,31 @@ class TabulationSummaryResultEngineTest extends TestCase
             'passPercentage' => 50.0, 'failPercentage' => 25.0, 'incompletePercentage' => 0.0], $summary['overallSummary']);
     }
 
+    public function test_result_summary_heading_preserves_specific_and_all_department_on_screen_and_print(): void
+    {
+        $scope = $this->scope();
+        $base = [
+            'examId' => $scope['exam']->id,
+            'classId' => $scope['class']->id,
+            'sessionId' => $scope['session']->id,
+            'sectionId' => $scope['section']->id,
+        ];
+
+        $specific = app(MarksheetController::class)->resultSummary(
+            Request::create('/marksheet/result-summary', 'GET', $base + ['departmentId' => $scope['department']->id])
+        );
+        $specificHtml = $specific->render();
+        $this->assertSame($scope['department']->id, (int) $specific->getData()['departmentId']);
+        $this->assertGreaterThanOrEqual(2, substr_count($specificHtml, '<strong>Department:</strong> Science'));
+        $this->assertStringContainsString('name="departmentId"', $specificHtml);
+        $this->assertStringContainsString('value="'.$scope['department']->id.'" selected', $specificHtml);
+
+        $allHtml = app(MarksheetController::class)->resultSummary(
+            Request::create('/marksheet/result-summary', 'GET', $base)
+        )->render();
+        $this->assertGreaterThanOrEqual(2, substr_count($allHtml, '<strong>Department:</strong> All Departments'));
+    }
+
     public function test_retired_controller_does_not_restore_legacy_paths_for_mixed_flags(): void
     {
         $scope = $this->scope(); $main = $this->subject('Main', 'Main', 100); $optional = $this->subject('Optional', 'Optional', 100);

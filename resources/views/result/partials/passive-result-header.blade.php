@@ -82,7 +82,7 @@
         </div>
         <h4 class="fw-bold text-center my-3">Tabulation Sheet for - {{ $resultHeader['examName'] }}</h4>
         <div class="p-2 border rounded d-flex justify-content-between">
-            <div><strong>Class:</strong> {{ $resultHeader['className'] }} &nbsp; <strong>Section/Group:</strong> {{ $resultHeader['sectionName'] }} &nbsp; <strong>Session:</strong> {{ $resultHeader['sessionName'] }}</div>
+            <div><strong>Class:</strong> {{ $resultHeader['className'] }} &nbsp; <strong>Section/Group:</strong> {{ $resultHeader['sectionName'] }} &nbsp; <strong>Session:</strong> {{ $resultHeader['sessionName'] }}@if($headerVariant === 'result-summary') &nbsp; <strong>Department:</strong> {{ $resultHeader['departmentName'] ?? 'All Departments' }}@endif</div>
             <div><span class="d-none d-print-inline"><strong>Printed:</strong> {{ $resultHeader['printedAt'] }}</span>
                 <button type="button" class="btn btn-warning btn-sm d-print-none" onclick="window.print()">Print</button>
             </div>
