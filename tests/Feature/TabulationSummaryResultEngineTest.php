@@ -104,6 +104,64 @@ class TabulationSummaryResultEngineTest extends TestCase
         $this->assertGreaterThanOrEqual(2, substr_count($allHtml, '<strong>Department:</strong> All Departments'));
     }
 
+    public function test_subject_wise_gender_filter_limits_population_and_preserves_screen_print_context(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Gender Main', 'Main', 100);
+        $male = $this->student($scope, '1'); $male->forceFill(['gender' => 'Male'])->save();
+        $female = $this->student($scope, '2'); $female->forceFill(['gender' => '2'])->save();
+        $other = $this->student($scope, '3'); $other->forceFill(['gender' => null])->save();
+        foreach ([$male, $female, $other] as $student) $this->mark($student, $scope, $subject, 80);
+
+        $base = ['examId'=>$scope['exam']->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
+            'sectionId'=>$scope['section']->id,'departmentId'=>$scope['department']->id];
+        $all = app(MarksheetController::class)->allMarksheet(Request::create('/marksheet/all', 'GET', $base + ['gender'=>'all']))->getData();
+        $maleView = app(MarksheetController::class)->allMarksheet(Request::create('/marksheet/all', 'GET', $base + ['gender'=>'male']));
+        $femaleData = app(MarksheetController::class)->allMarksheet(Request::create('/marksheet/all', 'GET', $base + ['gender'=>'female']))->getData();
+        $otherData = app(MarksheetController::class)->allMarksheet(Request::create('/marksheet/all', 'GET', $base + ['gender'=>'other']))->getData();
+
+        $this->assertCount(3, $all['tabulationRows']);
+        $this->assertSame([$male->id], collect($maleView->getData()['tabulationRows'])->pluck('student.id')->all());
+        $this->assertSame([$female->id], collect($femaleData['tabulationRows'])->pluck('student.id')->all());
+        $this->assertSame([$other->id], collect($otherData['tabulationRows'])->pluck('student.id')->all());
+        $maleHtml = $maleView->render();
+        $this->assertStringContainsString('name="gender"', $maleHtml);
+        $this->assertStringContainsString('value="male" selected', $maleHtml);
+        $this->assertGreaterThanOrEqual(2, substr_count($maleHtml, '<div class="header-meta-value">Male</div>'));
+    }
+
+    public function test_result_summary_gender_counts_support_department_combination_and_screen_print_parity(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Summary Gender Main', 'Main', 100);
+        $male = $this->student($scope, '1'); $male->forceFill(['gender' => '1'])->save();
+        $female = $this->student($scope, '2'); $female->forceFill(['gender' => 'Female'])->save();
+        $other = $this->student($scope, '3'); $other->forceFill(['gender' => 'unknown'])->save();
+        foreach ([$male, $female, $other] as $student) $this->mark($student, $scope, $subject, 80);
+
+        $otherDepartment = new Department(); $otherDepartment->departmentName = 'Humanities'; $otherDepartment->save();
+        $otherScope = $scope; $otherScope['department'] = $otherDepartment;
+        $excludedMale = $this->student($otherScope, '4'); $excludedMale->forceFill(['gender' => 'male'])->save();
+        $this->mark($excludedMale, $otherScope, $subject, 80);
+
+        $base = ['examId'=>$scope['exam']->id,'classId'=>$scope['class']->id,'sessionId'=>$scope['session']->id,
+            'sectionId'=>$scope['section']->id,'departmentId'=>$scope['department']->id];
+        $all = app(MarksheetController::class)->resultSummary(Request::create('/marksheet/result-summary', 'GET', $base + ['gender'=>'all']))->getData();
+        $maleView = app(MarksheetController::class)->resultSummary(Request::create('/marksheet/result-summary', 'GET', $base + ['gender'=>'male']));
+        $female = app(MarksheetController::class)->resultSummary(Request::create('/marksheet/result-summary', 'GET', $base + ['gender'=>'female']))->getData();
+        $other = app(MarksheetController::class)->resultSummary(Request::create('/marksheet/result-summary', 'GET', $base + ['gender'=>'other']))->getData();
+
+        $this->assertSame(3, $all['overallSummary']['total']);
+        $this->assertSame(1, $maleView->getData()['overallSummary']['total']);
+        $this->assertSame(1, $female['overallSummary']['total']);
+        $this->assertSame(1, $other['overallSummary']['total']);
+        $this->assertSame($all['overallSummary']['total'], $maleView->getData()['overallSummary']['total'] + $female['overallSummary']['total'] + $other['overallSummary']['total']);
+        $maleHtml = $maleView->render();
+        $this->assertStringContainsString('value="male" selected', $maleHtml);
+        $this->assertGreaterThanOrEqual(2, substr_count($maleHtml, '<strong>Gender:</strong> Male'));
+        $this->assertGreaterThanOrEqual(2, substr_count(app(MarksheetController::class)->resultSummary(Request::create('/marksheet/result-summary', 'GET', $base))->render(), '<strong>Gender:</strong> All'));
+    }
+
     public function test_retired_controller_does_not_restore_legacy_paths_for_mixed_flags(): void
     {
         $scope = $this->scope(); $main = $this->subject('Main', 'Main', 100); $optional = $this->subject('Optional', 'Optional', 100);
@@ -221,6 +279,7 @@ class TabulationSummaryResultEngineTest extends TestCase
             app(\App\Services\ResultCalculation\ComponentRequirementProfileBuilder::class),
         ) extends ResultCalculationBatchBuilder {
             public function build(int $examId, int $classId, int $sessionId, ?int $sectionId = null, ?int $departmentId = null): array { throw new RuntimeException('simulated'); }
+            public function buildForGender(int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId, string $gender): array { throw new RuntimeException('simulated'); }
         };
         $this->app->instance(ResultCalculationBatchBuilder::class, $fake);
         config(['result_engine.tabulation_enabled' => true, 'result_engine.summary_enabled' => true]);

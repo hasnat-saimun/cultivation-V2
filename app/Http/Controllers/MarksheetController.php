@@ -39,6 +39,7 @@ use App\Services\ResultPublishService;
 use App\Services\ResultUnpublishService;
 use App\Services\PublishedResultReadyMarksService;
 use App\Services\TranscriptAccessService;
+use App\Services\Students\StudentGenderService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Support\Facades\Log;
@@ -70,6 +71,7 @@ class MarksheetController extends Controller
     private ResultUnpublishService $resultUnpublisher;
     private PublishedResultReadyMarksService $publishedMarks;
     private TranscriptAccessService $transcriptAccess;
+    private StudentGenderService $studentGender;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
@@ -92,7 +94,8 @@ class MarksheetController extends Controller
         ResultPublishService $resultPublisher,
         ResultUnpublishService $resultUnpublisher,
         PublishedResultReadyMarksService $publishedMarks,
-        TranscriptAccessService $transcriptAccess
+        TranscriptAccessService $transcriptAccess,
+        StudentGenderService $studentGender
     )
     {
         $this->adminResolver = $adminResolver;
@@ -116,6 +119,7 @@ class MarksheetController extends Controller
         $this->resultUnpublisher = $resultUnpublisher;
         $this->publishedMarks = $publishedMarks;
         $this->transcriptAccess = $transcriptAccess;
+        $this->studentGender = $studentGender;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -967,10 +971,13 @@ class MarksheetController extends Controller
         $sessionId = $request->integer('sessionId');
         $sectionId = $request->filled('sectionId') ? $request->integer('sectionId') : null;
         $departmentId = $request->filled('departmentId') ? $request->integer('departmentId') : null;
+        $gender = $request->routeIs('atGlanceResult')
+            ? StudentGenderService::ALL
+            : $this->studentGender->normalize($request->input('gender', 'all'));
 
         if ($examId > 0 && $classId > 0 && $sessionId > 0) {
             try {
-                return $this->centralizedTabulation($request, $examId, $classId, $sessionId, $sectionId, $departmentId);
+                return $this->centralizedTabulation($request, $examId, $classId, $sessionId, $sectionId, $departmentId, $gender);
             } catch (\Throwable $exception) {
                 Log::error('Centralized marksheet calculation failed.', [
                     'exam_id'=>$examId,'class_id'=>$classId,'session_id'=>$sessionId,
@@ -988,13 +995,14 @@ class MarksheetController extends Controller
             'compactMode'=>(bool)$request->get('compact'),'examId'=>$examId ?: null,
             'classId'=>$classId ?: null,'sessionId'=>$sessionId ?: null,'sectionId'=>$sectionId,
             'departmentId'=>$departmentId,'studentsLoaded'=>false,'exam'=>null,
+            'gender'=>$gender,
             'usingCentralizedTabulation'=>true,
-        ] + $this->resultPresentationContext($examId ?: null, $classId ?: null, $sessionId ?: null, $sectionId, $departmentId));
+        ] + $this->resultPresentationContext($examId ?: null, $classId ?: null, $sessionId ?: null, $sectionId, $departmentId, null, $gender));
     }
 
-    private function centralizedTabulation(Request $request, int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId)
+    private function centralizedTabulation(Request $request, int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId, string $gender)
     {
-        $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
+        $batch = $this->resultCalculationBatchBuilder->buildForGender($examId, $classId, $sessionId, $sectionId, $departmentId, $gender);
         $presented = $this->tabulationResultPresenter->present($batch['entries']);
         $passResults = array_values(array_filter($presented['sections']['Complete'], fn ($row) => $row['status'] === 'Pass'));
         $failResults = array_values(array_filter($presented['sections']['Complete'], fn ($row) => $row['status'] === 'Fail'));
@@ -1009,6 +1017,7 @@ class MarksheetController extends Controller
             'absentResults' => $absentResults,
             'compactMode' => $compactMode, 'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId,
             'sectionId' => $sectionId, 'departmentId' => $departmentId, 'studentsLoaded' => true,
+            'gender' => $gender,
             'exam' => $batch['exam'], 'usingCentralizedTabulation' => true,
             'tabulationRows' => $presented['rows'], 'tabulationSections' => $presented['sections'],
             'glanceRows' => $presented['glanceRows'], 'reportSections' => $presented['reportSections'],
@@ -1016,7 +1025,7 @@ class MarksheetController extends Controller
             'failureBuckets' => $presented['failureBuckets'],
             'tabulationPages' => $presented['tabulationPages'],
             'subjectWisePages' => $presented['subjectWisePages'], 'glancePages' => $presented['glancePages'],
-        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam']));
+        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam'], $gender));
     }
 
     private function centralizedSummary(Request $request)
@@ -1025,18 +1034,20 @@ class MarksheetController extends Controller
         $sessionId = (int) $request->get('sessionId');
         $sectionId = $request->get('sectionId') ? (int) $request->get('sectionId') : null;
         $departmentId = $request->get('departmentId') ? (int) $request->get('departmentId') : null;
-        $batch = $this->resultCalculationBatchBuilder->build($examId, $classId, $sessionId, $sectionId, $departmentId);
+        $gender = $this->studentGender->normalize($request->input('gender', 'all'));
+        $batch = $this->resultCalculationBatchBuilder->buildForGender($examId, $classId, $sessionId, $sectionId, $departmentId, $gender);
         $presented = $this->tabulationResultPresenter->present($batch['entries']);
         $summary = $this->tabulationResultPresenter->summarize($presented['rows'], $presented['subjects']);
         return view('result.result-summary', [
             'examId' => $examId, 'classId' => $classId, 'sessionId' => $sessionId, 'sectionId' => $sectionId,
             'departmentId' => $departmentId, 'studentsLoaded' => true,
+            'gender' => $gender,
             'overallSummary' => $summary['overallSummary'], 'subjectStats' => $summary['subjectStats'],
             'failureBuckets' => $summary['failureBuckets'], 'gpaDistribution' => $summary['gpaDistribution'],
             'gradeDistribution' => $summary['gradeDistribution'], 'hasData' => count($presented['rows']) > 0,
             'summaryView' => $summary,
             'usingCentralizedSummary' => true,
-        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam']));
+        ] + $this->resultPresentationContext($examId, $classId, $sessionId, $sectionId, $departmentId, $batch['exam'], $gender));
     }
 
     public function resultSummary(Request $request)
@@ -1057,6 +1068,7 @@ class MarksheetController extends Controller
             'examId'=>$request->get('examId'),'classId'=>$request->get('classId'),
             'sessionId'=>$request->get('sessionId'),'sectionId'=>$request->get('sectionId'),
             'departmentId'=>$request->get('departmentId'),'studentsLoaded'=>false,
+            'gender'=>$this->studentGender->normalize($request->input('gender', 'all')),
             'overallSummary'=>['total'=>0,'present'=>0,'absent'=>0,'pass'=>0,'fail'=>0,'incomplete'=>0,'passRate'=>0],
             'subjectStats'=>[],'failureBuckets'=>[],'gpaDistribution'=>[],'gradeDistribution'=>[],
             'hasData'=>false,'usingCentralizedSummary'=>true,
@@ -1067,6 +1079,8 @@ class MarksheetController extends Controller
             $request->integer('sessionId') ?: null,
             $request->integer('sectionId') ?: null,
             $request->integer('departmentId') ?: null,
+            null,
+            $this->studentGender->normalize($request->input('gender', 'all')),
         ));
     }
 
@@ -1077,6 +1091,7 @@ class MarksheetController extends Controller
         ?int $sectionId,
         ?int $departmentId,
         ?Exam $exam = null,
+        string $gender = StudentGenderService::ALL,
     ): array {
         $serverConfig = ServerConfig::orderBy('id', 'DESC')->first();
         $class = $classId ? classManage::find($classId) : null;
@@ -1098,6 +1113,7 @@ class MarksheetController extends Controller
                 'session' => $session?->session ?? '-',
                 'section' => $section?->section ?? 'N/A',
                 'department' => $department?->departmentName ?? 'All',
+                'gender' => $this->studentGender->label($gender),
             ],
             'resultHeader' => [
                 'examName' => $exam?->examName ?? '-',
@@ -1105,6 +1121,7 @@ class MarksheetController extends Controller
                 'sessionName' => $session?->session ?? '-',
                 'sectionName' => $section?->section ?? '-',
                 'departmentName' => $department?->departmentName ?? 'All Departments',
+                'genderName' => $this->studentGender->label($gender),
                 'printedAt' => now()->format('d M Y, h:i A'),
             ],
             'preloadedInstituteConfig' => $serverConfig,

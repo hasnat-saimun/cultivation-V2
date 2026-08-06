@@ -10,7 +10,7 @@ Result Summary
 </style>
 <div class="main-website"><div class="main-content"><div class="container-fluid mb-4">
     <form method="GET" action="{{ route('result.summary') }}" class="row g-2 align-items-end d-print-none">
-        @include('result.partials.result-filters')
+        @include('result.partials.result-filters', ['showGenderFilter' => true])
         <div class="col-md-2"><button class="btn btn-primary w-100">Show Summary</button></div>
     </form>
     @if(!$examId || !$classId || !$sessionId)

@@ -7,6 +7,7 @@ use App\Models\ResultPublish;
 use App\Models\newAdmission;
 use App\Models\sessionManage;
 use App\Services\PublishedResultReadyMarksService;
+use App\Services\Students\StudentGenderService;
 use Illuminate\Support\Collection;
 
 class ResultCalculationBatchBuilder
@@ -17,12 +18,19 @@ class ResultCalculationBatchBuilder
         private ComponentRequirementProfileBuilder $componentProfileBuilder,
         private ?PublishedResultReadyMarksService $publishedMarks = null,
         private ?PublishedResultFinalizer $publishedResultFinalizer = null,
+        private ?StudentGenderService $studentGender = null,
     ) {}
 
     /** @return array{exam:Exam,students:Collection,entries:array<int,array>} */
     public function build(int $examId, int $classId, int $sessionId, ?int $sectionId = null, ?int $departmentId = null): array
     {
         return $this->buildBatch($examId, $classId, $sessionId, $sectionId, $departmentId, false);
+    }
+
+    /** Report-only population filter applied before calculation inputs are built. */
+    public function buildForGender(int $examId, int $classId, int $sessionId, ?int $sectionId, ?int $departmentId, string $gender): array
+    {
+        return $this->buildBatch($examId, $classId, $sessionId, $sectionId, $departmentId, false, false, null, true, $gender);
     }
 
     /** @return array{exam:Exam,students:Collection,entries:array<int,array>,errors:array<int,array>} */
@@ -68,10 +76,11 @@ class ResultCalculationBatchBuilder
         bool $sectionlessOnly = false,
         ?string $sessionLabel = null,
         bool $applyPublicationFinalization = true,
+        string $gender = StudentGenderService::ALL,
     ): array
     {
         $exam = Exam::findOrFail($examId);
-        $students = newAdmission::query()
+        $studentQuery = newAdmission::query()
             ->where('className', $classId)
             ->where(function ($query) use ($sessionId, $sessionLabel) {
                 $query->where('sessName', (string) $sessionId);
@@ -81,7 +90,8 @@ class ResultCalculationBatchBuilder
             })
             ->when($sectionId, fn ($query) => $query->where('sectionName', $sectionId))
             ->when($sectionlessOnly, fn ($query) => $query->whereNull('sectionName'))
-            ->when($departmentId, fn ($query) => $query->where('departmentName', $departmentId))
+            ->when($departmentId, fn ($query) => $query->where('departmentName', $departmentId));
+        $students = $this->studentGender()->apply($studentQuery, $gender)
             ->orderByRaw('CAST(NULLIF(gender, "") AS UNSIGNED) ASC')
             ->orderByRaw('CAST(NULLIF(rollNumber, "") AS UNSIGNED) ASC')
             ->orderBy('id')
@@ -170,6 +180,11 @@ class ResultCalculationBatchBuilder
     private function publishedMarks(): PublishedResultReadyMarksService
     {
         return $this->publishedMarks ??= app(PublishedResultReadyMarksService::class);
+    }
+
+    private function studentGender(): StudentGenderService
+    {
+        return $this->studentGender ??= app(StudentGenderService::class);
     }
 
     private function publishedResultFinalizer(): PublishedResultFinalizer
