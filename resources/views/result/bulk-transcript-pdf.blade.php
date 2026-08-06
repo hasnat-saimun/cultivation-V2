@@ -56,7 +56,7 @@
             @include('result.partials.transcript-information', [
                 'identity' => $transcript['studentIdentity'],
                 'metadata' => $transcript['metadata'],
-                'meritRank' => $transcript['meritRank'] ?? '01',
+                'meritRank' => $transcript['meritRank'] ?? '-',
                 'gradeLegend' => $bulkView['gradeLegend'],
             ])
 

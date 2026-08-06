@@ -64,7 +64,7 @@
                     <div class="header-meta-label">Department</div>
                     <div class="header-meta-value">{{ $scopeLabels['department'] ?? 'All' }}</div>
                 </div>
-                @if($headerVariant === 'subject-wise')
+                @if(in_array($headerVariant, ['subject-wise', 'at-a-glance'], true))
                     <div class="header-meta-item">
                         <div class="header-meta-label">Gender</div>
                         <div class="header-meta-value">{{ $scopeLabels['gender'] ?? 'All' }}</div>

@@ -971,9 +971,7 @@ class MarksheetController extends Controller
         $sessionId = $request->integer('sessionId');
         $sectionId = $request->filled('sectionId') ? $request->integer('sectionId') : null;
         $departmentId = $request->filled('departmentId') ? $request->integer('departmentId') : null;
-        $gender = $request->routeIs('atGlanceResult')
-            ? StudentGenderService::ALL
-            : $this->studentGender->normalize($request->input('gender', 'all'));
+        $gender = $this->studentGender->normalize($request->input('gender', 'all'));
 
         if ($examId > 0 && $classId > 0 && $sessionId > 0) {
             try {

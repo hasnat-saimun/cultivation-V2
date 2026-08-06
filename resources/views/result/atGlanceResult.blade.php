@@ -82,6 +82,7 @@ At-a-Glance Result
         <div class="container-fluid mb-4">
             @include('result.partials.result-report-filter', [
                 'filterAction' => route('atGlanceResult'),
+                'showGenderFilter' => true,
             ])
 
             @include('result.partials.result-report-empty-state')

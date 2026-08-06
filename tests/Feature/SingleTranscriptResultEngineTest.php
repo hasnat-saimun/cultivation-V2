@@ -338,7 +338,7 @@ class SingleTranscriptResultEngineTest extends TestCase
 
         $this->assertStringContainsString('class="report-header"', $html);
         $this->assertStringContainsString('class="title"', $html);
-        $this->assertStringContainsString('class="meta-wrap"', $html);
+        $this->assertMatchesRegularExpression('/class="[^"]*\\bmeta-wrap\\b[^"]*"/', $html);
         $this->assertStringContainsString('class="student-info"', $html);
         $this->assertStringContainsString('class="grading-table-wrap"', $html);
         $this->assertStringContainsString('class="grading-table"', $html);

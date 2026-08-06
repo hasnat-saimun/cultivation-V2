@@ -20,6 +20,8 @@ class BulkTranscriptResultBuilder
         private ResultCalculationInputBuilder $inputBuilder,
         private ComponentRequirementProfileBuilder $componentProfileBuilder,
         private ?PublishedResultFinalizer $publishedResultFinalizer = null,
+        private ?ResultCalculationBatchBuilder $batchBuilder = null,
+        private ?ResultMeritPositionService $meritPositionService = null,
     ) {}
 
     public function build(iterable $students, Exam $exam): array
@@ -49,6 +51,30 @@ class BulkTranscriptResultBuilder
             $id = is_numeric($raw) ? (int) $raw : (int) (sessionManage::where('session', (string) $raw)->value('id') ?? 0);
             return [(int) $student->id => $id];
         });
+        $meritPositions = collect();
+        $students->groupBy(function ($student) use ($sessionIds) {
+            return implode(':', [
+                (int) ($sessionIds[(int) $student->id] ?? 0),
+                (int) ($student->className ?? 0),
+                is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : 0,
+                is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : 0,
+            ]);
+        })->each(function ($scopeStudents) use ($exam, $sessionIds, $meritPositions) {
+            $student = $scopeStudents->first();
+            $sessionId = (int) ($sessionIds[(int) $student->id] ?? 0);
+            $classId = (int) ($student->className ?? 0);
+            if ($sessionId <= 0 || $classId <= 0) return;
+            $batch = $this->batchBuilder()->build(
+                (int) $exam->id,
+                $classId,
+                $sessionId,
+                is_numeric($student->sectionName ?? null) ? (int) $student->sectionName : null,
+                is_numeric($student->departmentName ?? null) ? (int) $student->departmentName : null,
+            );
+            foreach ($this->meritPositionService()->positions($batch['entries']) as $studentId => $position) {
+                $meritPositions[(int) $studentId] = (int) $position;
+            }
+        });
         $publishedScopes = ResultPublish::query()
             ->where('status', ResultPublish::STATUS_PUBLISHED)
             ->where('examId', (string) $exam->id)
@@ -56,7 +82,7 @@ class BulkTranscriptResultBuilder
             ->whereIn('classId', $classIds->map(fn ($id) => (string) $id))
             ->get(['sessionId', 'classId', 'groupId', 'legacyImported'])
             ->groupBy(fn ($publication) => $publication->sessionId.':'.$publication->classId);
-        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentProfilesByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows, $sessionIds, $publishedScopes) {
+        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentProfilesByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows, $sessionIds, $publishedScopes, $meritPositions) {
             $classId = (int) ($student->className ?? 0);
             $departmentId = (int) ($student->departmentName ?? $student->departmentId ?? 0);
             $transcript = $this->baseTranscript($student, [
@@ -65,6 +91,7 @@ class BulkTranscriptResultBuilder
                 'sectionName' => (string) ($sectionNames[(int) ($student->sectionName ?? $student->sectionId ?? 0)] ?? '-'),
                 'departmentName' => (string) ($departmentNames[$departmentId] ?? '-'),
             ]);
+            $transcript['meritRank'] = $meritPositions[(int) $student->id] ?? null;
             try {
                 $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
                 $result = $this->calculator->calculate(
@@ -127,5 +154,15 @@ class BulkTranscriptResultBuilder
     private function publishedResultFinalizer(): PublishedResultFinalizer
     {
         return $this->publishedResultFinalizer ??= app(PublishedResultFinalizer::class);
+    }
+
+    private function batchBuilder(): ResultCalculationBatchBuilder
+    {
+        return $this->batchBuilder ??= app(ResultCalculationBatchBuilder::class);
+    }
+
+    private function meritPositionService(): ResultMeritPositionService
+    {
+        return $this->meritPositionService ??= app(ResultMeritPositionService::class);
     }
 }

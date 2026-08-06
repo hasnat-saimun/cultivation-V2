@@ -16,6 +16,8 @@ use App\Models\Subject;
 use App\Services\ResultCalculation\BoardResultCalculator;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use App\Services\ResultCalculation\ResultCalculationInputBuilder;
+use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
+use App\Services\ResultCalculation\ResultMeritPositionService;
 use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\SubjectResult;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
@@ -270,6 +272,40 @@ class BulkTranscriptResultEngineTest extends TestCase
         DB::disableQueryLog();
 
         $this->assertLessThanOrEqual($oneStudentQueries + 2, $classQueries);
+    }
+
+    public function test_bulk_merit_uses_complete_scope_with_single_parity_ties_and_missing_fallback(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Merit Main', 'Main', 100);
+        $students = [];
+        foreach ([90, 80, 70, 70, 60] as $index => $total) {
+            $student = $this->student($scope, (string) ($index + 1));
+            $this->mark($student, $scope, $subject, $total);
+            $students[] = $student;
+        }
+        $this->loadMarks($students, $scope['exam']);
+
+        $expected = app(ResultMeritPositionService::class)->positions(
+            app(ResultCalculationBatchBuilder::class)->build(
+                $scope['exam']->id, $scope['class']->id, $scope['session']->id,
+                $scope['section']->id, $scope['department']->id,
+            )['entries']
+        );
+        $this->assertSame([1, 2, 3, 3, 5], collect($students)->map(fn ($student) => $expected[$student->id])->all());
+
+        $selected = [$students[1], $students[2], $students[3], $students[4]];
+        $transcripts = app(BulkTranscriptResultBuilder::class)->build($selected, $scope['exam']);
+        $actual = collect($transcripts)->mapWithKeys(fn ($row) => [(int) $row['studentDetails']->id => $row['meritRank']])->all();
+        foreach ($selected as $student) {
+            $this->assertSame($expected[$student->id], $actual[$student->id]);
+        }
+
+        $html = $this->render($transcripts, $scope['exam']);
+        foreach ([2, 3, 3, 5] as $rank) $this->assertStringContainsString('>'.$rank.'<', $html);
+        $transcripts[0]['meritRank'] = null;
+        $fallbackHtml = $this->render([$transcripts[0]], $scope['exam']);
+        $this->assertMatchesRegularExpression('/Merit Position<\\/th><td>:\s*<\\/td><td[^>]*>-<\\/td>/', $fallbackHtml);
     }
 
     #[DataProvider('failedSubjectRowCountProvider')]
