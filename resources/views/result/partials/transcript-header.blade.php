@@ -7,9 +7,10 @@
     @if(!empty($header['institute']['mobile']) || !empty($header['institute']['email']))
         <p>{{ $header['institute']['mobile'] }}{{ !empty($header['institute']['mobile']) && !empty($header['institute']['email']) ? ' | ' : '' }}{{ $header['institute']['email'] }}</p>
     @endif
-</div>
 
-<div class="title">
-    <h3>{{ $header['title'] }}</h3>
-    <p>{{ $header['examName'] }}</p>
+    <div class="title">
+        <h3>{{ $header['title'] }}</h3>
+        <p>{{ $header['examName'] }}</p>
+    </div>
+
 </div>

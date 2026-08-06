@@ -1,4 +1,4 @@
-<table class="meta-wrap">
+<table class="meta-wrap mt-4">
     <tr>
         <td class="meta-left">
             <table class="student-info">
