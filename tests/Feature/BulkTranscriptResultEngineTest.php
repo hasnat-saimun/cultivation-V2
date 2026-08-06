@@ -20,6 +20,7 @@ use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultCalculation\ResultMeritPositionService;
 use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\SubjectResult;
+use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
@@ -306,6 +307,35 @@ class BulkTranscriptResultEngineTest extends TestCase
         $transcripts[0]['meritRank'] = null;
         $fallbackHtml = $this->render([$transcripts[0]], $scope['exam']);
         $this->assertMatchesRegularExpression('/Merit Position<\\/th><td>:\s*<\\/td><td[^>]*>-<\\/td>/', $fallbackHtml);
+    }
+
+    public function test_incomplete_student_is_not_ranked_in_single_bulk_or_tabulation_policy(): void
+    {
+        $scope = $this->scope();
+        $markedSubject = $this->subject('Marked Main', 'Main', 100);
+        $missingSubject = $this->subject('Missing Main', 'Main', 100);
+        $student = $this->student($scope, '01');
+        $this->mark($student, $scope, $markedSubject, 80);
+        $this->ensureCurriculumMapping($scope, $missingSubject);
+        $this->loadMarks([$student], $scope['exam']);
+
+        $entries = app(ResultCalculationBatchBuilder::class)->build(
+            $scope['exam']->id, $scope['class']->id, $scope['session']->id,
+            $scope['section']->id, $scope['department']->id,
+        )['entries'];
+        $positions = app(ResultMeritPositionService::class)->positions($entries);
+        $bulk = app(BulkTranscriptResultBuilder::class)->build([$student], $scope['exam']);
+        $tabulation = app(TabulationResultPresenter::class)->present($entries);
+
+        $this->assertArrayNotHasKey($student->id, $positions);
+        $this->assertNull($bulk[0]['meritRank']);
+        $this->assertSame('Incomplete', $bulk[0]['result']['classification']);
+        $this->assertNull($tabulation['rows'][0]['meritPosition']);
+        $this->assertSame('Incomplete', $tabulation['rows'][0]['classification']);
+        $this->assertMatchesRegularExpression(
+            '/Merit Position<\\/th><td>:\s*<\\/td><td[^>]*>-<\\/td>/',
+            $this->render($bulk, $scope['exam'])
+        );
     }
 
     #[DataProvider('failedSubjectRowCountProvider')]
