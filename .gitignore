@@ -15,6 +15,7 @@
 
 # Laravel public storage symlink
 /public/storage
+/public/upload/
 
 # Laravel storage runtime files
 /storage/*.key
