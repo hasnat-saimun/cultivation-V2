@@ -1,19 +1,4 @@
 <?php
-// Testimonial routes
-Route::get('testimonials/create/{admission}', [App\Http\Controllers\TestimonialController::class, 'create'])->name('testimonials.create');
-Route::post('testimonials/store', [App\Http\Controllers\TestimonialController::class, 'store'])->name('testimonials.store');
-Route::get('testimonials/{id}', [App\Http\Controllers\TestimonialController::class, 'show'])->name('testimonials.show');
-Route::get('testimonials/{id}/print', [App\Http\Controllers\TestimonialController::class, 'print'])->name('testimonials.print');
-Route::get('testimonials/{id}/edit', [App\Http\Controllers\TestimonialController::class, 'edit'])->name('testimonials.edit');
-Route::post('testimonials/update', [App\Http\Controllers\TestimonialController::class, 'update'])->name('testimonials.update');
-// Transfer Certificate (TC) routes
-Route::get('tc/create/{admission}', [App\Http\Controllers\TransferCertificateController::class, 'create'])->name('tc.create');
-Route::post('tc/store', [App\Http\Controllers\TransferCertificateController::class, 'store'])->name('tc.store');
-Route::get('tc/{id}', [App\Http\Controllers\TransferCertificateController::class, 'show'])->name('tc.show');
-Route::get('tc/{id}/print', [App\Http\Controllers\TransferCertificateController::class, 'print'])->name('tc.print');
-Route::get('tc/{id}/edit', [App\Http\Controllers\TransferCertificateController::class, 'edit'])->name('tc.edit');
-Route::post('tc/update', [App\Http\Controllers\TransferCertificateController::class, 'update'])->name('tc.update');
-// ...existing code...
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\BackofficeController;
@@ -40,6 +25,7 @@ use App\Http\Controllers\tuitionController;
 use App\Http\Controllers\registerController;
 use App\Http\Controllers\schoolUserController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AcademicAttendanceController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\CurriculumSubjectMappingController;
 use App\Http\Controllers\TeacherAuthController;
@@ -65,6 +51,10 @@ use App\Http\Middleware\BasicAdmin;
 use App\Http\Middleware\DealerAdmin;
 use App\Http\Middleware\adminGuard;
 
+
+
+
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -75,6 +65,23 @@ use App\Http\Middleware\adminGuard;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
+// Testimonial routes
+Route::get('testimonials/create/{admission}', [App\Http\Controllers\TestimonialController::class, 'create'])->name('testimonials.create');
+Route::post('testimonials/store', [App\Http\Controllers\TestimonialController::class, 'store'])->name('testimonials.store');
+Route::get('testimonials/{id}', [App\Http\Controllers\TestimonialController::class, 'show'])->name('testimonials.show');
+Route::get('testimonials/{id}/print', [App\Http\Controllers\TestimonialController::class, 'print'])->name('testimonials.print');
+Route::get('testimonials/{id}/edit', [App\Http\Controllers\TestimonialController::class, 'edit'])->name('testimonials.edit');
+Route::post('testimonials/update', [App\Http\Controllers\TestimonialController::class, 'update'])->name('testimonials.update');
+// Transfer Certificate (TC) routes
+Route::get('tc/create/{admission}', [App\Http\Controllers\TransferCertificateController::class, 'create'])->name('tc.create');
+Route::post('tc/store', [App\Http\Controllers\TransferCertificateController::class, 'store'])->name('tc.store');
+Route::get('tc/{id}', [App\Http\Controllers\TransferCertificateController::class, 'show'])->name('tc.show');
+Route::get('tc/{id}/print', [App\Http\Controllers\TransferCertificateController::class, 'print'])->name('tc.print');
+Route::get('tc/{id}/edit', [App\Http\Controllers\TransferCertificateController::class, 'edit'])->name('tc.edit');
+Route::post('tc/update', [App\Http\Controllers\TransferCertificateController::class, 'update'])->name('tc.update');
+// ...existing code...
+
 
 Route::get('/',[
     FrontController::class,
@@ -1855,6 +1862,15 @@ Route::middleware(['adminGuard'])->group (function(){
         MarksheetController::class,
         'resultSummary'
     ])->name('result.summary');
+
+    Route::middleware(\App\Http\Middleware\Roles::class.':3')->group(function () {
+        Route::get('/result/academic-attendance', [AcademicAttendanceController::class, 'index'])
+            ->name('academic-attendance.index');
+        Route::post('/result/academic-attendance/bulk', [AcademicAttendanceController::class, 'storeBulk'])
+            ->name('academic-attendance.bulk.store');
+        Route::post('/result/academic-attendance/single', [AcademicAttendanceController::class, 'storeSingle'])
+            ->name('academic-attendance.single.store');
+    });
 
     Route::post('/marksheet/generate',[
         MarksheetController::class ,

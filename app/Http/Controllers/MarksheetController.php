@@ -27,6 +27,7 @@ use App\Services\ResultCalculation\ResultCalculationInputBuilder;
 use App\Services\ResultCalculation\BulkTranscriptResultBuilder;
 use App\Services\ResultCalculation\ResultCalculationBatchBuilder;
 use App\Services\ResultCalculation\ResultMeritPositionService;
+use App\Services\ResultCalculation\GradeScaleOrderingService;
 use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultMarksDraftService;
 use App\Services\ResultComponentMarksValidationService;
@@ -39,6 +40,7 @@ use App\Services\ResultPublishService;
 use App\Services\ResultUnpublishService;
 use App\Services\PublishedResultReadyMarksService;
 use App\Services\TranscriptAccessService;
+use App\Services\AcademicAttendanceService;
 use App\Services\Students\StudentGenderService;
 use Dompdf\Dompdf;
 use Dompdf\Options;
@@ -72,6 +74,8 @@ class MarksheetController extends Controller
     private PublishedResultReadyMarksService $publishedMarks;
     private TranscriptAccessService $transcriptAccess;
     private StudentGenderService $studentGender;
+    private GradeScaleOrderingService $gradeScaleOrdering;
+    private AcademicAttendanceService $academicAttendance;
 
     public function __construct(
         CultivationAdminResolver $adminResolver,
@@ -95,7 +99,9 @@ class MarksheetController extends Controller
         ResultUnpublishService $resultUnpublisher,
         PublishedResultReadyMarksService $publishedMarks,
         TranscriptAccessService $transcriptAccess,
-        StudentGenderService $studentGender
+        StudentGenderService $studentGender,
+        GradeScaleOrderingService $gradeScaleOrdering,
+        AcademicAttendanceService $academicAttendance
     )
     {
         $this->adminResolver = $adminResolver;
@@ -120,6 +126,8 @@ class MarksheetController extends Controller
         $this->publishedMarks = $publishedMarks;
         $this->transcriptAccess = $transcriptAccess;
         $this->studentGender = $studentGender;
+        $this->gradeScaleOrdering = $gradeScaleOrdering;
+        $this->academicAttendance = $academicAttendance;
     }
 
     private function classRequiresOptionalGroup(?string $className): bool
@@ -1177,7 +1185,7 @@ class MarksheetController extends Controller
         $studentIdInput = trim((string)($request->studentId ?? ''));
         $stdIdInput = trim((string)($request->stdId ?? $request->studentId ?? $request->id ?? ''));
 
-        $studentQuery = newAdmission::query();
+        $studentQuery = $this->academicAttendance->selectForTranscript(newAdmission::query(), $examId);
         if ($studentIdInput !== '' && ctype_digit($studentIdInput)) {
             $studentQuery->whereKey((int)$studentIdInput);
         } elseif ($stdIdInput !== '') {
@@ -1306,12 +1314,8 @@ class MarksheetController extends Controller
                     'logoUrl' => $publicAsset($serverConfig?->logo, 'upload/image/cultivation'),
                 ],
                 'principalSignatureUrl' => $publicAsset($serverConfig?->principalSign, 'upload/image/cultivation'),
-                'gradeLegend' => GradeList::orderBy('gradePoint', 'DESC')->get()
-                    ->map(fn ($grade) => [
-                        'range' => $grade->minMark.' - '.$grade->maxMark,
-                        'grade' => $grade->gradeName,
-                        'point' => $grade->gradePoint,
-                    ])->all(),
+                'gradeLegend' => $this->gradeScaleOrdering->legend(),
+                'academicAttendance' => $this->academicAttendance->forTranscript($student, (int) $exam->id),
             ];
         } catch (\Throwable $exception) {
             Log::error('Centralized single marksheet calculation failed.', [
@@ -1452,7 +1456,7 @@ class MarksheetController extends Controller
         });
 
         try {
-            $gradeRows = GradeList::orderBy('maxMark', 'DESC')->orderBy('gradePoint', 'DESC')->get();
+            $gradeRows = $this->gradeScaleOrdering->all();
             $transcripts = $this->bulkTranscriptResultBuilder->buildWithGradeRows($students, $exam, $gradeRows, $gender);
         } catch (\Throwable $exception) {
             Log::warning('Centralized bulk transcript calculation failed.', [
@@ -1496,11 +1500,7 @@ class MarksheetController extends Controller
                     'logoUrl' => $publicAsset($config?->logo, 'upload/image/cultivation'),
                 ],
                 'principalSignatureUrl' => $publicAsset($config?->principalSign, 'upload/image/cultivation'),
-                'gradeLegend' => $gradeRows->map(fn ($grade) => [
-                        'range' => $grade->minMark.' - '.$grade->maxMark,
-                        'grade' => $grade->gradeName,
-                        'point' => number_format((float) $grade->gradePoint, 2),
-                    ])->all(),
+                'gradeLegend' => $this->gradeScaleOrdering->legend($gradeRows),
             ];
             $html = view('result.bulk-transcript-pdf', [
                 'exam' => $exam,

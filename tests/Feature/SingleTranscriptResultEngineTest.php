@@ -19,6 +19,7 @@ use App\Models\Subject;
 use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\TranscriptSubjectOrderingService;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
+use App\Services\AcademicAttendanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -111,6 +112,31 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertSame([], $queries, 'The single-transcript Blade path executed a database query.');
     }
 
+    public function test_single_transcript_shows_saved_academic_attendance_without_changing_result_or_merit(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Attendance Main', 'Main', 100);
+        $student = $this->student($scope);
+        $this->mark($student, $scope, $subject, 80);
+        $before = $this->response($student, $scope['exam'])->getData();
+        $this->assertNull($before['transcriptView']['academicAttendance']);
+        $this->assertStringNotContainsString('Academic Attendance', $before['transcriptView']['academicAttendance'] === null
+            ? view('result.partials.academic-attendance', ['attendance' => null])->render() : 'unexpected');
+
+        app(AcademicAttendanceService::class)->saveOne([
+            'exam_id' => $scope['exam']->id, 'session_id' => $scope['session']->id,
+            'class_id' => $scope['class']->id, 'section_id' => $scope['section']->id,
+            'department_id' => $scope['department']->id, 'gender' => 'all',
+        ], ['student_id' => $student->id, 'working_days' => 120, 'present_days' => 112, 'absent_days' => 8], 1);
+
+        $after = $this->response($student, $scope['exam'])->getData();
+        $html = $this->response($student, $scope['exam'])->render();
+        $this->assertSame(['workingDays' => 120, 'presentDays' => 112, 'absentDays' => 8], $after['transcriptView']['academicAttendance']);
+        $this->assertStringContainsString('Academic Attendance', $html);
+        $this->assertSame($before['transcriptResult'], $after['transcriptResult']);
+        $this->assertSame($before['transcriptView']['meritRank'], $after['transcriptView']['meritRank']);
+    }
+
     public function test_single_transcript_preserves_fractional_component_marks_and_total(): void
     {
         $scope = $this->scope(1);
@@ -158,6 +184,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->assertSummary($html, '5.00', 'A+');
         $this->assertStringContainsString('Status- Pass', $html);
         $this->assertStringContainsString('Optional Fail', $html);
+        $this->assertSame(2, substr_count($html, 'class="failed-grade-cell"'));
     }
 
     public function test_enabled_compulsory_f_causes_failure(): void
@@ -165,6 +192,7 @@ class SingleTranscriptResultEngineTest extends TestCase
         [$html] = $this->singleMainResult('Failed Main', 'Main', 100, 32);
         $this->assertSummary($html, '0.00', 'F');
         $this->assertStringContainsString('Status- Fail', $html);
+        $this->assertSame(2, substr_count($html, 'class="failed-grade-cell"'));
     }
 
     public function test_enabled_normalizes_fifty_mark_subject(): void

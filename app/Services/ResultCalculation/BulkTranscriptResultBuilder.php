@@ -12,6 +12,7 @@ use App\Models\sectionManage;
 use App\Models\sessionManage;
 use Illuminate\Support\Facades\Log;
 use App\Services\Students\StudentGenderService;
+use App\Services\AcademicAttendanceService;
 
 class BulkTranscriptResultBuilder
 {
@@ -23,6 +24,7 @@ class BulkTranscriptResultBuilder
         private ?PublishedResultFinalizer $publishedResultFinalizer = null,
         private ?ResultCalculationBatchBuilder $batchBuilder = null,
         private ?ResultMeritPositionService $meritPositionService = null,
+        private ?AcademicAttendanceService $academicAttendance = null,
     ) {}
 
     public function build(iterable $students, Exam $exam): array
@@ -57,6 +59,7 @@ class BulkTranscriptResultBuilder
         $sectionNames = sectionManage::whereIn('id', $students->pluck('sectionName')->filter())->pluck('section', 'id');
         $departmentIds = $students->map(fn ($student) => $student->departmentName ?? $student->departmentId ?? null)->filter()->unique();
         $departmentNames = Department::whereIn('id', $departmentIds)->pluck('departmentName', 'id');
+        $academicAttendanceByStudent = $this->attendance()->forTranscripts($students, (int) $exam->id);
         $sessionIds = $students->mapWithKeys(function ($student) {
             $raw = $student->sessName ?? null;
             $id = is_numeric($raw) ? (int) $raw : (int) (sessionManage::where('session', (string) $raw)->value('id') ?? 0);
@@ -94,7 +97,7 @@ class BulkTranscriptResultBuilder
             ->whereIn('classId', $classIds->map(fn ($id) => (string) $id))
             ->get(['sessionId', 'classId', 'groupId', 'legacyImported'])
             ->groupBy(fn ($publication) => $publication->sessionId.':'.$publication->classId);
-        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentProfilesByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows, $sessionIds, $publishedScopes, $meritPositions) {
+        return $students->map(function ($student) use ($exam, $subjectsByStudent, $componentProfilesByStudent, $sessionNames, $classNames, $fallbackClassNames, $sectionNames, $departmentNames, $gradeRows, $sessionIds, $publishedScopes, $meritPositions, $academicAttendanceByStudent) {
             $classId = (int) ($student->className ?? 0);
             $departmentId = (int) ($student->departmentName ?? $student->departmentId ?? 0);
             $transcript = $this->baseTranscript($student, [
@@ -104,6 +107,7 @@ class BulkTranscriptResultBuilder
                 'departmentName' => (string) ($departmentNames[$departmentId] ?? '-'),
             ]);
             $transcript['meritRank'] = $meritPositions[(int) $student->id] ?? null;
+            $transcript['academicAttendance'] = $academicAttendanceByStudent[(int) $student->id] ?? null;
             try {
                 $subjects = $subjectsByStudent[(int) $student->id] ?? collect();
                 $result = $this->calculator->calculate(
@@ -176,5 +180,10 @@ class BulkTranscriptResultBuilder
     private function meritPositionService(): ResultMeritPositionService
     {
         return $this->meritPositionService ??= app(ResultMeritPositionService::class);
+    }
+
+    private function attendance(): AcademicAttendanceService
+    {
+        return $this->academicAttendance ??= app(AcademicAttendanceService::class);
     }
 }

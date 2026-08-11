@@ -47,7 +47,7 @@
                     @php
                         $isHome = request()->routeIs('resultPart');
                         $marksRoutes = ['addMarks'];
-                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','atGlanceResult','result.summary','transcripts.bulk','result.final.publish'];
+                        $resultRoutes = ['addMarks','createMarksheet','allMarksheet','atGlanceResult','result.summary','transcripts.bulk','result.final.publish','academic-attendance.*'];
                         $classRoutes = ['allClasses','createClass','resultClassRoutineManage','saveResultClassRoutine','editResultClassRoutine','viewResultClassRoutine','printResultClassRoutine','downloadResultClassRoutinePdf'];
                         $deptRoutes = ['allDepartment','createDepartment'];
                         $sectionRoutes = ['allSection','createSection'];
@@ -93,6 +93,9 @@
                                         </li>
                                         <li class="nav-item">
                                             <a href="{{ route('transcripts.bulk') }}" class="nav-link {{ request()->routeIs('transcripts.bulk') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Bulk Transcripts</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="{{ route('academic-attendance.index') }}" class="nav-link {{ request()->routeIs('academic-attendance.*') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Academic Attendance</a>
                                         </li>
                                         <li class="nav-item">
                                             <a href="{{ route('allMarksheet') }}" class="nav-link {{ request()->routeIs('allMarksheet') ? 'active' : '' }}"><i class="fas fa-angle-right"></i>Subjectwise Result</a>

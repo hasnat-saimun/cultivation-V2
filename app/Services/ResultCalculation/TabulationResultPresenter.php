@@ -3,20 +3,20 @@
 namespace App\Services\ResultCalculation;
 
 use App\Models\Subject;
-use App\Models\GradeList;
 
 class TabulationResultPresenter
 {
     public function __construct(
         private TranscriptResultPresenter $transcriptPresenter,
         private ResultMeritPositionService $meritPositionService,
+        private GradeScaleOrderingService $gradeScaleOrdering,
     ) {}
 
     public function present(array $entries): array
     {
         $rows = [];
         $columnDefinitions = [];
-        $gradeRows = GradeList::all();
+        $gradeRows = $this->gradeScaleOrdering->all();
         $meritPositions = $this->meritPositionService->positions($entries);
         foreach ($entries as $entry) {
             /** @var StudentResult $result */
@@ -224,7 +224,11 @@ class TabulationResultPresenter
                 'failPercentage' => $total ? round($counts['Fail'] / $total * 100, 2) : 0.0,
                 'incompletePercentage' => $total ? round($counts['Incomplete'] / $total * 100, 2) : 0.0],
             'subjectStats' => $subjectStats, 'failureBuckets' => $failureBuckets,
-            'gpaDistribution' => $gpaDistribution, 'gradeDistribution' => $gradeDistribution,
+            'gpaDistribution' => $gpaDistribution,
+            'gradeDistribution' => $this->gradeScaleOrdering->sortDistribution(
+                $gradeDistribution,
+                $this->gradeScaleOrdering->all(),
+            ),
             'subjectPages' => $this->pageSubjectRows($subjectStats, 22),
             'failureSummaryLine' => $this->failureSummaryLine($failureBuckets),
         ];

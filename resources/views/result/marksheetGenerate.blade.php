@@ -71,6 +71,10 @@ Marksheet Generate
     .grading-table tbody tr:last-child td { border-bottom: 0; }
     .grading-letter, .grading-point { font-weight: 700; }
     .transcript-footer { page-break-inside: avoid; break-inside: avoid; }
+    .academic-attendance-block { margin: 14px 0; page-break-inside: avoid; break-inside: avoid; }
+    .academic-attendance-title { padding: 2px 5px; border: 1px solid #334155; border-bottom: 0; background: #e5e7eb; font-size: 10px; font-weight: 700; text-align: center; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .academic-attendance-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+    .marksheet .academic-attendance-table th, .marksheet .academic-attendance-table td { padding: 2px 5px; border: 1px solid #334155; text-align: center; }
     .report-header { width: 100%; text-align: center; margin: 0 0 3px; padding-bottom: 3px; border-bottom: 1px solid #cbd5e1; }
     .report-header .hdr-logo { display: inline-block; max-height: 42px; max-width: 64px; margin-bottom: 2px; object-fit: contain; }
     .report-header h2 { margin: 0; font-size: 17px; font-weight: 700; }
@@ -79,6 +83,7 @@ Marksheet Generate
     .title h3 { margin: 0; font-size: 15px; font-weight: 700; text-transform: uppercase; }
     .title p { margin: 2px 0 0; font-weight: 700; }
     .small { font-size: 9px; color: #4b5563; }
+    @include('result.partials.transcript-failure-styles')
 </style>
 
 <div class="container-fluid d-print-none no-print mb-2 text-end">
@@ -132,19 +137,10 @@ Marksheet Generate
                     <tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr>
                 </thead>
                 <tbody>
-                    @forelse($transcriptResult['mainRows'] as $row)
-                        <tr data-subject-id="{{ $row['id'] }}" data-status="{{ $row['status'] }}">
-                            <td>{{ $row['name'] }}</td>
-                            <td>{{ $row['cq'] }}</td>
-                            <td>{{ $row['mcq'] }}</td>
-                            <td>{{ $row['practical'] }}</td>
-                            <td>{{ $row['total'] }}</td>
-                            <td>{{ $row['grade'] }}</td>
-                            <td>{{ $row['gradePoint'] }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="7">No main subjects</td></tr>
-                    @endforelse
+                    @include('result.partials.transcript-subject-rows', [
+                        'rows' => $transcriptResult['mainRows'],
+                        'emptyMessage' => 'No main subjects',
+                    ])
                 </tbody>
             </table>
 
@@ -154,19 +150,10 @@ Marksheet Generate
                     <tr><th>Subject Name</th><th>Theory</th><th>M.C.Q</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr>
                 </thead>
                 <tbody>
-                    @forelse($transcriptResult['optionalRows'] as $row)
-                        <tr data-subject-id="{{ $row['id'] }}" data-status="{{ $row['status'] }}">
-                            <td>{{ $row['name'] }}</td>
-                            <td>{{ $row['cq'] }}</td>
-                            <td>{{ $row['mcq'] }}</td>
-                            <td>{{ $row['practical'] }}</td>
-                            <td>{{ $row['total'] }}</td>
-                            <td>{{ $row['grade'] }}</td>
-                            <td>{{ $row['gradePoint'] }}</td>
-                        </tr>
-                    @empty
-                        <tr><td colspan="7">No selected 4th subject data found</td></tr>
-                    @endforelse
+                    @include('result.partials.transcript-subject-rows', [
+                        'rows' => $transcriptResult['optionalRows'],
+                        'emptyMessage' => 'No selected 4th subject data found',
+                    ])
                 </tbody>
             </table>
 
@@ -193,6 +180,7 @@ Marksheet Generate
             </table>
 
             <div class="transcript-footer col-12">
+                @include('result.partials.academic-attendance', ['attendance' => $transcriptView['academicAttendance'] ?? null])
                 @include('result.partials.failed-subjects', [
                     'result' => $transcriptResult,
                     'containerClass' => 'mb-1',

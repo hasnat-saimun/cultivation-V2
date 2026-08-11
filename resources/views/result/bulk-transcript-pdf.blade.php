@@ -40,11 +40,16 @@
         .marksheet .failed-subject-grid td { width: 33.333%; border: 0; padding: 1px 8px 1px 0; vertical-align: top; line-height: 1.2; overflow-wrap: anywhere; word-break: normal; }
         .failed-subject-empty { visibility: hidden; }
         .transcript-footer { page-break-inside: avoid; break-inside: avoid; }
+        .academic-attendance-block { margin: 14px 0; page-break-inside: avoid; break-inside: avoid; }
+        .academic-attendance-title { padding: 2px 5px; border: 1px solid #334155; border-bottom: 0; background: #e5e7eb; font-size: 9px; font-weight: 700; text-align: center; text-transform: uppercase; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .academic-attendance-table { width: 100%; border-collapse: collapse; font-size: 9px; }
+        .marksheet .academic-attendance-table th, .marksheet .academic-attendance-table td { padding: 2px 4px; border: 1px solid #334155; text-align: center; }
         .signature-row { width: 100%; margin-top: 7px; page-break-inside: avoid; break-inside: avoid; }
         .signature-row td { width: 33.33%; border: 0 !important; text-align: center; vertical-align: bottom; height: 48px; }
         .signature-line { border-top: 1px solid #111827; width: 75%; margin: 0 auto; }
         .small { font-size: 9px; color: #4b5563; }
         .sign-image { height: 30px; width: auto; max-width: 110px; object-fit: contain; margin: 0 auto 3px; display: block; }
+        @include('result.partials.transcript-failure-styles')
         @media print { .print-button { display: none; } }
     </style>
 </head>
@@ -64,11 +69,10 @@
             <table>
                 <thead><tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr></thead>
                 <tbody>
-                @forelse($transcript['result']['mainRows'] as $row)
-                    <tr><td>{{ $row['name'] }}</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td><td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td></tr>
-                @empty
-                    <tr><td colspan="7">No main subjects</td></tr>
-                @endforelse
+                @include('result.partials.transcript-subject-rows', [
+                    'rows' => $transcript['result']['mainRows'],
+                    'emptyMessage' => 'No main subjects',
+                ])
                 </tbody>
             </table>
 
@@ -76,11 +80,11 @@
             <table>
                 <thead><tr><th>Subject Name</th><th>Theory</th><th>MCQ</th><th>Practical</th><th>Total</th><th>Grade</th><th>Point</th></tr></thead>
                 <tbody>
-                @forelse($transcript['result']['optionalRows'] as $row)
-                    <tr><td>{{ $row['name'] }} (4th)</td><td>{{ $row['cq'] }}</td><td>{{ $row['mcq'] }}</td><td>{{ $row['practical'] }}</td><td>{{ $row['total'] }}</td><td>{{ $row['grade'] }}</td><td>{{ $row['gradePoint'] }}</td></tr>
-                @empty
-                    <tr><td colspan="7">No selected 4th subject data found</td></tr>
-                @endforelse
+                @include('result.partials.transcript-subject-rows', [
+                    'rows' => $transcript['result']['optionalRows'],
+                    'optionalLabel' => '(4th)',
+                    'emptyMessage' => 'No selected 4th subject data found',
+                ])
                 </tbody>
             </table>
 
@@ -96,7 +100,8 @@
                     <th>Remark- {{ $transcript['result']['status'] }}</th>
                 </tr></thead>
             </table>
-
+            
+            @include('result.partials.academic-attendance', ['attendance' => $transcript['academicAttendance'] ?? null])
             <div class="transcript-footer">
             @include('result.partials.failed-subjects', ['result' => $transcript['result']])
 

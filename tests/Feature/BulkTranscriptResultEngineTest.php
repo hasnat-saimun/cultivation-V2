@@ -23,6 +23,7 @@ use App\Services\ResultCalculation\StudentResult;
 use App\Services\ResultCalculation\SubjectResult;
 use App\Services\ResultCalculation\TabulationResultPresenter;
 use App\Services\ResultCalculation\TranscriptResultPresenter;
+use App\Services\AcademicAttendanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -124,6 +125,8 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->assertSame(1, $transcripts[0]['result']['mainRows'] ? count($transcripts[0]['result']['mainRows']) : 0);
         $this->assertSame(3.0, $transcripts[0]['result']['optionalBonus']);
         $this->assertSame(0.0, $transcripts[1]['result']['optionalBonus']);
+        $html = $this->render($transcripts, $scope['exam']);
+        $this->assertSame(4, substr_count($html, 'class="failed-grade-cell"'));
     }
 
     #[DataProvider('parityScenarioProvider')]
@@ -187,6 +190,33 @@ class BulkTranscriptResultEngineTest extends TestCase
         ]));
 
         $this->assertSame([$matching->id], $response->getData()['students']->pluck('id')->all());
+    }
+
+    public function test_bulk_transcript_uses_each_students_academic_attendance_and_keeps_result_output_unchanged(): void
+    {
+        $scope = $this->scope();
+        $subject = $this->subject('Attendance Main', 'Main', 100);
+        $first = $this->student($scope, '01');
+        $second = $this->student($scope, '02');
+        $this->mark($first, $scope, $subject, 80);
+        $this->mark($second, $scope, $subject, 70);
+        $this->loadMarks([$first, $second], $scope['exam']);
+        $before = app(BulkTranscriptResultBuilder::class)->build([$first, $second], $scope['exam']);
+
+        app(AcademicAttendanceService::class)->saveOne([
+            'exam_id' => $scope['exam']->id, 'session_id' => $scope['session']->id,
+            'class_id' => $scope['class']->id, 'section_id' => $scope['section']->id,
+            'department_id' => $scope['department']->id, 'gender' => 'all',
+        ], ['student_id' => $first->id, 'working_days' => 100, 'present_days' => 91, 'absent_days' => 9], 1);
+
+        $after = app(BulkTranscriptResultBuilder::class)->build([$first, $second], $scope['exam']);
+        $this->assertSame(['workingDays' => 100, 'presentDays' => 91, 'absentDays' => 9], $after[0]['academicAttendance']);
+        $this->assertNull($after[1]['academicAttendance']);
+        $this->assertSame($before[0]['result'], $after[0]['result']);
+        $this->assertSame($before[1]['result'], $after[1]['result']);
+        $html = $this->render($after, $scope['exam']);
+        $this->assertSame(1, substr_count($html, 'Academic Attendance'));
+        $this->assertSame($before[0]['meritRank'], $after[0]['meritRank']);
     }
 
     public function test_bulk_list_applies_and_preserves_normalized_gender_filter(): void
