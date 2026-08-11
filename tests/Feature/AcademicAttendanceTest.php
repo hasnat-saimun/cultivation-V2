@@ -92,7 +92,7 @@ final class AcademicAttendanceTest extends TestCase
         app(AcademicAttendanceService::class)->saveOne($scope, ['student_id' => $outside->id, 'working_days' => 10, 'present_days' => 8, 'absent_days' => 2], 1);
     }
 
-    public function test_transcript_contract_hides_missing_and_returns_saved_values(): void
+    public function test_transcript_contract_renders_missing_placeholders_and_saved_values(): void
     {
         [$scope, $students] = $this->fixture(1);
         $service = app(AcademicAttendanceService::class);
@@ -101,10 +101,11 @@ final class AcademicAttendanceTest extends TestCase
         $this->assertSame(['workingDays' => 120, 'presentDays' => 112, 'absentDays' => 8], $service->forTranscript($students[0], $scope['exam_id']));
 
         $shown = view('result.partials.academic-attendance', ['attendance' => $service->forTranscript($students[0], $scope['exam_id'])])->render();
-        $hidden = view('result.partials.academic-attendance', ['attendance' => null])->render();
+        $missing = view('result.partials.academic-attendance', ['attendance' => null])->render();
         $this->assertStringContainsString('Academic Attendance', $shown);
         $this->assertStringContainsString('112', $shown);
-        $this->assertStringNotContainsString('Academic Attendance', $hidden);
+        $this->assertStringContainsString('Academic Attendance', $missing);
+        $this->assertSame(3, substr_count($missing, '—'));
     }
 
     public function test_all_departments_persists_the_students_effective_department_scope(): void

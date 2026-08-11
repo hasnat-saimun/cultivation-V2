@@ -120,8 +120,11 @@ class SingleTranscriptResultEngineTest extends TestCase
         $this->mark($student, $scope, $subject, 80);
         $before = $this->response($student, $scope['exam'])->getData();
         $this->assertNull($before['transcriptView']['academicAttendance']);
-        $this->assertStringNotContainsString('Academic Attendance', $before['transcriptView']['academicAttendance'] === null
-            ? view('result.partials.academic-attendance', ['attendance' => null])->render() : 'unexpected');
+        $missingHtml = view('result.partials.academic-attendance', [
+            'attendance' => $before['transcriptView']['academicAttendance'],
+        ])->render();
+        $this->assertStringContainsString('Academic Attendance', $missingHtml);
+        $this->assertSame(3, substr_count($missingHtml, '—'));
 
         app(AcademicAttendanceService::class)->saveOne([
             'exam_id' => $scope['exam']->id, 'session_id' => $scope['session']->id,
@@ -133,6 +136,9 @@ class SingleTranscriptResultEngineTest extends TestCase
         $html = $this->response($student, $scope['exam'])->render();
         $this->assertSame(['workingDays' => 120, 'presentDays' => 112, 'absentDays' => 8], $after['transcriptView']['academicAttendance']);
         $this->assertStringContainsString('Academic Attendance', $html);
+        $this->assertStringContainsString('120', $html);
+        $this->assertStringContainsString('112', $html);
+        $this->assertStringContainsString('8', $html);
         $this->assertSame($before['transcriptResult'], $after['transcriptResult']);
         $this->assertSame($before['transcriptView']['meritRank'], $after['transcriptView']['meritRank']);
     }

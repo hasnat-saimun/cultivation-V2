@@ -215,8 +215,13 @@ class BulkTranscriptResultEngineTest extends TestCase
         $this->assertSame($before[0]['result'], $after[0]['result']);
         $this->assertSame($before[1]['result'], $after[1]['result']);
         $html = $this->render($after, $scope['exam']);
-        $this->assertSame(1, substr_count($html, 'Academic Attendance'));
+        $this->assertSame(2, substr_count($html, 'Academic Attendance'));
+        $this->assertSame(3, substr_count($html, '—'));
+        $this->assertStringContainsString('100', $html);
+        $this->assertStringContainsString('91', $html);
+        $this->assertStringContainsString('9', $html);
         $this->assertSame($before[0]['meritRank'], $after[0]['meritRank']);
+        $this->assertSame($before[1]['meritRank'], $after[1]['meritRank']);
     }
 
     public function test_bulk_list_applies_and_preserves_normalized_gender_filter(): void

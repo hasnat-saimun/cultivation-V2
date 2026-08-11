@@ -43,9 +43,12 @@ class TranscriptPresentationFinalCorrectionsTest extends TestCase
         $css = view('result.partials.transcript-failure-styles')->render();
 
         $this->assertStringContainsString('.failed-grade-cell', $css);
-        $this->assertStringContainsString('border: 3px double #000', $css);
+        $this->assertStringContainsString('color: #7f1d1d !important', $css);
+        $this->assertStringContainsString('background: #fee2e2 !important', $css);
+        $this->assertStringContainsString('font-weight: 800 !important', $css);
+        $this->assertStringContainsString('color: #000 !important', $css);
+        $this->assertStringContainsString('background: #e5e7eb !important', $css);
         $this->assertStringContainsString('font-weight: 900', $css);
-        $this->assertStringContainsString('text-decoration-style: double', $css);
         $this->assertStringContainsString('-webkit-print-color-adjust: exact', $css);
         $this->assertStringContainsString('print-color-adjust: exact', $css);
     }
